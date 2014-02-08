@@ -1,7 +1,7 @@
 #
 # This file is part of the CMake build system for Gce
 #
-# CMake auto-generated configuration options. 
+# CMake auto-generated configuration options.
 # Do not check in modified versions of this file.
 #
 # Copyright (c) 2009-2014 Nous Xiong (348944179 at qq dot com)
@@ -27,7 +27,7 @@ if (UNIX)
 endif ()
 
 if (WIN32)
-  add_definitions (-D_WIN32_WINNT=0x0501)
+  set (GCE_WINVER "0x0501" CACHE STRING "Windows version maro. Default is 0x0501 - winxp, user can reset")
 endif ()
 
 # Set glibc.
