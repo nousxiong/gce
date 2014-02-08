@@ -1,0 +1,28 @@
+///
+/// user.hpp
+/// CMake auto-generated configuration options. 
+/// Do not check in modified versions of this file.
+///
+/// Copyright (c) 2009-2014 Nous Xiong (348944179 at qq dot com)
+///
+/// Distributed under the Boost Software License, Version 1.0. (See accompanying
+/// file LICENSE_1_0.txt or copy at http://www.boost.org/LICENSE_1_0.txt)
+///
+/// See https://github.com/nousxiong/gce for latest version.
+///
+
+#ifndef GCE_ACTOR_USER_HPP
+#define GCE_ACTOR_USER_HPP
+
+/// User options.
+#define GCE_CACHE_LINE_SIZE @GCE_CACHE_LINE_SIZE@
+#define GCE_FREE_CACHE_SIZE @GCE_FREE_CACHE_SIZE@
+#define GCE_SOCKET_RECV_CACHE_SIZE @GCE_SOCKET_RECV_CACHE_SIZE@
+#define GCE_SOCKET_RECV_MAX_SIZE @GCE_SOCKET_RECV_MAX_SIZE@
+#define GCE_SMALL_MSG_SIZE @GCE_SMALL_MSG_SIZE@
+#define GCE_MSG_MIN_GROW_SIZE @GCE_MSG_MIN_GROW_SIZE@
+
+#cmakedefine GCE_ACTOR_BUILD_EXAMPLE
+#cmakedefine GCE_ACTOR_BUILD_TEST
+
+#endif /// GCE_ACTOR_USER_HPP

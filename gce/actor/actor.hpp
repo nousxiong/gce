@@ -1,0 +1,190 @@
+﻿///
+/// Copyright (c) 2009-2014 Nous Xiong (348944179 at qq dot com)
+///
+/// Distributed under the Boost Software License, Version 1.0. (See accompanying
+/// file LICENSE_1_0.txt or copy at http://www.boost.org/LICENSE_1_0.txt)
+///
+/// See https://github.com/nousxiong/gce for latest version.
+///
+
+#ifndef GCE_ACTOR_ACTOR_HPP
+#define GCE_ACTOR_ACTOR_HPP
+
+#include <gce/actor/config.hpp>
+#include <gce/actor/basic_actor.hpp>
+#include <gce/actor/detail/pack.hpp>
+#include <gce/actor/match.hpp>
+#include <gce/actor/detail/mailbox_fwd.hpp>
+#include <gce/detail/cache_aligned_new.hpp>
+
+namespace gce
+{
+namespace detail
+{
+class cache_pool;
+class mailbox;
+}
+class mixin;
+class response_t;
+
+class actor
+  : public detail::object_pool<actor, detail::actor_attrs>::object
+  , public detail::mpsc_queue<actor>::node
+  , public basic_actor
+{
+  typedef basic_actor base_type;
+
+public:
+  enum status
+  {
+    ready = 0,
+    on,
+    off,
+    closed
+  };
+
+  class self
+  {
+  public:
+    explicit self(actor& a) : a_(a) {}
+    ~self() {}
+
+  public:
+    inline aid_t recv(message& msg, match const& mach = match())
+    {
+      return a_.recv(msg, mach);
+    }
+
+    inline void send(aid_t sender, message const& m)
+    {
+      a_.send(sender, m);
+    }
+
+    inline response_t request(aid_t sender, message const& m)
+    {
+      return a_.request(sender, m);
+    }
+
+    inline void reply(aid_t sender, message const& m)
+    {
+      a_.reply(sender, m);
+    }
+
+    inline aid_t recv(response_t res, message& msg, seconds_t tmo = infin)
+    {
+      return a_.recv(res, msg, tmo);
+    }
+
+    inline void link(aid_t target)
+    {
+      a_.link(target);
+    }
+
+    inline void monitor(aid_t target)
+    {
+      a_.monitor(target);
+    }
+
+    inline void add_link(detail::link_t l)
+    {
+      a_.add_link(l);
+    }
+
+    inline aid_t get_aid()
+    {
+      return a_.get_aid();
+    }
+
+    inline detail::cache_pool* get_cache_pool()
+    {
+      return a_.get_cache_pool();
+    }
+
+    inline yield_t get_yield()
+    {
+      return a_.get_yield();
+    }
+
+  private:
+    actor& a_;
+  };
+
+  typedef self& self_ref_t;
+  typedef boost::function<void (self_ref_t)> func_t;
+
+public:
+  explicit actor(detail::actor_attrs);
+  ~actor();
+
+public:
+  aid_t recv(message&, match const&);
+  void send(aid_t, message const&);
+
+  response_t request(aid_t, message const&);
+  void reply(aid_t, message const&);
+  aid_t recv(response_t, message&, seconds_t);
+
+  void link(aid_t);
+  void monitor(aid_t);
+
+public:
+  detail::cache_pool* get_cache_pool();
+  yield_t get_yield();
+  void start();
+  void init(
+    detail::cache_pool* user, detail::cache_pool* owner,
+    func_t const& f,
+    aid_t link_tgt
+    );
+  void on_free();
+  void on_recv(detail::pack*);
+
+private:
+  static std::size_t make_stack_size(stack_scale_type);
+  void run(yield_t);
+  void begin_run();
+  void resume(detail::actor_code ac = detail::actor_normal);
+  detail::actor_code yield();
+  void free_self();
+  void stopped();
+  void start_recv_timer(seconds_t);
+  void handle_recv_timeout(errcode_t const&, std::size_t);
+  void handle_recv(detail::pack*);
+
+private:
+  byte_t pad0_[GCE_CACHE_LINE_SIZE]; /// Ensure start from a new cache line.
+
+  status stat_;
+  byte_t pad1_[GCE_CACHE_LINE_SIZE - sizeof(status)];
+
+  std::size_t stack_size_;
+  byte_t pad2_[GCE_CACHE_LINE_SIZE - sizeof(std::size_t)];
+
+  self self_;
+  byte_t pad3_[GCE_CACHE_LINE_SIZE - sizeof(self)];
+
+  detail::cache_aligned_ptr<detail::cache_pool, detail::cache_pool*> user_;
+
+  typedef detail::unique_ptr<func_t> func_ptr;
+  detail::cache_aligned_ptr<func_t, func_ptr> f_;
+
+  typedef boost::function<void (detail::actor_code)> yield_cb_t;
+
+  /// thread local vals
+  bool recving_;
+  bool responsing_;
+  detail::recv_t recving_rcv_;
+  response_t recving_res_;
+  message recving_msg_;
+  match curr_match_;
+  timer_t tmr_;
+  std::size_t tmr_sid_;
+  yield_t* yld_;
+  yield_cb_t yld_cb_;
+};
+
+typedef actor::self& self_t;
+typedef boost::function<void (self_t)> actor_func_t;
+}
+
+#endif /// GCE_ACTOR_ACTOR_HPP

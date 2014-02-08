@@ -1,0 +1,84 @@
+﻿#include <gce/actor/actor.hpp>
+#include <gce/actor/thin.hpp>
+#include <gce/actor/message.hpp>
+#include <gce/actor/spawn.hpp>
+#include <boost/atomic.hpp>
+
+namespace gce
+{
+class actor_pingpong_ut
+{
+static std::size_t const msg_size = 1000000;
+public:
+  static void run()
+  {
+    test();
+  }
+
+private:
+  static void my_child(self_t self, aid_t sire, aid_t base_id)
+  {
+    message msg;
+    while (true)
+    {
+      self.recv(msg);
+      if (msg.get_type() == 2)
+      {
+        break;
+      }
+      else
+      {
+        self.send(sire, msg);
+      }
+    }
+    self.send(base_id, msg);
+  }
+
+  static void my_actor(self_t self, aid_t base_id)
+  {
+    aid_t aid = spawn<stackful>(
+      self,
+      boost::bind(
+        &actor_pingpong_ut::my_child,
+        _1, self.get_aid(), base_id
+        )
+      );
+
+    message m(1);
+    for (std::size_t i=0; i<msg_size; ++i)
+    {
+      self.send(aid, m);
+      self.recv(m);
+    }
+    self.send(aid, message(2));
+  }
+
+  static void test()
+  {
+    try
+    {
+      context ctx;
+
+      mixin& base = spawn(ctx);
+      aid_t base_id = base.get_aid();
+      aid_t aid =
+        spawn<stackful>(
+          base,
+          boost::bind(
+            &actor_pingpong_ut::my_actor, _1,
+            base_id
+            )
+          );
+
+      message m;
+      boost::timer::auto_cpu_timer t;
+      base.recv(m);
+    }
+    catch (std::exception& ex)
+    {
+      std::cerr << ex.what() << std::endl;
+    }
+  }
+};
+}
+

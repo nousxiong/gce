@@ -1,0 +1,47 @@
+﻿#include <gce/actor/all.hpp>
+#include <gce/detail/mpsc_queue.hpp>
+#include <boost/asio.hpp>
+#include <boost/shared_ptr.hpp>
+#include <boost/make_shared.hpp>
+#include <boost/lexical_cast.hpp>
+#include <boost/bind.hpp>
+#include <boost/function.hpp>
+#include <boost/array.hpp>
+#include <boost/ref.hpp>
+#include <boost/assert.hpp>
+#include <iostream>
+#include <string>
+#include <vector>
+
+#include <gce/detail/cache_aligned_new.hpp>
+#include <boost/timer/timer.hpp>
+#include "test_object_pool.hpp"
+#include "test_actor.hpp"
+#include "test_thin.hpp"
+#include "test_actor_pingpong.hpp"
+#include "test_thin_pingpong.hpp"
+#include "test_match.hpp"
+#include "test_link.hpp"
+#include "test_socket.hpp"
+#include "test_message.hpp"
+
+int main()
+{
+  try
+  {
+    gce::object_pool_ut::run();
+    gce::actor_ut::run();
+    gce::thin_ut::run();
+    gce::actor_pingpong_ut::run();
+    gce::thin_pingpong_ut::run();
+    gce::match_ut::run();
+    gce::link_ut::run();
+    gce::socket_ut::run();
+    gce::message_ut::run();
+  }
+  catch (std::exception& ex)
+  {
+    std::cerr << ex.what() << std::endl;
+  }
+  return 0;
+}
