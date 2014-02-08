@@ -58,7 +58,7 @@ if (BOOST_ROOT)
   set (Boost_NO_SYSTEM_PATHS ON)
 endif ()
 
-find_package (Boost 1.54.0 REQUIRED atomic coroutine context system timer chrono thread)
+find_package (Boost 1.54.0 REQUIRED atomic coroutine context system regex date_time timer chrono thread)
 
 mark_as_advanced (Boost_DIR)
 if (WIN32)
