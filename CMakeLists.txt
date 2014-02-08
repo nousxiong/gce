@@ -73,7 +73,7 @@ find_package (Threads)
 set (CMAKE_VERBOSE_MAKEFILE true)
 
 # Select build sub libs.
-set (SUB_LIBRARYS "actor" CACHE STRING "Select build sub libs")
+set (SUB_LIBRARYS "actor amsg" CACHE STRING "Select build sub libs")
 string (TOLOWER ${SUB_LIBRARYS} SUB_LIBRARYS_TOLOWER)
 string (REGEX MATCHALL "[a-z_]+" SUB_LIB_NAME_LIST ${SUB_LIBRARYS_TOLOWER})
 
