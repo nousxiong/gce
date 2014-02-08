@@ -18,24 +18,24 @@ class basic_actor;
 class actor_id
 {
 public:
-  actor_id() : ptr_(0), sid_(sid_nil) {}
-  actor_id(basic_actor* ptr, sid_t sid) : ptr_(ptr), sid_(sid) {}
+  actor_id() : uintptr_(0), sid_(sid_nil) {}
+  actor_id(basic_actor* ptr, sid_t sid) : uintptr_((boost::uint64_t)ptr), sid_(sid) {}
   ~actor_id() {}
 
 public:
   inline operator bool() const
   {
-    return ptr_ != 0;
+    return uintptr_ != 0;
   }
 
   bool operator!() const
   {
-    return ptr_ == 0;
+    return uintptr_ == 0;
   }
 
   inline bool operator==(actor_id const& rhs) const
   {
-    return ptr_ == rhs.ptr_ && sid_ == rhs.sid_;
+    return uintptr_ == rhs.uintptr_ && sid_ == rhs.sid_;
   }
 
   inline bool operator!=(actor_id const& rhs) const
@@ -45,11 +45,11 @@ public:
 
   inline bool operator<(actor_id const& rhs) const
   {
-    if (ptr_ < rhs.ptr_)
+    if (uintptr_ < rhs.uintptr_)
     {
       return true;
     }
-    else if (ptr_ > rhs.ptr_)
+    else if (uintptr_ > rhs.uintptr_)
     {
       return false;
     }
@@ -68,7 +68,7 @@ public:
 
   inline basic_actor* get_actor_ptr() const
   {
-    return ptr_;
+    return (basic_actor*)uintptr_;
   }
 
   inline sid_t get_sid() const
@@ -76,12 +76,13 @@ public:
     return sid_;
   }
 
-private:
-  basic_actor* ptr_;
+  boost::uint64_t uintptr_;
   sid_t sid_;
 };
 
 typedef actor_id aid_t;
 }
+
+GCE_PACK(gce::aid_t, (uintptr_)(sid_));
 
 #endif /// GCE_ACTOR_ACTOR_ID_HPP

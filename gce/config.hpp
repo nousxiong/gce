@@ -13,7 +13,7 @@
 #define GCE_CONFIG_HPP
 
 #include <boost/config.hpp>
-#include <gce_user.hpp>
+#include <gce/user.hpp>
 
 /// Define winver bal bal...
 #if defined(_WIN32) || defined(__WIN32__) || defined(WIN32)
@@ -22,10 +22,16 @@
 # endif
 #endif
 
+
+
 #if defined(_WIN32) || defined(__WIN32__) || defined(WIN32)
+
 # ifndef _WIN32_WINNT
+
 #   define _WIN32_WINNT GCE_WINVER
+
 # endif
+
 #endif
 
 /// Suppress some vc warnings.

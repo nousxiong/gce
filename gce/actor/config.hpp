@@ -11,7 +11,7 @@
 #define GCE_ACTOR_CONFIG_HPP
 
 #include <gce/config.hpp>
-#include <gce_actor_user.hpp>
+#include <gce/actor/user.hpp>
 #include <gce/integer.hpp>
 #include <gce/actor/atom.hpp>
 #include <gce/amsg/amsg.hpp>

@@ -23,8 +23,6 @@ set (GCE_MSG_MIN_GROW_SIZE "64" CACHE STRING "Message grow min size")
 option (GCE_ACTOR_BUILD_EXAMPLE "Build Gce.Actor examples" ON)
 option (GCE_ACTOR_BUILD_TEST "Build Gce.Actor tests" ON)
 
-include_directories (${CMAKE_CURRENT_BINARY_DIR})
-
 set (LINK_LIBS ${Boost_LIBRARIES} ${CMAKE_THREAD_LIBS_INIT})
 if (UNIX)
   set (LINK_LIBS ${LINK_LIBS} rt)
@@ -82,7 +80,7 @@ endif ()
 # Configure a header file to pass some of the CMake settings to the source code.
 configure_file (
   "${CMAKE_CURRENT_SOURCE_DIR}/user.hpp.in"
-  "${CMAKE_CURRENT_BINARY_DIR}/gce_actor_user.hpp"
+  "${PROJECT_BINARY_DIR}/gce/actor/user.hpp"
   )
 
-install (FILES ${CMAKE_CURRENT_BINARY_DIR}/gce_actor_user.hpp DESTINATION include/gce)
+install (FILES ${PROJECT_BINARY_DIR}/gce/actor/user.hpp DESTINATION include/gce/actor)

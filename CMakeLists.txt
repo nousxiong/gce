@@ -84,10 +84,10 @@ endforeach(SUB_LIB_NAME)
 # Configure a header file to pass some of the CMake settings to the source code.
 configure_file (
   "${PROJECT_SOURCE_DIR}/user.hpp.in"
-  "${PROJECT_BINARY_DIR}/gce_user.hpp"
+  "${PROJECT_BINARY_DIR}/gce/user.hpp"
   )
 
-install (FILES ${PROJECT_BINARY_DIR}/gce_user.hpp DESTINATION include/gce)
+install (FILES ${PROJECT_BINARY_DIR}/gce/user.hpp DESTINATION include/gce)
 
 # Build a CPack driven installer package.
 include (InstallRequiredSystemLibraries)
