@@ -1,7 +1,7 @@
-// (C) Copyright Ning Ding 2012.
+﻿// (C) Copyright Ning Ding 2012.
 // lordoffox@gmail.com
-// Distributed under the ::boost Software License, Version 1.0. (See accompany-
-// ing file LICENSE_1_0.txt or copy at http://www.::boost.org/LICENSE_1_0.txt)
+// Distributed under the boost Software License, Version 1.0. (See accompany-
+// ing file LICENSE_1_0.txt or copy at http://www.boost.org/LICENSE_1_0.txt)
 //amsg version 0.0.3
 
 #ifndef AMSG_HPP_DDGDDFGDG345435
@@ -797,14 +797,14 @@ namespace boost{ namespace amsg{	namespace detail
 				{
 					store_data.set_error_code(negative_assign_to_unsigned_integer_number);
 					return;
-		
+
 				}
 				int read_bytes = (value & const_interger_byte_msak) + 1;
 				if( bytes < read_bytes )
 				{
 					store_data.set_error_code(value_too_large_to_integer_number);
 					return;
-		
+
 				}
 				store_data.read((char*)&value ,1);
 				if(store_data.bad())
@@ -953,14 +953,14 @@ namespace boost{ namespace amsg{	namespace detail
 				{
 					store_data.set_error_code(negative_assign_to_unsigned_integer_number);
 					return;
-		
+
 				}
 				int read_bytes = (value & const_interger_byte_msak) + 1;
 				if( bytes < read_bytes )
 				{
 					store_data.set_error_code(value_too_large_to_integer_number);
 					return;
-		
+
 				}
 				ptr = (uint8_t *)&read_value[1];
 				store_data.read((char*)ptr,read_bytes);
@@ -1040,7 +1040,7 @@ namespace boost{ namespace amsg{	namespace detail
 				{
 					store_data.set_error_code(value_too_large_to_integer_number);
 					return;
-		
+
 				}
 				ptr = (uint8_t *)&read_value[1];
 				store_data.read((char*)ptr,read_bytes);
@@ -1128,14 +1128,14 @@ namespace boost{ namespace amsg{	namespace detail
 				{
 					store_data.set_error_code(negative_assign_to_unsigned_integer_number);
 					return;
-		
+
 				}
 				int read_bytes = (value & const_interger_byte_msak) + 1;
 				if( bytes < read_bytes )
 				{
 					store_data.set_error_code(value_too_large_to_integer_number);
 					return;
-		
+
 				}
 				ptr = (uint8_t *)&read_value[1];
 				store_data.read((char*)ptr,read_bytes);
@@ -1223,7 +1223,7 @@ namespace boost{ namespace amsg{	namespace detail
 				{
 					store_data.set_error_code(value_too_large_to_integer_number);
 					return;
-		
+
 				}
 				ptr = (uint8_t *)&read_value[1];
 				store_data.read((char*)ptr,read_bytes);
@@ -1319,7 +1319,7 @@ namespace boost{ namespace amsg{	namespace detail
 				{
 					store_data.set_error_code(negative_assign_to_unsigned_integer_number);
 					return;
-		
+
 				}
 				int read_bytes = int(value & const_interger_byte_msak) + 1;
 				if( bytes < read_bytes )
@@ -1429,7 +1429,7 @@ namespace boost{ namespace amsg{	namespace detail
 				{
 					store_data.set_error_code(value_too_large_to_integer_number);
 					return;
-		
+
 				}
 				ptr = (uint8_t *)&read_value[1];
 				store_data.read((char*)ptr,read_bytes);

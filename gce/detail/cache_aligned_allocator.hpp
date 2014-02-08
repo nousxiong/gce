@@ -1,4 +1,13 @@
-﻿#ifndef GCE_DETAIL_CACHE_ALIGNED_ALLOCATOR_HPP
+﻿///
+/// Copyright (c) 2009-2014 Nous Xiong (348944179 at qq dot com)
+///
+/// Distributed under the Boost Software License, Version 1.0. (See accompanying
+/// file LICENSE_1_0.txt or copy at http://www.boost.org/LICENSE_1_0.txt)
+///
+/// See https://github.com/nousxiong/gce for latest version.
+///
+
+#ifndef GCE_DETAIL_CACHE_ALIGNED_ALLOCATOR_HPP
 #define GCE_DETAIL_CACHE_ALIGNED_ALLOCATOR_HPP
 
 #include <gce/config.hpp>
@@ -72,7 +81,7 @@ public:
 
     byte_t* ret = 0;
     byte_t* ptr = (byte_t*)m_.malloc(bytes + line_size);
-    /// 来自tbb
+    /// Since tbb(https://www.threadingbuildingblocks.org/)
     ret = (byte_t*)((uintptr_t)(ptr + line_size) & -line_size);
     ((uintptr_t*)ret)[-1] = uintptr_t(ptr);
     return (pointer)ret;
@@ -84,7 +93,7 @@ public:
     if (p)
     {
       BOOST_ASSERT_MSG((uintptr_t)p>=0x4096, "attempt to free block not obtained from cache_aligned_allocator" );
-      // Recover where block actually starts
+      /// Recover where block actually starts
       byte_t* ptr = ((byte_t**)p)[-1];
       int line_size = GCE_CACHE_LINE_SIZE;
       BOOST_ASSERT_MSG((void*)((uintptr_t)(ptr + line_size) & -line_size) == p, "not allocated by cache_aligned_allocator" );

@@ -1,6 +1,6 @@
-// (C) Copyright Ning Ding 2012.
+﻿// (C) Copyright Ning Ding 2012.
 // lordoffox@gmail.com
-// Distributed under the ::boost Software License, Version 1.0. (See accompany-
+// Distributed under the boost Software License, Version 1.0. (See accompany-
 // ing file LICENSE_1_0.txt or copy at http://www.boost.org/LICENSE_1_0.txt)
 
 #ifndef ZERO_COPY_HPP_VNFGHBF54646
@@ -333,7 +333,7 @@ namespace boost{ namespace amsg
 		}
 	};
 
-		
+
 	template<typename error_string_ty>
 	struct value_write_support_zerocopy_impl<basic_zero_copy_buffer<error_string_ty>, ::boost::uint16_t>
 	{

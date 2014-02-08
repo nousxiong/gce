@@ -1,4 +1,13 @@
-﻿#include <gce/actor/detail/acceptor.hpp>
+﻿///
+/// Copyright (c) 2009-2014 Nous Xiong (348944179 at qq dot com)
+///
+/// Distributed under the Boost Software License, Version 1.0. (See accompanying
+/// file LICENSE_1_0.txt or copy at http://www.boost.org/LICENSE_1_0.txt)
+///
+/// See https://github.com/nousxiong/gce for latest version.
+///
+
+#include <gce/actor/detail/acceptor.hpp>
 #include <gce/actor/detail/socket.hpp>
 #include <gce/actor/impl/tcp/acceptor.hpp>
 #include <gce/actor/detail/cache_pool.hpp>
@@ -31,7 +40,7 @@ acceptor::~acceptor()
 ///----------------------------------------------------------------------------
 void acceptor::init(cache_pool* user, cache_pool* owner, net_option opt)
 {
-  BOOST_ASSERT_MSG(stat_ == ready, "socket 状态不正确，必须为ready");
+  BOOST_ASSERT_MSG(stat_ == ready, "socket status error");
   user_ = user;
   owner_ = owner;
   opt_ = opt;
@@ -111,7 +120,7 @@ void acceptor::run(std::string const& ep, yield_t yield)
 ///----------------------------------------------------------------------------
 basic_acceptor* acceptor::make_acceptor(std::string const& ep)
 {
-  /// 找出协议名
+  /// Find protocol name
   std::size_t pos = ep.find("://");
   if (pos == std::string::npos)
   {
@@ -121,7 +130,7 @@ basic_acceptor* acceptor::make_acceptor(std::string const& ep)
   std::string prot_name = ep.substr(0, pos);
   if (prot_name == "tcp")
   {
-    /// 解析地址
+    /// Parse address
     std::size_t begin = pos + 3;
     pos = ep.find(':', begin);
     if (pos == std::string::npos)
@@ -131,7 +140,7 @@ basic_acceptor* acceptor::make_acceptor(std::string const& ep)
 
     std::string address = ep.substr(begin, pos - begin);
 
-    /// 解析端口
+    /// Parse port
     begin = pos + 1;
     pos = ep.size();
 
