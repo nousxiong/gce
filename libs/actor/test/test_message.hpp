@@ -7,10 +7,9 @@
 /// See https://github.com/nousxiong/gce for latest version.
 ///
 
-#include <gce/actor/message.hpp>
+#include <gce/amsg/amsg.hpp>
 #include <boost/thread.hpp>
 #include <boost/assign.hpp>
-#include <gce/amsg/amsg.hpp>
 #include <sstream>
 #include <string>
 #include <vector>
@@ -37,17 +36,17 @@ namespace gce
 {
 static std::size_t const lv1_thr_num = 5;
 static std::size_t const lv2_thr_num = 5;
-static std::size_t const lv3_thr_num = 2;
 class message_ut
 {
 public:
   static void run()
   {
+    std::cout << "message_ut begin." << std::endl;
     for (std::size_t i=0; i<100; ++i)
     {
       test_common();
-      std::cout << "message_ut count: " << i << std::endl;
     }
+    std::cout << "message_ut end." << std::endl;
   }
 
   static void print(int size, message& msg)
@@ -66,7 +65,7 @@ public:
         << arg2.i_ << "\n";
     }
     ss << "end.\n";
-    std::cout << ss.str();
+    //std::cout << ss.str();
   }
 
   static void add_arg(message& msg)
@@ -124,7 +123,7 @@ public:
 
       thrs.join_all();
 
-      std::cout << "\n///----------------------------------------------------------\n" << std::endl;
+      //std::cout << "\n///----------------------------------------------------------\n" << std::endl;
     }
     catch (std::exception& ex)
     {

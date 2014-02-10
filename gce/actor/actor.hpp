@@ -55,19 +55,19 @@ public:
       return a_.recv(msg, mach);
     }
 
-    inline void send(aid_t sender, message const& m)
+    inline void send(aid_t recver, message const& m)
     {
-      a_.send(sender, m);
+      a_.send(recver, m);
     }
 
-    inline response_t request(aid_t sender, message const& m)
+    inline response_t request(aid_t recver, message const& m)
     {
-      return a_.request(sender, m);
+      return a_.request(recver, m);
     }
 
-    inline void reply(aid_t sender, message const& m)
+    inline void reply(aid_t recver, message const& m)
     {
-      a_.reply(sender, m);
+      a_.reply(recver, m);
     }
 
     inline aid_t recv(response_t res, message& msg, seconds_t tmo = infin)

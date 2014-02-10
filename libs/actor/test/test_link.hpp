@@ -7,24 +7,16 @@
 /// See https://github.com/nousxiong/gce for latest version.
 ///
 
-#include <gce/actor/actor.hpp>
-#include <gce/actor/thin.hpp>
-#include <gce/actor/message.hpp>
-#include <gce/actor/spawn.hpp>
-#include <boost/atomic.hpp>
-
 namespace gce
 {
-static boost::atomic_size_t link_count(0);
 class link_ut
 {
 public:
   static void run()
   {
-    for (std::size_t i=0; i<10; ++i)
-    {
-      test_common();
-    }
+    std::cout << "link_ut begin." << std::endl;
+    test_common();
+    std::cout << "link_ut end." << std::endl;
   }
 
   struct stack
@@ -39,31 +31,20 @@ public:
 
   static void my_child(thin_t self, stack& s)
   {
-    //std::cout << "gce::thin: hello world!\n";
     GCE_REENTER(self)
     {
-      ++link_count;
-
       GCE_YIELD
       {
         match mach;
         mach.match_list_.push_back(5);
         self.recv(s.sender, s.msg);
       }
-
-      //GCE_YIELD self.recv(s.sender, s.msg, match(seconds_t(3)));
     }
   }
 
   static void my_actor_child(self_t self)
   {
-    //std::cout << "gce::actor: hello world!\n";
-    ++link_count;
-    message msg(4);
-    match mach;
-    mach.match_list_.push_back(3);
-    aid_t aid = self.recv(msg, mach);
-    //self.recv(msg, match(seconds_t(3)));
+    aid_t aid = recv(self, 3);
   }
 
   static void my_thin(thin_t self, aid_t base_id, stack& s)
@@ -96,35 +77,34 @@ public:
   {
     std::size_t size = 1;
     std::vector<response_t> res_list(size);
-    message m(3);
     for (std::size_t i=0; i<size; ++i)
     {
-      aid_t aid = spawn<stackful>(self, boost::bind(&link_ut::my_actor_child, _1), linked);
-      //self.send(aid, m);
-      res_list[i] = self.request(aid, m);
+      aid_t aid =
+        spawn<stackful>(
+          self,
+          boost::bind(
+            &link_ut::my_actor_child, _1
+            ),
+          linked
+          );
+      res_list[i] = request(self, aid, 3);
     }
 
-    message msg;
-    match mach;
-    mach.match_list_.push_back(exit_normal);
-    self.recv(msg, mach);
+    recv(self, exit_normal);
   }
 
   static void my_thr(context& ctx, aid_t base_id)
   {
-    mixin& mix = spawn(ctx);
+    mixin_t mix = spawn(ctx);
     for (std::size_t i=0; i<2; ++i)
     {
       spawn<stackless>(mix, boost::bind(&link_ut::my_thin, _1, base_id, stack()), monitored);
       spawn<stackful>(mix, boost::bind(&link_ut::my_actor, _1, base_id), monitored);
     }
 
-    match mach;
-    mach.match_list_.push_back(exit_normal);
-    message m;
     for (std::size_t i=0; i<4; ++i)
     {
-      mix.recv(m, mach);
+      recv(mix, exit_normal);
     }
   }
 
@@ -166,23 +146,10 @@ public:
 
       thrs.join_all();
 
-      message m;
-      std::size_t i=0;
+      for (std::size_t i=0; i<1; ++i)
       {
-        match mach;
-        mach.match_list_.push_back(exit_normal);
-        for (i=0; i<1; ++i)
-//        for (i=0; i<msg_size; ++i)
-        {
-          //std::cout << "i: " << i << std::endl;
-          base.recv(m, mach);
-//          base.send(aid, m);
-        }
+        recv(base, exit_normal);
       }
-
-      std::cout << std::endl;
-      std::cout << "link_count: " << link_count << std::endl;
-      //std::cout << "i: " << i << std::endl;
     }
     catch (std::exception& ex)
     {

@@ -7,41 +7,30 @@
 /// See https://github.com/nousxiong/gce for latest version.
 ///
 
-#include <gce/actor/actor.hpp>
-#include <gce/actor/thin.hpp>
-#include <gce/actor/message.hpp>
-#include <gce/actor/spawn.hpp>
-#include <boost/atomic.hpp>
-
 namespace gce
 {
-static boost::atomic_size_t actor_count(0);
 class actor_ut
 {
 public:
   static void run()
   {
-    for (std::size_t i=0; i<2; ++i)
-    {
-      test_common();
-    }
+    std::cout << "actor_ut begin." << std::endl;
+    test_common();
+    std::cout << "actor_ut end." << std::endl;
   }
 
 private:
   static void my_child(self_t self)
   {
-    ++actor_count;
-    message msg;
-    aid_t aid = self.recv(msg);
-    self.recv(msg, match(seconds_t(3)));
-    self.reply(aid, msg);
+    aid_t aid = recv(self);
+    recv(self, seconds_t(3));
+    reply(self, aid);
   }
 
   static void my_actor(self_t self, aid_t base_id)
   {
     std::size_t size = 5;
     std::vector<response_t> res_list(size);
-    message m;
     for (std::size_t i=0; i<size; ++i)
     {
       aid_t aid =
@@ -49,26 +38,25 @@ private:
           self,
           boost::bind(&actor_ut::my_child, _1)
           );
-      res_list[i] = self.request(aid, m);
+      res_list[i] = request(self, aid);
     }
 
-    message msg;
     for (std::size_t i=0; i<size; ++i)
     {
       aid_t aid;
       do
       {
-        aid = self.recv(res_list[i], msg, seconds_t(1));
+        aid = recv(self, res_list[i], seconds_t(1));
       }
       while (!aid);
     }
 
-    self.send(base_id, message(2));
+    send(self, base_id);
   }
 
   static void my_thr(context& ctx, aid_t base_id)
   {
-    mixin& mix = spawn(ctx);
+    mixin_t mix = spawn(ctx);
     for (std::size_t i=0; i<2; ++i)
     {
       spawn<stackful>(mix, boost::bind(&actor_ut::my_actor, _1, base_id));
@@ -86,7 +74,7 @@ private:
       attrs.mixin_num_ = user_thr_num + 1;
       context ctx(attrs);
 
-      mixin& base = spawn(ctx);
+      mixin_t base = spawn(ctx);
       aid_t base_id = base.get_aid();
       for (std::size_t i=0; i<free_actor_num; ++i)
       {
@@ -112,14 +100,10 @@ private:
 
       thrs.join_all();
 
-      message m;
       for (std::size_t i=0; i<my_actor_size; ++i)
       {
-        base.recv(m);
+        recv(base);
       }
-
-      std::cout << std::endl;
-      std::cout << "actor_count: " << actor_count << std::endl;
     }
     catch (std::exception& ex)
     {

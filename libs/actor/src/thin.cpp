@@ -225,7 +225,6 @@ void thin::on_free()
   msg_ = 0;
   rcv_ = detail::recv_t();
   res_ = response_t();
-  //std::cout << "thin on_free\n";
 }
 ///----------------------------------------------------------------------------
 void thin::on_recv(detail::pack* pk)

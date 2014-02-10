@@ -29,7 +29,6 @@ slice::slice(mixin* sire)
 ///----------------------------------------------------------------------------
 slice::~slice()
 {
-  //std::cout << "~slice\n";
 }
 ///----------------------------------------------------------------------------
 aid_t slice::recv(message& msg, match_list_t const& match_list)
@@ -143,8 +142,6 @@ void slice::init(aid_t link_tgt)
 void slice::on_free()
 {
   base_type::on_free();
-
-  std::cout << "slice on_free\n";
 }
 ///----------------------------------------------------------------------------
 void slice::on_recv(detail::pack* pk)

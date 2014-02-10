@@ -76,7 +76,9 @@ class object_pool_ut
 public:
   static void run()
   {
+    std::cout << "object_pool_ut begin." << std::endl;
     test_freelist();
+    std::cout << "object_pool_ut end." << std::endl;
   }
 
 private:
@@ -90,7 +92,7 @@ private:
       detail::cache_aligned_deleter()
       );
 
-    boost::timer::auto_cpu_timer t;
+    //boost::timer::auto_cpu_timer t;
     run_test(op.get(), true);
   }
 

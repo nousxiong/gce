@@ -134,17 +134,12 @@ void socket::send(message const& m)
     {
       message const& m = conn_cache_.front();
       send_msg(m);
-      std::cout << "socket::send, " << this <<
-        ", " << m.get_type() << ", " << m.size() << std::endl;
       conn_cache_.pop();
     }
     send_msg(m);
-    std::cout << "socket::send, " << this <<
-      ", " << type << ", " << size << std::endl;
   }
   else
   {
-    std::cout << "socket::send push, " << this << ", " << type << ", " << size << std::endl;
     conn_cache_.push(m);
   }
 }
@@ -184,7 +179,6 @@ void socket::run_conn(std::string const& ep, yield_t yield)
       errcode_t ec = recv(msg, yield);
       if (ec)
       {
-        std::cout << "socket::run_conn: " << ec.message() << std::endl;
         --curr_reconn_;
         if (curr_reconn_ == 0)
         {
@@ -237,7 +231,6 @@ void socket::run(basic_socket* skt, yield_t yield)
       errcode_t ec = recv(msg, yield);
       if (ec)
       {
-        std::cout << "socket::run: " << ec.message() << std::endl;
         close();
         break;
       }
@@ -411,7 +404,6 @@ void socket::connect(yield_t yield)
     }
 
     conn_ = true;
-    std::cout << "socket::connect ok\n";
     start_heartbeat(boost::bind(&socket::reconn, this));
   }
 }
@@ -484,7 +476,6 @@ void socket::free_self(exit_code_t exc, yield_t yield)
   base_type::send_exit(exc, user_.get());
   base_type::update_aid();
   user_->free_socket(owner_.get(), this);
-  std::cout << "socket::free_self, skt: " << skt_ << std::endl;
 }
 ///----------------------------------------------------------------------------
 }

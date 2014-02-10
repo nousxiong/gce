@@ -53,7 +53,7 @@ inline aid_t bind(
 }
 
 /// connect
-inline aid_t connect(mixin& sire, std::string const& ep, net_option opt = net_option())
+inline aid_t connect(mixin_t sire, std::string const& ep, net_option opt = net_option())
 {
   aid_t ret = detail::connect(sire.select_cache_pool(), ep, opt, sire.get_aid());
   sire.add_link(detail::link_t(linked, ret));
@@ -75,7 +75,7 @@ inline aid_t connect(thin_t sire, std::string const& ep, net_option opt = net_op
 }
 
 /// bind
-inline void bind(mixin& sire, std::string const& ep, net_option opt = net_option())
+inline void bind(mixin_t sire, std::string const& ep, net_option opt = net_option())
 {
   aid_t aid = detail::bind(sire.select_cache_pool(), ep, opt, sire.get_aid());
   sire.add_link(detail::link_t(linked, aid));

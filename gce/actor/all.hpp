@@ -11,6 +11,8 @@
 #define GCE_ACTOR_ALL_HPP
 
 #include <gce/actor/context.hpp>
+#include <gce/actor/send.hpp>
+#include <gce/actor/recv.hpp>
 #include <gce/actor/actor.hpp>
 #include <gce/actor/mixin.hpp>
 #include <gce/actor/thin.hpp>

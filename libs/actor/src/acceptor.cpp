@@ -98,7 +98,6 @@ void acceptor::run(std::string const& ep, yield_t yield)
       basic_socket* prot = acpr_->accept(yield[ec]);
       if (ec)
       {
-        std::cout << "acceptor::run: " << ec.message() << std::endl;
         close();
         break;
       }

@@ -7,21 +7,17 @@
 /// See https://github.com/nousxiong/gce for latest version.
 ///
 
-#include <gce/actor/actor.hpp>
-#include <gce/actor/thin.hpp>
-#include <gce/actor/message.hpp>
-#include <gce/actor/spawn.hpp>
-#include <boost/atomic.hpp>
-
 namespace gce
 {
 class actor_pingpong_ut
 {
-static std::size_t const msg_size = 1000000;
+static std::size_t const msg_size = 100000;
 public:
   static void run()
   {
+    std::cout << "actor_pingpong_ut begin." << std::endl;
     test();
+    std::cout << "actor_pingpong_ut end." << std::endl;
   }
 
 private:
@@ -59,7 +55,7 @@ private:
       self.send(aid, m);
       self.recv(m);
     }
-    self.send(aid, message(2));
+    send(self, aid, 2);
   }
 
   static void test()
@@ -68,7 +64,7 @@ private:
     {
       context ctx;
 
-      mixin& base = spawn(ctx);
+      mixin_t base = spawn(ctx);
       aid_t base_id = base.get_aid();
       aid_t aid =
         spawn<stackful>(
@@ -79,9 +75,8 @@ private:
             )
           );
 
-      message m;
       boost::timer::auto_cpu_timer t;
-      base.recv(m);
+      recv(base);
     }
     catch (std::exception& ex)
     {

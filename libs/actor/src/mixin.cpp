@@ -62,7 +62,6 @@ mixin::mixin(context& ctx, std::size_t id, attributes const& attrs)
 mixin::~mixin()
 {
   delete_cache();
-  //std::cout << "~mixin\n";
 }
 ///----------------------------------------------------------------------------
 aid_t mixin::recv(message& msg, match const& mach)
@@ -81,7 +80,6 @@ aid_t mixin::recv(message& msg, match const& mach)
       basic_actor::move_pack(owner_.get());
       if (!mb_->pop(rcv, msg, mach.match_list_))
       {
-        //std::cout << "recv wait\n";
         bool has_msg = false;
         boost::chrono::milliseconds tmo_ms = tmo;
         typedef boost::chrono::system_clock clock_t;

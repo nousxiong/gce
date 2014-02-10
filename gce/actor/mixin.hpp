@@ -81,6 +81,8 @@ private:
   typedef detail::unique_ptr<detail::slice_pool_t> slice_pool_ptr;
   detail::cache_aligned_ptr<detail::slice_pool_t, slice_pool_ptr> slice_pool_;
 };
+
+typedef mixin& mixin_t;
 }
 
 #endif /// GCE_ACTOR_MIXIN_HPP

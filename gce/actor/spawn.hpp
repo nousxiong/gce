@@ -58,7 +58,7 @@ struct stackless {};
 namespace detail
 {
 /// Spawn a stackful actor using given mixin
-inline aid_t spawn(stackful, mixin& sire, actor_func_t const& f, link_type type)
+inline aid_t spawn(stackful, mixin_t sire, actor_func_t const& f, link_type type)
 {
   aid_t link_tgt;
   if (type != no_link)
@@ -71,7 +71,7 @@ inline aid_t spawn(stackful, mixin& sire, actor_func_t const& f, link_type type)
 }
 
 /// Spawn a stackless actor using given mixin
-inline aid_t spawn(stackless, mixin& sire, thin_func_t const& f, link_type type)
+inline aid_t spawn(stackless, mixin_t sire, thin_func_t const& f, link_type type)
 {
   aid_t link_tgt;
   if (type != no_link)
@@ -85,7 +85,7 @@ inline aid_t spawn(stackless, mixin& sire, thin_func_t const& f, link_type type)
 }
 
 template <typename Tag, typename F>
-inline aid_t spawn(mixin& sire, F f, link_type type = no_link)
+inline aid_t spawn(mixin_t sire, F f, link_type type = no_link)
 {
   return detail::spawn(Tag(), sire, f, type);
 }
@@ -161,13 +161,13 @@ inline aid_t spawn(thin_t sire, F f, link_type type = no_link)
 }
 
 /// Spawn a mixin
-inline mixin& spawn(context& ctx)
+inline mixin_t spawn(context& ctx)
 {
   return ctx.make_mixin();
 }
 
 /// Spawn a slice using given mixin
-inline slice_t spawn(mixin& sire, link_type type = no_link)
+inline slice_t spawn(mixin_t sire, link_type type = no_link)
 {
   aid_t link_tgt;
   if (type != no_link)
@@ -182,7 +182,7 @@ inline slice_t spawn(mixin& sire, link_type type = no_link)
 
 /// Make actor/thin function
 template <typename T, typename F, typename A>
-inline boost::function<void (T)> make_function(F f, A a)
+inline boost::function<void (T)> make_func(F f, A a)
 {
   return boost::function<void (T)>(f, a);
 }

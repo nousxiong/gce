@@ -66,7 +66,6 @@ public:
       buf_.reset(large_->data(), large_->size());
     }
     buf_.write(buf.write_size());
-    //buf_.read(buf.read_size());
   }
 
   message& operator=(message const& rhs)
@@ -94,7 +93,6 @@ public:
         buf_.reset(large_->data(), large_->size());
       }
       buf_.write(buf.write_size());
-      //buf_.read(buf.read_size());
     }
     return *this;
   }
@@ -121,7 +119,6 @@ public:
 
     if (size > buf_.remain_write_size())
     {
-      std::cout << "resize buffer\n";
       std::size_t old_buf_size = buf_.size();
       std::size_t new_buf_size = buf_.write_size() + size;
       if (new_buf_size - old_buf_size < GCE_MSG_MIN_GROW_SIZE)
@@ -140,7 +137,6 @@ public:
         /// copy-on-write
         if (large_->use_count() > 1)
         {
-          std::cout << "copy-on-write\n";
           detail::buffer_ptr tmp = large_;
           make_large(new_buf_size);
           std::memcpy(large_->data(), tmp->data(), old_buf_size);

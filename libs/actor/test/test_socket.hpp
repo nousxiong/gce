@@ -33,10 +33,9 @@ class socket_ut
 public:
   static void run()
   {
-    for (std::size_t i=0; i<300; ++i)
-    {
-      test_base();
-    }
+    std::cout << "socket_ut begin." << std::endl;
+    test_base();
+    std::cout << "socket_ut end." << std::endl;
   }
 
 public:
@@ -47,6 +46,7 @@ public:
       std::size_t client_num = 2;
       std::size_t echo_num = 10;
       context ctx;
+
       mixin& base = spawn(ctx);
       aid_t base_id = base.get_aid();
       spawn<stackful>(
@@ -57,12 +57,7 @@ public:
           )
         );
 
-      message msg;
-      match mat;
-      mat.match_list_.push_back(atom("bye"));
-      base.recv(msg, mat);
-
-      std::cout << "test_base end.\n";
+      recv(base, atom("bye"));
     }
     catch (std::exception& ex)
     {
@@ -77,7 +72,7 @@ public:
   {
     try
     {
-      bind(self, "tcp://127.0.0.1:10000");
+      bind(self, "tcp://127.0.0.1:14923");
       for (std::size_t i=0; i<client_num; ++i)
       {
         spawn<stackful>(
@@ -106,10 +101,7 @@ public:
         }
       }
 
-//      message msg;
-//      self.recv(msg);
-      self.send(base_id, message(atom("bye")));
-      std::cout << "echo_server end.\n";
+      send(self, base_id, atom("bye"));
     }
     catch (std::exception& ex)
     {
@@ -121,7 +113,7 @@ public:
   {
     try
     {
-      aid_t svr = connect(self, "tcp://127.0.0.1:10000");
+      aid_t svr = connect(self, "tcp://127.0.0.1:14923");
 
       echo_data d;
       d.hi_ = "hello";
@@ -154,8 +146,7 @@ public:
         BOOST_ASSERT(it == 2);
       }
 
-      self.send(svr, message(atom("end")));
-      std::cout << "echo_client end\n";
+      send(self, svr, atom("end"));
     }
     catch (std::exception& ex)
     {

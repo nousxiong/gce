@@ -111,14 +111,9 @@ void socket::wait_end(yield_t yield)
   waiting_end_ = true;
   if (sending_)
   {
-    std::cout << "tcp::socket::wait_end: " << this << std::endl;
     errcode_t ec;
     sync_.expires_from_now(infin);
     sync_.async_wait(yield[ec]);
-    if (ec)
-    {
-      std::cout << "tcp::socket::wait_end: " << this << ", " << ec.message() << std::endl;
-    }
   }
 }
 ///----------------------------------------------------------------------------
@@ -135,7 +130,6 @@ void socket::close_socket()
 ///----------------------------------------------------------------------------
 void socket::begin_send()
 {
-  std::cout << "socket::begin_send\n";
   sending_ = true;
   strand_t* snd = user_->get_strand();
   std::swap(sending_buffer_, standby_buffer_);
@@ -164,7 +158,6 @@ void socket::end_send(errcode_t const& errc)
   }
   else if (closed_)
   {
-    std::cout << "tcp::socket::end_send closed_" << this << std::endl;
     close();
   }
 
