@@ -169,6 +169,11 @@ void mixin::reply(aid_t recver, message const& m)
   }
   a->on_recv(pk);
 }
+///----------------------------------------------------------------------------
+void mixin::wait(seconds_t dur)
+{
+  boost::this_thread::sleep_for(dur);
+}
 ///------------------------------------------------------------------------------
 detail::cache_pool* mixin::select_cache_pool()
 {

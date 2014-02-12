@@ -39,7 +39,7 @@ public:
     GCE_REENTER(self)
     {
       GCE_YIELD self.recv(s.sender, s.msg);
-      GCE_YIELD self.recv(s.sender, s.msg, match(seconds_t(3)));
+      GCE_YIELD self.wait(seconds_t(3));
       self.reply(s.sender, s.msg);
     }
   }

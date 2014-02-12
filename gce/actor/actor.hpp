@@ -70,6 +70,11 @@ public:
       a_.reply(recver, m);
     }
 
+    inline void wait(seconds_t dur)
+    {
+      a_.wait(dur);
+    }
+
     inline aid_t recv(response_t res, message& msg, seconds_t tmo = infin)
     {
       return a_.recv(res, msg, tmo);
@@ -123,6 +128,7 @@ public:
   response_t request(aid_t, message const&);
   void reply(aid_t, message const&);
   aid_t recv(response_t, message&, seconds_t);
+  void wait(seconds_t);
 
   void link(aid_t);
   void monitor(aid_t);

@@ -56,6 +56,7 @@ public:
   void reply(aid_t, message const&);
   void recv(response_t, aid_t&, message&, seconds_t tmo = infin);
   aid_t recv(response_t, message&);
+  void wait(seconds_t);
 
   void link(aid_t);
   void monitor(aid_t);
@@ -82,6 +83,7 @@ private:
   void handle_recv_timeout(errcode_t const&, std::size_t);
   void end_recv();
   void end_response();
+  void end_wait();
 
 private:
   detail::cache_aligned_ptr<detail::cache_pool, detail::cache_pool*> user_;

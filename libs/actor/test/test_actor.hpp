@@ -23,7 +23,7 @@ private:
   static void my_child(self_t self)
   {
     aid_t aid = recv(self);
-    recv(self, seconds_t(3));
+    wait(self, seconds_t(3));
     reply(self, aid);
   }
 

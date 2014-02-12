@@ -2188,7 +2188,7 @@ namespace boost{ namespace amsg{	namespace detail
 
   namespace
   {
-    sfix_def sfix;
+    static sfix_def sfix = sfix_def();
   }
 
   template<typename ty>

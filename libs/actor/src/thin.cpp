@@ -177,6 +177,14 @@ aid_t thin::recv(response_t res, message& msg)
   return sender;
 }
 ///----------------------------------------------------------------------------
+void thin::wait(seconds_t dur)
+{
+  if (dur < infin)
+  {
+    start_recv_timer(dur);
+  }
+}
+///----------------------------------------------------------------------------
 void thin::link(aid_t target)
 {
   base_type::link(detail::link_t(linked, target), user_.get());
@@ -385,6 +393,10 @@ void thin::handle_recv_timeout(errcode_t const& ec, std::size_t tmr_sid)
     {
       end_response();
     }
+    else
+    {
+      end_wait();
+    }
   }
 }
 ///----------------------------------------------------------------------------
@@ -403,6 +415,11 @@ void thin::end_response()
   sender_ = 0;
   msg_= 0;
   responsing_ = false;
+  run();
+}
+///----------------------------------------------------------------------------
+void thin::end_wait()
+{
   run();
 }
 ///----------------------------------------------------------------------------

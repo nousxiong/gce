@@ -42,6 +42,7 @@ public:
   aid_t recv(message&, match const& mach = match());
   void send(aid_t, message const&);
   void reply(aid_t, message const&);
+  void wait(seconds_t);
 
   detail::cache_pool* select_cache_pool();
   std::size_t get_cache_match_size() const;

@@ -52,7 +52,7 @@ public:
   static void my_actor_child(self_t self)
   {
     aid_t aid = recv(self, 3);
-    recv(self, seconds_t(3));
+    wait(self, seconds_t(3));
     reply(self, aid);
   }
 

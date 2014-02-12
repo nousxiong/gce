@@ -177,6 +177,15 @@ aid_t actor::recv(response_t res, message& msg, seconds_t tmo)
   return sender;
 }
 ///----------------------------------------------------------------------------
+void actor::wait(seconds_t dur)
+{
+  if (dur < infin)
+  {
+    start_recv_timer(dur);
+  }
+  yield();
+}
+///----------------------------------------------------------------------------
 void actor::link(aid_t target)
 {
   base_type::link(detail::link_t(linked, target), user_.get());
