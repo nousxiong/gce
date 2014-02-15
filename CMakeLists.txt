@@ -28,6 +28,7 @@ endif ()
 
 if (WIN32)
   set (GCE_WINVER "0x0501" CACHE STRING "Windows version maro. Default is 0x0501 - winxp, user can reset")
+  add_definitions (-D_WIN32_WINNT=${GCE_WINVER})
 endif ()
 
 # Set glibc.

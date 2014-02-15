@@ -14,10 +14,16 @@
 #include <gce/actor/user.hpp>
 #include <gce/integer.hpp>
 #include <gce/actor/atom.hpp>
+
+/// Do not define WIN32_LEAN_AND_MEAN before include boost/atomic.hpp
+/// Or you will recv:
+///   "error C3861: '_InterlockedExchange': identifier not found"
+/// Under winxp(x86) vc9
+#include <boost/atomic.hpp> 
+
 #include <gce/amsg/amsg.hpp>
 #include <boost/system/error_code.hpp>
 #include <boost/chrono.hpp>
-#include <boost/atomic.hpp>
 #include <boost/asio/system_timer.hpp>
 #include <boost/asio/strand.hpp>
 #include <boost/asio/spawn.hpp>
