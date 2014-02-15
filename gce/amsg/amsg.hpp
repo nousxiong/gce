@@ -1852,7 +1852,7 @@ namespace boost{ namespace amsg{	namespace detail
 	};
 
 	template<typename store_ty,typename alloc_ty , int tag>
-	struct value_write_support<store_ty , ::std::basic_string<char, ::std::char_traits<wchar_t>, alloc_ty> , tag>
+	struct value_write_support<store_ty , ::std::basic_string<wchar_t, ::std::char_traits<wchar_t>, alloc_ty> , tag>
 	{
 		typedef ::std::basic_string<wchar_t, ::std::char_traits<wchar_t>, alloc_ty> value_type;
 		typedef value_string_write_support_impl<store_ty,value_type,tag> impl_type;
