@@ -65,13 +65,13 @@ typedef boost::asio::system_timer timer_t;
 typedef boost::asio::yield_context yield_t;
 
 typedef match_t exit_code_t;
+static exit_code_t const exit = atom("gce_actor_exit");
 static exit_code_t const exit_normal = atom("gce_ex_normal");
-static exit_code_t const exit_timeout = atom("gce_ex_timeout");
 static exit_code_t const exit_except = atom("gce_ex_except");
 static exit_code_t const exit_remote = atom("gce_ex_remote");
 static exit_code_t const exit_already = atom("gce_ex_already");
-static exit_code_t const exit_notify = atom("gce_ex_notify");
 static exit_code_t const exit_neterr = atom("gce_ex_neterr");
+static exit_code_t const exit_unknown = atom("gce_ex_unknown");
 
 class context;
 namespace detail

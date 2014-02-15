@@ -57,7 +57,6 @@ aid_t actor::recv(message& msg, match const& mach)
       detail::scope_flag<bool> scp(recving_);
       if (tmo < infin)
       {
-        /// 超时计时器
         start_recv_timer(tmo);
       }
       curr_match_ = mach;
@@ -153,7 +152,6 @@ aid_t actor::recv(response_t res, message& msg, seconds_t tmo)
       detail::scope_flag<bool> scp(responsing_);
       if (tmo < infin)
       {
-        /// 超时计时器
         start_recv_timer(tmo);
       }
       detail::actor_code ac = yield();
@@ -230,7 +228,7 @@ void actor::init(
   aid_t link_tgt
   )
 {
-  BOOST_ASSERT_MSG(stat_ == ready, "actor 状态不正确");
+  BOOST_ASSERT_MSG(stat_ == ready, "actor status error");
   user_ = user;
   owner_ = owner;
   *f_ = f;
@@ -255,6 +253,8 @@ void actor::on_free()
   recving_rcv_ = detail::recv_t();
   recving_res_ = response_t();
   recving_msg_ = message();
+  ec_ = exit_normal;
+  exit_msg_.clear();
 }
 ///----------------------------------------------------------------------------
 void actor::on_recv(detail::pack* pk)
@@ -296,16 +296,22 @@ void actor::run(yield_t yld)
   {
     try
     {
-      detail::scope scp(boost::bind(&actor::stopped, this));
       stat_ = on;
       (*f_)(self_);
+      stopped(exit_normal, "exit normal");
     }
     catch (boost::coroutines::detail::forced_unwind const&)
     {
+      stopped(exit_normal, "exit normal");
       throw;
+    }
+    catch (std::exception& ex)
+    {
+      stopped(exit_except, ex.what());
     }
     catch (...)
     {
+      stopped(exit_unknown, "unexpected exception");
     }
   }
   while (stat_ == ready);
@@ -340,14 +346,16 @@ detail::actor_code actor::yield()
 ///----------------------------------------------------------------------------
 void actor::free_self()
 {
-  base_type::send_exit(exit_normal, user_.get());
+  base_type::send_exit(ec_, exit_msg_, user_.get());
   base_type::update_aid();
   user_->free_actor(owner_.get(), this);
 }
 ///----------------------------------------------------------------------------
-void actor::stopped()
+void actor::stopped(exit_code_t ec, std::string const& exit_msg)
 {
   stat_ = off;
+  ec_ = ec;
+  exit_msg_ = exit_msg;
   yield();
 }
 ///----------------------------------------------------------------------------
@@ -439,7 +447,10 @@ void actor::handle_recv(detail::pack* pk)
     if (detail::link_t* link = boost::get<detail::link_t>(&pk->tag_))
     {
       /// send actor exit msg
-      send(link->get_aid(), message(exit_already));
+      message m(exit);
+      std::string exit_msg("already exited");
+      m << exit_already << exit_msg;
+      send(link->get_aid(), m);
     }
   }
 }

@@ -15,3 +15,16 @@
 # Build examples.
 set (EXAMPLES_LINK_LIBS gce_actor ${LINK_LIBS})
 
+if (GCE_STATIC)
+  set (GCE_LINK_PROP "${GCE_LINK_PROP} -static -static-libgcc -static-libstdc++")
+endif ()
+
+# Gce work with asio.
+add_subdirectory (asio)
+
+# Gce cluster.
+add_subdirectory (cluster)
+
+# Two actors pingpong.
+add_subdirectory (pingpong)
+

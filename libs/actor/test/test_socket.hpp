@@ -129,9 +129,12 @@ public:
         message msg;
         self.recv(msg);
 
-        if (msg.get_type() == exit_neterr)
+        if (msg.get_type() == exit)
         {
-          std::cout << "echo_client exit_neterr\n";
+          exit_code_t exc;
+          std::string exit_msg;
+          msg >> exc >> exit_msg;
+          std::cout << exit_msg << std::endl;
           return;
         }
 

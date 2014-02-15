@@ -78,7 +78,7 @@ private:
   void run();
   void handle_recv(detail::pack*);
   void begin_run();
-  void free_self(exit_code_t);
+  void free_self(exit_code_t, std::string const&);
   void start_recv_timer(seconds_t);
   void handle_recv_timeout(errcode_t const&, std::size_t);
   void end_recv();

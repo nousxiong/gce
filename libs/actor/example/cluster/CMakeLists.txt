@@ -18,18 +18,14 @@ if (WIN32)
   endif ()
 endif ()
 
-# Build tests.
-set (TESTS_LINK_LIBS gce_actor ${LINK_LIBS})
-file (GLOB_RECURSE GCE_ACTOR_UNIT_TEST_FILES "${CMAKE_CURRENT_SOURCE_DIR}/*.cpp")
-file (GLOB_RECURSE GCE_ACTOR_UNIT_TEST_FILES ${GCE_ACTOR_UNIT_TEST_FILES} "${CMAKE_CURRENT_SOURCE_DIR}/*.hpp")
-add_executable (gce_actor_ut ${GCE_ACTOR_UNIT_TEST_FILES})
+file (GLOB_RECURSE GCE_ACTOR_EXAMPLE_FILES "${CMAKE_CURRENT_SOURCE_DIR}/*.cpp")
+file (GLOB_RECURSE GCE_ACTOR_EXAMPLE_FILES ${GCE_ACTOR_EXAMPLE_FILES} "${CMAKE_CURRENT_SOURCE_DIR}/*.hpp")
+add_executable (gce_actor_cluster ${GCE_ACTOR_EXAMPLE_FILES})
 
-if (GCE_STATIC)
-  set (GCE_LINK_PROP "${GCE_LINK_PROP} -static -static-libgcc -static-libstdc++")
-endif ()
 if (GCE_LINK_PROP)
-  set_target_properties (gce_actor_ut PROPERTIES LINK_FLAGS "${GCE_LINK_PROP}")
+  set_target_properties (gce_actor_cluster PROPERTIES LINK_FLAGS "${GCE_LINK_PROP}")
 endif ()
 
-target_link_libraries (gce_actor_ut ${TESTS_LINK_LIBS})
-install (TARGETS gce_actor_ut RUNTIME DESTINATION bin)
+target_link_libraries (gce_actor_cluster ${EXAMPLES_LINK_LIBS})
+install (TARGETS gce_actor_cluster RUNTIME DESTINATION bin)
+

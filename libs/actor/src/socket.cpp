@@ -46,7 +46,7 @@ socket::~socket()
 ///----------------------------------------------------------------------------
 void socket::init(cache_pool* user, cache_pool* owner, net_option opt)
 {
-  BOOST_ASSERT_MSG(stat_ == ready, "socket 状态不正确，必须为ready");
+  BOOST_ASSERT_MSG(stat_ == ready, "socket status error");
   user_ = user;
   owner_ = owner;
   opt_ = opt;
@@ -71,11 +71,9 @@ void socket::connect(std::string const& ep, aid_t master)
     );
 }
 ///----------------------------------------------------------------------------
-void socket::start(basic_socket* skt, aid_t acpr_aid, aid_t master)
+void socket::start(basic_socket* skt, aid_t master)
 {
   master_ = master;
-  acpr_aid_ = acpr_aid;
-  base_type::add_link(acpr_aid_);
   conn_ = true;
 
   boost::asio::spawn(
@@ -96,7 +94,6 @@ void socket::on_free()
   stat_ = ready;
   skt_ = 0;
   master_ = aid_t();
-  acpr_aid_ = aid_t();
   recv_cache_.clear();
   conn_ = false;
   curr_reconn_ = 0;
@@ -167,6 +164,7 @@ void socket::send_msg_hb()
 void socket::run_conn(std::string const& ep, yield_t yield)
 {
   exit_code_t exc = exit_normal;
+  std::string exit_msg("exit normal");
   try
   {
     stat_ = on;
@@ -183,6 +181,7 @@ void socket::run_conn(std::string const& ep, yield_t yield)
         if (curr_reconn_ == 0)
         {
           exc = exit_neterr;
+          exit_msg = "network error";
           close();
           break;
         }
@@ -191,8 +190,9 @@ void socket::run_conn(std::string const& ep, yield_t yield)
       else
       {
         match_t type = msg.get_type();
-        if (type == exit_remote)
+        if (type == exit)
         {
+          msg >> exc >> exit_msg;
           close();
         }
         else
@@ -208,16 +208,23 @@ void socket::run_conn(std::string const& ep, yield_t yield)
   }
   catch (std::exception& ex)
   {
-    std::cerr << ex.what() << std::endl;
     exc = exit_except;
+    exit_msg = ex.what();
     close();
   }
-  free_self(exc, yield);
+  catch (...)
+  {
+    exc = exit_unknown;
+    exit_msg = "unexpected exception";
+    close();
+  }
+  free_self(exc, exit_msg, yield);
 }
 ///----------------------------------------------------------------------------
 void socket::run(basic_socket* skt, yield_t yield)
 {
   exit_code_t exc = exit_normal;
+  std::string exit_msg("exit normal");
   try
   {
     stat_ = on;
@@ -232,10 +239,20 @@ void socket::run(basic_socket* skt, yield_t yield)
       if (ec)
       {
         close();
+        exc = exit_neterr;
+        exit_msg = "network error";
         break;
       }
 
-      if (msg.get_type() != detail::msg_hb)
+      match_t type = msg.get_type();
+      if (type == exit)
+      {
+        msg >> exc >> exit_msg;
+        close();
+        break;
+      }
+
+      if (type != detail::msg_hb)
       {
         send(master_, msg);
       }
@@ -244,16 +261,22 @@ void socket::run(basic_socket* skt, yield_t yield)
   }
   catch (std::exception& ex)
   {
-    std::cerr << ex.what() << std::endl;
     exc = exit_except;
+    exit_msg = ex.what();
     close();
   }
-  free_self(exc, yield);
+  catch (...)
+  {
+    exc = exit_unknown;
+    exit_msg = "unexpected exception";
+    close();
+  }
+  free_self(exc, exit_msg, yield);
 }
 ///----------------------------------------------------------------------------
 basic_socket* socket::make_socket(std::string const& ep)
 {
-  /// 找出协议名
+  /// find protocol name
   std::size_t pos = ep.find("://");
   if (pos == std::string::npos)
   {
@@ -263,7 +286,7 @@ basic_socket* socket::make_socket(std::string const& ep)
   std::string prot_name = ep.substr(0, pos);
   if (prot_name == "tcp")
   {
-    /// 解析地址
+    /// parse address
     std::size_t begin = pos + 3;
     pos = ep.find(':', begin);
     if (pos == std::string::npos)
@@ -273,7 +296,7 @@ basic_socket* socket::make_socket(std::string const& ep)
 
     std::string address = ep.substr(begin, pos - begin);
 
-    /// 解析端口
+    /// parse port
     begin = pos + 1;
     pos = ep.size();
 
@@ -306,15 +329,12 @@ void socket::handle_recv(pack* pk)
     else if (exit_t* ex = boost::get<exit_t>(&pk->tag_))
     {
       base_type::remove_link(ex->get_aid());
-      if (
-        ex->get_aid() == acpr_aid_ ||
-        ex->get_aid() == master_
-        )
+      if (ex->get_aid() == master_)
       {
-        if (acpr_aid_)
-        {
-          send(message(exit_remote));
-        }
+        message m(exit);
+        std::string exit_msg("remote exited");
+        m << exit_remote << exit_msg;
+        send(m);
         close();
       }
     }
@@ -324,7 +344,10 @@ void socket::handle_recv(pack* pk)
     if (link_t* link = boost::get<link_t>(&pk->tag_))
     {
       /// send actor exit msg
-      send(link->get_aid(), message(exit_already));
+      message m(exit);
+      std::string exit_msg("already exited");
+      m << exit_already << exit_msg;
+      send(link->get_aid(), m);
     }
   }
 }
@@ -355,7 +378,7 @@ bool socket::parse_message(message& msg)
   recv_cache_.read(header_size + hdr.size_);
   msg = message(hdr.type_, data + header_size, hdr.size_);
 
-  /// 根据cache大小重置read_cache
+  /// reset read_cache
   if (recv_cache_.read_size() > GCE_SOCKET_RECV_MAX_SIZE)
   {
     BOOST_ASSERT(recv_cache_.write_size() >= recv_cache_.read_size());
@@ -457,7 +480,7 @@ void socket::start_heartbeat(F f)
   hb_.start();
 }
 ///----------------------------------------------------------------------------
-void socket::free_self(exit_code_t exc, yield_t yield)
+void socket::free_self(exit_code_t exc, std::string const& exit_msg, yield_t yield)
 {
   try
   {
@@ -473,7 +496,7 @@ void socket::free_self(exit_code_t exc, yield_t yield)
   GCE_CACHE_ALIGNED_DELETE(basic_socket, skt_);
 
   hb_.clear();
-  base_type::send_exit(exc, user_.get());
+  base_type::send_exit(exc, exit_msg, user_.get());
   base_type::update_aid();
   user_->free_socket(owner_.get(), this);
 }

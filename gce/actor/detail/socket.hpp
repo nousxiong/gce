@@ -55,7 +55,7 @@ public:
   void connect(std::string const&, aid_t);
 
 public:
-  void start(basic_socket*, aid_t, aid_t);
+  void start(basic_socket*, aid_t);
   void on_free();
   void on_recv(pack*);
 
@@ -80,7 +80,7 @@ private:
   void reconn();
   template <typename F>
   void start_heartbeat(F);
-  void free_self(exit_code_t, yield_t);
+  void free_self(exit_code_t, std::string const&, yield_t);
 
 private:
   byte_t pad0_[GCE_CACHE_LINE_SIZE]; /// Ensure start from a new cache line.
@@ -100,7 +100,6 @@ private:
   std::size_t tmr_sid_;
 
   aid_t master_;
-  aid_t acpr_aid_;
 
   byte_t recv_buffer_[GCE_SOCKET_RECV_CACHE_SIZE];
   detail::buffer_ref recv_cache_;

@@ -86,6 +86,7 @@ void acceptor::on_recv(pack* pk)
 void acceptor::run(std::string const& ep, yield_t yield)
 {
   exit_code_t exc = exit_normal;
+  std::string exit_msg("exit normal");
   try
   {
     stat_ = on;
@@ -104,17 +105,22 @@ void acceptor::run(std::string const& ep, yield_t yield)
 
       socket* s = user_->get_socket();
       s->init(ctx_.select_cache_pool(), user_.get(), opt_);
-      base_type::add_link(s->get_aid());
-      s->start(prot, base_type::get_aid(), master_);
+      s->start(prot, master_);
     }
   }
   catch (std::exception& ex)
   {
-    std::cerr << ex.what() << std::endl;
     exc = exit_except;
+    exit_msg = ex.what();
     close();
   }
-  free_self(exc, yield);
+  catch (...)
+  {
+    exc = exit_unknown;
+    exit_msg = "unexpected exception";
+    close();
+  }
+  free_self(exc, exit_msg, yield);
 }
 ///----------------------------------------------------------------------------
 basic_acceptor* acceptor::make_acceptor(std::string const& ep)
@@ -178,11 +184,11 @@ void acceptor::close()
   acpr_->close();
 }
 ///----------------------------------------------------------------------------
-void acceptor::free_self(exit_code_t exc, yield_t yield)
+void acceptor::free_self(exit_code_t exc, std::string const& exit_msg, yield_t yield)
 {
   GCE_CACHE_ALIGNED_DELETE(basic_acceptor, acpr_);
 
-  base_type::send_exit(exc, user_.get());
+  base_type::send_exit(exc, exit_msg, user_.get());
   base_type::update_aid();
   user_->free_acceptor(owner_.get(), this);
 }

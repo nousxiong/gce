@@ -67,7 +67,7 @@ public:
       GCE_YIELD
       {
         match mach;
-        mach.match_list_.push_back(exit_normal);
+        mach.match_list_.push_back(exit);
         self.recv(s.sender, s.msg, mach);
       }
     }
@@ -90,7 +90,7 @@ public:
       res_list[i] = request(self, aid, 3);
     }
 
-    recv(self, exit_normal);
+    recv(self, exit);
   }
 
   static void my_thr(context& ctx, aid_t base_id)
@@ -104,7 +104,7 @@ public:
 
     for (std::size_t i=0; i<4; ++i)
     {
-      recv(mix, exit_normal);
+      recv(mix, exit);
     }
   }
 
@@ -148,7 +148,7 @@ public:
 
       for (std::size_t i=0; i<1; ++i)
       {
-        recv(base, exit_normal);
+        recv(base, exit);
       }
     }
     catch (std::exception& ex)

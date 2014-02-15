@@ -152,7 +152,7 @@ private:
   void resume(detail::actor_code ac = detail::actor_normal);
   detail::actor_code yield();
   void free_self();
-  void stopped();
+  void stopped(exit_code_t, std::string const&);
   void start_recv_timer(seconds_t);
   void handle_recv_timeout(errcode_t const&, std::size_t);
   void handle_recv(detail::pack*);
@@ -187,6 +187,8 @@ private:
   std::size_t tmr_sid_;
   yield_t* yld_;
   yield_cb_t yld_cb_;
+  exit_code_t ec_;
+  std::string exit_msg_;
 };
 
 typedef actor::self& self_t;

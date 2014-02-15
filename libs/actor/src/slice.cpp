@@ -151,7 +151,7 @@ void slice::on_recv(detail::pack* pk)
 ///----------------------------------------------------------------------------
 void slice::free()
 {
-  base_type::send_exit(exit_normal, owner_.get());
+  base_type::send_exit(exit_normal, "exit normal", owner_.get());
   base_type::update_aid();
   sire_->free_slice(this);
 }

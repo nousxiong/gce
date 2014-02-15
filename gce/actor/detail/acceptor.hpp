@@ -64,7 +64,7 @@ private:
 
 private:
   void close();
-  void free_self(exit_code_t, yield_t);
+  void free_self(exit_code_t, std::string const&, yield_t);
 
 private:
   byte_t pad0_[GCE_CACHE_LINE_SIZE]; /// Ensure start from a new cache line.

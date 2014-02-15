@@ -67,7 +67,7 @@ protected:
   void move_pack(detail::cache_pool*);
   void add_link(aid_t);
   void link(detail::link_t, detail::cache_pool* user = 0);
-  void send_exit(exit_code_t, detail::cache_pool*);
+  void send_exit(exit_code_t, std::string const&, detail::cache_pool*);
   void remove_link(aid_t);
 
 protected:

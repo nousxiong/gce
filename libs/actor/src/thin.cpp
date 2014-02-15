@@ -45,7 +45,6 @@ void thin::recv(aid_t& sender, message& msg, match const& mach)
     curr_mach_ = mach;
     if (tmo < infin)
     {
-      /// 超时计时器
       start_recv_timer(tmo);
     }
     sender_ = &sender;
@@ -150,7 +149,6 @@ void thin::recv(response_t res, aid_t& sender, message& msg, seconds_t tmo)
   {
     if (tmo < infin)
     {
-      /// 超时计时器
       start_recv_timer(tmo);
     }
     sender_ = &sender;
@@ -252,13 +250,16 @@ void thin::run()
     (*f_)(*this);
     if (coro_.is_complete())
     {
-      free_self(exit_normal);
+      free_self(exit_normal, "exit normal");
     }
   }
   catch (std::exception& ex)
   {
-    free_self(exit_except);
-    std::cerr << "thin except: " << ex.what() << std::endl;
+    free_self(exit_except, ex.what());
+  }
+  catch (...)
+  {
+    free_self(exit_unknown, "unexpected exception");
   }
 }
 ///----------------------------------------------------------------------------
@@ -350,7 +351,10 @@ void thin::handle_recv(detail::pack* pk)
     if (detail::link_t* link = boost::get<detail::link_t>(&pk->tag_))
     {
       /// send actor exit msg
-      send(link->get_aid(), message(exit_already));
+      message m(exit);
+      std::string exit_msg("already exited");
+      m << exit_already << exit_msg;
+      send(link->get_aid(), m);
     }
   }
 }
@@ -360,9 +364,9 @@ void thin::begin_run()
   run();
 }
 ///----------------------------------------------------------------------------
-void thin::free_self(exit_code_t ec)
+void thin::free_self(exit_code_t ec, std::string const& exit_msg)
 {
-  base_type::send_exit(ec, user_.get());
+  base_type::send_exit(ec, exit_msg, user_.get());
   base_type::update_aid();
   user_->free_thin(owner_.get(), this);
 }

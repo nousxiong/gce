@@ -99,7 +99,9 @@ void basic_actor::move_pack(detail::cache_pool* user)
           detail::pack* pk = alloc_pack(user);
           pk->tag_ = get_aid();
           pk->recver_ = link->get_aid();
-          pk->msg_ = message(exit_already);
+          pk->msg_ = message(exit);
+          std::string exit_msg("already exited");
+          pk->msg_ << exit_already << exit_msg;
 
           basic_actor* a = pk->recver_.get_actor_ptr();
           a->on_recv(pk);
@@ -138,14 +140,15 @@ void basic_actor::link(detail::link_t l, detail::cache_pool* user)
   }
 }
 ///----------------------------------------------------------------------------
-void basic_actor::send_exit(exit_code_t ec, detail::cache_pool* user)
+void basic_actor::send_exit(exit_code_t ec, std::string const& exit_msg, detail::cache_pool* user)
 {
   BOOST_FOREACH(aid_t aid, link_list_)
   {
     detail::pack* pk = alloc_pack(user);
     pk->tag_ = detail::exit_t(ec, get_aid());
     pk->recver_ = aid;
-    pk->msg_ = message(ec);
+    pk->msg_ = message(exit);
+    pk->msg_ << ec << exit_msg;
 
     basic_actor* a = aid.get_actor_ptr();
     a->on_recv(pk);
