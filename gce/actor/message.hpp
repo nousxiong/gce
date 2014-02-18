@@ -117,37 +117,7 @@ public:
       throw std::runtime_error(bs.message());
     }
 
-    if (size > buf_.remain_write_size())
-    {
-      std::size_t old_buf_size = buf_.size();
-      std::size_t new_buf_size = buf_.write_size() + size;
-      if (new_buf_size - old_buf_size < GCE_MSG_MIN_GROW_SIZE)
-      {
-        new_buf_size = old_buf_size + GCE_MSG_MIN_GROW_SIZE;
-      }
-
-      if (is_small())
-      {
-        make_large(new_buf_size);
-        std::memcpy(large_->data(), buf_.data(), buf_.write_size());
-      }
-      else
-      {
-        BOOST_ASSERT(large_);
-        /// copy-on-write
-        if (large_->use_count() > 1)
-        {
-          detail::buffer_ptr tmp = large_;
-          make_large(new_buf_size);
-          std::memcpy(large_->data(), tmp->data(), old_buf_size);
-        }
-        else
-        {
-          large_->resize(new_buf_size);
-        }
-      }
-      buf_.reset(large_->data(), new_buf_size);
-    }
+    reserve(size);
 
     boost::amsg::zero_copy_buffer writer(
       buf_.get_write_data(), buf_.remain_write_size()
@@ -177,12 +147,115 @@ public:
     return *this;
   }
 
+  message& operator<<(message const m)
+  {
+    boost::uint32_t msg_size = m.size();
+    match_t msg_type = m.get_type();
+    boost::amsg::error_code_t ec = boost::amsg::success;
+    std::size_t size = boost::amsg::size_of(msg_size, ec);
+    size += boost::amsg::size_of(msg_type, ec);
+    size += msg_size;
+    if (ec != boost::amsg::success)
+    {
+      boost::amsg::base_store bs;
+      bs.set_error_code(ec);
+      throw std::runtime_error(bs.message());
+    }
+
+    reserve(size);
+
+    boost::amsg::zero_copy_buffer writer(
+      buf_.get_write_data(), buf_.remain_write_size()
+      );
+
+    boost::amsg::write(writer, msg_size);
+    BOOST_ASSERT(!writer.bad());
+    boost::amsg::write(writer, msg_type);
+    BOOST_ASSERT(!writer.bad());
+
+    buf_.write(writer.write_length());
+    byte_t* write_data = buf_.get_write_data();
+    buf_.write(msg_size);
+    std::memcpy(write_data, m.data(), msg_size);
+    return *this;
+  }
+
+  message& operator>>(message& msg)
+  {
+    boost::uint32_t msg_size;
+    match_t msg_type;
+    boost::amsg::zero_copy_buffer reader(
+      buf_.get_read_data(), buf_.remain_read_size()
+      );
+
+    boost::amsg::read(reader, msg_size);
+    if (reader.bad())
+    {
+      throw std::runtime_error("read data overflow");
+    }
+
+    boost::amsg::read(reader, msg_type);
+    if (reader.bad())
+    {
+      throw std::runtime_error("read data overflow");
+    }
+
+    buf_.read(reader.read_length());
+    byte_t* read_data = buf_.get_read_data();
+    buf_.read(msg_size);
+    msg = message(msg_type, read_data, msg_size);
+    return *this;
+  }
+
   inline bool is_small() const
   {
     return buf_.data() == small_;
   }
 
 private:
+  inline void reserve(std::size_t size)
+  {
+    std::size_t old_buf_capacity = buf_.size();
+    std::size_t old_buf_size = buf_.write_size();
+    std::size_t new_buf_size = old_buf_size + size;
+    std::size_t new_buf_capacity = old_buf_capacity;
+    if (new_buf_size > old_buf_capacity)
+    {
+      std::size_t diff = new_buf_size - old_buf_capacity;
+      if (diff < GCE_MSG_MIN_GROW_SIZE)
+      {
+        diff = GCE_MSG_MIN_GROW_SIZE;
+      }
+      new_buf_capacity = old_buf_capacity + diff;
+    }
+
+    if (is_small())
+    {
+      if (new_buf_capacity > old_buf_capacity)
+      {
+        make_large(new_buf_capacity);
+        std::memcpy(large_->data(), buf_.data(), buf_.write_size());
+        buf_.reset(large_->data(), new_buf_capacity);
+      }
+    }
+    else
+    {
+      BOOST_ASSERT(large_);
+      /// copy-on-write
+      if (large_->use_count() > 1)
+      {
+        detail::buffer_ptr tmp = large_;
+        make_large(new_buf_capacity);
+        std::memcpy(large_->data(), tmp->data(), buf_.write_size());
+      }
+      else
+      {
+        large_->resize(new_buf_capacity);
+      }
+      buf_.reset(large_->data(), new_buf_capacity);
+    }
+  }
+
   inline void make_large(std::size_t size)
   {
     large_.reset(GCE_CACHE_ALIGNED_NEW(detail::buffer)(size));

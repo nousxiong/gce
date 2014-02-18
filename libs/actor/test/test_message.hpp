@@ -49,20 +49,26 @@ public:
     std::cout << "message_ut end." << std::endl;
   }
 
-  static void print(int size, message& msg)
+  static void print(std::string const& tag, int size, message& msg, int i = 0)
   {
     arg1_t arg1;
     arg2_t arg2;
 
     std::stringstream ss;
-    ss << "begin: \n";
-    for (int i=0; i<size; ++i)
+    ss << "begin [" << tag << "," << i << "]\n";
     {
       msg >> arg1 >> arg2;
       ss << "arg1: " << arg1.hi_ << ", " << arg1.i_ << ", arg2: "
         << arg2.v_[0] << ", " << arg2.v_[1] << ", " << arg2.v_[2]
         << ", " << arg2.v_[3] << ", " << arg2.v_[4] << ", "
         << arg2.i_ << "\n";
+    }
+
+    for (i=1; i<size; ++i)
+    {
+      message m;
+      msg >> m;
+      print(tag, 0, m, i);
     }
     ss << "end.\n";
     //std::cout << ss.str();
@@ -81,12 +87,12 @@ public:
 
   static void lv2_thr(int size, message& msg)
   {
-    print(size, msg);
+    print("lv2_thr", size, msg);
   }
 
   static void lv1_thr(message& msg)
   {
-    print(2, msg);
+    print("lv1_thr", 2, msg);
 
     boost::thread_group thrs;
     for (std::size_t i=0; i<lv2_thr_num; ++i)
@@ -94,7 +100,7 @@ public:
       int size = 2;
       if (i == 1)
       {
-        add_arg(msg);
+        msg << msg;
         size = 3;
       }
       else if (i > 1)
@@ -113,7 +119,7 @@ public:
     {
       message m(1);
       add_arg(m);
-      add_arg(m);
+      m << m;
 
       boost::thread_group thrs;
       for (std::size_t i=0; i<lv1_thr_num; ++i)

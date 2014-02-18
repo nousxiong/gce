@@ -20,6 +20,8 @@
 
 namespace gce
 {
+typedef std::size_t thrid_t;
+typedef boost::function<void (thrid_t)> thread_callback_t;
 struct attributes
 {
   attributes()
@@ -64,6 +66,8 @@ struct attributes
   std::size_t acceptor_pool_free_size_;
   std::size_t max_cache_match_size_;
   boost::chrono::milliseconds gc_period_;
+  std::vector<thread_callback_t> thread_begin_cb_list_;
+  std::vector<thread_callback_t> thread_end_cb_list_;
 };
 
 namespace detail
@@ -85,7 +89,11 @@ public:
   mixin& make_mixin();
 
 private:
-  void run();
+  void run(
+    thrid_t,
+    std::vector<thread_callback_t> const&,
+    std::vector<thread_callback_t> const&
+    );
   void stop();
   void start_gc_timer(detail::cache_pool*);
   void gc(detail::cache_pool*, errcode_t const&);
@@ -93,9 +101,9 @@ private:
 private:
   byte_t pad0_[GCE_CACHE_LINE_SIZE]; /// Ensure start from a new cache line.
 
-  BOOST_STATIC_ASSERT((GCE_CACHE_LINE_SIZE * 3 >= sizeof(attributes)));
+  BOOST_STATIC_ASSERT((GCE_CACHE_LINE_SIZE * 4 >= sizeof(attributes)));
   attributes attrs_;
-  byte_t pad1_[GCE_CACHE_LINE_SIZE * 3 - sizeof(attributes)];
+  byte_t pad1_[GCE_CACHE_LINE_SIZE * 4 - sizeof(attributes)];
 
   std::size_t curr_cache_pool_; /// 使用轮询方式select cache pool
   byte_t pad2_[GCE_CACHE_LINE_SIZE - sizeof(std::size_t)];

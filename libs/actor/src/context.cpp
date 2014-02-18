@@ -48,7 +48,13 @@ context::context(attributes attrs)
 
     for (std::size_t i=0; i<attrs_.thread_num_; ++i)
     {
-      thread_group_->create_thread(boost::bind(&context::run, this));
+      thread_group_->create_thread(
+        boost::bind(
+          &context::run, this, i,
+          attrs_.thread_begin_cb_list_,
+          attrs_.thread_end_cb_list_
+          )
+        );
     }
 
     for (std::size_t i=0; i<attrs_.mixin_num_; ++i, index+=attrs_.per_mixin_cache_)
@@ -92,8 +98,17 @@ mixin& context::make_mixin()
   return *(*mixin_list_)[i];
 }
 ///------------------------------------------------------------------------------
-void context::run()
+void context::run(
+  thrid_t id,
+  std::vector<thread_callback_t> const& begin_cb_list,
+  std::vector<thread_callback_t> const& end_cb_list
+  )
 {
+  BOOST_FOREACH(thread_callback_t const& cb, begin_cb_list)
+  {
+    cb(id);
+  }
+
   while (true)
   {
     try
@@ -106,6 +121,11 @@ void context::run()
       std::cerr << "Unexpected exception: " <<
         boost::current_exception_diagnostic_information();
     }
+  }
+
+  BOOST_FOREACH(thread_callback_t const& cb, end_cb_list)
+  {
+    cb(id);
   }
 }
 ///------------------------------------------------------------------------------
