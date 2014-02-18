@@ -31,6 +31,8 @@ if (WIN32)
   add_definitions (-D_WIN32_WINNT=${GCE_WINVER})
 endif ()
 
+add_definitions (-DBOOST_ASIO_DISABLE_STD_CHRONO)
+
 # Set glibc.
 if (GCE_STATIC)
   set (GLIBC_INCLUDEDIR "" CACHE PATH "Path to glibc include directory")
@@ -59,7 +61,7 @@ if (BOOST_ROOT)
   set (Boost_NO_SYSTEM_PATHS ON)
 endif ()
 
-find_package (Boost 1.54.0 REQUIRED atomic coroutine context system regex date_time timer chrono thread)
+find_package (Boost 1.55.0 REQUIRED atomic coroutine context system regex date_time timer chrono thread)
 
 mark_as_advanced (Boost_DIR)
 if (WIN32)
