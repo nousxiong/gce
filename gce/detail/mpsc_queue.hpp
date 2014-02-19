@@ -95,7 +95,7 @@ public:
   pointer pop_all_reverse()
   {
     BOOST_STATIC_ASSERT((boost::is_base_of<node, value_type>::value));
-    return head_.exchange(0, boost::memory_order_consume);
+    return head_.exchange(0, boost::memory_order_seq_cst);
   }
 
 private:
