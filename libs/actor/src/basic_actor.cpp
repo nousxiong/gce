@@ -91,20 +91,18 @@ void basic_actor::move_pack(detail::cache_pool* user)
           mb_->push(*res, pk->msg_);
         }
       }
-      else
+      else if (!pk->is_err_ret_)
       {
         if (detail::link_t* link = boost::get<detail::link_t>(&pk->tag_))
         {
           /// send actor exit msg
-          detail::pack* pk = alloc_pack(user);
-          pk->tag_ = get_aid();
-          pk->recver_ = link->get_aid();
-          pk->msg_ = message(exit);
-          std::string exit_msg("already exited");
-          pk->msg_ << exit_already << exit_msg;
-
-          basic_actor* a = pk->recver_.get_actor_ptr();
-          a->on_recv(pk);
+          send_already_exited(link->get_aid(), pk->recver_, user);
+        }
+        else if (detail::request_t* req = boost::get<detail::request_t>(&pk->tag_))
+        {
+          /// reply actor exit msg
+          response_t res(req->get_id(), pk->recver_);
+          send_already_exited(req->get_aid(), res, user);
         }
       }
       pk = next;
@@ -159,6 +157,40 @@ void basic_actor::remove_link(aid_t aid)
 {
   link_list_.erase(aid);
   monitor_list_.erase(aid);
+}
+///----------------------------------------------------------------------------
+void basic_actor::send_already_exited(
+  aid_t recver, aid_t sender, detail::cache_pool* user
+  )
+{
+  message m(exit);
+  std::string exit_msg("already exited");
+  m << exit_already << exit_msg;
+
+  detail::pack* ret = alloc_pack(user);
+  ret->tag_ = sender;
+  ret->recver_ = recver;
+  ret->msg_ = m;
+  ret->is_err_ret_ = true;
+
+  recver.get_actor_ptr()->on_recv(ret);
+}
+///----------------------------------------------------------------------------
+void basic_actor::send_already_exited(
+  aid_t recver, response_t res, detail::cache_pool* user
+  )
+{
+  message m(exit);
+  std::string exit_msg("already exited");
+  m << exit_already << exit_msg;
+
+  detail::pack* ret = alloc_pack(user);
+  ret->tag_ = res;
+  ret->recver_ = recver;
+  ret->msg_ = m;
+  ret->is_err_ret_ = true;
+
+  recver.get_actor_ptr()->on_recv(ret);
 }
 ///----------------------------------------------------------------------------
 }

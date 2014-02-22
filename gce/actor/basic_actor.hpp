@@ -69,6 +69,8 @@ protected:
   void link(detail::link_t, detail::cache_pool* user = 0);
   void send_exit(exit_code_t, std::string const&, detail::cache_pool*);
   void remove_link(aid_t);
+  void send_already_exited(aid_t recver, aid_t sender, detail::cache_pool*);
+  void send_already_exited(aid_t recver, response_t res, detail::cache_pool*);
 
 protected:
   detail::cache_aligned_ptr<detail::cache_pool, detail::cache_pool*> owner_;

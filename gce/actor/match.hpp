@@ -21,7 +21,7 @@ struct match
   {
   }
 
-  explicit match(seconds_t tmo)
+  explicit match(duration_t tmo)
     : timeout_(tmo)
   {
   }
@@ -32,7 +32,7 @@ struct match
     match_list_.clear();
   }
 
-  seconds_t timeout_;
+  duration_t timeout_;
   match_list_t match_list_;
 };
 }

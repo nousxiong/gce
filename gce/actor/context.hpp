@@ -25,7 +25,8 @@ typedef boost::function<void (thrid_t)> thread_callback_t;
 struct attributes
 {
   attributes()
-    : thread_num_(boost::thread::hardware_concurrency())
+    : ios_(0)
+    , thread_num_(boost::thread::hardware_concurrency())
     , mixin_num_(1)
     , per_thread_cache_(3)
     , per_mixin_cache_(2)
@@ -47,6 +48,7 @@ struct attributes
   {
   }
 
+  io_service_t* ios_;
   std::size_t thread_num_;
   std::size_t mixin_num_;
   std::size_t per_thread_cache_;
@@ -111,11 +113,11 @@ private:
   std::size_t cache_pool_size_;
   byte_t pad3_[GCE_CACHE_LINE_SIZE - sizeof(std::size_t)];
 
-  typedef detail::unique_ptr<boost::asio::io_service> io_service_ptr;
-  detail::cache_aligned_ptr<boost::asio::io_service, io_service_ptr> ios_;
+  typedef detail::unique_ptr<io_service_t> io_service_ptr;
+  detail::cache_aligned_ptr<io_service_t, io_service_ptr> ios_;
 
-  typedef detail::unique_ptr<boost::asio::io_service::work> work_ptr;
-  detail::cache_aligned_ptr<boost::asio::io_service::work, work_ptr> work_;
+  typedef detail::unique_ptr<io_service_t::work> work_ptr;
+  detail::cache_aligned_ptr<io_service_t::work, work_ptr> work_;
 
   typedef detail::unique_ptr<boost::thread_group> thread_group_ptr;
   detail::cache_aligned_ptr<boost::thread_group, thread_group_ptr> thread_group_;

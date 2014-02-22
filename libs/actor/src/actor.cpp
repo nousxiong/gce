@@ -51,7 +51,7 @@ aid_t actor::recv(message& msg, match const& mach)
 
   if (!mb_->pop(rcv, msg, mach.match_list_))
   {
-    seconds_t tmo = mach.timeout_;
+    duration_t tmo = mach.timeout_;
     if (tmo > zero)
     {
       detail::scope_flag<bool> scp(recving_);
@@ -141,7 +141,7 @@ void actor::reply(aid_t recver, message const& m)
   a->on_recv(pk);
 }
 ///----------------------------------------------------------------------------
-aid_t actor::recv(response_t res, message& msg, seconds_t tmo)
+aid_t actor::recv(response_t res, message& msg, duration_t tmo)
 {
   aid_t sender;
 
@@ -175,7 +175,7 @@ aid_t actor::recv(response_t res, message& msg, seconds_t tmo)
   return sender;
 }
 ///----------------------------------------------------------------------------
-void actor::wait(seconds_t dur)
+void actor::wait(duration_t dur)
 {
   if (dur < infin)
   {
@@ -359,7 +359,7 @@ void actor::stopped(exit_code_t ec, std::string const& exit_msg)
   yield();
 }
 ///----------------------------------------------------------------------------
-void actor::start_recv_timer(seconds_t dur)
+void actor::start_recv_timer(duration_t dur)
 {
   strand_t* snd = user_->get_strand();
   tmr_.expires_from_now(dur);
@@ -442,15 +442,18 @@ void actor::handle_recv(detail::pack* pk)
       resume(detail::actor_normal);
     }
   }
-  else
+  else if (!pk->is_err_ret_)
   {
     if (detail::link_t* link = boost::get<detail::link_t>(&pk->tag_))
     {
       /// send actor exit msg
-      message m(exit);
-      std::string exit_msg("already exited");
-      m << exit_already << exit_msg;
-      send(link->get_aid(), m);
+      base_type::send_already_exited(link->get_aid(), pk->recver_, user_.get());
+    }
+    else if (detail::request_t* req = boost::get<detail::request_t>(&pk->tag_))
+    {
+      /// reply actor exit msg
+      response_t res(req->get_id(), pk->recver_);
+      base_type::send_already_exited(req->get_aid(), res, user_.get());
     }
   }
 }

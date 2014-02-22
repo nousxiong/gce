@@ -339,15 +339,18 @@ void socket::handle_recv(pack* pk)
       }
     }
   }
-  else
+  else if (!pk->is_err_ret_)
   {
-    if (link_t* link = boost::get<link_t>(&pk->tag_))
+    if (detail::link_t* link = boost::get<detail::link_t>(&pk->tag_))
     {
       /// send actor exit msg
-      message m(exit);
-      std::string exit_msg("already exited");
-      m << exit_already << exit_msg;
-      send(link->get_aid(), m);
+      base_type::send_already_exited(link->get_aid(), pk->recver_, user_.get());
+    }
+    else if (detail::request_t* req = boost::get<detail::request_t>(&pk->tag_))
+    {
+      /// reply actor exit msg
+      response_t res(req->get_id(), pk->recver_);
+      base_type::send_already_exited(req->get_aid(), res, user_.get());
     }
   }
 }

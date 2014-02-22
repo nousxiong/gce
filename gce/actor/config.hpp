@@ -19,7 +19,7 @@
 /// Or you will recv:
 ///   "error C3861: '_InterlockedExchange': identifier not found"
 /// Under winxp(x86) vc9
-#include <boost/atomic.hpp> 
+#include <boost/atomic.hpp>
 
 #include <gce/amsg/amsg.hpp>
 #include <boost/system/error_code.hpp>
@@ -36,7 +36,13 @@
 
 namespace gce
 {
+typedef boost::asio::io_service io_service_t;
+typedef boost::asio::io_service::strand strand_t;
+typedef boost::asio::system_timer timer_t;
+typedef boost::asio::yield_context yield_t;
+
 typedef boost::system::error_code errcode_t;
+typedef boost::chrono::system_clock::duration duration_t;
 typedef boost::chrono::seconds seconds_t;
 static seconds_t zero(0);
 static seconds_t infin(99999999);
@@ -64,11 +70,6 @@ enum link_type
   linked,
   monitored
 };
-
-typedef boost::asio::io_service io_service_t;
-typedef boost::asio::io_service::strand strand_t;
-typedef boost::asio::system_timer timer_t;
-typedef boost::asio::yield_context yield_t;
 
 typedef match_t exit_code_t;
 static exit_code_t const exit = atom("gce_actor_exit");

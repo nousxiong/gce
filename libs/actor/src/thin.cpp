@@ -41,7 +41,7 @@ void thin::recv(aid_t& sender, message& msg, match const& mach)
 {
   if (!mb_->pop(rcv_, msg, mach.match_list_))
   {
-    seconds_t tmo = mach.timeout_;
+    duration_t tmo = mach.timeout_;
     curr_mach_ = mach;
     if (tmo < infin)
     {
@@ -142,7 +142,7 @@ void thin::reply(aid_t recver, message const& m)
   a->on_recv(pk);
 }
 ///----------------------------------------------------------------------------
-void thin::recv(response_t res, aid_t& sender, message& msg, seconds_t tmo)
+void thin::recv(response_t res, aid_t& sender, message& msg, duration_t tmo)
 {
   res_ = res;
   if (!mb_->pop(res_, msg))
@@ -158,7 +158,6 @@ void thin::recv(response_t res, aid_t& sender, message& msg, seconds_t tmo)
   }
 
   sender = res_.get_aid();
-
   strand_t* snd = user_->get_strand();
   snd->post(boost::bind(&thin::end_response, this));
 }
@@ -175,7 +174,7 @@ aid_t thin::recv(response_t res, message& msg)
   return sender;
 }
 ///----------------------------------------------------------------------------
-void thin::wait(seconds_t dur)
+void thin::wait(duration_t dur)
 {
   if (dur < infin)
   {
@@ -346,15 +345,18 @@ void thin::handle_recv(detail::pack* pk)
       }
     }
   }
-  else
+  else if (!pk->is_err_ret_)
   {
     if (detail::link_t* link = boost::get<detail::link_t>(&pk->tag_))
     {
       /// send actor exit msg
-      message m(exit);
-      std::string exit_msg("already exited");
-      m << exit_already << exit_msg;
-      send(link->get_aid(), m);
+      base_type::send_already_exited(link->get_aid(), pk->recver_, user_.get());
+    }
+    else if (detail::request_t* req = boost::get<detail::request_t>(&pk->tag_))
+    {
+      /// reply actor exit msg
+      response_t res(req->get_id(), pk->recver_);
+      base_type::send_already_exited(req->get_aid(), res, user_.get());
     }
   }
 }
@@ -371,7 +373,7 @@ void thin::free_self(exit_code_t ec, std::string const& exit_msg)
   user_->free_thin(owner_.get(), this);
 }
 ///----------------------------------------------------------------------------
-void thin::start_recv_timer(seconds_t dur)
+void thin::start_recv_timer(duration_t dur)
 {
   strand_t* snd = user_->get_strand();
   tmr_.expires_from_now(dur);

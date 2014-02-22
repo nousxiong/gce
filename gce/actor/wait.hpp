@@ -15,7 +15,7 @@
 namespace gce
 {
 template <typename Waiter>
-inline void wait(Waiter& waiter, seconds_t dur)
+inline void wait(Waiter& waiter, duration_t dur)
 {
   return waiter.wait(dur);
 }

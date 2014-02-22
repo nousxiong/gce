@@ -176,6 +176,20 @@ void acceptor::handle_recv(pack* pk)
       }
     }
   }
+  else if (!pk->is_err_ret_)
+  {
+    if (detail::link_t* link = boost::get<detail::link_t>(&pk->tag_))
+    {
+      /// send actor exit msg
+      base_type::send_already_exited(link->get_aid(), pk->recver_, user_.get());
+    }
+    else if (detail::request_t* req = boost::get<detail::request_t>(&pk->tag_))
+    {
+      /// reply actor exit msg
+      response_t res(req->get_id(), pk->recver_);
+      base_type::send_already_exited(req->get_aid(), res, user_.get());
+    }
+  }
 }
 ///----------------------------------------------------------------------------
 void acceptor::close()

@@ -70,12 +70,12 @@ public:
       a_.reply(recver, m);
     }
 
-    inline void wait(seconds_t dur)
+    inline void wait(duration_t dur)
     {
       a_.wait(dur);
     }
 
-    inline aid_t recv(response_t res, message& msg, seconds_t tmo = infin)
+    inline aid_t recv(response_t res, message& msg, duration_t tmo = infin)
     {
       return a_.recv(res, msg, tmo);
     }
@@ -127,8 +127,8 @@ public:
 
   response_t request(aid_t, message const&);
   void reply(aid_t, message const&);
-  aid_t recv(response_t, message&, seconds_t);
-  void wait(seconds_t);
+  aid_t recv(response_t, message&, duration_t);
+  void wait(duration_t);
 
   void link(aid_t);
   void monitor(aid_t);
@@ -153,7 +153,7 @@ private:
   detail::actor_code yield();
   void free_self();
   void stopped(exit_code_t, std::string const&);
-  void start_recv_timer(seconds_t);
+  void start_recv_timer(duration_t);
   void handle_recv_timeout(errcode_t const&, std::size_t);
   void handle_recv(detail::pack*);
 

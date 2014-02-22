@@ -73,7 +73,7 @@ aid_t mixin::recv(message& msg, match const& mach)
   basic_actor::move_pack(owner_.get());
   if (!mb_->pop(rcv, msg, mach.match_list_))
   {
-    seconds_t tmo = mach.timeout_;
+    duration_t tmo = mach.timeout_;
     if (tmo > zero)
     {
       boost::unique_lock<boost::shared_mutex> lock(*mtx_);
@@ -81,7 +81,7 @@ aid_t mixin::recv(message& msg, match const& mach)
       if (!mb_->pop(rcv, msg, mach.match_list_))
       {
         bool has_msg = false;
-        boost::chrono::milliseconds tmo_ms = tmo;
+        duration_t curr_tmo = tmo;
         typedef boost::chrono::system_clock clock_t;
         clock_t::time_point begin_tp;
         do
@@ -94,7 +94,7 @@ aid_t mixin::recv(message& msg, match const& mach)
           else
           {
             begin_tp = clock_t::now();
-            cv_stat = cv_->wait_for(lock, tmo_ms);
+            cv_stat = cv_->wait_for(lock, curr_tmo);
           }
 
           if (cv_stat == boost::cv_status::timeout)
@@ -106,11 +106,8 @@ aid_t mixin::recv(message& msg, match const& mach)
           has_msg = mb_->pop(rcv, msg, mach.match_list_);
           if (!has_msg && tmo != infin)
           {
-            boost::chrono::milliseconds pass_time =
-              boost::chrono::duration_cast<boost::chrono::milliseconds>(
-                clock_t::now() - begin_tp
-                );
-            tmo_ms -= pass_time;
+            duration_t pass_time = clock_t::now() - begin_tp;
+            curr_tmo -= pass_time;
           }
         }
         while (!has_msg);
@@ -170,7 +167,7 @@ void mixin::reply(aid_t recver, message const& m)
   a->on_recv(pk);
 }
 ///----------------------------------------------------------------------------
-void mixin::wait(seconds_t dur)
+void mixin::wait(duration_t dur)
 {
   boost::this_thread::sleep_for(dur);
 }

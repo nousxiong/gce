@@ -31,12 +31,18 @@ struct pack
   , public mpsc_queue<pack>::node
 {
   typedef boost::variant<aid_t, request_t, response_t, link_t, exit_t> tag_t;
+  pack()
+    : owner_(0)
+    , is_err_ret_(false)
+  {
+  }
 
   inline void on_free()
   {
     tag_ = tag_t();
     recver_ = aid_t();
     msg_ = message();
+    is_err_ret_ = false;
   }
 
   tag_t tag_;
@@ -44,6 +50,7 @@ struct pack
   message msg_;
 
   cache_pool* owner_;
+  bool is_err_ret_;
 };
 
 typedef object_pool<pack> pack_pool_t;

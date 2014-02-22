@@ -25,8 +25,13 @@ context::context(attributes attrs)
   : attrs_(attrs)
   , curr_cache_pool_(size_nil)
   , cache_pool_size_(attrs_.thread_num_ * attrs_.per_thread_cache_)
-  , ios_(GCE_CACHE_ALIGNED_NEW(boost::asio::io_service)(attrs_.thread_num_), detail::cache_aligned_deleter())
-  , work_(GCE_CACHE_ALIGNED_NEW(boost::asio::io_service::work)(*ios_), detail::cache_aligned_deleter())
+  , ios_(
+      attrs_.ios_ ?
+        attrs_.ios_ :
+        GCE_CACHE_ALIGNED_NEW(io_service_t)
+          (attrs_.thread_num_), detail::cache_aligned_deleter()
+          )
+  , work_(GCE_CACHE_ALIGNED_NEW(io_service_t::work)(*ios_), detail::cache_aligned_deleter())
   , thread_group_(GCE_CACHE_ALIGNED_NEW(boost::thread_group), detail::cache_aligned_deleter())
   , cache_pool_list_(GCE_CACHE_ALIGNED_NEW(cache_pool_list_t), detail::cache_aligned_deleter())
   , mixin_list_(GCE_CACHE_ALIGNED_NEW(mixin_list_t), detail::cache_aligned_deleter())

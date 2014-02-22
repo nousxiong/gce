@@ -207,6 +207,58 @@ public:
     return *this;
   }
 
+  message& operator<<(errcode_t const& ec)
+  {
+    boost::int32_t code = (boost::int32_t)ec.value();
+    uintptr_t errcat = (uintptr_t)(&ec.category());
+    *this << code << errcat;
+    return *this;
+  }
+
+  message& operator>>(errcode_t& ec)
+  {
+    boost::int32_t code;
+    uintptr_t errcat;
+    *this >> code >> errcat;
+    boost::system::error_category const* errcat_ptr =
+      (boost::system::error_category const*)errcat;
+    ec = errcode_t((int)code, *errcat_ptr);
+    return *this;
+  }
+
+  template <typename Rep, typename Period>
+  message& operator<<(boost::chrono::duration<Rep, Period> const& dur)
+  {
+    *this << dur.count();
+    return *this;
+  }
+
+  template <typename Rep, typename Period>
+  message& operator>>(boost::chrono::duration<Rep, Period>& dur)
+  {
+    typedef boost::chrono::duration<Rep, Period> duration_t;
+    typename duration_t::rep c;
+    *this >> c;
+    dur = duration_t(c);
+    return *this;
+  }
+
+  template <typename Clock>
+  message& operator<<(boost::chrono::time_point<Clock, typename Clock::duration> const& tp)
+  {
+    *this << tp.time_since_epoch();
+    return *this;
+  }
+
+  template <typename Clock>
+  message& operator>>(boost::chrono::time_point<Clock, typename Clock::duration>& tp)
+  {
+    typename Clock::duration dur;
+    *this << dur;
+    tp = boost::chrono::time_point<Clock, typename Clock::duration>(dur);
+    return *this;
+  }
+
   inline bool is_small() const
   {
     return buf_.data() == small_;

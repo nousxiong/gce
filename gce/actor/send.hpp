@@ -89,6 +89,42 @@ inline void send(
   detail::send(sender, recver, m);
 }
 ///----------------------------------------------------------------------------
+template <typename Sender, typename A1, typename A2, typename A3>
+inline void send(
+  Sender& sender, aid_t recver, match_t type,
+  A1 const& a1, A2 const& a2, A3 const& a3
+  )
+{
+  message m(type);
+  m << a1 << a2 << a3;
+  detail::send(sender, recver, m);
+}
+///----------------------------------------------------------------------------
+template <typename Sender, typename A1, typename A2, typename A3, typename A4>
+inline void send(
+  Sender& sender, aid_t recver, match_t type,
+  A1 const& a1, A2 const& a2, A3 const& a3, A4 const& a4
+  )
+{
+  message m(type);
+  m << a1 << a2 << a3 << a4;
+  detail::send(sender, recver, m);
+}
+///----------------------------------------------------------------------------
+template <
+  typename Sender, typename A1, typename A2,
+  typename A3, typename A4, typename A5
+  >
+inline void send(
+  Sender& sender, aid_t recver, match_t type,
+  A1 const& a1, A2 const& a2, A3 const& a3, A4 const& a4, A5 const& a5
+  )
+{
+  message m(type);
+  m << a1 << a2 << a3 << a4 << a5;
+  detail::send(sender, recver, m);
+}
+///----------------------------------------------------------------------------
 /// Request
 ///----------------------------------------------------------------------------
 template <typename Sender>
@@ -124,6 +160,41 @@ inline response_t request(
   return detail::request(sender, recver, m);
 }
 ///----------------------------------------------------------------------------
+template <typename Sender, typename A1, typename A2, typename A3>
+inline response_t request(
+  Sender& sender, aid_t recver, match_t type,
+  A1 const& a1, A2 const& a2, A3 const& a3
+  )
+{
+  message m(type);
+  m << a1 << a2 << a3;
+  return detail::request(sender, recver, m);
+}
+///----------------------------------------------------------------------------
+template <typename Sender, typename A1, typename A2, typename A3, typename A4>
+inline response_t request(
+  Sender& sender, aid_t recver, match_t type,
+  A1 const& a1, A2 const& a2, A3 const& a3, A4 const& a4
+  )
+{
+  message m(type);
+  m << a1 << a2 << a3 << a4;
+  return detail::request(sender, recver, m);
+}
+///----------------------------------------------------------------------------
+template <
+  typename Sender, typename A1, typename A2,
+  typename A3, typename A4, typename A5>
+inline response_t request(
+  Sender& sender, aid_t recver, match_t type,
+  A1 const& a1, A2 const& a2, A3 const& a3, A4 const& a4, A5 const& a5
+  )
+{
+  message m(type);
+  m << a1 << a2 << a3 << a4 << a5;
+  return detail::request(sender, recver, m);
+}
+///----------------------------------------------------------------------------
 /// Reply
 ///----------------------------------------------------------------------------
 template <typename Sender>
@@ -156,6 +227,42 @@ inline void reply(
 {
   message m(type);
   m << a1 << a2;
+  detail::reply(sender, recver, m);
+}
+///----------------------------------------------------------------------------
+template <typename Sender, typename A1, typename A2, typename A3>
+inline void reply(
+  Sender& sender, aid_t recver, match_t type,
+  A1 const& a1, A2 const& a2, A3 const& a3
+  )
+{
+  message m(type);
+  m << a1 << a2 << a3;
+  detail::reply(sender, recver, m);
+}
+///----------------------------------------------------------------------------
+template <typename Sender, typename A1, typename A2, typename A3, typename A4>
+inline void reply(
+  Sender& sender, aid_t recver, match_t type,
+  A1 const& a1, A2 const& a2, A3 const& a3, A4 const& a4
+  )
+{
+  message m(type);
+  m << a1 << a2 << a3 << a4;
+  detail::reply(sender, recver, m);
+}
+///----------------------------------------------------------------------------
+template <
+  typename Sender, typename A1, typename A2,
+  typename A3, typename A4, typename A5
+  >
+inline void reply(
+  Sender& sender, aid_t recver, match_t type,
+  A1 const& a1, A2 const& a2, A3 const& a3, A4 const& a4, A5 const& a5
+  )
+{
+  message m(type);
+  m << a1 << a2 << a3 << a4 << a5;
   detail::reply(sender, recver, m);
 }
 ///----------------------------------------------------------------------------
