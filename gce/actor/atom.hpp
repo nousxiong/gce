@@ -12,6 +12,7 @@
 
 #include <gce/config.hpp>
 #include <boost/integer.hpp>
+#include <string>
 #include <cstring>
 
 namespace gce
@@ -61,22 +62,23 @@ inline boost::uint64_t atom(char const* str)
   return value;
 }
 
-///// Since lordoffox's str2val.h (http://bbs.cppfans.org/forum.php?mod=viewthread&tid=56&extra=page%3D1)
-//template <typename String>
-//inline void val2str(boost::uint64_t what, String& str)
-//{
-//  static typename String::const_pointer const decoding_table = "\0abcdefghijklmnopqrstuvwxyz_";
-//  boost::uint64_t x = what;
-//  typename String::value_type buf[21] = {0};
-//  std::size_t pos = 19;
-//  while (x)
-//  {
-//    buf[pos--] = decoding_table[x % 28];
-//    x = x / 28;
-//  }
-//  ++pos;
-//  str.assign(buf + pos, 20 - pos);
-//}
+/// Since lordoffox's str2val.h (http://bbs.cppfans.org/forum.php?mod=viewthread&tid=56&extra=page%3D1)
+inline std::string atom(boost::uint64_t what)
+{
+  std::string ret;
+  static std::string::const_pointer const decoding_table = "\0abcdefghijklmnopqrstuvwxyz_";
+  boost::uint64_t x = what;
+  std::string::value_type buf[21] = {0};
+  std::size_t pos = 19;
+  while (x)
+  {
+    buf[pos--] = decoding_table[x % 28];
+    x = x / 28;
+  }
+  ++pos;
+  ret.assign(buf + pos, 20 - pos);
+  return ret;
+}
 }
 
 #endif /// GCE_ACTOR_ATOM_HPP

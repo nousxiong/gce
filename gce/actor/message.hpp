@@ -15,7 +15,8 @@
 #include <gce/actor/detail/buffer_ref.hpp>
 #include <gce/amsg/amsg.hpp>
 #include <gce/amsg/zerocopy.hpp>
-#include <boost/call_traits.hpp>
+#include <boost/utility/string_ref.hpp>
+#include <utility>
 
 namespace gce
 {
@@ -104,6 +105,7 @@ public:
 
   inline std::size_t size() const { return buf_.write_size(); }
   inline match_t get_type() const { return type_; }
+  inline void set_type(match_t type) { type_ = type; }
 
   template <typename T>
   message& operator<<(T const& t)
@@ -207,6 +209,26 @@ public:
     return *this;
   }
 
+  message& operator<<(boost::string_ref str)
+  {
+    boost::uint32_t size = (boost::uint32_t)str.size();
+    *this << size;
+    reserve(size);
+    byte_t* write_data = buf_.get_write_data();
+    buf_.write(size);
+    std::memcpy(write_data, str.data(), size);
+    return *this;
+  }
+
+  message& operator>>(boost::string_ref& str)
+  {
+    boost::uint32_t size;
+    *this >> size;
+    str = boost::string_ref((char const*)buf_.get_read_data(), size);
+    buf_.read(size);
+    return *this;
+  }
+
   message& operator<<(errcode_t const& ec)
   {
     boost::int32_t code = (boost::int32_t)ec.value();
@@ -256,6 +278,20 @@ public:
     typename Clock::duration dur;
     *this << dur;
     tp = boost::chrono::time_point<Clock, typename Clock::duration>(dur);
+    return *this;
+  }
+
+  template <typename T, typename U>
+  message& operator<<(std::pair<T, U> const& pr)
+  {
+    *this << pr.first << pr.second;
+    return *this;
+  }
+
+  template <typename T, typename U>
+  message& operator>>(std::pair<T, U>& pr)
+  {
+    *this >> pr.first >> pr.second;
     return *this;
   }
 

@@ -29,7 +29,7 @@ inline bool find_exit(match_t type)
 
 inline bool check_exit(std::vector<match_t>& match_list)
 {
-  if (match_list.emtpy())
+  if (match_list.empty())
   {
     return false;
   }
