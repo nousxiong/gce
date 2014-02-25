@@ -28,7 +28,7 @@ public:
     {
       mixin_t base = spawn(ctx);
       cln_ = spawn(base);
-      aid_t counter = spawn<stackful>(base, boost::bind(&slice_ut::cd, _1));
+      aid_t counter = spawn(base, boost::bind(&slice_ut::cd, _1));
       send(cln_, counter, atom("cd"), count_down);
     }
 

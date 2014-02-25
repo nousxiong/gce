@@ -34,7 +34,7 @@ private:
     for (std::size_t i=0; i<size; ++i)
     {
       aid_t aid =
-        spawn<stackful>(
+        spawn(
           self,
           boost::bind(&actor_ut::my_child, _1)
           );
@@ -59,7 +59,7 @@ private:
     mixin_t mix = spawn(ctx);
     for (std::size_t i=0; i<2; ++i)
     {
-      spawn<stackful>(mix, boost::bind(&actor_ut::my_actor, _1, base_id));
+      spawn(mix, boost::bind(&actor_ut::my_actor, _1, base_id));
     }
   }
 
@@ -78,7 +78,7 @@ private:
       aid_t base_id = base.get_aid();
       for (std::size_t i=0; i<free_actor_num; ++i)
       {
-        spawn<stackful>(
+        spawn(
           base,
           boost::bind(
             &actor_ut::my_actor, _1,

@@ -32,7 +32,6 @@ struct attributes
     , per_mixin_cache_(2)
     , stack_scale_(stack_default)
     , actor_pool_reserve_size_(8)
-    , thin_pool_reserve_size_(8)
     , timer_pool_reserve_size_(8)
     , timer_pool_free_size_(8)
     , pack_pool_reserve_size_(8)
@@ -55,7 +54,6 @@ struct attributes
   std::size_t per_mixin_cache_;
   stack_scale_type stack_scale_;
   std::size_t actor_pool_reserve_size_;
-  std::size_t thin_pool_reserve_size_;
   std::size_t timer_pool_reserve_size_;
   std::size_t timer_pool_free_size_;
   std::size_t pack_pool_reserve_size_;

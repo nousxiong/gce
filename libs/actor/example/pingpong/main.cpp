@@ -47,8 +47,8 @@ int main(int argc, char* argv[])
 
     gce::context ctx;
     gce::mixin_t host = gce::spawn(ctx);
-    gce::aid_t ping = gce::spawn<gce::stackful>(host, boost::bind(&pingpong, _1));
-    gce::aid_t pong = gce::spawn<gce::stackful>(host, boost::bind(&pingpong, _1));
+    gce::aid_t ping = gce::spawn(host, boost::bind(&pingpong, _1));
+    gce::aid_t pong = gce::spawn(host, boost::bind(&pingpong, _1));
 
     gce::send(host, ping, gce::atom("prepare"), pong);
     gce::send(host, pong, gce::atom("prepare"), ping);

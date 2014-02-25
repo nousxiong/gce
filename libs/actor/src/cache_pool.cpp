@@ -10,7 +10,6 @@
 #include <gce/actor/detail/cache_pool.hpp>
 #include <gce/actor/context.hpp>
 #include <gce/actor/actor.hpp>
-#include <gce/actor/thin.hpp>
 #include <gce/actor/detail/socket.hpp>
 #include <gce/actor/detail/acceptor.hpp>
 #include <boost/foreach.hpp>
@@ -32,10 +31,6 @@ cache_pool::cache_pool(context& ctx, std::size_t id, attributes const& attrs, bo
       this, detail::actor_attrs(&ctx, attrs.stack_scale_, cache_match_size_), size_nil,
       attrs.actor_pool_reserve_size_
       )
-  , thin_pool_(
-      this, detail::thin_attrs(&ctx, cache_match_size_), size_nil,
-      attrs.thin_pool_reserve_size_
-      )
   , pack_pool_(
       this,
       attrs.pack_pool_free_size_,
@@ -52,13 +47,11 @@ cache_pool::cache_pool(context& ctx, std::size_t id, attributes const& attrs, bo
       attrs.acceptor_pool_reserve_size_
       )
   , actor_cache_list_(cache_num_)
-  , thin_cache_list_(cache_num_)
   , pack_cache_list_(cache_num_)
   , socket_cache_list_(cache_num_)
   , acceptor_cache_list_(cache_num_)
 {
   actor_cache_dirty_list_.reserve(cache_num_);
-  thin_cache_dirty_list_.reserve(cache_num_);
   pack_cache_dirty_list_.reserve(cache_num_);
   socket_cache_dirty_list_.reserve(cache_num_);
   acceptor_cache_dirty_list_.reserve(cache_num_);
@@ -77,16 +70,6 @@ actor* cache_pool::get_actor()
   }
 
   return actor_pool_.get();
-}
-///------------------------------------------------------------------------------
-thin* cache_pool::get_thin()
-{
-  if (!mixed_ && !snd_.running_in_this_thread())
-  {
-    throw std::runtime_error("get_thin strand thread error");
-  }
-
-  return thin_pool_.get();
 }
 ///------------------------------------------------------------------------------
 pack* cache_pool::get_pack()
@@ -124,14 +107,6 @@ void cache_pool::free_actor(cache_pool* owner, actor* a)
   free_object(
     owner, a, actor_cache_list_, actor_pool_,
     owner->actor_free_queue_, actor_cache_dirty_list_
-    );
-}
-///------------------------------------------------------------------------------
-void cache_pool::free_thin(cache_pool* owner, thin* t)
-{
-  free_object(
-    owner, t, thin_cache_list_, thin_pool_,
-    owner->thin_free_queue_, thin_cache_dirty_list_
     );
 }
 ///------------------------------------------------------------------------------
@@ -201,7 +176,6 @@ void cache_pool::free_object(Pool& pool, FreeQueue& free_que)
 void cache_pool::free_object()
 {
   free_object<actor>(actor_pool_, actor_free_queue_);
-  free_object<thin>(thin_pool_, thin_free_queue_);
   free_object<pack>(pack_pool_, pack_free_queue_);
   free_object<socket>(socket_pool_, socket_free_queue_);
   free_object<acceptor>(acceptor_pool_, acceptor_free_queue_);
@@ -216,15 +190,6 @@ void cache_pool::free_cache()
       cac->free();
     }
     actor_cache_dirty_list_.clear();
-  }
-
-  if (!thin_cache_dirty_list_.empty())
-  {
-    BOOST_FOREACH(thin_cache_t* cac, thin_cache_dirty_list_)
-    {
-      cac->free();
-    }
-    thin_cache_dirty_list_.clear();
   }
 
   if (!pack_cache_dirty_list_.empty())

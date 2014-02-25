@@ -41,13 +41,14 @@ private:
 
   static void my_actor(self_t self, aid_t base_id)
   {
-    aid_t aid = spawn<stackful>(
-      self,
-      boost::bind(
-        &actor_pingpong_ut::my_child,
-        _1, self.get_aid(), base_id
-        )
-      );
+    aid_t aid =
+      spawn(
+        self,
+        boost::bind(
+          &actor_pingpong_ut::my_child,
+          _1, self.get_aid(), base_id
+          )
+        );
 
     message m(1);
     for (std::size_t i=0; i<msg_size; ++i)
@@ -67,7 +68,7 @@ private:
       mixin_t base = spawn(ctx);
       aid_t base_id = base.get_aid();
       aid_t aid =
-        spawn<stackful>(
+        spawn(
           base,
           boost::bind(
             &actor_pingpong_ut::my_actor, _1,

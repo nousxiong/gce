@@ -54,8 +54,8 @@ public:
 
       int const count_down = 10000;
       mixin_t host = spawn(ctx);
-      aid_t ping = spawn<stackful>(host, boost::bind(&send_recv_ut::ping_pong, _1));
-      aid_t pong = spawn<stackful>(host, boost::bind(&send_recv_ut::ping_pong, _1));
+      aid_t ping = spawn(host, boost::bind(&send_recv_ut::ping_pong, _1));
+      aid_t pong = spawn(host, boost::bind(&send_recv_ut::ping_pong, _1));
 
       send(host, ping, atom("prepare"), pong);
       send(host, pong, atom("prepare"), ping);

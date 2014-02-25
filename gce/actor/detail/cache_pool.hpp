@@ -22,7 +22,6 @@ namespace gce
 {
 class context;
 class actor;
-class thin;
 struct attributes;
 
 namespace detail
@@ -30,11 +29,9 @@ namespace detail
 class socket;
 class acceptor;
 typedef object_pool<actor, detail::actor_attrs> actor_pool_t;
-typedef object_pool<thin, detail::thin_attrs> thin_pool_t;
 typedef object_pool<socket, context*> socket_pool_t;
 typedef object_pool<acceptor, context*> acceptor_pool_t;
 typedef mpsc_queue<actor> actor_queue_t;
-typedef mpsc_queue<thin> thin_queue_t;
 typedef mpsc_queue<socket> socket_queue_t;
 typedef mpsc_queue<acceptor> acceptor_queue_t;
 
@@ -53,13 +50,11 @@ public:
   inline timer_t& get_gc_timer() { return gc_tmr_; }
 
   actor* get_actor();
-  thin* get_thin();
   pack* get_pack();
   socket* get_socket();
   acceptor* get_acceptor();
 
   void free_actor(cache_pool*, actor*);
-  void free_thin(cache_pool*, thin*);
   void free_pack(cache_pool*, pack*);
   void free_socket(cache_pool*, socket*);
   void free_acceptor(cache_pool*, acceptor*);
@@ -141,33 +136,28 @@ private:
 
   /// pools
   GCE_CACHE_ALIGNED_VAR(actor_pool_t, actor_pool_)
-  GCE_CACHE_ALIGNED_VAR(thin_pool_t, thin_pool_)
   GCE_CACHE_ALIGNED_VAR(pack_pool_t, pack_pool_)
   GCE_CACHE_ALIGNED_VAR(socket_pool_t, socket_pool_)
   GCE_CACHE_ALIGNED_VAR(acceptor_pool_t, acceptor_pool_)
 
   /// queues
   GCE_CACHE_ALIGNED_VAR(actor_queue_t, actor_free_queue_)
-  GCE_CACHE_ALIGNED_VAR(thin_queue_t, thin_free_queue_)
   GCE_CACHE_ALIGNED_VAR(pack_queue_t, pack_free_queue_)
   GCE_CACHE_ALIGNED_VAR(socket_queue_t, socket_free_queue_)
   GCE_CACHE_ALIGNED_VAR(acceptor_queue_t, acceptor_free_queue_)
 
   /// thread local vals
   typedef cache<actor, actor_queue_t> actor_cache_t;
-  typedef cache<thin, thin_queue_t> thin_cache_t;
   typedef cache<pack, pack_queue_t> pack_cache_t;
   typedef cache<socket, socket_queue_t> socket_cache_t;
   typedef cache<acceptor, acceptor_queue_t> acceptor_cache_t;
 
   std::vector<actor_cache_t> actor_cache_list_;
-  std::vector<thin_cache_t> thin_cache_list_;
   std::vector<pack_cache_t> pack_cache_list_;
   std::vector<socket_cache_t> socket_cache_list_;
   std::vector<acceptor_cache_t> acceptor_cache_list_;
 
   std::vector<actor_cache_t*> actor_cache_dirty_list_;
-  std::vector<thin_cache_t*> thin_cache_dirty_list_;
   std::vector<pack_cache_t*> pack_cache_dirty_list_;
   std::vector<socket_cache_t*> socket_cache_dirty_list_;
   std::vector<acceptor_cache_t*> acceptor_cache_dirty_list_;

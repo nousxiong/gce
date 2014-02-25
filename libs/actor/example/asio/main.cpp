@@ -32,7 +32,7 @@ public:
     gce::aid_t base_id = base_.get_aid();
     for (std::size_t i=0; i<cln_num_; ++i)
     {
-      gce::spawn<gce::stackful>(base_, boost::bind(&client::run, this, _1, base_id));
+      gce::spawn(base_, boost::bind(&client::run, this, _1, base_id));
     }
   }
 
@@ -103,7 +103,7 @@ public:
     , echo_num_(echo_num)
   {
     gce::mixin_t base = gce::spawn(ctx_);
-    gce::spawn<gce::stackful>(base, boost::bind(&server::run, this, _1));
+    gce::spawn(base, boost::bind(&server::run, this, _1));
   }
 
   ~server()
@@ -146,7 +146,7 @@ private:
         if (!ec)
         {
           std::cout << "new connection!\n";
-          gce::spawn<gce::stackful>(self, boost::bind(&server::session, this, _1, sock));
+          gce::spawn(self, boost::bind(&server::session, this, _1, sock));
         }
         else
         {

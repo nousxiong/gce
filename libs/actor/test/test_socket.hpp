@@ -49,7 +49,7 @@ public:
 
       mixin& base = spawn(ctx);
       aid_t base_id = base.get_aid();
-      spawn<stackful>(
+      spawn(
         base,
         boost::bind(
           &socket_ut::echo_server, _1,
@@ -75,7 +75,7 @@ public:
       bind(self, "tcp://127.0.0.1:14923");
       for (std::size_t i=0; i<client_num; ++i)
       {
-        spawn<stackful>(
+        spawn(
           self,
           boost::bind(
             &socket_ut::echo_client, _1, base_id, echo_num
