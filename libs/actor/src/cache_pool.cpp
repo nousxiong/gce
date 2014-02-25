@@ -25,8 +25,8 @@ cache_pool::cache_pool(context& ctx, std::size_t id, attributes const& attrs, bo
   , cache_num_(attrs.thread_num_*attrs.per_thread_cache_ + attrs.mixin_num_*attrs.per_mixin_cache_)
   , cache_match_size_(attrs.max_cache_match_size_)
   , mixed_(mixed)
-  , snd_(*ctx.get_io_service())
-  , gc_tmr_(*ctx.get_io_service())
+  , snd_(ctx.get_io_service())
+  , gc_tmr_(ctx.get_io_service())
   , actor_pool_(
       this, detail::actor_attrs(&ctx, attrs.stack_scale_, cache_match_size_), size_nil,
       attrs.actor_pool_reserve_size_

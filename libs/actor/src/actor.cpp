@@ -28,7 +28,7 @@ actor::actor(detail::actor_attrs attrs)
   , user_(0)
   , recving_(false)
   , responsing_(false)
-  , tmr_(*attrs.ctx_->get_io_service())
+  , tmr_(attrs.ctx_->get_io_service())
   , tmr_sid_(0)
   , yld_(0)
 {

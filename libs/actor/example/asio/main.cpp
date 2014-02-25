@@ -54,13 +54,13 @@ private:
 
       /// make a tcp socket to connnect to server
       gce::yield_t yield = self.get_yield();
-      gce::io_service_t* ios = ctx_.get_io_service();
+      gce::io_service_t& ios = ctx_.get_io_service();
 
-      boost::asio::ip::tcp::resolver reso(*ios);
+      boost::asio::ip::tcp::resolver reso(ios);
       boost::asio::ip::tcp::resolver::query query(host_, port_);
       boost::asio::ip::tcp::resolver::iterator itr = reso.async_resolve(query, yield);
 
-      boost::asio::ip::tcp::socket sock(*ios);
+      boost::asio::ip::tcp::socket sock(ios);
       boost::asio::async_connect(sock, itr, yield);
 
       char data[32];
@@ -97,7 +97,7 @@ public:
     boost::uint16_t port,
     std::size_t echo_num = 3
     )
-    : acpr_(*ctx_.get_io_service())
+    : acpr_(ctx_.get_io_service())
     , host_(host)
     , port_(port)
     , echo_num_(echo_num)
@@ -118,7 +118,7 @@ private:
     try
     {
       gce::yield_t yield = self.get_yield();
-      gce::io_service_t* ios = ctx_.get_io_service();
+      gce::io_service_t& ios = ctx_.get_io_service();
 
       boost::asio::ip::address addr;
       addr.from_string(host_);
@@ -140,7 +140,7 @@ private:
       while (true)
       {
         gce::errcode_t ec;
-        boost::shared_ptr<socket_t> sock(new socket_t(*ios));
+        boost::shared_ptr<socket_t> sock(new socket_t(ios));
         acpr_.async_accept(*sock, yield[ec]);
 
         if (!ec)
