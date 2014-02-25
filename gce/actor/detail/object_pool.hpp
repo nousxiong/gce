@@ -12,10 +12,10 @@
 
 #include <gce/actor/config.hpp>
 #include <gce/detail/object_access.hpp>
-#include <gce/detail/cache_aligned_allocator.hpp>
 #include <gce/detail/freelist.hpp>
 #include <boost/static_assert.hpp>
 #include <boost/type_traits/is_base_of.hpp>
+#include <memory>
 
 namespace gce
 {
@@ -25,7 +25,7 @@ class cache_pool;
 template <
   typename T,
   typename Args = void,
-  typename Alloc = cache_aligned_allocator<T>
+  typename Alloc = std::allocator<T>
   >
 class object_pool
 {

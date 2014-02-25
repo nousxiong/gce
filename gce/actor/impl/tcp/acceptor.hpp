@@ -12,7 +12,6 @@
 
 #include <gce/actor/config.hpp>
 #include <gce/actor/detail/basic_acceptor.hpp>
-#include <gce/detail/asio_alloc_handler.hpp>
 #include <boost/asio/ip/tcp.hpp>
 
 namespace gce
@@ -27,7 +26,7 @@ class acceptor
   : public gce::detail::basic_acceptor
 {
 public:
-  acceptor(strand_t*, std::string const&, boost::uint16_t);
+  acceptor(strand_t&, std::string const&, boost::uint16_t);
   ~acceptor();
 
 public:
@@ -39,7 +38,7 @@ private:
   void delete_socket(gce::detail::basic_socket*);
 
 private:
-  strand_t* snd_;
+  strand_t& snd_;
   boost::asio::ip::tcp::acceptor acpr_;
   std::string const host_;
   boost::uint16_t const port_;

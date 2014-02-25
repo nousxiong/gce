@@ -12,10 +12,10 @@
 
 #include <gce/actor/config.hpp>
 #include <gce/actor/response.hpp>
+#include <gce/actor/detail/mailbox.hpp>
 #include <gce/actor/detail/request.hpp>
 #include <gce/actor/detail/link.hpp>
 #include <gce/actor/actor_id.hpp>
-#include <gce/detail/cache_aligned_ptr.hpp>
 #include <gce/actor/detail/pack.hpp>
 #include <boost/function.hpp>
 #include <set>
@@ -25,7 +25,6 @@ namespace gce
 class message;
 namespace detail
 {
-class mailbox;
 class cache_pool;
 }
 
@@ -72,18 +71,16 @@ protected:
   void send_already_exited(aid_t recver, aid_t sender, detail::cache_pool*);
   void send_already_exited(aid_t recver, response_t res, detail::cache_pool*);
 
+private:
+  byte_t pad0_[GCE_CACHE_LINE_SIZE]; /// Ensure start from a new cache line.
+
 protected:
-  detail::cache_aligned_ptr<detail::cache_pool, detail::cache_pool*> owner_;
-
-  typedef detail::unique_ptr<detail::mailbox> mailbox_ptr;
-  detail::cache_aligned_ptr<detail::mailbox, mailbox_ptr> mb_;
-
-  typedef detail::unique_ptr<detail::pack_queue_t> pack_queue_ptr;
-  detail::cache_aligned_ptr<detail::pack_queue_t, pack_queue_ptr> pack_que_;
+  GCE_CACHE_ALIGNED_VAR(detail::cache_pool*, owner_)
+  GCE_CACHE_ALIGNED_VAR(detail::mailbox, mb_)
+  GCE_CACHE_ALIGNED_VAR(detail::pack_queue_t, pack_que_)
 
 private:
-  aid_t aid_;
-  byte_t pad1_[GCE_CACHE_LINE_SIZE - sizeof(aid_t)];
+  GCE_CACHE_ALIGNED_VAR(aid_t, aid_)
 
   /// local vals
   sid_t req_id_;

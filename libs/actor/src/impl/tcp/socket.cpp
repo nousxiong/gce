@@ -131,14 +131,14 @@ void socket::close_socket()
 void socket::begin_send()
 {
   sending_ = true;
-  strand_t* snd = user_->get_strand();
+  strand_t& snd = user_->get_strand();
   std::swap(sending_buffer_, standby_buffer_);
   gce::detail::bytes_t const& bytes = send_buffer_[sending_buffer_];
 
   boost::asio::async_write(
     sock_,
     boost::asio::buffer(bytes.data(), bytes.size()),
-    snd->wrap(
+    snd.wrap(
       boost::bind(
         &socket::end_send, this,
         boost::asio::placeholders::error

@@ -17,8 +17,6 @@
 #include <gce/detail/mpsc_queue.hpp>
 #include <gce/actor/detail/pack.hpp>
 #include <gce/actor/match.hpp>
-#include <gce/detail/asio_alloc_handler.hpp>
-#include <gce/detail/cache_aligned_new.hpp>
 
 namespace gce
 {
@@ -69,13 +67,9 @@ private:
 private:
   byte_t pad0_[GCE_CACHE_LINE_SIZE]; /// Ensure start from a new cache line.
 
-  status stat_;
-  byte_t pad1_[GCE_CACHE_LINE_SIZE - sizeof(status)];
-
-  cache_aligned_ptr<cache_pool, cache_pool*> user_;
-
-  net_option opt_;
-  byte_t pad2_[GCE_CACHE_LINE_SIZE - sizeof(net_option)];
+  GCE_CACHE_ALIGNED_VAR(status, stat_)
+  GCE_CACHE_ALIGNED_VAR(cache_pool*, user_)
+  GCE_CACHE_ALIGNED_VAR(net_option, opt_)
 
   /// thread local vals
   context& ctx_;

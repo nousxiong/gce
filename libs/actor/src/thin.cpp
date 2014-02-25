@@ -23,7 +23,6 @@ namespace gce
 thin::thin(detail::thin_attrs attrs)
   : basic_actor(attrs.cache_match_size_)
   , user_(0)
-  , f_(GCE_CACHE_ALIGNED_NEW(func_t), detail::cache_aligned_deleter())
   , recving_(false)
   , responsing_(false)
   , sender_(0)
@@ -39,7 +38,7 @@ thin::~thin()
 ///----------------------------------------------------------------------------
 void thin::recv(aid_t& sender, message& msg, match const& mach)
 {
-  if (!mb_->pop(rcv_, msg, mach.match_list_))
+  if (!mb_.pop(rcv_, msg, mach.match_list_))
   {
     duration_t tmo = mach.timeout_;
     curr_mach_ = mach;
@@ -66,14 +65,14 @@ void thin::recv(aid_t& sender, message& msg, match const& mach)
     sender = ex->get_aid();
   }
 
-  strand_t* snd = user_->get_strand();
-  snd->post(boost::bind(&thin::end_recv, this));
+  strand_t& snd = user_->get_strand();
+  snd.post(boost::bind(&thin::end_recv, this));
 }
 ///----------------------------------------------------------------------------
 aid_t thin::recv(message& msg, match_list_t const& match_list)
 {
   aid_t sender;
-  if (!mb_->pop(rcv_, msg, match_list))
+  if (!mb_.pop(rcv_, msg, match_list))
   {
     return sender;
   }
@@ -96,7 +95,7 @@ aid_t thin::recv(message& msg, match_list_t const& match_list)
 ///----------------------------------------------------------------------------
 void thin::send(aid_t recver, message const& m)
 {
-  detail::pack* pk = base_type::alloc_pack(user_.get());
+  detail::pack* pk = base_type::alloc_pack(user_);
   pk->tag_ = get_aid();
   pk->recver_ = recver;
   pk->msg_ = m;
@@ -111,7 +110,7 @@ response_t thin::request(aid_t target, message const& m)
   response_t res(new_request(), sender);
   detail::request_t req(res.get_id(), sender);
 
-  detail::pack* pk = base_type::alloc_pack(user_.get());
+  detail::pack* pk = base_type::alloc_pack(user_);
   pk->tag_ = req;
   pk->recver_ = target;
   pk->msg_ = m;
@@ -125,8 +124,8 @@ void thin::reply(aid_t recver, message const& m)
 {
   basic_actor* a = recver.get_actor_ptr();
   detail::request_t req;
-  detail::pack* pk = base_type::alloc_pack(user_.get());
-  if (mb_->pop(recver, req))
+  detail::pack* pk = base_type::alloc_pack(user_);
+  if (mb_.pop(recver, req))
   {
     response_t res(req.get_id(), get_aid());
     pk->tag_ = res;
@@ -145,7 +144,7 @@ void thin::reply(aid_t recver, message const& m)
 void thin::recv(response_t res, aid_t& sender, message& msg, duration_t tmo)
 {
   res_ = res;
-  if (!mb_->pop(res_, msg))
+  if (!mb_.pop(res_, msg))
   {
     if (tmo < infin)
     {
@@ -158,14 +157,14 @@ void thin::recv(response_t res, aid_t& sender, message& msg, duration_t tmo)
   }
 
   sender = res_.get_aid();
-  strand_t* snd = user_->get_strand();
-  snd->post(boost::bind(&thin::end_response, this));
+  strand_t& snd = user_->get_strand();
+  snd.post(boost::bind(&thin::end_response, this));
 }
 ///----------------------------------------------------------------------------
 aid_t thin::recv(response_t res, message& msg)
 {
   aid_t sender;
-  if (!mb_->pop(res, msg))
+  if (!mb_.pop(res, msg))
   {
     return sender;
   }
@@ -184,30 +183,30 @@ void thin::wait(duration_t dur)
 ///----------------------------------------------------------------------------
 void thin::link(aid_t target)
 {
-  base_type::link(detail::link_t(linked, target), user_.get());
+  base_type::link(detail::link_t(linked, target), user_);
 }
 ///----------------------------------------------------------------------------
 void thin::monitor(aid_t target)
 {
-  base_type::link(detail::link_t(monitored, target), user_.get());
+  base_type::link(detail::link_t(monitored, target), user_);
 }
 ///----------------------------------------------------------------------------
 detail::cache_pool* thin::get_cache_pool()
 {
-  return user_.get();
+  return user_;
 }
 ///----------------------------------------------------------------------------
 void thin::start()
 {
-  strand_t* snd = user_->get_strand();
-  snd->dispatch(boost::bind(&thin::begin_run, this));
+  strand_t& snd = user_->get_strand();
+  snd.dispatch(boost::bind(&thin::begin_run, this));
 }
 ///----------------------------------------------------------------------------
 void thin::init(detail::cache_pool* user, detail::cache_pool* owner, thin_func_t const& f, aid_t link_tgt)
 {
   user_ = user;
   owner_ = owner;
-  *f_ = f;
+  f_ = f;
   base_type::update_aid();
 
   if (link_tgt)
@@ -220,7 +219,7 @@ void thin::on_free()
 {
   base_type::on_free();
 
-  f_->clear();
+  f_.clear();
   coro_ = detail::coro_t();
   curr_mach_.clear();
 
@@ -234,8 +233,8 @@ void thin::on_free()
 ///----------------------------------------------------------------------------
 void thin::on_recv(detail::pack* pk)
 {
-  strand_t* snd = user_->get_strand();
-  snd->dispatch(
+  strand_t& snd = user_->get_strand();
+  snd.dispatch(
     boost::bind(
       &thin::handle_recv, this, pk
       )
@@ -246,7 +245,7 @@ void thin::run()
 {
   try
   {
-    (*f_)(*this);
+    f_(*this);
     if (coro_.is_complete())
     {
       free_self(exit_normal, "exit normal");
@@ -264,21 +263,21 @@ void thin::run()
 ///----------------------------------------------------------------------------
 void thin::handle_recv(detail::pack* pk)
 {
-  detail::scope scp(boost::bind(&basic_actor::dealloc_pack, user_.get(), pk));
+  detail::scope scp(boost::bind(&basic_actor::dealloc_pack, user_, pk));
   if (check(pk->recver_))
   {
     bool is_response = false;
     if (aid_t* aid = boost::get<aid_t>(&pk->tag_))
     {
-      mb_->push(*aid, pk->msg_);
+      mb_.push(*aid, pk->msg_);
     }
     else if (detail::request_t* req = boost::get<detail::request_t>(&pk->tag_))
     {
-      mb_->push(*req, pk->msg_);
+      mb_.push(*req, pk->msg_);
     }
     else if (detail::exit_t* ex = boost::get<detail::exit_t>(&pk->tag_))
     {
-      mb_->push(*ex, pk->msg_);
+      mb_.push(*ex, pk->msg_);
       base_type::remove_link(ex->get_aid());
     }
     else if (detail::link_t* link = boost::get<detail::link_t>(&pk->tag_))
@@ -289,7 +288,7 @@ void thin::handle_recv(detail::pack* pk)
     else if (response_t* res = boost::get<response_t>(&pk->tag_))
     {
       is_response = true;
-      mb_->push(*res, pk->msg_);
+      mb_.push(*res, pk->msg_);
     }
 
     bool have_msg = false;
@@ -300,7 +299,7 @@ void thin::handle_recv(detail::pack* pk)
         BOOST_ASSERT(sender_);
         BOOST_ASSERT(msg_);
         BOOST_ASSERT(res_.valid());
-        have_msg = mb_->pop(res_, *msg_);
+        have_msg = mb_.pop(res_, *msg_);
         if (have_msg)
         {
           *sender_ = res_.get_aid();
@@ -313,7 +312,7 @@ void thin::handle_recv(detail::pack* pk)
       {
         BOOST_ASSERT(sender_);
         BOOST_ASSERT(msg_);
-        have_msg = mb_->pop(rcv_, *msg_, curr_mach_.match_list_);
+        have_msg = mb_.pop(rcv_, *msg_, curr_mach_.match_list_);
         if (have_msg)
         {
           curr_mach_.clear();
@@ -350,13 +349,13 @@ void thin::handle_recv(detail::pack* pk)
     if (detail::link_t* link = boost::get<detail::link_t>(&pk->tag_))
     {
       /// send actor exit msg
-      base_type::send_already_exited(link->get_aid(), pk->recver_, user_.get());
+      base_type::send_already_exited(link->get_aid(), pk->recver_, user_);
     }
     else if (detail::request_t* req = boost::get<detail::request_t>(&pk->tag_))
     {
       /// reply actor exit msg
       response_t res(req->get_id(), pk->recver_);
-      base_type::send_already_exited(req->get_aid(), res, user_.get());
+      base_type::send_already_exited(req->get_aid(), res, user_);
     }
   }
 }
@@ -368,17 +367,17 @@ void thin::begin_run()
 ///----------------------------------------------------------------------------
 void thin::free_self(exit_code_t ec, std::string const& exit_msg)
 {
-  base_type::send_exit(ec, exit_msg, user_.get());
+  base_type::send_exit(ec, exit_msg, user_);
   base_type::update_aid();
-  user_->free_thin(owner_.get(), this);
+  user_->free_thin(owner_, this);
 }
 ///----------------------------------------------------------------------------
 void thin::start_recv_timer(duration_t dur)
 {
-  strand_t* snd = user_->get_strand();
+  strand_t& snd = user_->get_strand();
   tmr_.expires_from_now(dur);
   tmr_.async_wait(
-    snd->wrap(
+    snd.wrap(
       boost::bind(
         &thin::handle_recv_timeout, this,
         boost::asio::placeholders::error, ++tmr_sid_

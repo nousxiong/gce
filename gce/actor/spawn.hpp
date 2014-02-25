@@ -30,11 +30,11 @@ inline aid_t make_actor(
   bool sync_sire
   )
 {
-  context* ctx = cac_pool->get_context();
+  context& ctx = cac_pool->get_context();
   cache_pool* user = cac_pool;
   if (!sync_sire)
   {
-    user = ctx->select_cache_pool();
+    user = ctx.select_cache_pool();
   }
   actor* a = cac_pool->get_actor();
   a->init(user, cac_pool, f, link_tgt);
@@ -49,11 +49,11 @@ inline aid_t make_thin(
   bool sync_sire
   )
 {
-  context* ctx = cac_pool->get_context();
+  context& ctx = cac_pool->get_context();
   cache_pool* user = cac_pool;
   if (!sync_sire)
   {
-    user = ctx->select_cache_pool();
+    user = ctx.select_cache_pool();
   }
   thin* t = cac_pool->get_thin();
   t->init(user, cac_pool, f, link_tgt);
@@ -184,7 +184,7 @@ inline slice_t spawn(mixin_t sire, link_type type = no_link)
   {
     link_tgt = sire.get_aid();
   }
-  slice_t s(sire.get_slice_pool()->get());
+  slice_t s(sire.get_slice());
   s->init(link_tgt);
   sire.add_link(detail::link_t(type, s->get_aid()));
   return s;

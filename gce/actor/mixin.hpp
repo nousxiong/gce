@@ -15,10 +15,9 @@
 #include <gce/actor/detail/pack.hpp>
 #include <gce/actor/match.hpp>
 #include <gce/actor/context.hpp>
-#include <gce/detail/asio_alloc_handler.hpp>
-#include <gce/detail/cache_aligned_new.hpp>
 #include <boost/thread/condition_variable.hpp>
 #include <boost/thread/shared_mutex.hpp>
+#include <boost/optional.hpp>
 #include <vector>
 
 namespace gce
@@ -51,7 +50,8 @@ public:
 
   void on_recv(detail::pack*);
   void gc();
-  inline detail::slice_pool_t* get_slice_pool() { return slice_pool_.get(); }
+
+  slice* get_slice();
   void free_slice(slice*);
   void free_cache();
 
@@ -61,26 +61,17 @@ private:
 private:
   byte_t pad0_[GCE_CACHE_LINE_SIZE]; /// Ensure start from a new cache line.
 
-  std::size_t curr_cache_pool_; /// select cache pool
-  byte_t pad1_[GCE_CACHE_LINE_SIZE - sizeof(std::size_t)];
+  /// select cache pool
+  GCE_CACHE_ALIGNED_VAR(std::size_t, curr_cache_pool_)
+  GCE_CACHE_ALIGNED_VAR(std::size_t, cache_pool_size_)
 
-  std::size_t cache_pool_size_;
-  byte_t pad2_[GCE_CACHE_LINE_SIZE - sizeof(std::size_t)];
+  GCE_CACHE_ALIGNED_VAR(boost::shared_mutex, mtx_)
+  GCE_CACHE_ALIGNED_VAR(boost::condition_variable_any, cv_)
 
-  typedef detail::unique_ptr<boost::shared_mutex> mutex_ptr;
-  detail::cache_aligned_ptr<boost::shared_mutex, mutex_ptr> mtx_;
-
-  typedef detail::unique_ptr<boost::condition_variable_any> cv_ptr;
-  detail::cache_aligned_ptr<boost::condition_variable_any, cv_ptr> cv_;
-
-  typedef detail::cache_aligned_ptr<detail::cache_pool, detail::cache_pool*> cache_pool_ptr;
-  typedef std::vector<cache_pool_ptr> cache_pool_list_t;
-  typedef detail::unique_ptr<cache_pool_list_t> cache_pool_list_ptr;
-  detail::cache_aligned_ptr<cache_pool_list_t, cache_pool_list_ptr> cache_pool_list_;
+  GCE_CACHE_ALIGNED_VAR(std::vector<detail::cache_pool*>, cache_pool_list_)
 
   /// pools
-  typedef detail::unique_ptr<detail::slice_pool_t> slice_pool_ptr;
-  detail::cache_aligned_ptr<detail::slice_pool_t, slice_pool_ptr> slice_pool_;
+  GCE_CACHE_ALIGNED_VAR(boost::optional<detail::slice_pool_t>, slice_pool_)
 };
 
 typedef mixin& mixin_t;

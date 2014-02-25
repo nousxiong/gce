@@ -11,7 +11,6 @@
 #define GCE_BUFFER_HPP
 
 #include <gce/actor/config.hpp>
-#include <gce/detail/cache_aligned_new.hpp>
 #include <gce/detail/ref_count.hpp>
 #include <boost/bind.hpp>
 #include <new>
@@ -71,7 +70,7 @@ public:
 
   void free()
   {
-    GCE_CACHE_ALIGNED_DELETE(buffer, this);
+    delete this;
   }
 
 private:

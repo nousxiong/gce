@@ -22,7 +22,6 @@
 #include <string>
 #include <vector>
 
-#include <gce/detail/cache_aligned_new.hpp>
 #include <boost/timer/timer.hpp>
 #include "test_object_pool.hpp"
 #include "test_actor.hpp"

@@ -12,7 +12,6 @@
 
 #include <gce/actor/config.hpp>
 #include <gce/actor/detail/basic_socket.hpp>
-#include <gce/detail/asio_alloc_handler.hpp>
 #include <boost/asio/ip/tcp.hpp>
 #include <boost/array.hpp>
 

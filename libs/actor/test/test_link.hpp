@@ -22,6 +22,7 @@ public:
   struct stack
   {
     gce::aid_t sender;
+    gce::aid_t aid;
     response_t res;
     message msg;
     std::size_t i;
@@ -53,15 +54,37 @@ public:
     {
       s.size = 1;
       s.res_list.resize(s.size);
-      for (std::size_t i=0; i<s.size; ++i)
+      for (s.i=0; s.i<s.size; ++s.i)
       {
-        aid_t aid = spawn<stackless>(
-          self,
-          boost::bind(&link_ut::my_child, _1, stack()),
-          linked
-          );
+        s.aid =
+          spawn<stackless>(
+            self,
+            boost::bind(&link_ut::my_child, _1, stack()),
+            linked
+            );
+
+        {
+          basic_actor* a = s.aid.get_actor_ptr();
+          sid_t sid = s.aid.get_sid();
+          sid += 100000;
+          ++sid;
+          self.link(aid_t(a, sid));
+        }
+        GCE_YIELD self.recv(s.sender, s.msg);
+        BOOST_ASSERT(s.msg.get_type() == exit);
+
+        {
+          basic_actor* a = s.aid.get_actor_ptr();
+          sid_t sid = s.aid.get_sid();
+          sid += 100000;
+          ++sid;
+          s.res = self.request(aid_t(a, sid), message());
+        }
+        GCE_YIELD self.recv(s.res, s.sender, s.msg);
+        BOOST_ASSERT(s.msg.get_type() == exit);
+
         message m(5);
-        s.res_list[i] = self.request(aid, m);
+        s.res_list[s.i] = self.request(s.aid, m);
       }
 
       GCE_YIELD
@@ -87,6 +110,22 @@ public:
             ),
           linked
           );
+
+      basic_actor* a = aid.get_actor_ptr();
+      sid_t sid = aid.get_sid();
+      sid += 100000;
+      ++sid;
+
+      message msg;
+
+      self.link(aid_t(a, sid));
+      self.recv(msg);
+      BOOST_ASSERT(msg.get_type() == exit);
+
+      response_t res = request(self, aid_t(a, sid));
+      self.recv(res, msg);
+      BOOST_ASSERT(msg.get_type() == exit);
+
       res_list[i] = request(self, aid, 3);
     }
 
@@ -98,8 +137,8 @@ public:
     mixin_t mix = spawn(ctx);
     for (std::size_t i=0; i<2; ++i)
     {
-      spawn<stackless>(mix, boost::bind(&link_ut::my_thin, _1, base_id, stack()), monitored);
       spawn<stackful>(mix, boost::bind(&link_ut::my_actor, _1, base_id), monitored);
+      spawn<stackless>(mix, boost::bind(&link_ut::my_thin, _1, base_id, stack()), monitored);
     }
 
     for (std::size_t i=0; i<4; ++i)

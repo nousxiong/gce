@@ -17,7 +17,6 @@
 #include <gce/actor/detail/pack.hpp>
 #include <gce/actor/match.hpp>
 #include <gce/actor/detail/mailbox_fwd.hpp>
-#include <gce/detail/cache_aligned_new.hpp>
 
 namespace gce
 {
@@ -86,13 +85,11 @@ private:
   void end_wait();
 
 private:
-  detail::cache_aligned_ptr<detail::cache_pool, detail::cache_pool*> user_;
+  byte_t pad0_[GCE_CACHE_LINE_SIZE]; /// Ensure start from a new cache line.
 
-  typedef detail::unique_ptr<func_t> func_ptr;
-  detail::cache_aligned_ptr<func_t, func_ptr> f_;
-
-  detail::coro_t coro_;
-  byte_t pad1_[GCE_CACHE_LINE_SIZE - sizeof(detail::coro_t)];
+  GCE_CACHE_ALIGNED_VAR(detail::cache_pool*, user_)
+  GCE_CACHE_ALIGNED_VAR(func_t, f_)
+  GCE_CACHE_ALIGNED_VAR(detail::coro_t, coro_)
 
   /// thread local vals
   bool recving_;

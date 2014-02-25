@@ -11,11 +11,11 @@
 #define GCE_ACTOR_CONTEXT_HPP
 
 #include <gce/actor/config.hpp>
-#include <gce/detail/cache_aligned_ptr.hpp>
 #include <gce/detail/unique_ptr.hpp>
 #include <boost/thread/thread.hpp>
 #include <boost/static_assert.hpp>
 #include <boost/atomic.hpp>
+#include <boost/optional.hpp>
 #include <vector>
 
 namespace gce
@@ -103,37 +103,20 @@ private:
 private:
   byte_t pad0_[GCE_CACHE_LINE_SIZE]; /// Ensure start from a new cache line.
 
-  BOOST_STATIC_ASSERT((GCE_CACHE_LINE_SIZE * 4 >= sizeof(attributes)));
-  attributes attrs_;
-  byte_t pad1_[GCE_CACHE_LINE_SIZE * 4 - sizeof(attributes)];
+  GCE_CACHE_ALIGNED_VAR(attributes, attrs_)
 
-  std::size_t curr_cache_pool_; /// 使用轮询方式select cache pool
-  byte_t pad2_[GCE_CACHE_LINE_SIZE - sizeof(std::size_t)];
+  /// select cache pool
+  GCE_CACHE_ALIGNED_VAR(std::size_t, curr_cache_pool_)
+  GCE_CACHE_ALIGNED_VAR(std::size_t, cache_pool_size_)
 
-  std::size_t cache_pool_size_;
-  byte_t pad3_[GCE_CACHE_LINE_SIZE - sizeof(std::size_t)];
+  GCE_CACHE_ALIGNED_VAR(detail::unique_ptr<io_service_t>, ios_)
+  GCE_CACHE_ALIGNED_VAR(boost::optional<io_service_t::work>, work_)
 
-  typedef detail::unique_ptr<io_service_t> io_service_ptr;
-  detail::cache_aligned_ptr<io_service_t, io_service_ptr> ios_;
+  GCE_CACHE_ALIGNED_VAR(boost::thread_group, thread_group_)
+  GCE_CACHE_ALIGNED_VAR(std::vector<detail::cache_pool*>, cache_pool_list_)
 
-  typedef detail::unique_ptr<io_service_t::work> work_ptr;
-  detail::cache_aligned_ptr<io_service_t::work, work_ptr> work_;
-
-  typedef detail::unique_ptr<boost::thread_group> thread_group_ptr;
-  detail::cache_aligned_ptr<boost::thread_group, thread_group_ptr> thread_group_;
-
-  typedef detail::cache_aligned_ptr<detail::cache_pool, detail::cache_pool*> cache_pool_ptr;
-  typedef std::vector<cache_pool_ptr> cache_pool_list_t;
-  typedef detail::unique_ptr<cache_pool_list_t> cache_pool_list_ptr;
-  detail::cache_aligned_ptr<cache_pool_list_t, cache_pool_list_ptr> cache_pool_list_;
-
-  typedef detail::cache_aligned_ptr<mixin, mixin*> mixin_ptr;
-  typedef std::vector<mixin_ptr> mixin_list_t;
-  typedef detail::unique_ptr<mixin_list_t> mixin_list_ptr;
-  detail::cache_aligned_ptr<mixin_list_t, mixin_list_ptr> mixin_list_;
-
-  boost::atomic_size_t curr_mixin_;
-  byte_t pad4_[GCE_CACHE_LINE_SIZE - sizeof(boost::atomic_size_t)];
+  GCE_CACHE_ALIGNED_VAR(std::vector<mixin*>, mixin_list_)
+  GCE_CACHE_ALIGNED_VAR(boost::atomic_size_t, curr_mixin_)
 };
 }
 

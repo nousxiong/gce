@@ -11,7 +11,6 @@
 #define GCE_ACTOR_DETAIL_MAILBOX_HPP
 
 #include <gce/actor/config.hpp>
-#include <gce/actor/basic_actor.hpp>
 #include <gce/actor/response.hpp>
 #include <gce/actor/detail/request.hpp>
 #include <gce/actor/message.hpp>
@@ -49,7 +48,8 @@ public:
   bool push(response_t, message const&);
 
 private:
-  void add_match(recv_t const&, message const&);
+  void add_match_msg(recv_t const&, message const&);
+  bool fetch_match_msg(match_t, recv_t&, message&);
 
 private:
   typedef std::list<recv_pair_t> recv_queue_t;

@@ -15,7 +15,6 @@
 #include <gce/actor/detail/mailbox.hpp>
 #include <gce/actor/message.hpp>
 #include <gce/detail/scope.hpp>
-#include <gce/detail/cache_aligned_new.hpp>
 #include <boost/asio/placeholders.hpp>
 #include <boost/bind.hpp>
 #include <boost/variant/get.hpp>
@@ -54,7 +53,7 @@ void acceptor::bind(std::string const& ep, aid_t master)
   base_type::add_link(master_);
 
   boost::asio::spawn(
-    *user_->get_strand(),
+    user_->get_strand(),
     boost::bind(
       &acceptor::run, this, ep, _1
       ),
@@ -75,8 +74,8 @@ void acceptor::on_free()
 ///----------------------------------------------------------------------------
 void acceptor::on_recv(pack* pk)
 {
-  strand_t* snd = user_->get_strand();
-  snd->dispatch(
+  strand_t& snd = user_->get_strand();
+  snd.dispatch(
     boost::bind(
       &acceptor::handle_recv, this, pk
       )
@@ -104,7 +103,7 @@ void acceptor::run(std::string const& ep, yield_t yield)
       }
 
       socket* s = user_->get_socket();
-      s->init(ctx_.select_cache_pool(), user_.get(), opt_);
+      s->init(ctx_.select_cache_pool(), user_, opt_);
       s->start(prot, master_);
     }
   }
@@ -153,10 +152,7 @@ basic_acceptor* acceptor::make_acceptor(std::string const& ep)
       boost::lexical_cast<boost::uint16_t>(
         ep.substr(begin, pos - begin)
         );
-    return GCE_CACHE_ALIGNED_NEW(tcp::acceptor)(
-      user_->get_strand(),
-      address, port
-      );
+    return new tcp::acceptor(user_->get_strand(), address, port);
   }
 
   throw std::runtime_error("unsupported protocol");
@@ -164,7 +160,7 @@ basic_acceptor* acceptor::make_acceptor(std::string const& ep)
 ///----------------------------------------------------------------------------
 void acceptor::handle_recv(pack* pk)
 {
-  scope scp(boost::bind(&basic_actor::dealloc_pack, user_.get(), pk));
+  scope scp(boost::bind(&basic_actor::dealloc_pack, user_, pk));
   if (check(pk->recver_))
   {
     if (exit_t* ex = boost::get<exit_t>(&pk->tag_))
@@ -181,13 +177,13 @@ void acceptor::handle_recv(pack* pk)
     if (detail::link_t* link = boost::get<detail::link_t>(&pk->tag_))
     {
       /// send actor exit msg
-      base_type::send_already_exited(link->get_aid(), pk->recver_, user_.get());
+      base_type::send_already_exited(link->get_aid(), pk->recver_, user_);
     }
     else if (detail::request_t* req = boost::get<detail::request_t>(&pk->tag_))
     {
       /// reply actor exit msg
       response_t res(req->get_id(), pk->recver_);
-      base_type::send_already_exited(req->get_aid(), res, user_.get());
+      base_type::send_already_exited(req->get_aid(), res, user_);
     }
   }
 }
@@ -200,11 +196,11 @@ void acceptor::close()
 ///----------------------------------------------------------------------------
 void acceptor::free_self(exit_code_t exc, std::string const& exit_msg, yield_t yield)
 {
-  GCE_CACHE_ALIGNED_DELETE(basic_acceptor, acpr_);
+  delete acpr_;
 
-  base_type::send_exit(exc, exit_msg, user_.get());
+  base_type::send_exit(exc, exit_msg, user_);
   base_type::update_aid();
-  user_->free_acceptor(owner_.get(), this);
+  user_->free_acceptor(owner_, this);
 }
 ///----------------------------------------------------------------------------
 }

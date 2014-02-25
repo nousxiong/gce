@@ -101,8 +101,7 @@ public:
 private:
   byte_t pad0_[GCE_CACHE_LINE_SIZE]; /// Ensure start from a new cache line.
 
-  boost::atomic<pointer> head_;
-  byte_t pad1_[GCE_CACHE_LINE_SIZE - sizeof(boost::atomic<pointer>)]; /// Ensure occupy entire one cache line.
+  GCE_CACHE_ALIGNED_VAR(boost::atomic<pointer>, head_)
 };
 }
 }

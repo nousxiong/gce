@@ -28,8 +28,8 @@ inline aid_t connect(
   net_option opt, aid_t master
   )
 {
-  context* ctx = cac_pool->get_context();
-  cache_pool* user = ctx->select_cache_pool();
+  context& ctx = cac_pool->get_context();
+  cache_pool* user = ctx.select_cache_pool();
   socket* s = cac_pool->get_socket();
   s->init(user, cac_pool, opt);
   aid_t ret = s->get_aid();
@@ -42,8 +42,8 @@ inline aid_t bind(
   net_option opt, aid_t master
   )
 {
-  context* ctx = cac_pool->get_context();
-  cache_pool* user = ctx->select_cache_pool();
+  context& ctx = cac_pool->get_context();
+  cache_pool* user = ctx.select_cache_pool();
   acceptor* a = cac_pool->get_acceptor();
   a->init(user, cac_pool, opt);
   aid_t ret = a->get_aid();

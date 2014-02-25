@@ -80,10 +80,10 @@ void heartbeat::clear()
 void heartbeat::start_timer()
 {
   ++waiting_;
-  strand_t* snd = cac_pool_->get_strand();
+  strand_t& snd = cac_pool_->get_strand();
   tmr_.expires_from_now(period_);
   tmr_.async_wait(
-    snd->wrap(
+    snd.wrap(
       boost::bind(
         &heartbeat::handle_timeout, this,
         boost::asio::placeholders::error

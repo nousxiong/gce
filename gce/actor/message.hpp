@@ -346,7 +346,7 @@ private:
 
   inline void make_large(std::size_t size)
   {
-    large_.reset(GCE_CACHE_ALIGNED_NEW(detail::buffer)(size));
+    large_.reset(new detail::buffer(size));
   }
 
 private:

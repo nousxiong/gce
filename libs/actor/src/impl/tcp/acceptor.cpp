@@ -11,7 +11,6 @@
 #include <gce/actor/impl/tcp/socket.hpp>
 #include <gce/actor/context.hpp>
 #include <gce/detail/scope.hpp>
-#include <gce/detail/cache_aligned_new.hpp>
 #include <boost/bind.hpp>
 
 namespace gce
@@ -20,12 +19,12 @@ namespace tcp
 {
 ///----------------------------------------------------------------------------
 acceptor::acceptor(
-  strand_t* snd,
+  strand_t& snd,
   std::string const& host,
   boost::uint16_t port
   )
   : snd_(snd)
-  , acpr_(snd_->get_io_service())
+  , acpr_(snd_.get_io_service())
   , host_(host)
   , port_(port)
 {
@@ -57,7 +56,7 @@ void acceptor::bind()
 ///----------------------------------------------------------------------------
 gce::detail::basic_socket* acceptor::accept(yield_t yield)
 {
-  socket* skt = GCE_CACHE_ALIGNED_NEW(socket)(snd_->get_io_service());
+  socket* skt = new socket(snd_.get_io_service());
   detail::scope scp(boost::bind(&acceptor::delete_socket, this, skt));
   acpr_.async_accept(skt->get_socket(), yield);
   scp.reset();
@@ -72,7 +71,7 @@ void acceptor::close()
 ///----------------------------------------------------------------------------
 void acceptor::delete_socket(gce::detail::basic_socket* skt)
 {
-  GCE_CACHE_ALIGNED_DELETE(gce::detail::basic_socket, skt);
+  delete skt;
 }
 ///----------------------------------------------------------------------------
 }

@@ -49,40 +49,13 @@ bool mailbox::pop(recv_t& src, message& msg, match_list_t const& match_list)
   if (match_list.empty())
   {
     recv_pair_t& rp = recv_que_.front();
-    src = rp.first;
-    msg = rp.second;
-    recv_que_.pop_front();
-    return true;
+    return fetch_match_msg(rp.second.get_type(), src, msg);
   }
 
   BOOST_FOREACH(match_t type, match_list)
   {
-    match_queue_t* match_que = 0;
-    match_queue_list_t::iterator mq_itr(match_queue_list_.end());
-    if (type >= 0 && type < (match_t)cache_match_list_.size())
+    if (fetch_match_msg(type, src, msg))
     {
-      match_que = &cache_match_list_[type];
-    }
-    else
-    {
-      mq_itr = match_queue_list_.find(type);
-      if (mq_itr != match_queue_list_.end())
-      {
-        match_que = &mq_itr->second;
-      }
-    }
-
-    if (match_que && !match_que->empty())
-    {
-      recv_itr itr = match_que->front();
-      match_que->pop_front();
-      if (match_que->empty() && mq_itr != match_queue_list_.end())
-      {
-        match_queue_list_.erase(mq_itr);
-      }
-      src = itr->first;
-      msg = itr->second;
-      recv_que_.erase(itr);
       return true;
     }
   }
@@ -124,7 +97,7 @@ void mailbox::push(aid_t sender, message const& msg)
 {
   recv_t rcv(sender);
   scope scp(boost::bind(&recv_queue_t::pop_back, &recv_que_));
-  add_match(rcv, msg);
+  add_match_msg(rcv, msg);
   scp.reset();
 }
 ///------------------------------------------------------------------------------
@@ -132,7 +105,7 @@ void mailbox::push(exit_t ex, message const& msg)
 {
   recv_t rcv(ex);
   scope scp(boost::bind(&recv_queue_t::pop_back, &recv_que_));
-  add_match(rcv, msg);
+  add_match_msg(rcv, msg);
   scp.reset();
 }
 ///------------------------------------------------------------------------------
@@ -140,7 +113,7 @@ void mailbox::push(request_t req, message const& msg)
 {
   scope scp(boost::bind(&recv_queue_t::pop_back, &recv_que_));
   recv_t rcv(req);
-  add_match(rcv, msg);
+  add_match_msg(rcv, msg);
   std::pair<wait_reply_list_t::iterator, bool> pr =
     wait_reply_list_.insert(std::make_pair(req.get_aid(), dummy_));
   pr.first->second.push_back(req);
@@ -153,7 +126,7 @@ bool mailbox::push(response_t res, message const& msg)
   return false;
 }
 ///------------------------------------------------------------------------------
-void mailbox::add_match(recv_t const& rcv, message const& msg)
+void mailbox::add_match_msg(recv_t const& rcv, message const& msg)
 {
   recv_itr itr = recv_que_.insert(recv_que_.end(), std::make_pair(rcv, msg));
   match_t type = msg.get_type();
@@ -167,6 +140,40 @@ void mailbox::add_match(recv_t const& rcv, message const& msg)
       match_queue_list_.insert(std::make_pair(type, dummy2_));
     pr.first->second.push_back(itr);
   }
+}
+///------------------------------------------------------------------------------
+bool mailbox::fetch_match_msg(match_t type, recv_t& src, message& msg)
+{
+  match_queue_t* match_que = 0;
+  match_queue_list_t::iterator mq_itr(match_queue_list_.end());
+  if (type >= 0 && type < (match_t)cache_match_list_.size())
+  {
+    match_que = &cache_match_list_[type];
+  }
+  else
+  {
+    mq_itr = match_queue_list_.find(type);
+    if (mq_itr != match_queue_list_.end())
+    {
+      match_que = &mq_itr->second;
+    }
+  }
+
+  if (match_que && !match_que->empty())
+  {
+    recv_itr itr = match_que->front();
+    match_que->pop_front();
+    if (match_que->empty() && mq_itr != match_queue_list_.end())
+    {
+      match_queue_list_.erase(mq_itr);
+    }
+    src = itr->first;
+    msg = itr->second;
+    recv_que_.erase(itr);
+    return true;
+  }
+
+  return false;
 }
 ///------------------------------------------------------------------------------
 }

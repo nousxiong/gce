@@ -85,12 +85,7 @@ private:
   static void test_freelist()
   {
     typedef detail::object_pool<my_data, std::string> op_t;
-    detail::unique_ptr<op_t> op(
-      GCE_CACHE_ALIGNED_NEW(op_t)(
-        (detail::cache_pool*)0, std::string(), size_nil
-        ),
-      detail::cache_aligned_deleter()
-      );
+    detail::unique_ptr<op_t> op(new op_t((detail::cache_pool*)0, std::string(), size_nil));
 
     //boost::timer::auto_cpu_timer t;
     run_test(op.get(), true);

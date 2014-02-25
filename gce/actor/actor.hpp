@@ -15,7 +15,6 @@
 #include <gce/actor/detail/pack.hpp>
 #include <gce/actor/match.hpp>
 #include <gce/actor/detail/mailbox_fwd.hpp>
-#include <gce/detail/cache_aligned_new.hpp>
 
 namespace gce
 {
@@ -90,11 +89,6 @@ public:
       a_.monitor(target);
     }
 
-    inline void add_link(detail::link_t l)
-    {
-      a_.add_link(l);
-    }
-
     inline aid_t get_aid()
     {
       return a_.get_aid();
@@ -108,6 +102,12 @@ public:
     inline yield_t get_yield()
     {
       return a_.get_yield();
+    }
+
+    /// internal use
+    inline void add_link(detail::link_t l)
+    {
+      a_.add_link(l);
     }
 
   private:
@@ -160,19 +160,11 @@ private:
 private:
   byte_t pad0_[GCE_CACHE_LINE_SIZE]; /// Ensure start from a new cache line.
 
-  status stat_;
-  byte_t pad1_[GCE_CACHE_LINE_SIZE - sizeof(status)];
-
-  std::size_t stack_size_;
-  byte_t pad2_[GCE_CACHE_LINE_SIZE - sizeof(std::size_t)];
-
-  self self_;
-  byte_t pad3_[GCE_CACHE_LINE_SIZE - sizeof(self)];
-
-  detail::cache_aligned_ptr<detail::cache_pool, detail::cache_pool*> user_;
-
-  typedef detail::unique_ptr<func_t> func_ptr;
-  detail::cache_aligned_ptr<func_t, func_ptr> f_;
+  GCE_CACHE_ALIGNED_VAR(status, stat_)
+  GCE_CACHE_ALIGNED_VAR(std::size_t, stack_size_)
+  GCE_CACHE_ALIGNED_VAR(self, self_)
+  GCE_CACHE_ALIGNED_VAR(detail::cache_pool*, user_)
+  GCE_CACHE_ALIGNED_VAR(func_t, f_)
 
   typedef boost::function<void (detail::actor_code)> yield_cb_t;
 

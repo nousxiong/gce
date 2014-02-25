@@ -15,7 +15,6 @@
 #include <gce/actor/detail/object_pool.hpp>
 #include <gce/detail/mpsc_queue.hpp>
 #include <gce/detail/unique_ptr.hpp>
-#include <gce/detail/cache_aligned_ptr.hpp>
 #include <boost/noncopyable.hpp>
 #include <vector>
 
@@ -48,10 +47,10 @@ public:
 
 public:
   inline std::size_t get_id() const { return id_; };
-  inline context* get_context() { return ctx_.get(); }
+  inline context& get_context() { return *ctx_; }
   inline std::size_t get_cache_match_size() const { return cache_match_size_; }
-  inline strand_t* get_strand() { return snd_.get(); }
-  inline timer_t* get_gc_timer() { return gc_tmr_.get(); }
+  inline strand_t& get_strand() { return snd_; }
+  inline timer_t& get_gc_timer() { return gc_tmr_; }
 
   actor* get_actor();
   thin* get_thin();
@@ -119,67 +118,40 @@ private:
     >
   void free_object(
     cache_pool*, T*,
-    std::vector<cache<T, FreeQueue> >&, Pool*,
-    FreeQueue*, DirtyList&
+    std::vector<cache<T, FreeQueue> >&, Pool&,
+    FreeQueue&, DirtyList&
     );
 
   template <typename T, typename Pool, typename FreeQueue>
-  void free_object(Pool*, FreeQueue*);
+  void free_object(Pool&, FreeQueue&);
 
 private:
   byte_t pad0_[GCE_CACHE_LINE_SIZE]; /// Ensure start from a new cache line.
 
-  cache_aligned_ptr<context, context*> ctx_;
+  GCE_CACHE_ALIGNED_VAR(context*, ctx_)
 
-  std::size_t id_;
-  byte_t pad1_[GCE_CACHE_LINE_SIZE - sizeof(std::size_t)];
+  GCE_CACHE_ALIGNED_VAR(std::size_t, id_)
+  GCE_CACHE_ALIGNED_VAR(std::size_t, cache_num_)
+  GCE_CACHE_ALIGNED_VAR(std::size_t, cache_match_size_)
 
-  std::size_t cache_num_;
-  byte_t pad2_[GCE_CACHE_LINE_SIZE - sizeof(std::size_t)];
+  GCE_CACHE_ALIGNED_VAR(bool, mixed_)
 
-  std::size_t cache_match_size_;
-  byte_t pad3_[GCE_CACHE_LINE_SIZE - sizeof(std::size_t)];
-
-  bool mixed_;
-  byte_t pad4_[GCE_CACHE_LINE_SIZE - sizeof(bool)];
-
-  typedef unique_ptr<strand_t> strand_ptr;
-  cache_aligned_ptr<strand_t, strand_ptr> snd_;
-
-  typedef unique_ptr<timer_t> timer_ptr;
-  cache_aligned_ptr<timer_t, timer_ptr> gc_tmr_;
+  GCE_CACHE_ALIGNED_VAR(strand_t, snd_)
+  GCE_CACHE_ALIGNED_VAR(timer_t, gc_tmr_)
 
   /// pools
-  typedef unique_ptr<actor_pool_t> actor_pool_ptr;
-  cache_aligned_ptr<actor_pool_t, actor_pool_ptr> actor_pool_;
-
-  typedef unique_ptr<thin_pool_t> thin_pool_ptr;
-  cache_aligned_ptr<thin_pool_t, thin_pool_ptr> thin_pool_;
-
-  typedef unique_ptr<pack_pool_t> pack_pool_ptr;
-  cache_aligned_ptr<pack_pool_t, pack_pool_ptr> pack_pool_;
-
-  typedef unique_ptr<socket_pool_t> socket_pool_ptr;
-  cache_aligned_ptr<socket_pool_t, socket_pool_ptr> socket_pool_;
-
-  typedef unique_ptr<acceptor_pool_t> acceptor_pool_ptr;
-  cache_aligned_ptr<acceptor_pool_t, acceptor_pool_ptr> acceptor_pool_;
+  GCE_CACHE_ALIGNED_VAR(actor_pool_t, actor_pool_)
+  GCE_CACHE_ALIGNED_VAR(thin_pool_t, thin_pool_)
+  GCE_CACHE_ALIGNED_VAR(pack_pool_t, pack_pool_)
+  GCE_CACHE_ALIGNED_VAR(socket_pool_t, socket_pool_)
+  GCE_CACHE_ALIGNED_VAR(acceptor_pool_t, acceptor_pool_)
 
   /// queues
-  typedef unique_ptr<actor_queue_t> actor_queue_ptr;
-  cache_aligned_ptr<actor_queue_t, actor_queue_ptr> actor_free_queue_;
-
-  typedef unique_ptr<thin_queue_t> thin_queue_ptr;
-  cache_aligned_ptr<thin_queue_t, thin_queue_ptr> thin_free_queue_;
-
-  typedef unique_ptr<pack_queue_t> pack_queue_ptr;
-  cache_aligned_ptr<pack_queue_t, pack_queue_ptr> pack_free_queue_;
-
-  typedef unique_ptr<socket_queue_t> socket_queue_ptr;
-  cache_aligned_ptr<socket_queue_t, socket_queue_ptr> socket_free_queue_;
-
-  typedef unique_ptr<acceptor_queue_t> acceptor_queue_ptr;
-  cache_aligned_ptr<acceptor_queue_t, acceptor_queue_ptr> acceptor_free_queue_;
+  GCE_CACHE_ALIGNED_VAR(actor_queue_t, actor_free_queue_)
+  GCE_CACHE_ALIGNED_VAR(thin_queue_t, thin_free_queue_)
+  GCE_CACHE_ALIGNED_VAR(pack_queue_t, pack_free_queue_)
+  GCE_CACHE_ALIGNED_VAR(socket_queue_t, socket_free_queue_)
+  GCE_CACHE_ALIGNED_VAR(acceptor_queue_t, acceptor_free_queue_)
 
   /// thread local vals
   typedef cache<actor, actor_queue_t> actor_cache_t;

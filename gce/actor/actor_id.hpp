@@ -68,6 +68,7 @@ public:
 
   inline basic_actor* get_actor_ptr() const
   {
+    BOOST_ASSERT(uintptr_ != 0);
     return (basic_actor*)uintptr_;
   }
 

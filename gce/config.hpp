@@ -20,4 +20,9 @@
 # pragma warning(disable : 4251 4231 4660 4275 4355 4244 4307)
 #endif
 
+/// Ensure occupy entire cache(s) line.
+#define GCE_CACHE_ALIGNED_VAR(type, var) \
+  type var; \
+  byte_t pad_##var[(sizeof(type)/GCE_CACHE_LINE_SIZE + 1)*GCE_CACHE_LINE_SIZE - sizeof(type)];
+
 #endif /// GCE_CONFIG_HPP

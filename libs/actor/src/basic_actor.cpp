@@ -9,8 +9,6 @@
 
 #include <gce/actor/basic_actor.hpp>
 #include <gce/actor/detail/cache_pool.hpp>
-#include <gce/actor/detail/mailbox.hpp>
-#include <gce/detail/cache_aligned_new.hpp>
 #include <gce/detail/scope.hpp>
 #include <boost/variant/get.hpp>
 #include <boost/foreach.hpp>
@@ -20,8 +18,7 @@ namespace gce
 ///----------------------------------------------------------------------------
 basic_actor::basic_actor(std::size_t cache_match_size)
   : owner_(0)
-  , mb_(GCE_CACHE_ALIGNED_NEW(detail::mailbox)(cache_match_size), detail::cache_aligned_deleter())
-  , pack_que_(GCE_CACHE_ALIGNED_NEW(detail::pack_queue_t), detail::cache_aligned_deleter())
+  , mb_(cache_match_size)
   , req_id_(0)
 {
   aid_ = aid_t(this, 0);
@@ -33,10 +30,10 @@ basic_actor::~basic_actor()
 ///----------------------------------------------------------------------------
 void basic_actor::on_free()
 {
-  mb_->clear();
+  mb_.clear();
   link_list_.clear();
   monitor_list_.clear();
-  dealloc_pack(owner_.get(), pack_que_->pop_all_reverse());
+  dealloc_pack(owner_, pack_que_.pop_all_reverse());
 }
 ///----------------------------------------------------------------------------
 detail::pack* basic_actor::alloc_pack(detail::cache_pool* owner)
@@ -59,7 +56,7 @@ void basic_actor::dealloc_pack(detail::cache_pool* owner, detail::pack* pk)
 ///----------------------------------------------------------------------------
 void basic_actor::move_pack(detail::cache_pool* user)
 {
-  detail::pack* pk = pack_que_->pop_all();
+  detail::pack* pk = pack_que_.pop_all();
   if (pk)
   {
     detail::scope scp(boost::bind(&basic_actor::dealloc_pack, user, pk));
@@ -70,15 +67,15 @@ void basic_actor::move_pack(detail::cache_pool* user)
       {
         if (aid_t* aid = boost::get<aid_t>(&pk->tag_))
         {
-          mb_->push(*aid, pk->msg_);
+          mb_.push(*aid, pk->msg_);
         }
         else if (detail::request_t* req = boost::get<detail::request_t>(&pk->tag_))
         {
-          mb_->push(*req, pk->msg_);
+          mb_.push(*req, pk->msg_);
         }
         else if (detail::exit_t* ex = boost::get<detail::exit_t>(&pk->tag_))
         {
-          mb_->push(*ex, pk->msg_);
+          mb_.push(*ex, pk->msg_);
           remove_link(ex->get_aid());
         }
         else if (detail::link_t* link = boost::get<detail::link_t>(&pk->tag_))
@@ -88,7 +85,7 @@ void basic_actor::move_pack(detail::cache_pool* user)
         }
         else if (response_t* res = boost::get<response_t>(&pk->tag_))
         {
-          mb_->push(*res, pk->msg_);
+          mb_.push(*res, pk->msg_);
         }
       }
       else if (!pk->is_err_ret_)

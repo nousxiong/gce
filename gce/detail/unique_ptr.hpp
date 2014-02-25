@@ -121,6 +121,12 @@ private:
   T* px_;
   deleter_t deleter_;
 };
+
+template <typename T>
+struct empty_deleter
+{
+  void operator()(T*) const {}
+};
 }
 }
 

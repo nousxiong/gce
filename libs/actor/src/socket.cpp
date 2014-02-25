@@ -14,7 +14,6 @@
 #include <gce/actor/detail/mailbox.hpp>
 #include <gce/actor/message.hpp>
 #include <gce/detail/scope.hpp>
-#include <gce/detail/cache_aligned_new.hpp>
 #include <gce/actor/impl/protocol.hpp>
 #include <gce/amsg/amsg.hpp>
 #include <gce/amsg/zerocopy.hpp>
@@ -61,7 +60,7 @@ void socket::connect(std::string const& ep, aid_t master)
   base_type::add_link(master_);
 
   boost::asio::spawn(
-    *user_->get_strand(),
+    user_->get_strand(),
     boost::bind(
       &socket::run_conn, this, ep, _1
       ),
@@ -77,7 +76,7 @@ void socket::start(basic_socket* skt, aid_t master)
   conn_ = true;
 
   boost::asio::spawn(
-    *user_->get_strand(),
+    user_->get_strand(),
     boost::bind(
       &socket::run, this, skt, _1
       ),
@@ -101,8 +100,8 @@ void socket::on_free()
 ///----------------------------------------------------------------------------
 void socket::on_recv(pack* pk)
 {
-  strand_t* snd = user_->get_strand();
-  snd->dispatch(
+  strand_t& snd = user_->get_strand();
+  snd.dispatch(
     boost::bind(
       &socket::handle_recv, this, pk
       )
@@ -111,7 +110,7 @@ void socket::on_recv(pack* pk)
 ///----------------------------------------------------------------------------
 void socket::send(aid_t recver, message const& m)
 {
-  pack* pk = base_type::alloc_pack(user_.get());
+  pack* pk = base_type::alloc_pack(user_);
   pk->tag_ = get_aid();
   pk->recver_ = recver;
   pk->msg_ = m;
@@ -229,7 +228,7 @@ void socket::run(basic_socket* skt, yield_t yield)
   {
     stat_ = on;
     skt_ = skt;
-    skt_->init(user_.get());
+    skt_->init(user_);
     start_heartbeat(boost::bind(&socket::close, this));
 
     while (stat_ == on)
@@ -302,11 +301,11 @@ basic_socket* socket::make_socket(std::string const& ep)
 
     std::string port = ep.substr(begin, pos - begin);
     basic_socket* skt =
-      GCE_CACHE_ALIGNED_NEW(tcp::socket)(
-        user_->get_strand()->get_io_service(),
+      new tcp::socket(
+        user_->get_strand().get_io_service(),
         address, port
         );
-    skt->init(user_.get());
+    skt->init(user_);
     return skt;
   }
 
@@ -315,7 +314,7 @@ basic_socket* socket::make_socket(std::string const& ep)
 ///----------------------------------------------------------------------------
 void socket::handle_recv(pack* pk)
 {
-  scope scp(boost::bind(&basic_actor::dealloc_pack, user_.get(), pk));
+  scope scp(boost::bind(&basic_actor::dealloc_pack, user_, pk));
   if (check(pk->recver_))
   {
     if (boost::get<aid_t>(&pk->tag_))
@@ -344,13 +343,13 @@ void socket::handle_recv(pack* pk)
     if (detail::link_t* link = boost::get<detail::link_t>(&pk->tag_))
     {
       /// send actor exit msg
-      base_type::send_already_exited(link->get_aid(), pk->recver_, user_.get());
+      base_type::send_already_exited(link->get_aid(), pk->recver_, user_);
     }
     else if (detail::request_t* req = boost::get<detail::request_t>(&pk->tag_))
     {
       /// reply actor exit msg
       response_t res(req->get_id(), pk->recver_);
-      base_type::send_already_exited(req->get_aid(), res, user_.get());
+      base_type::send_already_exited(req->get_aid(), res, user_);
     }
   }
 }
@@ -476,7 +475,7 @@ template <typename F>
 void socket::start_heartbeat(F f)
 {
   hb_.init(
-    user_.get(),
+    user_,
     opt_.heartbeat_period_, opt_.heartbeat_count_,
     f, boost::bind(&socket::send_msg_hb, this)
     );
@@ -496,12 +495,13 @@ void socket::free_self(exit_code_t exc, std::string const& exit_msg, yield_t yie
   catch (...)
   {
   }
-  GCE_CACHE_ALIGNED_DELETE(basic_socket, skt_);
+
+  delete skt_;
 
   hb_.clear();
-  base_type::send_exit(exc, exit_msg, user_.get());
+  base_type::send_exit(exc, exit_msg, user_);
   base_type::update_aid();
-  user_->free_socket(owner_.get(), this);
+  user_->free_socket(owner_, this);
 }
 ///----------------------------------------------------------------------------
 }
