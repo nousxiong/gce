@@ -64,6 +64,11 @@ public:
       a_.send(recver, m);
     }
 
+    inline void relay(aid_t des, message& m)
+    {
+      a_.relay(des, m);
+    }
+
     inline response_t request(aid_t recver, message const& m)
     {
       return a_.request(recver, m);
@@ -129,6 +134,7 @@ public:
 public:
   aid_t recv(message&, match const&);
   void send(aid_t, message const&);
+  void relay(aid_t, message&);
 
   response_t request(aid_t, message const&);
   void reply(aid_t, message const&);

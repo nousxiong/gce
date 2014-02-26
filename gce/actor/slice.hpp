@@ -33,6 +33,7 @@ public:
 public:
   aid_t recv(message&, match_list_t const& match_list = match_list_t());
   void send(aid_t, message const&);
+  void relay(aid_t, message&);
 
   response_t request(aid_t, message const&);
   void reply(aid_t, message const&);

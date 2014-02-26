@@ -40,6 +40,7 @@ public:
 public:
   aid_t recv(message&, match const& mach = match());
   void send(aid_t, message const&);
+  void relay(aid_t, message&);
   void reply(aid_t, message const&);
   void wait(duration_t);
 

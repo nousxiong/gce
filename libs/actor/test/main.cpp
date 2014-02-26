@@ -33,6 +33,7 @@
 #include "test_socket.hpp"
 #include "test_message.hpp"
 #include "test_send_recv.hpp"
+#include "test_relay.hpp"
 
 int main()
 {
@@ -48,6 +49,7 @@ int main()
     gce::link_ut::run();
     gce::socket_ut::run();
     gce::message_ut::run();
+    gce::relay_ut::run();
   }
   catch (std::exception& ex)
   {

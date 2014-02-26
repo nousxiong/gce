@@ -121,6 +121,7 @@ aid_t mixin::recv(message& msg, match const& mach)
   else if (detail::request_t* req = boost::get<detail::request_t>(&rcv))
   {
     sender = req->get_aid();
+    msg.req_ = *req;
   }
   else if (detail::exit_t* ex = boost::get<detail::exit_t>(&rcv))
   {
@@ -138,6 +139,24 @@ void mixin::send(aid_t recver, message const& m)
   pk->msg_ = m;
 
   recver.get_actor_ptr()->on_recv(pk);
+}
+///----------------------------------------------------------------------------
+void mixin::relay(aid_t des, message& m)
+{
+  detail::pack* pk = basic_actor::alloc_pack(owner_);
+  if (m.req_.valid())
+  {
+    pk->tag_ = m.req_;
+    m.req_ = detail::request_t();
+  }
+  else
+  {
+    pk->tag_ = get_aid();
+  }
+  pk->recver_ = des;
+  pk->msg_ = m;
+
+  des.get_actor_ptr()->on_recv(pk);
 }
 ///----------------------------------------------------------------------------
 void mixin::reply(aid_t recver, message const& m)

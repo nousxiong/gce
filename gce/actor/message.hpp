@@ -13,6 +13,7 @@
 #include <gce/actor/config.hpp>
 #include <gce/actor/detail/buffer.hpp>
 #include <gce/actor/detail/buffer_ref.hpp>
+#include <gce/actor/detail/request.hpp>
 #include <gce/amsg/amsg.hpp>
 #include <gce/amsg/zerocopy.hpp>
 #include <boost/utility/string_ref.hpp>
@@ -20,6 +21,9 @@
 
 namespace gce
 {
+class actor;
+class mixin;
+class slice;
 class message
 {
 public:
@@ -354,6 +358,11 @@ private:
   byte_t small_[GCE_SMALL_MSG_SIZE];
   detail::buffer_ptr large_;
   detail::buffer_ref buf_;
+
+  friend class actor;
+  friend class mixin;
+  friend class slice;
+  detail::request_t req_;
 };
 }
 
