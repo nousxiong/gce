@@ -28,7 +28,7 @@ cache_pool::cache_pool(context& ctx, std::size_t id, attributes const& attrs, bo
   , snd_(ctx.get_io_service())
   , gc_tmr_(ctx.get_io_service())
   , actor_pool_(
-      this, detail::actor_attrs(&ctx, attrs.stack_scale_, cache_match_size_), size_nil,
+      this, detail::actor_attrs(&ctx, cache_match_size_), size_nil,
       attrs.actor_pool_reserve_size_
       )
   , pack_pool_(

@@ -24,6 +24,7 @@
 
 #include <boost/timer/timer.hpp>
 #include "test_object_pool.hpp"
+#include "test_coro.hpp"
 #include "test_actor.hpp"
 #include "test_slice.hpp"
 #include "test_actor_pingpong.hpp"
@@ -38,6 +39,7 @@ int main()
   try
   {
     gce::object_pool_ut::run();
+    gce::coro_ut::run();
     gce::send_recv_ut::run();
     gce::actor_ut::run();
     gce::slice_ut::run();

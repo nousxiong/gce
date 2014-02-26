@@ -11,6 +11,7 @@
 #include <gce/actor/detail/cache_pool.hpp>
 #include <gce/actor/mixin.hpp>
 #include <gce/actor/detail/mailbox.hpp>
+#include <gce/actor/detail/scoped_bool.hpp>
 #include <gce/actor/message.hpp>
 #include <gce/detail/scope.hpp>
 #include <boost/asio/placeholders.hpp>
@@ -23,7 +24,6 @@ namespace gce
 actor::actor(detail::actor_attrs attrs)
   : basic_actor(attrs.cache_match_size_)
   , stat_(ready)
-  , stack_size_(make_stack_size(attrs.stack_scale_type_))
   , self_(*this)
   , user_(0)
   , recving_(false)
@@ -37,10 +37,10 @@ actor::actor(detail::actor_attrs attrs)
 actor::~actor()
 {
   stat_ = closed;
-  if (yld_cb_)
-  {
-    resume(detail::actor_normal);
-  }
+//  if (yld_cb_)
+//  {
+//    resume(actor_normal);
+//  }
 }
 ///----------------------------------------------------------------------------
 aid_t actor::recv(message& msg, match const& mach)
@@ -53,14 +53,14 @@ aid_t actor::recv(message& msg, match const& mach)
     duration_t tmo = mach.timeout_;
     if (tmo > zero)
     {
-      detail::scope_flag<bool> scp(recving_);
+      detail::scoped_bool<bool> scp(recving_);
       if (tmo < infin)
       {
         start_recv_timer(tmo);
       }
       curr_match_ = mach;
-      detail::actor_code ac = yield();
-      if (ac == detail::actor_timeout)
+      actor_code ac = yield();
+      if (ac == actor_timeout)
       {
         return sender;
       }
@@ -149,13 +149,13 @@ aid_t actor::recv(response_t res, message& msg, duration_t tmo)
   {
     if (tmo > zero)
     {
-      detail::scope_flag<bool> scp(responsing_);
+      detail::scoped_bool<bool> scp(responsing_);
       if (tmo < infin)
       {
         start_recv_timer(tmo);
       }
-      detail::actor_code ac = yield();
-      if (ac == detail::actor_timeout)
+      actor_code ac = yield();
+      if (ac == actor_timeout)
       {
         return sender;
       }
@@ -205,21 +205,27 @@ yield_t actor::get_yield()
   return *yld_;
 }
 ///----------------------------------------------------------------------------
-void actor::start()
+void actor::start(std::size_t stack_size)
 {
-  strand_t& snd = user_->get_strand();
-  if (!yld_cb_)
+  if (stack_size < minimum_stacksize())
   {
-    boost::asio::spawn(
-      snd,
-      boost::bind(
-        &actor::run, this, _1
-        ),
-      boost::coroutines::attributes(stack_size_)
-      );
+    stack_size = minimum_stacksize();
+  }
+  else if (stack_size > default_stacksize())
+  {
+    stack_size = default_stacksize();
   }
 
-  snd.dispatch(boost::bind(&actor::begin_run, this));
+  strand_t& snd = user_->get_strand();
+  boost::asio::spawn(
+    snd,
+    boost::bind(
+      &actor::run, this, _1
+      ),
+    boost::coroutines::attributes(stack_size)
+    );
+
+  snd.dispatch(boost::bind(&actor::begin, this));
 }
 ///----------------------------------------------------------------------------
 void actor::init(
@@ -267,21 +273,6 @@ void actor::on_recv(detail::pack* pk)
     );
 }
 ///----------------------------------------------------------------------------
-std::size_t actor::make_stack_size(stack_scale_type stack_scale)
-{
-  std::size_t min_size =
-    boost::coroutines::stack_allocator::minimum_stacksize();
-  std::size_t size =
-    boost::coroutines::stack_allocator::default_stacksize() /
-    (std::size_t)stack_scale;
-
-  if (size < min_size)
-  {
-    size = min_size;
-  }
-  return size;
-}
-///----------------------------------------------------------------------------
 void actor::run(yield_t yld)
 {
   yld_ = &yld;
@@ -292,52 +283,49 @@ void actor::run(yield_t yld)
     return;
   }
 
-  do
+  try
   {
-    try
-    {
-      stat_ = on;
-      f_(self_);
-      stopped(exit_normal, "exit normal");
-    }
-    catch (boost::coroutines::detail::forced_unwind const&)
-    {
-      stopped(exit_normal, "exit normal");
-      throw;
-    }
-    catch (std::exception& ex)
-    {
-      stopped(exit_except, ex.what());
-    }
-    catch (...)
-    {
-      stopped(exit_unknown, "unexpected exception");
-    }
+    stat_ = on;
+    f_(self_);
+    end(exit_normal, "exit normal");
   }
-  while (stat_ == ready);
+  catch (boost::coroutines::detail::forced_unwind const&)
+  {
+    end(exit_normal, "exit normal");
+    throw;
+  }
+  catch (std::exception& ex)
+  {
+    end(exit_except, ex.what());
+  }
+  catch (...)
+  {
+    end(exit_unknown, "unexpected exception");
+  }
 }
 ///----------------------------------------------------------------------------
-void actor::begin_run()
+void actor::begin()
 {
-  resume(detail::actor_normal);
+  resume(actor_normal);
 }
 ///----------------------------------------------------------------------------
-void actor::resume(detail::actor_code ac)
+void actor::resume(actor_code ac)
 {
   detail::scope scp(boost::bind(&actor::free_self, this));
   BOOST_ASSERT(yld_cb_);
   yld_cb_(ac);
+
   if (stat_ != off)
   {
     scp.reset();
   }
 }
 ///----------------------------------------------------------------------------
-detail::actor_code actor::yield()
+actor::actor_code actor::yield()
 {
   BOOST_ASSERT(yld_);
   boost::asio::detail::async_result_init<
-    yield_t, void (detail::actor_code)> init(
+    yield_t, void (actor_code)> init(
       BOOST_ASIO_MOVE_CAST(yield_t)(*yld_));
 
   yld_cb_ = boost::bind<void>(init.handler, _1);
@@ -351,12 +339,15 @@ void actor::free_self()
   user_->free_actor(owner_, this);
 }
 ///----------------------------------------------------------------------------
-void actor::stopped(exit_code_t ec, std::string const& exit_msg)
+void actor::end(exit_code_t ec, std::string const& exit_msg)
 {
+  /// Trigger a context switch, ensure we stop coro using actor::resume.
+  user_->get_strand().post(boost::bind(&actor::resume, this, actor_normal));
+  yield();
+
   stat_ = off;
   ec_ = ec;
   exit_msg_ = exit_msg;
-  yield();
 }
 ///----------------------------------------------------------------------------
 void actor::start_recv_timer(duration_t dur)
@@ -377,7 +368,7 @@ void actor::handle_recv_timeout(errcode_t const& ec, std::size_t tmr_sid)
 {
   if (!ec && tmr_sid == tmr_sid_)
   {
-    resume(detail::actor_timeout);
+    resume(actor_timeout);
   }
 }
 ///----------------------------------------------------------------------------
@@ -440,7 +431,7 @@ void actor::handle_recv(detail::pack* pk)
       ++tmr_sid_;
       errcode_t ec;
       tmr_.cancel(ec);
-      resume(detail::actor_normal);
+      resume(actor_normal);
     }
   }
   else if (!pk->is_err_ret_)

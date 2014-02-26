@@ -25,6 +25,7 @@ namespace detail
 template <typename F>
 inline aid_t make_actor(
   cache_pool* cac_pool, F f,
+  std::size_t stack_size,
   aid_t link_tgt, bool sync_sire
   )
 {
@@ -36,35 +37,44 @@ inline aid_t make_actor(
   }
   actor* a = cac_pool->get_actor();
   a->init(user, cac_pool, f, link_tgt);
-  a->start();
+  a->start(stack_size);
   return a->get_aid();
 }
 }
 
 /// Spawn a actor using given mixin
 template <typename F>
-inline aid_t spawn(mixin_t sire, F f, link_type type = no_link)
+inline aid_t spawn(
+  mixin_t sire, F f,
+  link_type type = no_link,
+  std::size_t stack_size = default_stacksize()
+  )
 {
   aid_t link_tgt;
   if (type != no_link)
   {
     link_tgt = sire.get_aid();
   }
-  aid_t ret = make_actor(sire.select_cache_pool(), f, link_tgt, false);
+  aid_t ret = make_actor(sire.select_cache_pool(), f, stack_size, link_tgt, false);
   sire.add_link(detail::link_t(type, ret));
   return ret;
 }
 
 /// Spawn a actor using given actor
 template <typename F>
-inline aid_t spawn(self_t sire, F f, link_type type = no_link, bool sync_sire = false)
+inline aid_t spawn(
+  self_t sire, F f,
+  link_type type = no_link,
+  bool sync_sire = false,
+  std::size_t stack_size = default_stacksize()
+  )
 {
   aid_t link_tgt;
   if (type != no_link)
   {
     link_tgt = sire.get_aid();
   }
-  aid_t ret = make_actor(sire.get_cache_pool(), f, link_tgt, sync_sire);
+  aid_t ret = make_actor(sire.get_cache_pool(), f, stack_size, link_tgt, sync_sire);
   sire.add_link(detail::link_t(type, ret));
   return ret;
 }

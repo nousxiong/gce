@@ -13,6 +13,7 @@
 #include <gce/actor/config.hpp>
 #include <gce/actor/message.hpp>
 #include <gce/actor/basic_actor.hpp>
+#include <gce/actor/net_option.hpp>
 #include <gce/actor/detail/object_pool.hpp>
 #include <gce/detail/mpsc_queue.hpp>
 #include <gce/actor/detail/pack.hpp>
@@ -21,6 +22,7 @@
 namespace gce
 {
 class mixin;
+class context;
 namespace detail
 {
 class cache_pool;

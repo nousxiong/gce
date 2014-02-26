@@ -12,6 +12,7 @@
 
 #include <gce/actor/config.hpp>
 #include <gce/actor/basic_actor.hpp>
+#include <gce/actor/actor_fwd.hpp>
 #include <gce/actor/detail/pack.hpp>
 #include <gce/actor/match.hpp>
 #include <gce/actor/detail/mailbox_fwd.hpp>
@@ -32,6 +33,11 @@ class actor
   , public basic_actor
 {
   typedef basic_actor base_type;
+  enum actor_code
+  {
+    actor_normal = 0,
+    actor_timeout,
+  };
 
 public:
   enum status
@@ -136,7 +142,7 @@ public:
 public:
   detail::cache_pool* get_cache_pool();
   yield_t get_yield();
-  void start();
+  void start(std::size_t);
   void init(
     detail::cache_pool* user, detail::cache_pool* owner,
     func_t const& f,
@@ -146,13 +152,12 @@ public:
   void on_recv(detail::pack*);
 
 private:
-  static std::size_t make_stack_size(stack_scale_type);
   void run(yield_t);
-  void begin_run();
-  void resume(detail::actor_code ac = detail::actor_normal);
-  detail::actor_code yield();
+  void begin();
+  void resume(actor_code ac = actor_normal);
+  actor_code yield();
   void free_self();
-  void stopped(exit_code_t, std::string const&);
+  void end(exit_code_t, std::string const&);
   void start_recv_timer(duration_t);
   void handle_recv_timeout(errcode_t const&, std::size_t);
   void handle_recv(detail::pack*);
@@ -161,12 +166,11 @@ private:
   byte_t pad0_[GCE_CACHE_LINE_SIZE]; /// Ensure start from a new cache line.
 
   GCE_CACHE_ALIGNED_VAR(status, stat_)
-  GCE_CACHE_ALIGNED_VAR(std::size_t, stack_size_)
   GCE_CACHE_ALIGNED_VAR(self, self_)
   GCE_CACHE_ALIGNED_VAR(detail::cache_pool*, user_)
   GCE_CACHE_ALIGNED_VAR(func_t, f_)
 
-  typedef boost::function<void (detail::actor_code)> yield_cb_t;
+  typedef boost::function<void (actor_code)> yield_cb_t;
 
   /// thread local vals
   bool recving_;

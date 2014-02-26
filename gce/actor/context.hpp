@@ -13,7 +13,6 @@
 #include <gce/actor/config.hpp>
 #include <gce/detail/unique_ptr.hpp>
 #include <boost/thread/thread.hpp>
-#include <boost/static_assert.hpp>
 #include <boost/atomic.hpp>
 #include <boost/optional.hpp>
 #include <vector>
@@ -30,10 +29,7 @@ struct attributes
     , mixin_num_(1)
     , per_thread_cache_(3)
     , per_mixin_cache_(2)
-    , stack_scale_(stack_default)
     , actor_pool_reserve_size_(8)
-    , timer_pool_reserve_size_(8)
-    , timer_pool_free_size_(8)
     , pack_pool_reserve_size_(8)
     , pack_pool_free_size_(8)
     , slice_pool_reserve_size_(8)
@@ -42,8 +38,8 @@ struct attributes
     , socket_pool_free_size_(8)
     , acceptor_pool_reserve_size_(8)
     , acceptor_pool_free_size_(8)
-    , max_cache_match_size_(16)
-    , gc_period_(boost::chrono::milliseconds(1000))
+    , max_cache_match_size_(32)
+    , gc_period_(1000)
   {
   }
 
@@ -52,10 +48,7 @@ struct attributes
   std::size_t mixin_num_;
   std::size_t per_thread_cache_;
   std::size_t per_mixin_cache_;
-  stack_scale_type stack_scale_;
   std::size_t actor_pool_reserve_size_;
-  std::size_t timer_pool_reserve_size_;
-  std::size_t timer_pool_free_size_;
   std::size_t pack_pool_reserve_size_;
   std::size_t pack_pool_free_size_;
   std::size_t slice_pool_reserve_size_;

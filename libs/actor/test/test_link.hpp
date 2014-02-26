@@ -65,7 +65,11 @@ public:
     mixin_t mix = spawn(ctx);
     for (std::size_t i=0; i<2; ++i)
     {
-      spawn(mix, boost::bind(&link_ut::my_actor, _1, base_id), monitored);
+      spawn(
+        mix,
+        boost::bind(&link_ut::my_actor, _1, base_id),
+        monitored
+        );
     }
 
     for (std::size_t i=0; i<2; ++i)

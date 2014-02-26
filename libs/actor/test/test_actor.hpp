@@ -41,6 +41,11 @@ private:
       res_list[i] = request(self, aid);
     }
 
+    timer_t tmr(self.get_cache_pool()->get_context().get_io_service());
+    yield_t yield = self.get_yield();
+    tmr.expires_from_now(boost::chrono::milliseconds(10));
+    tmr.async_wait(yield);
+
     for (std::size_t i=0; i<size; ++i)
     {
       aid_t aid;
@@ -50,6 +55,9 @@ private:
       }
       while (!aid);
     }
+
+    tmr.expires_from_now(boost::chrono::seconds(1));
+    tmr.async_wait(yield);
 
     send(self, base_id);
   }

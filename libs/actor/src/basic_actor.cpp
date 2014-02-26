@@ -130,8 +130,7 @@ void basic_actor::link(detail::link_t l, detail::cache_pool* user)
     pk->tag_ = detail::link_t(l.get_type(), get_aid());
     pk->recver_ = target;
 
-    basic_actor* a = target.get_actor_ptr();
-    a->on_recv(pk);
+    target.get_actor_ptr()->on_recv(pk);
   }
 }
 ///----------------------------------------------------------------------------
@@ -145,8 +144,7 @@ void basic_actor::send_exit(exit_code_t ec, std::string const& exit_msg, detail:
     pk->msg_ = message(exit);
     pk->msg_ << ec << exit_msg;
 
-    basic_actor* a = aid.get_actor_ptr();
-    a->on_recv(pk);
+    aid.get_actor_ptr()->on_recv(pk);
   }
 }
 ///----------------------------------------------------------------------------

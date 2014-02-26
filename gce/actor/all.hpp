@@ -23,5 +23,6 @@
 #include <gce/actor/match.hpp>
 #include <gce/actor/response.hpp>
 #include <gce/actor/actor_id.hpp>
+#include <gce/actor/net_option.hpp>
 
 #endif /// GCE_ACTOR_ALL_HPP

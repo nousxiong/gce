@@ -11,6 +11,7 @@
 #define GCE_ACTOR_DETAIL_CACHE_POOL_HPP
 
 #include <gce/actor/config.hpp>
+#include <gce/actor/actor_fwd.hpp>
 #include <gce/actor/detail/pack.hpp>
 #include <gce/actor/detail/object_pool.hpp>
 #include <gce/detail/mpsc_queue.hpp>
