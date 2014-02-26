@@ -22,23 +22,30 @@ namespace gce
 {
 namespace detail
 {
-template <typename F>
+template <typename Sire, typename F>
 inline aid_t make_actor(
-  cache_pool* cac_pool, F f,
-  std::size_t stack_size,
-  aid_t link_tgt, bool sync_sire
+  Sire& sire, cache_pool* user, cache_pool* owner, 
+  F f, link_type type, std::size_t stack_size
   )
 {
-  context& ctx = cac_pool->get_context();
-  cache_pool* user = cac_pool;
-  if (!sync_sire)
+  aid_t link_tgt;
+  if (type != no_link)
+  {
+    link_tgt = sire.get_aid();
+  }
+
+  context& ctx = owner->get_context();
+  if (!user)
   {
     user = ctx.select_cache_pool();
   }
-  actor* a = cac_pool->get_actor();
-  a->init(user, cac_pool, f, link_tgt);
+
+  actor* a = owner->get_actor();
+  a->init(user, owner, f, link_tgt);
+  aid_t aid = a->get_aid();
+  sire.add_link(detail::link_t(type, aid));
   a->start(stack_size);
-  return a->get_aid();
+  return aid;
 }
 }
 
@@ -50,14 +57,17 @@ inline aid_t spawn(
   std::size_t stack_size = default_stacksize()
   )
 {
-  aid_t link_tgt;
-  if (type != no_link)
-  {
-    link_tgt = sire.get_aid();
-  }
-  aid_t ret = make_actor(sire.select_cache_pool(), f, stack_size, link_tgt, false);
-  sire.add_link(detail::link_t(type, ret));
-  return ret;
+  detail::cache_pool* owner = sire.select_cache_pool();
+  context& ctx = owner->get_context();
+
+  ///   In boost 1.54 & 1.55, boost::asio::spawn will crash
+  /// When spwan multi-coros at main thread 
+  /// With multi-threads run io_service::run (vc11)
+  ///   I'don't know this wheather or not a bug.
+  ///   So, if using mixin(means in main or other user thread(s)),
+  /// We spawn actor(s) with only one cache_pool(means only on asio::strand).
+  detail::cache_pool* user = ctx.select_cache_pool(0);
+  return make_actor(sire, user, owner, f, type, stack_size);
 }
 
 /// Spawn a actor using given actor
@@ -69,14 +79,13 @@ inline aid_t spawn(
   std::size_t stack_size = default_stacksize()
   )
 {
-  aid_t link_tgt;
-  if (type != no_link)
+  detail::cache_pool* user = 0;
+  detail::cache_pool* owner = sire.get_cache_pool();
+  if (sync_sire)
   {
-    link_tgt = sire.get_aid();
+    user = owner;
   }
-  aid_t ret = make_actor(sire.get_cache_pool(), f, stack_size, link_tgt, sync_sire);
-  sire.add_link(detail::link_t(type, ret));
-  return ret;
+  return make_actor(sire, user, owner, f, type, stack_size);
 }
 
 /// Spawn a mixin

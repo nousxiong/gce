@@ -84,16 +84,24 @@ context::~context()
   stop();
 }
 ///------------------------------------------------------------------------------
-detail::cache_pool* context::select_cache_pool()
+detail::cache_pool* context::select_cache_pool(std::size_t i)
 {
-  std::size_t curr_cache_pool = curr_cache_pool_;
-  ++curr_cache_pool;
-  if (curr_cache_pool >= cache_pool_size_)
+  if (i == size_nil)
   {
-    curr_cache_pool = 0;
+    std::size_t curr_cache_pool = curr_cache_pool_;
+    ++curr_cache_pool;
+    if (curr_cache_pool >= cache_pool_size_)
+    {
+      curr_cache_pool = 0;
+    }
+    curr_cache_pool_ = curr_cache_pool;
+    return cache_pool_list_[curr_cache_pool];
   }
-  curr_cache_pool_ = curr_cache_pool;
-  return cache_pool_list_[curr_cache_pool];
+  else
+  {
+    BOOST_ASSERT(i < cache_pool_list_.size());
+    return cache_pool_list_[i];
+  }
 }
 ///------------------------------------------------------------------------------
 mixin& context::make_mixin()

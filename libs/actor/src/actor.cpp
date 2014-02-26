@@ -36,11 +36,6 @@ actor::actor(detail::actor_attrs attrs)
 ///----------------------------------------------------------------------------
 actor::~actor()
 {
-  stat_ = closed;
-//  if (yld_cb_)
-//  {
-//    resume(actor_normal);
-//  }
 }
 ///----------------------------------------------------------------------------
 aid_t actor::recv(message& msg, match const& mach)
@@ -99,8 +94,7 @@ void actor::send(aid_t recver, message const& m)
   pk->recver_ = recver;
   pk->msg_ = m;
 
-  basic_actor* a = recver.get_actor_ptr();
-  a->on_recv(pk);
+  recver.get_actor_ptr()->on_recv(pk);
 }
 ///----------------------------------------------------------------------------
 response_t actor::request(aid_t target, message const& m)
@@ -114,8 +108,7 @@ response_t actor::request(aid_t target, message const& m)
   pk->recver_ = target;
   pk->msg_ = m;
 
-  basic_actor* a = target.get_actor_ptr();
-  a->on_recv(pk);
+  target.get_actor_ptr()->on_recv(pk);
   return res;
 }
 ///----------------------------------------------------------------------------
@@ -216,16 +209,13 @@ void actor::start(std::size_t stack_size)
     stack_size = default_stacksize();
   }
 
-  strand_t& snd = user_->get_strand();
   boost::asio::spawn(
-    snd,
+    user_->get_strand(),
     boost::bind(
       &actor::run, this, _1
       ),
     boost::coroutines::attributes(stack_size)
     );
-
-  snd.dispatch(boost::bind(&actor::begin, this));
 }
 ///----------------------------------------------------------------------------
 void actor::init(
@@ -265,8 +255,7 @@ void actor::on_free()
 ///----------------------------------------------------------------------------
 void actor::on_recv(detail::pack* pk)
 {
-  strand_t& snd = user_->get_strand();
-  snd.dispatch(
+  user_->get_strand().dispatch(
     boost::bind(
       &actor::handle_recv, this, pk
       )
@@ -276,37 +265,26 @@ void actor::on_recv(detail::pack* pk)
 void actor::run(yield_t yld)
 {
   yld_ = &yld;
-  yield();
-
-  if (stat_ == closed)
-  {
-    return;
-  }
 
   try
   {
     stat_ = on;
     f_(self_);
-    end(exit_normal, "exit normal");
+    stop(exit_normal, "exit normal");
   }
   catch (boost::coroutines::detail::forced_unwind const&)
   {
-    end(exit_normal, "exit normal");
+    stop(exit_normal, "exit normal");
     throw;
   }
   catch (std::exception& ex)
   {
-    end(exit_except, ex.what());
+    stop(exit_except, ex.what());
   }
   catch (...)
   {
-    end(exit_unknown, "unexpected exception");
+    stop(exit_unknown, "unexpected exception");
   }
-}
-///----------------------------------------------------------------------------
-void actor::begin()
-{
-  resume(actor_normal);
 }
 ///----------------------------------------------------------------------------
 void actor::resume(actor_code ac)
@@ -339,7 +317,7 @@ void actor::free_self()
   user_->free_actor(owner_, this);
 }
 ///----------------------------------------------------------------------------
-void actor::end(exit_code_t ec, std::string const& exit_msg)
+void actor::stop(exit_code_t ec, std::string const& exit_msg)
 {
   /// Trigger a context switch, ensure we stop coro using actor::resume.
   user_->get_strand().post(boost::bind(&actor::resume, this, actor_normal));
@@ -352,10 +330,9 @@ void actor::end(exit_code_t ec, std::string const& exit_msg)
 ///----------------------------------------------------------------------------
 void actor::start_recv_timer(duration_t dur)
 {
-  strand_t& snd = user_->get_strand();
   tmr_.expires_from_now(dur);
   tmr_.async_wait(
-    snd.wrap(
+    user_->get_strand().wrap(
       boost::bind(
         &actor::handle_recv_timeout, this,
         boost::asio::placeholders::error, ++tmr_sid_

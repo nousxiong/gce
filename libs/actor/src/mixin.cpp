@@ -137,8 +137,7 @@ void mixin::send(aid_t recver, message const& m)
   pk->recver_ = recver;
   pk->msg_ = m;
 
-  basic_actor* a = recver.get_actor_ptr();
-  a->on_recv(pk);
+  recver.get_actor_ptr()->on_recv(pk);
 }
 ///----------------------------------------------------------------------------
 void mixin::reply(aid_t recver, message const& m)

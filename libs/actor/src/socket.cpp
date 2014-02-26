@@ -80,9 +80,7 @@ void socket::start(basic_socket* skt, aid_t master)
     boost::bind(
       &socket::run, this, skt, _1
       ),
-    boost::coroutines::attributes(
-      boost::coroutines::stack_allocator::default_stacksize()
-      )
+    boost::coroutines::attributes(default_stacksize())
     );
 }
 ///----------------------------------------------------------------------------
@@ -100,8 +98,7 @@ void socket::on_free()
 ///----------------------------------------------------------------------------
 void socket::on_recv(pack* pk)
 {
-  strand_t& snd = user_->get_strand();
-  snd.dispatch(
+  user_->get_strand().dispatch(
     boost::bind(
       &socket::handle_recv, this, pk
       )

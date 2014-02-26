@@ -65,8 +65,7 @@ void slice::send(aid_t recver, message const& m)
   pk->recver_ = recver;
   pk->msg_ = m;
 
-  basic_actor* a = recver.get_actor_ptr();
-  a->on_recv(pk);
+  recver.get_actor_ptr()->on_recv(pk);
 }
 ///----------------------------------------------------------------------------
 response_t slice::request(aid_t target, message const& m)
@@ -80,8 +79,7 @@ response_t slice::request(aid_t target, message const& m)
   pk->recver_ = target;
   pk->msg_ = m;
 
-  basic_actor* a = target.get_actor_ptr();
-  a->on_recv(pk);
+  target.get_actor_ptr()->on_recv(pk);
   return res;
 }
 ///----------------------------------------------------------------------------

@@ -44,8 +44,7 @@ public:
   {
     ready = 0,
     on,
-    off,
-    closed
+    off
   };
 
   class self
@@ -153,11 +152,10 @@ public:
 
 private:
   void run(yield_t);
-  void begin();
   void resume(actor_code ac = actor_normal);
   actor_code yield();
   void free_self();
-  void end(exit_code_t, std::string const&);
+  void stop(exit_code_t, std::string const&);
   void start_recv_timer(duration_t);
   void handle_recv_timeout(errcode_t const&, std::size_t);
   void handle_recv(detail::pack*);

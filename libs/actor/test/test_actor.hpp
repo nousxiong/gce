@@ -23,13 +23,13 @@ private:
   static void my_child(self_t self)
   {
     aid_t aid = recv(self);
-    wait(self, seconds_t(3));
+    //wait(self, seconds_t(3));
     reply(self, aid);
   }
 
   static void my_actor(self_t self, aid_t base_id)
   {
-    std::size_t size = 5;
+    std::size_t size = 50;
     std::vector<response_t> res_list(size);
     for (std::size_t i=0; i<size; ++i)
     {
@@ -43,7 +43,7 @@ private:
 
     timer_t tmr(self.get_cache_pool()->get_context().get_io_service());
     yield_t yield = self.get_yield();
-    tmr.expires_from_now(boost::chrono::milliseconds(10));
+    tmr.expires_from_now(boost::chrono::milliseconds(1));
     tmr.async_wait(yield);
 
     for (std::size_t i=0; i<size; ++i)
@@ -56,7 +56,7 @@ private:
       while (!aid);
     }
 
-    tmr.expires_from_now(boost::chrono::seconds(1));
+    tmr.expires_from_now(boost::chrono::milliseconds(1));
     tmr.async_wait(yield);
 
     send(self, base_id);
@@ -75,8 +75,8 @@ private:
   {
     try
     {
-      std::size_t free_actor_num = 5;
-      std::size_t user_thr_num = 5;
+      std::size_t free_actor_num = 20;
+      std::size_t user_thr_num = 0;
       std::size_t my_actor_size = free_actor_num + user_thr_num * 2;
       attributes attrs;
       attrs.mixin_num_ = user_thr_num + 1;
@@ -118,7 +118,5 @@ private:
       std::cerr << ex.what() << std::endl;
     }
   }
-
-
 };
 }

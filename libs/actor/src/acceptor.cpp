@@ -57,9 +57,7 @@ void acceptor::bind(std::string const& ep, aid_t master)
     boost::bind(
       &acceptor::run, this, ep, _1
       ),
-    boost::coroutines::attributes(
-      boost::coroutines::stack_allocator::default_stacksize()
-      )
+    boost::coroutines::attributes(default_stacksize())
     );
 }
 ///----------------------------------------------------------------------------
@@ -74,8 +72,7 @@ void acceptor::on_free()
 ///----------------------------------------------------------------------------
 void acceptor::on_recv(pack* pk)
 {
-  strand_t& snd = user_->get_strand();
-  snd.dispatch(
+  user_->get_strand().dispatch(
     boost::bind(
       &acceptor::handle_recv, this, pk
       )

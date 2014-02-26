@@ -34,10 +34,6 @@ private:
       tmr.expires_from_now(boost::chrono::milliseconds(1));
       tmr.async_wait(yield);
     }
-
-    //wait(self, boost::chrono::milliseconds(1));
-
-    //throw std::runtime_error("test coro ex");
   }
 
   static void test_common()

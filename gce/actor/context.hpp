@@ -78,7 +78,7 @@ public:
 public:
   inline attributes const& get_attributes() const { return attrs_; }
   inline io_service_t& get_io_service() { return *ios_; }
-  detail::cache_pool* select_cache_pool();
+  detail::cache_pool* select_cache_pool(std::size_t i = size_nil);
   mixin& make_mixin();
 
 private:
