@@ -43,7 +43,7 @@ mixin::mixin(context& ctx, std::size_t id, attributes const& attrs)
     slice_pool_ =
       boost::in_place(
         owner_, this,
-        attrs.slice_pool_free_size_,
+        size_nil,
         attrs.slice_pool_reserve_size_
         );
   }

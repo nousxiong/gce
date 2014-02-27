@@ -51,14 +51,14 @@ public:
   inline timer_t& get_gc_timer() { return gc_tmr_; }
 
   actor* get_actor();
-  pack* get_pack();
   socket* get_socket();
   acceptor* get_acceptor();
+  pack* get_pack();
 
   void free_actor(cache_pool*, actor*);
-  void free_pack(cache_pool*, pack*);
   void free_socket(cache_pool*, socket*);
   void free_acceptor(cache_pool*, acceptor*);
+  void free_pack(cache_pool*, pack*);
 
   void free_object();
   void free_cache();
@@ -137,31 +137,31 @@ private:
 
   /// pools
   GCE_CACHE_ALIGNED_VAR(actor_pool_t, actor_pool_)
-  GCE_CACHE_ALIGNED_VAR(pack_pool_t, pack_pool_)
   GCE_CACHE_ALIGNED_VAR(socket_pool_t, socket_pool_)
   GCE_CACHE_ALIGNED_VAR(acceptor_pool_t, acceptor_pool_)
+  GCE_CACHE_ALIGNED_VAR(pack_pool_t, pack_pool_)
 
   /// queues
   GCE_CACHE_ALIGNED_VAR(actor_queue_t, actor_free_queue_)
-  GCE_CACHE_ALIGNED_VAR(pack_queue_t, pack_free_queue_)
   GCE_CACHE_ALIGNED_VAR(socket_queue_t, socket_free_queue_)
   GCE_CACHE_ALIGNED_VAR(acceptor_queue_t, acceptor_free_queue_)
+  GCE_CACHE_ALIGNED_VAR(pack_queue_t, pack_free_queue_)
 
   /// thread local vals
   typedef cache<actor, actor_queue_t> actor_cache_t;
-  typedef cache<pack, pack_queue_t> pack_cache_t;
   typedef cache<socket, socket_queue_t> socket_cache_t;
   typedef cache<acceptor, acceptor_queue_t> acceptor_cache_t;
+  typedef cache<pack, pack_queue_t> pack_cache_t;
 
   std::vector<actor_cache_t> actor_cache_list_;
-  std::vector<pack_cache_t> pack_cache_list_;
   std::vector<socket_cache_t> socket_cache_list_;
   std::vector<acceptor_cache_t> acceptor_cache_list_;
+  std::vector<pack_cache_t> pack_cache_list_;
 
   std::vector<actor_cache_t*> actor_cache_dirty_list_;
-  std::vector<pack_cache_t*> pack_cache_dirty_list_;
   std::vector<socket_cache_t*> socket_cache_dirty_list_;
   std::vector<acceptor_cache_t*> acceptor_cache_dirty_list_;
+  std::vector<pack_cache_t*> pack_cache_dirty_list_;
 };
 }
 }

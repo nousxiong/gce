@@ -27,17 +27,14 @@ struct attributes
     : ios_(0)
     , thread_num_(boost::thread::hardware_concurrency())
     , mixin_num_(1)
-    , per_thread_cache_(3)
-    , per_mixin_cache_(2)
+    , per_thread_cache_(1)
+    , per_mixin_cache_(1)
     , actor_pool_reserve_size_(8)
+    , slice_pool_reserve_size_(8)
+    , socket_pool_reserve_size_(8)
+    , acceptor_pool_reserve_size_(8)
     , pack_pool_reserve_size_(8)
     , pack_pool_free_size_(8)
-    , slice_pool_reserve_size_(8)
-    , slice_pool_free_size_(8)
-    , socket_pool_reserve_size_(8)
-    , socket_pool_free_size_(8)
-    , acceptor_pool_reserve_size_(8)
-    , acceptor_pool_free_size_(8)
     , max_cache_match_size_(32)
     , gc_period_(1000)
   {
@@ -49,14 +46,11 @@ struct attributes
   std::size_t per_thread_cache_;
   std::size_t per_mixin_cache_;
   std::size_t actor_pool_reserve_size_;
+  std::size_t slice_pool_reserve_size_;
+  std::size_t socket_pool_reserve_size_;
+  std::size_t acceptor_pool_reserve_size_;
   std::size_t pack_pool_reserve_size_;
   std::size_t pack_pool_free_size_;
-  std::size_t slice_pool_reserve_size_;
-  std::size_t slice_pool_free_size_;
-  std::size_t socket_pool_reserve_size_;
-  std::size_t socket_pool_free_size_;
-  std::size_t acceptor_pool_reserve_size_;
-  std::size_t acceptor_pool_free_size_;
   std::size_t max_cache_match_size_;
   boost::chrono::milliseconds gc_period_;
   std::vector<thread_callback_t> thread_begin_cb_list_;

@@ -11,6 +11,7 @@
 #define GCE_ACTOR_ACTOR_ID_HPP
 
 #include <gce/actor/config.hpp>
+#include <iostream>
 
 namespace gce
 {
@@ -82,6 +83,15 @@ public:
 };
 
 typedef actor_id aid_t;
+}
+
+template<typename CharT, typename TraitsT>
+std::basic_ostream<CharT, TraitsT>& operator<<(
+  std::basic_ostream<CharT, TraitsT>& strm, gce::aid_t const& aid
+  )
+{
+  strm << "<" << aid.uintptr_ << "." << aid.sid_ << ">";
+  return strm;
 }
 
 GCE_PACK(gce::aid_t, (uintptr_)(sid_));

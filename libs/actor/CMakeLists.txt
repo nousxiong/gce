@@ -1,7 +1,7 @@
 #
 # This file is part of the CMake build system for Gce
 #
-# CMake auto-generated configuration options. 
+# CMake auto-generated configuration options.
 # Do not check in modified versions of this file.
 #
 # Copyright (c) 2009-2014 Nous Xiong (348944179 at qq dot com)
@@ -14,10 +14,10 @@
 
 # Provide user options to customise the build process.
 set (GCE_CACHE_LINE_SIZE "64" CACHE STRING "Cache line size")
-set (GCE_FREE_CACHE_SIZE "32" CACHE STRING "Free-queue cache size")
+set (GCE_FREE_CACHE_SIZE "8" CACHE STRING "Free-queue cache size")
 set (GCE_SOCKET_RECV_CACHE_SIZE "65535" CACHE STRING "Socket recv cache size")
 set (GCE_SOCKET_RECV_MAX_SIZE "60000" CACHE STRING "Socket max recv size")
-set (GCE_SMALL_MSG_SIZE "16" CACHE STRING "Small message size")
+set (GCE_SMALL_MSG_SIZE "64" CACHE STRING "Small message size")
 set (GCE_MSG_MIN_GROW_SIZE "64" CACHE STRING "Message grow min size")
 
 option (GCE_ACTOR_BUILD_EXAMPLE "Build Gce.Actor examples" ON)

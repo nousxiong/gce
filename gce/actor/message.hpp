@@ -18,6 +18,7 @@
 #include <gce/amsg/zerocopy.hpp>
 #include <boost/utility/string_ref.hpp>
 #include <utility>
+#include <iostream>
 
 namespace gce
 {
@@ -364,6 +365,15 @@ private:
   friend class slice;
   detail::request_t req_;
 };
+}
+
+template<typename CharT, typename TraitsT>
+std::basic_ostream<CharT, TraitsT>& operator<<(
+  std::basic_ostream<CharT, TraitsT>& strm, gce::message const& msg
+  )
+{
+  strm << "<" << gce::atom(msg.get_type()) << "." << msg.size() << ">";
+  return strm;
 }
 
 #endif /// GCE_ACTOR_MESSAGE_HPP

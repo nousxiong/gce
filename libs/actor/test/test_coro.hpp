@@ -44,11 +44,11 @@ private:
       context ctx;
       mixin_t base = spawn(ctx);
 
-      for (std::size_t a=0; a<10; ++a)
+      for (std::size_t a=0; a<5; ++a)
       {
         for (std::size_t i=0; i<actor_num; ++i)
         {
-          spawn(
+          aid_t aid = spawn(
             base,
             boost::bind(&coro_ut::my_actor, _1, base.get_aid()),
             monitored
