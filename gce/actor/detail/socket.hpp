@@ -54,7 +54,7 @@ public:
   void connect(std::string const&, aid_t);
 
 public:
-  void start(basic_socket*, aid_t);
+  void start(socket_ptr, aid_t);
   void on_free();
   void on_recv(pack*);
 
@@ -67,8 +67,8 @@ private:
   void send_msg(message const&);
   void send_msg_hb();
   void run_conn(std::string const&, yield_t);
-  void run(basic_socket*, yield_t);
-  basic_socket* make_socket(std::string const&);
+  void run(socket_ptr, yield_t);
+  socket_ptr make_socket(std::string const&);
   void handle_recv(pack*);
 
 private:
@@ -89,7 +89,7 @@ private:
   GCE_CACHE_ALIGNED_VAR(net_option, opt_)
 
   /// thread local vals
-  basic_socket* skt_;
+  socket_ptr skt_;
   heartbeat hb_;
   timer_t sync_;
   std::size_t tmr_sid_;

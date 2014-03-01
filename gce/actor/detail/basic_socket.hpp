@@ -11,6 +11,7 @@
 #define GCE_ACTOR_DETAIL_BASIC_SOCKET_HPP
 
 #include <gce/actor/config.hpp>
+#include <boost/shared_ptr.hpp>
 
 namespace gce
 {
@@ -32,6 +33,7 @@ public:
   virtual void wait_end(yield_t) = 0;
   virtual void reset() = 0;
 };
+typedef boost::shared_ptr<basic_socket> socket_ptr;
 }
 }
 

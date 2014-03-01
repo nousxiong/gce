@@ -30,7 +30,6 @@ namespace detail
 socket::socket(context* ctx)
   : basic_actor(ctx->get_attributes().max_cache_match_size_)
   , stat_(ready)
-  , skt_(0)
   , hb_(ctx->get_io_service())
   , sync_(ctx->get_io_service())
   , recv_cache_(recv_buffer_, GCE_SOCKET_RECV_CACHE_SIZE)
@@ -70,7 +69,7 @@ void socket::connect(std::string const& ep, aid_t master)
     );
 }
 ///----------------------------------------------------------------------------
-void socket::start(basic_socket* skt, aid_t master)
+void socket::start(socket_ptr skt, aid_t master)
 {
   master_ = master;
   conn_ = true;
@@ -89,7 +88,6 @@ void socket::on_free()
   base_type::on_free();
 
   stat_ = ready;
-  skt_ = 0;
   master_ = aid_t();
   recv_cache_.clear();
   conn_ = false;
@@ -217,7 +215,7 @@ void socket::run_conn(std::string const& ep, yield_t yield)
   free_self(exc, exit_msg, yield);
 }
 ///----------------------------------------------------------------------------
-void socket::run(basic_socket* skt, yield_t yield)
+void socket::run(socket_ptr skt, yield_t yield)
 {
   exit_code_t exc = exit_normal;
   std::string exit_msg("exit normal");
@@ -270,7 +268,7 @@ void socket::run(basic_socket* skt, yield_t yield)
   free_self(exc, exit_msg, yield);
 }
 ///----------------------------------------------------------------------------
-basic_socket* socket::make_socket(std::string const& ep)
+socket_ptr socket::make_socket(std::string const& ep)
 {
   /// find protocol name
   std::size_t pos = ep.find("://");
@@ -297,11 +295,12 @@ basic_socket* socket::make_socket(std::string const& ep)
     pos = ep.size();
 
     std::string port = ep.substr(begin, pos - begin);
-    basic_socket* skt =
+    socket_ptr skt(
       new tcp::socket(
         user_->get_strand().get_io_service(),
         address, port
-        );
+        )
+      );
     skt->init(user_);
     return skt;
   }
@@ -493,7 +492,7 @@ void socket::free_self(exit_code_t exc, std::string const& exit_msg, yield_t yie
   {
   }
 
-  delete skt_;
+  skt_.reset();
 
   hb_.clear();
   base_type::send_exit(exc, exit_msg, user_);

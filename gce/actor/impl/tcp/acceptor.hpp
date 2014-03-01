@@ -31,11 +31,8 @@ public:
 
 public:
   void bind();
-  gce::detail::basic_socket* accept(yield_t);
+  gce::detail::socket_ptr accept(yield_t);
   void close();
-
-private:
-  void delete_socket(gce::detail::basic_socket*);
 
 private:
   strand_t& snd_;

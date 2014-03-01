@@ -92,7 +92,7 @@ void acceptor::run(std::string const& ep, yield_t yield)
     while (stat_ == on)
     {
       errcode_t ec;
-      basic_socket* prot = acpr_->accept(yield[ec]);
+      socket_ptr prot = acpr_->accept(yield[ec]);
       if (ec)
       {
         close();

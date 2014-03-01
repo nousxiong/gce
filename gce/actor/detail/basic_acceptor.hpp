@@ -11,6 +11,7 @@
 #define GCE_ACTOR_DETAIL_BASIC_ACCEPTOR_HPP
 
 #include <gce/actor/config.hpp>
+#include <gce/actor/detail/basic_socket.hpp>
 
 namespace gce
 {
@@ -25,7 +26,7 @@ public:
 
 public:
   virtual void bind() = 0;
-  virtual basic_socket* accept(yield_t) = 0;
+  virtual socket_ptr accept(yield_t) = 0;
   virtual void close() = 0;
 };
 }

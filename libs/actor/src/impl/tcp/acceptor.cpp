@@ -54,12 +54,10 @@ void acceptor::bind()
   acpr_.set_option(boost::asio::socket_base::enable_connection_aborted(true));
 }
 ///----------------------------------------------------------------------------
-gce::detail::basic_socket* acceptor::accept(yield_t yield)
+gce::detail::socket_ptr acceptor::accept(yield_t yield)
 {
-  socket* skt = new socket(snd_.get_io_service());
-  detail::scope scp(boost::bind(&acceptor::delete_socket, this, skt));
+  gce::detail::socket_ptr skt(new socket(snd_.get_io_service()));
   acpr_.async_accept(skt->get_socket(), yield);
-  scp.reset();
   return skt;
 }
 ///----------------------------------------------------------------------------
@@ -67,11 +65,6 @@ void acceptor::close()
 {
   errcode_t ignore_ec;
   acpr_.close(ignore_ec);
-}
-///----------------------------------------------------------------------------
-void acceptor::delete_socket(gce::detail::basic_socket* skt)
-{
-  delete skt;
 }
 ///----------------------------------------------------------------------------
 }

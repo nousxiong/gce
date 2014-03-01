@@ -15,8 +15,6 @@
 #include <gce/actor/mixin.hpp>
 #include <gce/actor/detail/cache_pool.hpp>
 #include <gce/actor/slice.hpp>
-#include <boost/shared_ptr.hpp>
-#include <boost/make_shared.hpp>
 
 namespace gce
 {
