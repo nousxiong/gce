@@ -43,7 +43,7 @@ public:
   {
     try
     {
-      std::size_t client_num = 2;
+      std::size_t client_num = 5;
       std::size_t echo_num = 10;
       context ctx;
 
@@ -113,6 +113,10 @@ public:
   {
     try
     {
+      /// wait server setup
+      wait(self, boost::chrono::milliseconds(100));
+
+      /// establish a proxy to server
       aid_t svr = connect(self, "tcp://127.0.0.1:14923");
 
       echo_data d;

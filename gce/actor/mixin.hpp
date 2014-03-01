@@ -33,6 +33,8 @@ typedef object_pool<slice, mixin*> slice_pool_t;
 class mixin
   : public basic_actor
 {
+  typedef basic_actor base_type;
+
 public:
   mixin(context& ctx, std::size_t id, attributes const& attrs);
   ~mixin();
@@ -41,14 +43,18 @@ public:
   aid_t recv(message&, match const& mach = match());
   void send(aid_t, message const&);
   void relay(aid_t, message&);
+
+  response_t request(aid_t, message const&);
   void reply(aid_t, message const&);
+  aid_t recv(response_t, message&, duration_t);
   void wait(duration_t);
 
-  detail::cache_pool* select_cache_pool();
-  std::size_t get_cache_match_size() const;
   void link(aid_t);
   void monitor(aid_t);
 
+public:
+  detail::cache_pool* select_cache_pool();
+  std::size_t get_cache_match_size() const;
   void on_recv(detail::pack*);
   void gc();
 

@@ -22,7 +22,7 @@ namespace gce
 {
 ///----------------------------------------------------------------------------
 actor::actor(detail::actor_attrs attrs)
-  : basic_actor(attrs.cache_match_size_)
+  : base_type(attrs.cache_match_size_)
   , stat_(ready)
   , self_(*this)
   , user_(0)
@@ -119,7 +119,7 @@ void actor::relay(aid_t des, message& m)
 response_t actor::request(aid_t target, message const& m)
 {
   aid_t sender = get_aid();
-  response_t res(new_request(), sender);
+  response_t res(base_type::new_request(), sender);
   detail::request_t req(res.get_id(), sender);
 
   detail::pack* pk = base_type::alloc_pack(user_);

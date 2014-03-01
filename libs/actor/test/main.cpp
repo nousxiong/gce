@@ -26,6 +26,7 @@
 #include "test_object_pool.hpp"
 #include "test_coro.hpp"
 #include "test_actor.hpp"
+#include "test_mixin.hpp"
 #include "test_slice.hpp"
 #include "test_actor_pingpong.hpp"
 #include "test_match.hpp"
@@ -43,6 +44,7 @@ int main()
     gce::coro_ut::run();
     gce::send_recv_ut::run();
     gce::actor_ut::run();
+    gce::mixin_ut::run();
     gce::slice_ut::run();
     gce::actor_pingpong_ut::run();
     gce::match_ut::run();

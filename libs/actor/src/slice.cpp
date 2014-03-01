@@ -90,7 +90,7 @@ void slice::relay(aid_t des, message& m)
 response_t slice::request(aid_t target, message const& m)
 {
   aid_t sender = get_aid();
-  response_t res(new_request(), sender);
+  response_t res(base_type::new_request(), sender);
   detail::request_t req(res.get_id(), sender);
 
   detail::pack* pk = basic_actor::alloc_pack(owner_);
