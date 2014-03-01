@@ -25,7 +25,7 @@ namespace detail
 {
 template <typename Sire>
 inline aid_t connect(
-  Sire& sire, cache_pool* user, cache_pool* owner, 
+  Sire& sire, cache_pool* user, cache_pool* owner,
   std::string const& ep, net_option opt
   )
 {
@@ -70,11 +70,11 @@ inline aid_t connect(mixin_t sire, std::string const& ep, net_option opt = net_o
   context& ctx = owner->get_context();
 
   ///   In boost 1.54 & 1.55, boost::asio::spawn will crash
-  /// When spwan multi-coros at main thread 
+  /// When spwan multi-coros at main thread
   /// With multi-threads run io_service::run (vc11)
   ///   I'don't know this wheather or not a bug.
   ///   So, if using mixin(means in main or other user thread(s)),
-  /// We spawn actor(s) with only one cache_pool(means only on asio::strand).
+  /// We spawn actor(s) with only one cache_pool(means only one asio::strand).
   detail::cache_pool* user = ctx.select_cache_pool(0);
   return detail::connect(sire, user, owner, ep, opt);
 }
@@ -93,11 +93,11 @@ inline void bind(mixin_t sire, std::string const& ep, net_option opt = net_optio
   context& ctx = owner->get_context();
 
   ///   In boost 1.54 & 1.55, boost::asio::spawn will crash
-  /// When spwan multi-coros at main thread 
+  /// When spwan multi-coros at main thread
   /// With multi-threads run io_service::run (vc11)
   ///   I'don't know this wheather or not a bug.
   ///   So, if using mixin(means in main or other user thread(s)),
-  /// We spawn actor(s) with only one cache_pool(means only on asio::strand).
+  /// We spawn actor(s) with only one cache_pool(means only one asio::strand).
   detail::cache_pool* user = ctx.select_cache_pool(0);
   detail::bind(sire, user, owner, ep, opt);
 }
