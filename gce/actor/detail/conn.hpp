@@ -28,8 +28,7 @@ class conn
   enum status
   {
     ready = 0,
-    on,
-    off,
+    on
   };
 
 public:
@@ -38,17 +37,18 @@ public:
 
 public:
   void init(cache_pool* user, cache_pool* owner);
-  void start(aid_t skt, aid_t master);
+  void start(aid_t acpr, aid_t master, aid_t skt);
 
 public:
   void on_free();
   void on_recv(pack*);
 
 private:
+  void send(aid_t recver, message const&);
   void handle_recv(pack*);
 
 private:
-  void free_self(exit_code_t, std::string const&, yield_t);
+  void free_self(exit_code_t, std::string const&);
 
 private:
   byte_t pad0_[GCE_CACHE_LINE_SIZE]; /// Ensure start from a new cache line.
@@ -57,6 +57,7 @@ private:
   GCE_CACHE_ALIGNED_VAR(cache_pool*, user_)
 
   /// thread local vals
+  aid_t acpr_;
   aid_t master_;
   aid_t skt_;
 };
