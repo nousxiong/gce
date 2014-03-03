@@ -24,8 +24,8 @@ namespace gce
 namespace detail
 {
 template <typename Sire>
-inline aid_t connect(
-  Sire& sire, cache_pool* user, cache_pool* owner,
+inline void connect(
+  Sire& sire, cache_pool* user, cache_pool* owner, 
   std::string const& ep, net_option opt
   )
 {
@@ -37,15 +37,12 @@ inline aid_t connect(
 
   socket* s = owner->get_socket();
   s->init(user, owner, opt);
-  aid_t aid = s->get_aid();
-  sire.add_link(detail::link_t(linked, aid));
-  s->connect(ep, sire.get_aid());
-  return aid;
+  s->connect(ep);
 }
 
 template <typename Sire>
 inline void bind(
-  Sire& sire, cache_pool* user, cache_pool* owner,
+  Sire& sire, cache_pool* user, cache_pool* owner, 
   std::string const& ep, net_option opt
   )
 {
@@ -57,14 +54,12 @@ inline void bind(
 
   acceptor* a = owner->get_acceptor();
   a->init(user, owner, opt);
-  aid_t aid = a->get_aid();
-  sire.add_link(detail::link_t(linked, aid));
-  a->bind(ep, sire.get_aid());
+  a->bind(ep);
 }
 }
 
 /// connect
-inline aid_t connect(mixin_t sire, std::string const& ep, net_option opt = net_option())
+inline void connect(mixin_t sire, std::string const& ep, net_option opt = net_option())
 {
   detail::cache_pool* owner = sire.select_cache_pool();
   context& ctx = owner->get_context();
@@ -76,14 +71,14 @@ inline aid_t connect(mixin_t sire, std::string const& ep, net_option opt = net_o
   ///   So, if using mixin(means in main or other user thread(s)),
   /// We spawn actor(s) with only one cache_pool(means only one asio::strand).
   detail::cache_pool* user = ctx.select_cache_pool(0);
-  return detail::connect(sire, user, owner, ep, opt);
+  detail::connect(sire, user, owner, ep, opt);
 }
 
-inline aid_t connect(self_t sire, std::string const& ep, net_option opt = net_option())
+inline void connect(self_t sire, std::string const& ep, net_option opt = net_option())
 {
   detail::cache_pool* user = 0;
   detail::cache_pool* owner = sire.get_cache_pool();
-  return detail::connect(sire, user, owner, ep, opt);
+  detail::connect(sire, user, owner, ep, opt);
 }
 
 /// bind

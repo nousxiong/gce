@@ -56,7 +56,7 @@ void acceptor::bind()
 ///----------------------------------------------------------------------------
 gce::detail::socket_ptr acceptor::accept(yield_t yield)
 {
-  gce::detail::socket_ptr skt(new socket(snd_.get_io_service()));
+  gce::tcp::socket_ptr skt(new socket(snd_.get_io_service()));
   acpr_.async_accept(skt->get_socket(), yield);
   return skt;
 }

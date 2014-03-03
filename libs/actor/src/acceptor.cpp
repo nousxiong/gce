@@ -29,7 +29,6 @@ acceptor::acceptor(context* ctx)
   : basic_actor(ctx->get_attributes().max_cache_match_size_)
   , stat_(ready)
   , ctx_(*ctx)
-  , acpr_(0)
 {
 }
 ///----------------------------------------------------------------------------
@@ -61,12 +60,16 @@ void acceptor::bind(std::string const& ep, aid_t master)
     );
 }
 ///----------------------------------------------------------------------------
+void acceptor::stop()
+{
+  user_->get_strand().dispatch(boost::bind(&acceptor::close, this));
+}
+///----------------------------------------------------------------------------
 void acceptor::on_free()
 {
   base_type::on_free();
 
   stat_ = ready;
-  acpr_ = 0;
   master_ = aid_t();
 }
 ///----------------------------------------------------------------------------
@@ -83,38 +86,44 @@ void acceptor::run(std::string const& ep, yield_t yield)
 {
   exit_code_t exc = exit_normal;
   std::string exit_msg("exit normal");
-  try
-  {
-    stat_ = on;
-    acpr_ = make_acceptor(ep);
-    acpr_->bind();
 
-    while (stat_ == on)
+  if (!user_->stopped())
+  {
+    user_->cache_acceptor(this);
+
+    try
     {
-      errcode_t ec;
-      socket_ptr prot = acpr_->accept(yield[ec]);
-      if (ec)
-      {
-        close();
-        break;
-      }
+      stat_ = on;
+      acpr_.reset(make_acceptor(ep));
+      acpr_->bind();
 
-      socket* s = user_->get_socket();
-      s->init(ctx_.select_cache_pool(), user_, opt_);
-      s->start(prot, master_);
+      while (stat_ == on)
+      {
+        errcode_t ec;
+        socket_ptr prot = acpr_->accept(yield[ec]);
+        if (ec)
+        {
+          close();
+          break;
+        }
+
+        socket* s = user_->get_socket();
+        s->init(ctx_.select_cache_pool(), user_, opt_);
+        s->start(prot, master_);
+      }
     }
-  }
-  catch (std::exception& ex)
-  {
-    exc = exit_except;
-    exit_msg = ex.what();
-    close();
-  }
-  catch (...)
-  {
-    exc = exit_unknown;
-    exit_msg = "unexpected exception";
-    close();
+    catch (std::exception& ex)
+    {
+      exc = exit_except;
+      exit_msg = ex.what();
+      close();
+    }
+    catch (...)
+    {
+      exc = exit_unknown;
+      exit_msg = "unexpected exception";
+      close();
+    }
   }
   free_self(exc, exit_msg, yield);
 }
@@ -188,13 +197,17 @@ void acceptor::handle_recv(pack* pk)
 void acceptor::close()
 {
   stat_ = off;
-  acpr_->close();
+  if (acpr_)
+  {
+    acpr_->close();
+  }
 }
 ///----------------------------------------------------------------------------
 void acceptor::free_self(exit_code_t exc, std::string const& exit_msg, yield_t yield)
 {
-  delete acpr_;
+  acpr_.reset();
 
+  user_->remove_acceptor(this);
   base_type::send_exit(exc, exit_msg, user_);
   base_type::update_aid();
   user_->free_acceptor(owner_, this);

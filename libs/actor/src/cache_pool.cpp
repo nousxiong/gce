@@ -51,6 +51,7 @@ cache_pool::cache_pool(context& ctx, std::size_t id, attributes const& attrs, bo
   , socket_cache_list_(cache_num_)
   , acceptor_cache_list_(cache_num_)
   , pack_cache_list_(cache_num_)
+  , stopped_(false)
 {
   actor_cache_dirty_list_.reserve(cache_num_);
   socket_cache_dirty_list_.reserve(cache_num_);
@@ -220,6 +221,45 @@ void cache_pool::free_cache()
     }
     pack_cache_dirty_list_.clear();
   }
+}
+///------------------------------------------------------------------------------
+void cache_pool::cache_socket(socket* s)
+{
+  socket_list_.insert(s);
+}
+///------------------------------------------------------------------------------
+void cache_pool::cache_acceptor(acceptor* a)
+{
+  acceptor_list_.insert(a);
+}
+///------------------------------------------------------------------------------
+void cache_pool::remove_socket(socket* s)
+{
+  socket_list_.erase(s);
+}
+///------------------------------------------------------------------------------
+void cache_pool::remove_acceptor(acceptor* a)
+{
+  acceptor_list_.erase(a);
+}
+///------------------------------------------------------------------------------
+void cache_pool::stop()
+{
+  stopped_ = true;
+  errcode_t ignored_ec;
+  gc_tmr_.cancel(ignored_ec);
+
+  BOOST_FOREACH(socket* s, socket_list_)
+  {
+    s->stop();
+  }
+  socket_list_.clear();
+
+  BOOST_FOREACH(acceptor* a, acceptor_list_)
+  {
+    a->stop();
+  }
+  acceptor_list_.clear();
 }
 ///------------------------------------------------------------------------------
 }

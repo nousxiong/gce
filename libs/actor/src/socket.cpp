@@ -48,7 +48,7 @@ void socket::init(cache_pool* user, cache_pool* owner, net_option opt)
   user_ = user;
   owner_ = owner;
   opt_ = opt;
-  curr_reconn_ = opt_.reconn_count_;
+  curr_reconn_ = u32_nil;
 
   base_type::update_aid();
 }
@@ -81,6 +81,11 @@ void socket::start(socket_ptr skt, aid_t master)
       ),
     boost::coroutines::attributes(default_stacksize())
     );
+}
+///----------------------------------------------------------------------------
+void socket::stop()
+{
+  user_->get_strand().dispatch(boost::bind(&socket::close, this));
 }
 ///----------------------------------------------------------------------------
 void socket::on_free()
@@ -159,58 +164,64 @@ void socket::run_conn(std::string const& ep, yield_t yield)
 {
   exit_code_t exc = exit_normal;
   std::string exit_msg("exit normal");
-  try
-  {
-    stat_ = on;
-    skt_ = make_socket(ep);
-    connect(yield);
 
-    while (stat_ == on)
+  if (!user_->stopped())
+  {
+    user_->cache_socket(this);
+
+    try
     {
-      message msg;
-      errcode_t ec = recv(msg, yield);
-      if (ec)
+      stat_ = on;
+      skt_ = make_socket(ep);
+      connect(yield);
+
+      while (stat_ == on)
       {
-        --curr_reconn_;
-        if (curr_reconn_ == 0)
+        message msg;
+        errcode_t ec = recv(msg, yield);
+        if (ec)
         {
-          exc = exit_neterr;
-          exit_msg = "network error";
-          close();
-          break;
-        }
-        connect(yield);
-      }
-      else
-      {
-        match_t type = msg.get_type();
-        if (type == exit)
-        {
-          msg >> exc >> exit_msg;
-          close();
+          --curr_reconn_;
+          if (curr_reconn_ == 0)
+          {
+            exc = exit_neterr;
+            exit_msg = "network error";
+            close();
+            break;
+          }
+          connect(yield);
         }
         else
         {
-          if (type != detail::msg_hb)
+          match_t type = msg.get_type();
+          if (type == exit)
           {
-            send(master_, msg);
+            msg >> exc >> exit_msg;
+            close();
           }
-          hb_.beat();
+          else
+          {
+            if (type != detail::msg_hb)
+            {
+              send(master_, msg);
+            }
+            hb_.beat();
+          }
         }
       }
     }
-  }
-  catch (std::exception& ex)
-  {
-    exc = exit_except;
-    exit_msg = ex.what();
-    close();
-  }
-  catch (...)
-  {
-    exc = exit_unknown;
-    exit_msg = "unexpected exception";
-    close();
+    catch (std::exception& ex)
+    {
+      exc = exit_except;
+      exit_msg = ex.what();
+      close();
+    }
+    catch (...)
+    {
+      exc = exit_unknown;
+      exit_msg = "unexpected exception";
+      close();
+    }
   }
   free_self(exc, exit_msg, yield);
 }
@@ -219,51 +230,57 @@ void socket::run(socket_ptr skt, yield_t yield)
 {
   exit_code_t exc = exit_normal;
   std::string exit_msg("exit normal");
-  try
-  {
-    stat_ = on;
-    skt_ = skt;
-    skt_->init(user_);
-    start_heartbeat(boost::bind(&socket::close, this));
 
-    while (stat_ == on)
+  if (!user_->stopped())
+  {
+    user_->cache_socket(this);
+
+    try
     {
-      message msg;
-      errcode_t ec = recv(msg, yield);
-      if (ec)
-      {
-        close();
-        exc = exit_neterr;
-        exit_msg = "network error";
-        break;
-      }
+      stat_ = on;
+      skt_ = skt;
+      skt_->init(user_);
+      start_heartbeat(boost::bind(&socket::close, this));
 
-      match_t type = msg.get_type();
-      if (type == exit)
+      while (stat_ == on)
       {
-        msg >> exc >> exit_msg;
-        close();
-        break;
-      }
+        message msg;
+        errcode_t ec = recv(msg, yield);
+        if (ec)
+        {
+          close();
+          exc = exit_neterr;
+          exit_msg = "network error";
+          break;
+        }
 
-      if (type != detail::msg_hb)
-      {
-        send(master_, msg);
+        match_t type = msg.get_type();
+        if (type == exit)
+        {
+          msg >> exc >> exit_msg;
+          close();
+          break;
+        }
+
+        if (type != detail::msg_hb)
+        {
+          send(master_, msg);
+        }
+        hb_.beat();
       }
-      hb_.beat();
     }
-  }
-  catch (std::exception& ex)
-  {
-    exc = exit_except;
-    exit_msg = ex.what();
-    close();
-  }
-  catch (...)
-  {
-    exc = exit_unknown;
-    exit_msg = "unexpected exception";
-    close();
+    catch (std::exception& ex)
+    {
+      exc = exit_except;
+      exit_msg = ex.what();
+      close();
+    }
+    catch (...)
+    {
+      exc = exit_unknown;
+      exit_msg = "unexpected exception";
+      close();
+    }
   }
   free_self(exc, exit_msg, yield);
 }
@@ -395,9 +412,9 @@ void socket::connect(yield_t yield)
   conn_ = false;
   if (stat_ == on)
   {
-    for (std::size_t i=0; i<opt_.reconn_count_; ++i)
+    for (std::size_t i=0; i<u32_nil; ++i)
     {
-      if (curr_reconn_ < opt_.reconn_try_ || i > 0)
+      if (i > 0)
       {
         sync_.expires_from_now(opt_.reconn_period_);
         sync_.async_wait(yield[ec]);
@@ -457,7 +474,10 @@ void socket::close()
 {
   stat_ = off;
   hb_.stop();
-  skt_->close();
+  if (skt_)
+  {
+    skt_->close();
+  }
   errcode_t ignore_ec;
   sync_.cancel(ignore_ec);
 }
@@ -495,6 +515,7 @@ void socket::free_self(exit_code_t exc, std::string const& exit_msg, yield_t yie
   skt_.reset();
 
   hb_.clear();
+  user_->remove_socket(this);
   base_type::send_exit(exc, exit_msg, user_);
   base_type::update_aid();
   user_->free_socket(owner_, this);

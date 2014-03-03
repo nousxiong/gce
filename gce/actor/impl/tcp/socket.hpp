@@ -60,6 +60,7 @@ private:
   timer_t sync_;
   bool waiting_end_;
 };
+typedef boost::shared_ptr<socket> socket_ptr;
 }
 }
 

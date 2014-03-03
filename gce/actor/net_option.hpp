@@ -19,17 +19,13 @@ struct net_option
   net_option()
     : heartbeat_period_(30)
     , heartbeat_count_(3)
-    , reconn_period_(5)
-    , reconn_count_(3)
-    , reconn_try_(3)
+    , reconn_period_(15)
   {
   }
 
   seconds_t heartbeat_period_;
   std::size_t heartbeat_count_;
-  seconds_t reconn_period_;
-  std::size_t reconn_count_;
-  std::size_t reconn_try_;
+  seconds_t reconn_period_; /// in one reconn, between two connects' period
 };
 }
 

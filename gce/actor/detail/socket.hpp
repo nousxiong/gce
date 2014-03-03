@@ -14,6 +14,7 @@
 #include <gce/actor/message.hpp>
 #include <gce/actor/detail/heartbeat.hpp>
 #include <gce/actor/basic_actor.hpp>
+#include <gce/actor/detail/basic_socket.hpp>
 #include <gce/actor/net_option.hpp>
 #include <gce/actor/detail/object_pool.hpp>
 #include <gce/detail/mpsc_queue.hpp>
@@ -29,7 +30,6 @@ class mixin;
 namespace detail
 {
 class cache_pool;
-class basic_socket;
 
 class socket
   : public object_pool<socket, context*>::object
@@ -55,6 +55,7 @@ public:
 
 public:
   void start(socket_ptr, aid_t);
+  void stop();
   void on_free();
   void on_recv(pack*);
 

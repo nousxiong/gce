@@ -18,6 +18,7 @@
 #include <gce/detail/mpsc_queue.hpp>
 #include <gce/actor/detail/pack.hpp>
 #include <gce/actor/match.hpp>
+#include <boost/scoped_ptr.hpp>
 
 namespace gce
 {
@@ -51,6 +52,7 @@ public:
   void bind(std::string const&, aid_t);
 
 public:
+  void stop();
   void on_free();
   void on_recv(pack*);
 
@@ -75,7 +77,7 @@ private:
 
   /// thread local vals
   context& ctx_;
-  basic_acceptor* acpr_;
+  boost::scoped_ptr<basic_acceptor> acpr_;
   aid_t master_;
 };
 }

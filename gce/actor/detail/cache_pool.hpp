@@ -18,6 +18,7 @@
 #include <gce/detail/unique_ptr.hpp>
 #include <boost/noncopyable.hpp>
 #include <vector>
+#include <set>
 
 namespace gce
 {
@@ -62,6 +63,14 @@ public:
 
   void free_object();
   void free_cache();
+
+  void cache_socket(socket*);
+  void cache_acceptor(acceptor*);
+  void remove_socket(socket*);
+  void remove_acceptor(acceptor*);
+
+  void stop();
+  inline bool stopped() const { return stopped_; }
 
 private:
   template <typename T, typename FreeQueue>
@@ -162,6 +171,11 @@ private:
   std::vector<socket_cache_t*> socket_cache_dirty_list_;
   std::vector<acceptor_cache_t*> acceptor_cache_dirty_list_;
   std::vector<pack_cache_t*> pack_cache_dirty_list_;
+
+  std::set<socket*> socket_list_;
+  std::set<acceptor*> acceptor_list_;
+
+  bool stopped_;
 };
 }
 }

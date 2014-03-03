@@ -152,8 +152,9 @@ void context::stop()
   {
     if (cac_pool)
     {
-      errcode_t ignored_ec;
-      cac_pool->get_gc_timer().cancel(ignored_ec);
+      cac_pool->get_strand().dispatch(
+        boost::bind(&detail::cache_pool::stop, cac_pool)
+        );
     }
   }
   thread_group_.join_all();

@@ -52,6 +52,8 @@ typedef boost::uint64_t match_t;
 static std::size_t const match_nil = static_cast<boost::int64_t>(-1);
 typedef std::vector<match_t> match_list_t;
 
+typedef match_t ctxid_t;
+
 enum link_type
 {
   no_link = 0,
