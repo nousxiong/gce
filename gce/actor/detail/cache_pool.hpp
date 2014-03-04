@@ -30,7 +30,7 @@ namespace detail
 {
 class socket;
 class acceptor;
-typedef object_pool<actor, detail::actor_attrs> actor_pool_t;
+typedef object_pool<actor, context*> actor_pool_t;
 typedef object_pool<socket, context*> socket_pool_t;
 typedef object_pool<acceptor, context*> acceptor_pool_t;
 typedef mpsc_queue<actor> actor_queue_t;
@@ -41,13 +41,15 @@ class cache_pool
   : private boost::noncopyable
 {
 public:
-  cache_pool(context& ctx, std::size_t id, attributes const& attrs, bool mixed);
+  cache_pool(
+    context& ctx, std::size_t id,
+    attributes const& attrs, bool mixed
+    );
   ~cache_pool();
 
 public:
   inline std::size_t get_id() const { return id_; };
   inline context& get_context() { return *ctx_; }
-  inline std::size_t get_cache_match_size() const { return cache_match_size_; }
   inline strand_t& get_strand() { return snd_; }
   inline timer_t& get_gc_timer() { return gc_tmr_; }
 
@@ -71,6 +73,9 @@ public:
 
   void stop();
   inline bool stopped() const { return stopped_; }
+  inline ctxid_t get_ctxid() const { return ctxid_; }
+
+  void set_ctxid(ctxid_t);
 
 private:
   template <typename T, typename FreeQueue>
@@ -176,6 +181,7 @@ private:
   std::set<acceptor*> acceptor_list_;
 
   bool stopped_;
+  ctxid_t ctxid_;
 };
 }
 }

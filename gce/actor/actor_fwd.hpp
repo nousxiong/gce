@@ -23,28 +23,6 @@ inline std::size_t minimum_stacksize()
 {
   return boost::coroutines::stack_allocator::minimum_stacksize();
 }
-
-class context;
-namespace detail
-{
-struct actor_attrs
-{
-  actor_attrs()
-    : ctx_(0)
-    , cache_match_size_(16)
-  {
-  }
-
-  actor_attrs(context* ctx, std::size_t cache_match_size)
-    : ctx_(ctx)
-    , cache_match_size_(cache_match_size)
-  {
-  }
-
-  context* ctx_;
-  std::size_t cache_match_size_;
-};
-}
 }
 
 #endif /// GCE_ACTOR_ACTOR_FWD_HPP

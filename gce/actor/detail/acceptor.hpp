@@ -49,7 +49,7 @@ public:
 
 public:
   void init(cache_pool* user, cache_pool* owner, net_option);
-  void bind(std::string const&, aid_t);
+  void bind(std::string const&);
 
 public:
   void stop();
@@ -78,7 +78,6 @@ private:
   /// thread local vals
   context& ctx_;
   boost::scoped_ptr<basic_acceptor> acpr_;
-  aid_t master_;
 };
 }
 }

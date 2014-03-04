@@ -14,6 +14,7 @@
 #include <boost/foreach.hpp>
 #include <boost/ref.hpp>
 #include <stdexcept>
+#include <ctime>
 
 namespace gce
 {
@@ -22,6 +23,7 @@ namespace gce
 ///------------------------------------------------------------------------------
 context::context(attributes attrs)
   : attrs_(attrs)
+  , timestamp_((timestamp_t)std::time(NULL))
   , curr_cache_pool_(size_nil)
   , cache_pool_size_(attrs_.thread_num_ * attrs_.per_thread_cache_)
   , curr_mixin_(0)
@@ -84,6 +86,16 @@ context::~context()
   stop();
 }
 ///------------------------------------------------------------------------------
+mixin& context::make_mixin()
+{
+  std::size_t i = curr_mixin_.fetch_add(1, boost::memory_order_relaxed);
+  if (i >= mixin_list_.size())
+  {
+    throw std::runtime_error("out of mixin fix num");
+  }
+  return *(mixin_list_[i]);
+}
+///------------------------------------------------------------------------------
 detail::cache_pool* context::select_cache_pool(std::size_t i)
 {
   if (i == size_nil)
@@ -104,14 +116,31 @@ detail::cache_pool* context::select_cache_pool(std::size_t i)
   }
 }
 ///------------------------------------------------------------------------------
-mixin& context::make_mixin()
+void context::set_ctxid(ctxid_t id, detail::cache_pool* user)
 {
-  std::size_t i = curr_mixin_.fetch_add(1, boost::memory_order_relaxed);
-  if (i >= mixin_list_.size())
+  if (attrs_.id_ != ctxid_nil)
   {
-    throw std::runtime_error("out of mixin fix num");
+    throw std::runtime_error("ctxid already set");
   }
-  return *(mixin_list_[i]);
+
+  attrs_.id_ = id;
+  BOOST_FOREACH(detail::cache_pool* cac_pool, cache_pool_list_)
+  {
+    if (cac_pool)
+    {
+      cac_pool->get_strand().dispatch(
+        boost::bind(&detail::cache_pool::set_ctxid, cac_pool, id)
+        );
+    }
+  }
+
+  BOOST_FOREACH(mixin* mi, mixin_list_)
+  {
+    if (mi)
+    {
+      mi->set_ctxid(id, user);
+    }
+  }
 }
 ///------------------------------------------------------------------------------
 void context::run(

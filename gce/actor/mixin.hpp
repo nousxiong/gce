@@ -14,7 +14,6 @@
 #include <gce/actor/basic_actor.hpp>
 #include <gce/actor/detail/pack.hpp>
 #include <gce/actor/match.hpp>
-#include <gce/actor/context.hpp>
 #include <boost/thread/condition_variable.hpp>
 #include <boost/thread/shared_mutex.hpp>
 #include <boost/optional.hpp>
@@ -24,6 +23,8 @@ namespace gce
 {
 class slice;
 class mixin;
+class context;
+struct attributes;
 namespace detail
 {
 class cache_pool;
@@ -40,6 +41,7 @@ public:
   ~mixin();
 
 public:
+  inline context& get_context() { return *ctx_; }
   aid_t recv(message&, match const& mach = match());
   void send(aid_t, message const&);
   void relay(aid_t, message&);
@@ -52,9 +54,18 @@ public:
   void link(aid_t);
   void monitor(aid_t);
 
+  void set_ctxid(ctxid_t);
+
 public:
+  /// internal use
   detail::cache_pool* select_cache_pool();
-  std::size_t get_cache_match_size() const;
+  static void move_pack(
+    basic_actor* base,
+    detail::mailbox&,
+    detail::pack_queue_t&,
+    detail::cache_pool*,
+    mixin*
+    );
   void on_recv(detail::pack*);
   void gc();
 
@@ -62,11 +73,15 @@ public:
   void free_slice(slice*);
   void free_cache();
 
+  void set_ctxid(ctxid_t, detail::cache_pool*);
+
 private:
   void delete_cache();
 
 private:
   byte_t pad0_[GCE_CACHE_LINE_SIZE]; /// Ensure start from a new cache line.
+
+  GCE_CACHE_ALIGNED_VAR(context*, ctx_)
 
   /// select cache pool
   GCE_CACHE_ALIGNED_VAR(std::size_t, curr_cache_pool_)
@@ -79,6 +94,9 @@ private:
 
   /// pools
   GCE_CACHE_ALIGNED_VAR(boost::optional<detail::slice_pool_t>, slice_pool_)
+
+  /// local
+  ctxid_t ctxid_;
 };
 
 typedef mixin& mixin_t;

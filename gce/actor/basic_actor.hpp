@@ -23,6 +23,8 @@
 namespace gce
 {
 class message;
+class mixin;
+class slice;
 namespace detail
 {
 class cache_pool;
@@ -31,7 +33,7 @@ class cache_pool;
 class basic_actor
 {
 public:
-  explicit basic_actor(std::size_t);
+  basic_actor(std::size_t, timestamp_t const);
   virtual ~basic_actor();
 
 public:
@@ -51,9 +53,12 @@ public:
   }
 
 protected:
-  inline void update_aid()
+  friend class mixin;
+  friend class slice;
+
+  inline void update_aid(ctxid_t ctxid)
   {
-    aid_ = aid_t(this, aid_.get_sid() + 1);
+    aid_ = aid_t(ctxid, aid_.timestamp_, this, aid_.sid_ + 1);
   }
 
   inline sid_t new_request()
@@ -63,7 +68,6 @@ protected:
 
   static detail::pack* alloc_pack(detail::cache_pool*);
   static void dealloc_pack(detail::cache_pool*, detail::pack*);
-  void move_pack(detail::cache_pool*);
   void add_link(aid_t);
   void link(detail::link_t, detail::cache_pool* user = 0);
   void send_exit(exit_code_t, std::string const&, detail::cache_pool*);
@@ -86,11 +90,28 @@ private:
   sid_t req_id_;
   std::set<aid_t> link_list_;
   std::set<aid_t> monitor_list_;
+  timestamp_t const timestamp_;
 };
 
-inline bool check(aid_t id)
+inline bool check_local(aid_t const& id, ctxid_t ctxid)
 {
-  return id && id.get_actor_ptr()->get_aid() == id;
+  return id.ctxid_ == ctxid;
+}
+
+inline bool check_local_valid(aid_t const& id, ctxid_t ctxid, timestamp_t timestamp)
+{
+  BOOST_ASSERT(id.ctxid_ == ctxid);
+  return id.timestamp_ == timestamp;
+}
+
+inline bool check(aid_t const& id, ctxid_t ctxid, timestamp_t timestamp)
+{
+  if (ctxid != id.ctxid_ || timestamp != id.timestamp_)
+  {
+    return false;
+  }
+
+  return id && id.get_actor_ptr(ctxid, timestamp)->get_aid() == id;
 }
 }
 

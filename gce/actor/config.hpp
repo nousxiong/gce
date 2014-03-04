@@ -49,10 +49,13 @@ typedef boost::uint32_t sid_t;
 static boost::uint32_t const sid_nil = static_cast<sid_t>(-1);
 
 typedef boost::uint64_t match_t;
-static std::size_t const match_nil = static_cast<boost::int64_t>(-1);
+static boost::uint64_t const match_nil = static_cast<boost::uint64_t>(-1);
 typedef std::vector<match_t> match_list_t;
 
 typedef match_t ctxid_t;
+static match_t const ctxid_nil = static_cast<boost::uint64_t>(-1);
+
+typedef boost::uint32_t timestamp_t;
 
 enum link_type
 {
@@ -74,6 +77,7 @@ namespace detail
 {
 typedef std::basic_string<byte_t, std::char_traits<byte_t>, std::allocator<byte_t> > bytes_t;
 static match_t const msg_hb = atom("gce_msg_hb");
+static match_t const msg_set_ctxid = atom("gce_set_ctxid");
 } /// namespce detail
 } /// namespace gce
 

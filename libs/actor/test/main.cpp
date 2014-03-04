@@ -31,7 +31,7 @@
 #include "test_actor_pingpong.hpp"
 #include "test_match.hpp"
 #include "test_link.hpp"
-#include "test_socket.hpp"
+//#include "test_socket.hpp"
 #include "test_message.hpp"
 #include "test_send_recv.hpp"
 #include "test_relay.hpp"
@@ -49,7 +49,7 @@ int main()
     gce::actor_pingpong_ut::run();
     gce::match_ut::run();
     gce::link_ut::run();
-    gce::socket_ut::run();
+//    gce::socket_ut::run();
     gce::message_ut::run();
     gce::relay_ut::run();
   }

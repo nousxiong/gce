@@ -19,7 +19,10 @@ namespace gce
 namespace detail
 {
 ///------------------------------------------------------------------------------
-cache_pool::cache_pool(context& ctx, std::size_t id, attributes const& attrs, bool mixed)
+cache_pool::cache_pool(
+  context& ctx, std::size_t id,
+  attributes const& attrs, bool mixed
+  )
   : ctx_(&ctx)
   , id_(id)
   , cache_num_(attrs.thread_num_*attrs.per_thread_cache_ + attrs.mixin_num_*attrs.per_mixin_cache_)
@@ -28,7 +31,7 @@ cache_pool::cache_pool(context& ctx, std::size_t id, attributes const& attrs, bo
   , snd_(ctx.get_io_service())
   , gc_tmr_(ctx.get_io_service())
   , actor_pool_(
-      this, detail::actor_attrs(&ctx, cache_match_size_),
+      this, &ctx,
       size_nil,
       attrs.actor_pool_reserve_size_
       )
@@ -52,6 +55,7 @@ cache_pool::cache_pool(context& ctx, std::size_t id, attributes const& attrs, bo
   , acceptor_cache_list_(cache_num_)
   , pack_cache_list_(cache_num_)
   , stopped_(false)
+  , ctxid_(attrs.id_)
 {
   actor_cache_dirty_list_.reserve(cache_num_);
   socket_cache_dirty_list_.reserve(cache_num_);
@@ -194,7 +198,6 @@ void cache_pool::free_cache()
     actor_cache_dirty_list_.clear();
   }
 
-
   if (!socket_cache_dirty_list_.empty())
   {
     BOOST_FOREACH(socket_cache_t* cac, socket_cache_dirty_list_)
@@ -260,6 +263,11 @@ void cache_pool::stop()
     a->stop();
   }
   acceptor_list_.clear();
+}
+///------------------------------------------------------------------------------
+void cache_pool::set_ctxid(ctxid_t id)
+{
+  ctxid_ = id;
 }
 ///------------------------------------------------------------------------------
 }

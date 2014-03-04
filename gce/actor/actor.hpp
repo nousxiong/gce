@@ -25,10 +25,11 @@ class cache_pool;
 class mailbox;
 }
 class mixin;
+class context;
 class response_t;
 
 class actor
-  : public detail::object_pool<actor, detail::actor_attrs>::object
+  : public detail::object_pool<actor, context*>::object
   , public detail::mpsc_queue<actor>::node
   , public basic_actor
 {
@@ -114,6 +115,11 @@ public:
       return a_.get_yield();
     }
 
+    inline void set_ctxid(ctxid_t ctxid)
+    {
+      a_.set_ctxid(ctxid);
+    }
+
     /// internal use
     inline void add_link(detail::link_t l)
     {
@@ -128,7 +134,7 @@ public:
   typedef boost::function<void (self_ref_t)> func_t;
 
 public:
-  explicit actor(detail::actor_attrs);
+  explicit actor(context*);
   ~actor();
 
 public:
@@ -143,6 +149,8 @@ public:
 
   void link(aid_t);
   void monitor(aid_t);
+
+  void set_ctxid(ctxid_t ctxid);
 
 public:
   detail::cache_pool* get_cache_pool();

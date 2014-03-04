@@ -9,6 +9,7 @@
 
 #include <gce/actor/mixin.hpp>
 #include <gce/actor/detail/cache_pool.hpp>
+#include <gce/actor/context.hpp>
 #include <gce/actor/slice.hpp>
 #include <gce/actor/detail/mailbox.hpp>
 #include <gce/actor/message.hpp>
@@ -22,11 +23,12 @@ namespace gce
 {
 ///----------------------------------------------------------------------------
 mixin::mixin(context& ctx, std::size_t id, attributes const& attrs)
-  : base_type(attrs.max_cache_match_size_)
+  : base_type(attrs.max_cache_match_size_, ctx.get_timestamp())
+  , ctx_(&ctx)
   , curr_cache_pool_(size_nil)
   , cache_pool_size_(attrs.per_mixin_cache_)
+  , ctxid_(attrs.id_)
 {
-  base_type::update_aid();
   cache_pool_list_.reserve(attrs.per_mixin_cache_);
 
   try
@@ -40,6 +42,7 @@ mixin::mixin(context& ctx, std::size_t id, attributes const& attrs)
     }
 
     owner_ = select_cache_pool();
+    base_type::update_aid(owner_->get_ctxid());
     slice_pool_ =
       boost::in_place(
         owner_, this,
@@ -65,14 +68,14 @@ aid_t mixin::recv(message& msg, match const& mach)
   aid_t sender;
   detail::recv_t rcv;
 
-  base_type::move_pack(owner_);
+  move_pack(this, mb_, pack_que_, owner_, this);
   if (!mb_.pop(rcv, msg, mach.match_list_))
   {
     duration_t tmo = mach.timeout_;
     if (tmo > zero)
     {
       boost::unique_lock<boost::shared_mutex> lock(mtx_);
-      base_type::move_pack(owner_);
+      move_pack(this, mb_, pack_que_, owner_, this);
       if (!mb_.pop(rcv, msg, mach.match_list_))
       {
         bool has_msg = false;
@@ -97,7 +100,7 @@ aid_t mixin::recv(message& msg, match const& mach)
             return sender;
           }
 
-          base_type::move_pack(owner_);
+          move_pack(this, mb_, pack_que_, owner_, this);
           has_msg = mb_.pop(rcv, msg, mach.match_list_);
           if (!has_msg && tmo != infin)
           {
@@ -138,7 +141,10 @@ void mixin::send(aid_t recver, message const& m)
   pk->recver_ = recver;
   pk->msg_ = m;
 
-  recver.get_actor_ptr()->on_recv(pk);
+  recver.get_actor_ptr(
+    owner_->get_ctxid(),
+    owner_->get_context().get_timestamp()
+    )->on_recv(pk);
 }
 ///----------------------------------------------------------------------------
 void mixin::relay(aid_t des, message& m)
@@ -156,7 +162,10 @@ void mixin::relay(aid_t des, message& m)
   pk->recver_ = des;
   pk->msg_ = m;
 
-  des.get_actor_ptr()->on_recv(pk);
+  des.get_actor_ptr(
+    owner_->get_ctxid(),
+    owner_->get_context().get_timestamp()
+    )->on_recv(pk);
 }
 ///----------------------------------------------------------------------------
 response_t mixin::request(aid_t target, message const& m)
@@ -170,13 +179,20 @@ response_t mixin::request(aid_t target, message const& m)
   pk->recver_ = target;
   pk->msg_ = m;
 
-  target.get_actor_ptr()->on_recv(pk);
+  target.get_actor_ptr(
+    owner_->get_ctxid(),
+    owner_->get_context().get_timestamp()
+    )->on_recv(pk);
   return res;
 }
 ///----------------------------------------------------------------------------
 void mixin::reply(aid_t recver, message const& m)
 {
-  base_type* a = recver.get_actor_ptr();
+  base_type* a =
+    recver.get_actor_ptr(
+      owner_->get_ctxid(),
+      owner_->get_context().get_timestamp()
+      );
   detail::request_t req;
   detail::pack* pk = base_type::alloc_pack(owner_);
   if (mb_.pop(recver, req))
@@ -200,13 +216,13 @@ aid_t mixin::recv(response_t res, message& msg, duration_t tmo)
   detail::scope scp(boost::bind(&mixin::gc, this));
   aid_t sender;
 
-  base_type::move_pack(owner_);
+  move_pack(this, mb_, pack_que_, owner_, this);
   if (!mb_.pop(res, msg))
   {
     if (tmo > zero)
     {
       boost::unique_lock<boost::shared_mutex> lock(mtx_);
-      base_type::move_pack(owner_);
+      move_pack(this, mb_, pack_que_, owner_, this);
       if (!mb_.pop(res, msg))
       {
         bool has_msg = false;
@@ -231,7 +247,7 @@ aid_t mixin::recv(response_t res, message& msg, duration_t tmo)
             return sender;
           }
 
-          base_type::move_pack(owner_);
+          move_pack(this, mb_, pack_que_, owner_, this);
           has_msg = mb_.pop(res, msg);
           if (!has_msg && tmo != infin)
           {
@@ -266,6 +282,11 @@ void mixin::monitor(aid_t target)
 {
   base_type::link(detail::link_t(monitored, target), owner_);
 }
+///----------------------------------------------------------------------------
+void mixin::set_ctxid(ctxid_t ctxid)
+{
+  owner_->get_context().set_ctxid(ctxid, owner_);
+}
 ///------------------------------------------------------------------------------
 detail::cache_pool* mixin::select_cache_pool()
 {
@@ -279,9 +300,78 @@ detail::cache_pool* mixin::select_cache_pool()
   return cache_pool_list_[curr_cache_pool];
 }
 ///----------------------------------------------------------------------------
-std::size_t mixin::get_cache_match_size() const
+void mixin::move_pack(
+  basic_actor* base,
+  detail::mailbox& mb,
+  detail::pack_queue_t& pack_que,
+  detail::cache_pool* user,
+  mixin* mix
+  )
 {
-  return owner_->get_cache_match_size();
+  detail::pack* pk = pack_que.pop_all();
+  if (pk)
+  {
+    detail::scope scp(boost::bind(&basic_actor::dealloc_pack, user, pk));
+    while (pk)
+    {
+      detail::pack* next = detail::node_access::get_next(pk);
+      if (check(pk->recver_, user->get_ctxid(), user->get_context().get_timestamp()))
+      {
+        if (aid_t* aid = boost::get<aid_t>(&pk->tag_))
+        {
+          if (pk->msg_.get_type() == detail::msg_set_ctxid)
+          {
+            ctxid_t ctxid;
+            pk->msg_ >> ctxid;
+            BOOST_FOREACH(detail::cache_pool* cac_pool, mix->cache_pool_list_)
+            {
+              if (cac_pool)
+              {
+                cac_pool->set_ctxid(ctxid);
+              }
+            }
+          }
+          else
+          {
+            mb.push(*aid, pk->msg_);
+          }
+        }
+        else if (detail::request_t* req = boost::get<detail::request_t>(&pk->tag_))
+        {
+          mb.push(*req, pk->msg_);
+        }
+        else if (detail::exit_t* ex = boost::get<detail::exit_t>(&pk->tag_))
+        {
+          mb.push(*ex, pk->msg_);
+          base->remove_link(ex->get_aid());
+        }
+        else if (detail::link_t* link = boost::get<detail::link_t>(&pk->tag_))
+        {
+          base->add_link(link->get_aid());
+          return;
+        }
+        else if (response_t* res = boost::get<response_t>(&pk->tag_))
+        {
+          mb.push(*res, pk->msg_);
+        }
+      }
+      else if (!pk->is_err_ret_)
+      {
+        if (detail::link_t* link = boost::get<detail::link_t>(&pk->tag_))
+        {
+          /// send actor exit msg
+          base->send_already_exited(link->get_aid(), pk->recver_, user);
+        }
+        else if (detail::request_t* req = boost::get<detail::request_t>(&pk->tag_))
+        {
+          /// reply actor exit msg
+          response_t res(req->get_id(), pk->recver_);
+          base->send_already_exited(req->get_aid(), res, user);
+        }
+      }
+      pk = next;
+    }
+  }
 }
 ///----------------------------------------------------------------------------
 void mixin::on_recv(detail::pack* pk)
@@ -322,6 +412,19 @@ void mixin::free_cache()
       cac_pool->free_cache();
     }
   }
+}
+///----------------------------------------------------------------------------
+void mixin::set_ctxid(ctxid_t ctxid, detail::cache_pool* user)
+{
+  detail::pack* pk = base_type::alloc_pack(user);
+  aid_t self = get_aid();
+  pk->tag_ = self;
+  pk->recver_ = self;
+
+  message m(detail::msg_set_ctxid);
+  m << ctxid;
+  pk->msg_ = m;
+  on_recv(pk);
 }
 ///----------------------------------------------------------------------------
 void mixin::delete_cache()

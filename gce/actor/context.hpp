@@ -25,6 +25,7 @@ struct attributes
 {
   attributes()
     : ios_(0)
+    , id_(ctxid_nil)
     , thread_num_(boost::thread::hardware_concurrency())
     , mixin_num_(1)
     , per_thread_cache_(1)
@@ -41,6 +42,7 @@ struct attributes
   }
 
   io_service_t* ios_;
+  ctxid_t id_;
   std::size_t thread_num_;
   std::size_t mixin_num_;
   std::size_t per_thread_cache_;
@@ -70,10 +72,20 @@ public:
   ~context();
 
 public:
-  inline attributes const& get_attributes() const { return attrs_; }
-  inline io_service_t& get_io_service() { return *ios_; }
-  detail::cache_pool* select_cache_pool(std::size_t i = size_nil);
+  inline io_service_t& get_io_service()
+  {
+    BOOST_ASSERT(ios_);
+    return *ios_;
+  }
+
   mixin& make_mixin();
+
+public:
+  /// internal use
+  inline attributes const& get_attributes() const { return attrs_; }
+  inline timestamp_t get_timestamp() const { return timestamp_; }
+  detail::cache_pool* select_cache_pool(std::size_t i = size_nil);
+  void set_ctxid(ctxid_t, detail::cache_pool*);
 
 private:
   void run(
@@ -89,6 +101,7 @@ private:
   byte_t pad0_[GCE_CACHE_LINE_SIZE]; /// Ensure start from a new cache line.
 
   GCE_CACHE_ALIGNED_VAR(attributes, attrs_)
+  GCE_CACHE_ALIGNED_VAR(timestamp_t const, timestamp_)
 
   /// select cache pool
   GCE_CACHE_ALIGNED_VAR(std::size_t, curr_cache_pool_)

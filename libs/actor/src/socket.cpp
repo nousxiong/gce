@@ -10,6 +10,7 @@
 #include <gce/actor/detail/socket.hpp>
 #include <gce/actor/detail/cache_pool.hpp>
 #include <gce/actor/mixin.hpp>
+#include <gce/actor/context.hpp>
 #include <gce/actor/impl/tcp/socket.hpp>
 #include <gce/actor/detail/mailbox.hpp>
 #include <gce/actor/message.hpp>
@@ -28,7 +29,10 @@ namespace detail
 {
 ///----------------------------------------------------------------------------
 socket::socket(context* ctx)
-  : basic_actor(ctx->get_attributes().max_cache_match_size_)
+  : basic_actor(
+      ctx->get_attributes().max_cache_match_size_,
+      ctx->get_timestamp()
+      )
   , stat_(ready)
   , hb_(ctx->get_io_service())
   , sync_(ctx->get_io_service())
@@ -50,28 +54,22 @@ void socket::init(cache_pool* user, cache_pool* owner, net_option opt)
   opt_ = opt;
   curr_reconn_ = u32_nil;
 
-  base_type::update_aid();
+  base_type::update_aid(user_->get_ctxid());
 }
 ///----------------------------------------------------------------------------
-void socket::connect(std::string const& ep, aid_t master)
+void socket::connect(std::string const& ep)
 {
-  master_ = master;
-  base_type::add_link(master_);
-
   boost::asio::spawn(
     user_->get_strand(),
     boost::bind(
       &socket::run_conn, this, ep, _1
       ),
-    boost::coroutines::attributes(
-      boost::coroutines::stack_allocator::default_stacksize()
-      )
+    boost::coroutines::attributes(default_stacksize())
     );
 }
 ///----------------------------------------------------------------------------
-void socket::start(socket_ptr skt, aid_t master)
+void socket::start(socket_ptr skt)
 {
-  master_ = master;
   conn_ = true;
 
   boost::asio::spawn(
@@ -93,7 +91,6 @@ void socket::on_free()
   base_type::on_free();
 
   stat_ = ready;
-  master_ = aid_t();
   recv_cache_.clear();
   conn_ = false;
   curr_reconn_ = 0;
@@ -115,8 +112,10 @@ void socket::send(aid_t recver, message const& m)
   pk->recver_ = recver;
   pk->msg_ = m;
 
-  basic_actor* a = recver.get_actor_ptr();
-  a->on_recv(pk);
+  recver.get_actor_ptr(
+    user_->get_ctxid(),
+    user_->get_context().get_timestamp()
+    )->on_recv(pk);
 }
 ///----------------------------------------------------------------------------
 void socket::send(message const& m)
@@ -193,20 +192,7 @@ void socket::run_conn(std::string const& ep, yield_t yield)
         }
         else
         {
-          match_t type = msg.get_type();
-          if (type == exit)
-          {
-            msg >> exc >> exit_msg;
-            close();
-          }
-          else
-          {
-            if (type != detail::msg_hb)
-            {
-              send(master_, msg);
-            }
-            hb_.beat();
-          }
+          hb_.beat();
         }
       }
     }
@@ -254,18 +240,6 @@ void socket::run(socket_ptr skt, yield_t yield)
           break;
         }
 
-        match_t type = msg.get_type();
-        if (type == exit)
-        {
-          msg >> exc >> exit_msg;
-          close();
-          break;
-        }
-
-        if (type != detail::msg_hb)
-        {
-          send(master_, msg);
-        }
         hb_.beat();
       }
     }
@@ -328,7 +302,7 @@ socket_ptr socket::make_socket(std::string const& ep)
 void socket::handle_recv(pack* pk)
 {
   scope scp(boost::bind(&basic_actor::dealloc_pack, user_, pk));
-  if (check(pk->recver_))
+  if (check(pk->recver_, user_->get_ctxid(), user_->get_context().get_timestamp()))
   {
     if (boost::get<aid_t>(&pk->tag_))
     {
@@ -341,14 +315,6 @@ void socket::handle_recv(pack* pk)
     else if (exit_t* ex = boost::get<exit_t>(&pk->tag_))
     {
       base_type::remove_link(ex->get_aid());
-      if (ex->get_aid() == master_)
-      {
-        message m(exit);
-        std::string exit_msg("remote exited");
-        m << exit_remote << exit_msg;
-        send(m);
-        close();
-      }
     }
   }
   else if (!pk->is_err_ret_)
@@ -517,7 +483,7 @@ void socket::free_self(exit_code_t exc, std::string const& exit_msg, yield_t yie
   hb_.clear();
   user_->remove_socket(this);
   base_type::send_exit(exc, exit_msg, user_);
-  base_type::update_aid();
+  base_type::update_aid(user_->get_ctxid());
   user_->free_socket(owner_, this);
 }
 ///----------------------------------------------------------------------------

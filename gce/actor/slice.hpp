@@ -42,6 +42,8 @@ public:
   void link(aid_t);
   void monitor(aid_t);
 
+  void set_ctxid(ctxid_t);
+
 public:
   void init(aid_t);
   void on_free();

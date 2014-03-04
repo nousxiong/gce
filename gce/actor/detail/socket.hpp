@@ -51,10 +51,10 @@ public:
 
 public:
   void init(cache_pool* user, cache_pool* owner, net_option);
-  void connect(std::string const&, aid_t);
+  void connect(std::string const&);
 
 public:
-  void start(socket_ptr, aid_t);
+  void start(socket_ptr);
   void stop();
   void on_free();
   void on_recv(pack*);
@@ -95,8 +95,6 @@ private:
   timer_t sync_;
   std::size_t tmr_sid_;
 
-  aid_t master_;
-
   byte_t recv_buffer_[GCE_SOCKET_RECV_CACHE_SIZE];
   detail::buffer_ref recv_cache_;
 
@@ -104,6 +102,17 @@ private:
   std::queue<message, std::deque<message> > conn_cache_;
   std::size_t curr_reconn_;
 };
+}
+
+inline void set_socket(aid_t& aid, detail::socket* skt)
+{
+  aid.skt_ = skt;
+  aid.skt_sid_ = skt->get_aid().sid_;
+}
+
+inline bool check_socket(aid_t const& id)
+{
+  return id.skt_ && id.skt_->get_aid().sid_ == id.skt_sid_;
 }
 }
 

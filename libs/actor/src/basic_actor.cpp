@@ -8,6 +8,7 @@
 ///
 
 #include <gce/actor/basic_actor.hpp>
+#include <gce/actor/context.hpp>
 #include <gce/actor/detail/cache_pool.hpp>
 #include <gce/detail/scope.hpp>
 #include <boost/variant/get.hpp>
@@ -16,12 +17,13 @@
 namespace gce
 {
 ///----------------------------------------------------------------------------
-basic_actor::basic_actor(std::size_t cache_match_size)
+basic_actor::basic_actor(std::size_t cache_match_size, timestamp_t const timestamp)
   : owner_(0)
   , mb_(cache_match_size)
   , req_id_(0)
+  , timestamp_(timestamp)
 {
-  aid_ = aid_t(this, 0);
+  aid_ = aid_t(ctxid_nil, timestamp, this, 0);
 }
 ///----------------------------------------------------------------------------
 basic_actor::~basic_actor()
@@ -54,59 +56,6 @@ void basic_actor::dealloc_pack(detail::cache_pool* owner, detail::pack* pk)
   }
 }
 ///----------------------------------------------------------------------------
-void basic_actor::move_pack(detail::cache_pool* user)
-{
-  detail::pack* pk = pack_que_.pop_all();
-  if (pk)
-  {
-    detail::scope scp(boost::bind(&basic_actor::dealloc_pack, user, pk));
-    while (pk)
-    {
-      detail::pack* next = detail::node_access::get_next(pk);
-      if (check(pk->recver_))
-      {
-        if (aid_t* aid = boost::get<aid_t>(&pk->tag_))
-        {
-          mb_.push(*aid, pk->msg_);
-        }
-        else if (detail::request_t* req = boost::get<detail::request_t>(&pk->tag_))
-        {
-          mb_.push(*req, pk->msg_);
-        }
-        else if (detail::exit_t* ex = boost::get<detail::exit_t>(&pk->tag_))
-        {
-          mb_.push(*ex, pk->msg_);
-          remove_link(ex->get_aid());
-        }
-        else if (detail::link_t* link = boost::get<detail::link_t>(&pk->tag_))
-        {
-          add_link(link->get_aid());
-          return;
-        }
-        else if (response_t* res = boost::get<response_t>(&pk->tag_))
-        {
-          mb_.push(*res, pk->msg_);
-        }
-      }
-      else if (!pk->is_err_ret_)
-      {
-        if (detail::link_t* link = boost::get<detail::link_t>(&pk->tag_))
-        {
-          /// send actor exit msg
-          send_already_exited(link->get_aid(), pk->recver_, user);
-        }
-        else if (detail::request_t* req = boost::get<detail::request_t>(&pk->tag_))
-        {
-          /// reply actor exit msg
-          response_t res(req->get_id(), pk->recver_);
-          send_already_exited(req->get_aid(), res, user);
-        }
-      }
-      pk = next;
-    }
-  }
-}
-///----------------------------------------------------------------------------
 void basic_actor::add_link(aid_t target)
 {
   link_list_.insert(target);
@@ -130,11 +79,16 @@ void basic_actor::link(detail::link_t l, detail::cache_pool* user)
     pk->tag_ = detail::link_t(l.get_type(), get_aid());
     pk->recver_ = target;
 
-    target.get_actor_ptr()->on_recv(pk);
+    target.get_actor_ptr(
+      user->get_ctxid(),
+      user->get_context().get_timestamp()
+      )->on_recv(pk);
   }
 }
 ///----------------------------------------------------------------------------
-void basic_actor::send_exit(exit_code_t ec, std::string const& exit_msg, detail::cache_pool* user)
+void basic_actor::send_exit(
+  exit_code_t ec, std::string const& exit_msg, detail::cache_pool* user
+  )
 {
   BOOST_FOREACH(aid_t aid, link_list_)
   {
@@ -144,7 +98,10 @@ void basic_actor::send_exit(exit_code_t ec, std::string const& exit_msg, detail:
     pk->msg_ = message(exit);
     pk->msg_ << ec << exit_msg;
 
-    aid.get_actor_ptr()->on_recv(pk);
+    aid.get_actor_ptr(
+      user->get_ctxid(),
+      user->get_context().get_timestamp()
+      )->on_recv(pk);
   }
 }
 ///----------------------------------------------------------------------------
@@ -168,7 +125,10 @@ void basic_actor::send_already_exited(
   ret->msg_ = m;
   ret->is_err_ret_ = true;
 
-  recver.get_actor_ptr()->on_recv(ret);
+  recver.get_actor_ptr(
+    user->get_ctxid(),
+    user->get_context().get_timestamp()
+    )->on_recv(ret);
 }
 ///----------------------------------------------------------------------------
 void basic_actor::send_already_exited(
@@ -185,7 +145,10 @@ void basic_actor::send_already_exited(
   ret->msg_ = m;
   ret->is_err_ret_ = true;
 
-  recver.get_actor_ptr()->on_recv(ret);
+  recver.get_actor_ptr(
+    user->get_ctxid(),
+    user->get_context().get_timestamp()
+    )->on_recv(ret);
 }
 ///----------------------------------------------------------------------------
 }

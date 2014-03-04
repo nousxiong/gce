@@ -11,6 +11,7 @@
 #include <gce/actor/detail/socket.hpp>
 #include <gce/actor/impl/tcp/acceptor.hpp>
 #include <gce/actor/detail/cache_pool.hpp>
+#include <gce/actor/context.hpp>
 #include <gce/actor/mixin.hpp>
 #include <gce/actor/detail/mailbox.hpp>
 #include <gce/actor/message.hpp>
@@ -26,7 +27,10 @@ namespace detail
 {
 ///----------------------------------------------------------------------------
 acceptor::acceptor(context* ctx)
-  : basic_actor(ctx->get_attributes().max_cache_match_size_)
+  : basic_actor(
+      ctx->get_attributes().max_cache_match_size_,
+      ctx->get_timestamp()
+      )
   , stat_(ready)
   , ctx_(*ctx)
 {
@@ -43,14 +47,11 @@ void acceptor::init(cache_pool* user, cache_pool* owner, net_option opt)
   owner_ = owner;
   opt_ = opt;
 
-  base_type::update_aid();
+  base_type::update_aid(user_->get_ctxid());
 }
 ///----------------------------------------------------------------------------
-void acceptor::bind(std::string const& ep, aid_t master)
+void acceptor::bind(std::string const& ep)
 {
-  master_ = master;
-  base_type::add_link(master_);
-
   boost::asio::spawn(
     user_->get_strand(),
     boost::bind(
@@ -70,7 +71,6 @@ void acceptor::on_free()
   base_type::on_free();
 
   stat_ = ready;
-  master_ = aid_t();
 }
 ///----------------------------------------------------------------------------
 void acceptor::on_recv(pack* pk)
@@ -109,7 +109,7 @@ void acceptor::run(std::string const& ep, yield_t yield)
 
         socket* s = user_->get_socket();
         s->init(ctx_.select_cache_pool(), user_, opt_);
-        s->start(prot, master_);
+        s->start(prot);
       }
     }
     catch (std::exception& ex)
@@ -167,15 +167,11 @@ basic_acceptor* acceptor::make_acceptor(std::string const& ep)
 void acceptor::handle_recv(pack* pk)
 {
   scope scp(boost::bind(&basic_actor::dealloc_pack, user_, pk));
-  if (check(pk->recver_))
+  if (check(pk->recver_, user_->get_ctxid(), user_->get_context().get_timestamp()))
   {
     if (exit_t* ex = boost::get<exit_t>(&pk->tag_))
     {
       base_type::remove_link(ex->get_aid());
-      if (ex->get_aid() == master_)
-      {
-        close();
-      }
     }
   }
   else if (!pk->is_err_ret_)
@@ -209,7 +205,7 @@ void acceptor::free_self(exit_code_t exc, std::string const& exit_msg, yield_t y
 
   user_->remove_acceptor(this);
   base_type::send_exit(exc, exit_msg, user_);
-  base_type::update_aid();
+  base_type::update_aid(user_->get_ctxid());
   user_->free_acceptor(owner_, this);
 }
 ///----------------------------------------------------------------------------

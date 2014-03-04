@@ -9,6 +9,7 @@
 
 #include <gce/actor/actor.hpp>
 #include <gce/actor/detail/cache_pool.hpp>
+#include <gce/actor/context.hpp>
 #include <gce/actor/mixin.hpp>
 #include <gce/actor/detail/mailbox.hpp>
 #include <gce/actor/detail/scoped_bool.hpp>
@@ -21,14 +22,14 @@
 namespace gce
 {
 ///----------------------------------------------------------------------------
-actor::actor(detail::actor_attrs attrs)
-  : base_type(attrs.cache_match_size_)
+actor::actor(context* ctx)
+  : base_type(ctx->get_attributes().max_cache_match_size_, ctx->get_timestamp())
   , stat_(ready)
   , self_(*this)
   , user_(0)
   , recving_(false)
   , responsing_(false)
-  , tmr_(attrs.ctx_->get_io_service())
+  , tmr_(ctx->get_io_service())
   , tmr_sid_(0)
   , yld_(0)
 {
@@ -95,7 +96,10 @@ void actor::send(aid_t recver, message const& m)
   pk->recver_ = recver;
   pk->msg_ = m;
 
-  recver.get_actor_ptr()->on_recv(pk);
+  recver.get_actor_ptr(
+    user_->get_ctxid(),
+    user_->get_context().get_timestamp()
+    )->on_recv(pk);
 }
 ///----------------------------------------------------------------------------
 void actor::relay(aid_t des, message& m)
@@ -113,7 +117,10 @@ void actor::relay(aid_t des, message& m)
   pk->recver_ = des;
   pk->msg_ = m;
 
-  des.get_actor_ptr()->on_recv(pk);
+  des.get_actor_ptr(
+    user_->get_ctxid(),
+    user_->get_context().get_timestamp()
+    )->on_recv(pk);
 }
 ///----------------------------------------------------------------------------
 response_t actor::request(aid_t target, message const& m)
@@ -127,13 +134,20 @@ response_t actor::request(aid_t target, message const& m)
   pk->recver_ = target;
   pk->msg_ = m;
 
-  target.get_actor_ptr()->on_recv(pk);
+  target.get_actor_ptr(
+    user_->get_ctxid(),
+    user_->get_context().get_timestamp()
+    )->on_recv(pk);
   return res;
 }
 ///----------------------------------------------------------------------------
 void actor::reply(aid_t recver, message const& m)
 {
-  basic_actor* a = recver.get_actor_ptr();
+  basic_actor* a =
+    recver.get_actor_ptr(
+      user_->get_ctxid(),
+      user_->get_context().get_timestamp()
+      );
   detail::request_t req;
   detail::pack* pk = base_type::alloc_pack(user_);
   if (mb_.pop(recver, req))
@@ -206,6 +220,11 @@ void actor::monitor(aid_t target)
   base_type::link(detail::link_t(monitored, target), user_);
 }
 ///----------------------------------------------------------------------------
+void actor::set_ctxid(ctxid_t ctxid)
+{
+  user_->get_context().set_ctxid(ctxid, user_);
+}
+///----------------------------------------------------------------------------
 detail::cache_pool* actor::get_cache_pool()
 {
   return user_;
@@ -247,7 +266,7 @@ void actor::init(
   user_ = user;
   owner_ = owner;
   f_ = f;
-  base_type::update_aid();
+  base_type::update_aid(user_->get_ctxid());
 
   if (link_tgt)
   {
@@ -332,7 +351,7 @@ actor::actor_code actor::yield()
 void actor::free_self()
 {
   base_type::send_exit(ec_, exit_msg_, user_);
-  base_type::update_aid();
+  base_type::update_aid(user_->get_ctxid());
   user_->free_actor(owner_, this);
 }
 ///----------------------------------------------------------------------------
@@ -371,7 +390,7 @@ void actor::handle_recv_timeout(errcode_t const& ec, std::size_t tmr_sid)
 void actor::handle_recv(detail::pack* pk)
 {
   detail::scope scp(boost::bind(&basic_actor::dealloc_pack, user_, pk));
-  if (check(pk->recver_))
+  if (check(pk->recver_, user_->get_ctxid(), user_->get_context().get_timestamp()))
   {
     bool is_response = false;
 

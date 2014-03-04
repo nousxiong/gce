@@ -26,6 +26,7 @@ public:
 
   static void my_actor(self_t self, aid_t base_id)
   {
+    detail::cache_pool* cac_pool = self.get_cache_pool();
     std::size_t size = 1;
     std::vector<response_t> res_list(size);
     for (std::size_t i=0; i<size; ++i)
@@ -39,18 +40,22 @@ public:
           linked
           );
 
-      basic_actor* a = aid.get_actor_ptr();
-      sid_t sid = aid.get_sid();
+      basic_actor* a =
+        aid.get_actor_ptr(
+          cac_pool->get_ctxid(),
+          cac_pool->get_context().get_timestamp()
+          );
+      sid_t sid = aid.sid_;
       sid += 100000;
       ++sid;
 
       message msg;
 
-      self.link(aid_t(a, sid));
+      self.link(aid_t(ctxid_nil, aid.timestamp_, a, sid));
       self.recv(msg);
       BOOST_ASSERT(msg.get_type() == exit);
 
-      response_t res = request(self, aid_t(a, sid));
+      response_t res = request(self, aid_t(ctxid_nil, aid.timestamp_, a, sid));
       self.recv(res, msg);
       BOOST_ASSERT(msg.get_type() == exit);
 
