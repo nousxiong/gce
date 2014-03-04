@@ -237,7 +237,7 @@ public:
   message& operator<<(errcode_t const& ec)
   {
     boost::int32_t code = (boost::int32_t)ec.value();
-    uintptr_t errcat = (uintptr_t)(&ec.category());
+    boost::uint64_t errcat = (boost::uint64_t)(&ec.category());
     *this << code << errcat;
     return *this;
   }
@@ -245,7 +245,7 @@ public:
   message& operator>>(errcode_t& ec)
   {
     boost::int32_t code;
-    uintptr_t errcat;
+    boost::uint64_t errcat;
     *this >> code >> errcat;
     boost::system::error_category const* errcat_ptr =
       (boost::system::error_category const*)errcat;
