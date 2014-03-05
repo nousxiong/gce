@@ -42,6 +42,7 @@ mixin::mixin(context& ctx, std::size_t id, attributes const& attrs)
     }
 
     owner_ = select_cache_pool();
+    user_ = select_cache_pool();
     base_type::update_aid(owner_->get_ctxid());
     slice_pool_ =
       boost::in_place(
@@ -68,14 +69,14 @@ aid_t mixin::recv(message& msg, match const& mach)
   aid_t sender;
   detail::recv_t rcv;
 
-  move_pack(this, mb_, pack_que_, owner_, this);
+  move_pack(this, mb_, pack_que_, user_, this);
   if (!mb_.pop(rcv, msg, mach.match_list_))
   {
     duration_t tmo = mach.timeout_;
     if (tmo > zero)
     {
       boost::unique_lock<boost::shared_mutex> lock(mtx_);
-      move_pack(this, mb_, pack_que_, owner_, this);
+      move_pack(this, mb_, pack_que_, user_, this);
       if (!mb_.pop(rcv, msg, mach.match_list_))
       {
         bool has_msg = false;
@@ -100,7 +101,7 @@ aid_t mixin::recv(message& msg, match const& mach)
             return sender;
           }
 
-          move_pack(this, mb_, pack_que_, owner_, this);
+          move_pack(this, mb_, pack_que_, user_, this);
           has_msg = mb_.pop(rcv, msg, mach.match_list_);
           if (!has_msg && tmo != infin)
           {
@@ -134,95 +135,18 @@ aid_t mixin::recv(message& msg, match const& mach)
   return sender;
 }
 ///----------------------------------------------------------------------------
-void mixin::send(aid_t recver, message const& m)
-{
-  detail::pack* pk = base_type::alloc_pack(owner_);
-  pk->tag_ = get_aid();
-  pk->recver_ = recver;
-  pk->msg_ = m;
-
-  recver.get_actor_ptr(
-    owner_->get_ctxid(),
-    owner_->get_context().get_timestamp()
-    )->on_recv(pk);
-}
-///----------------------------------------------------------------------------
-void mixin::relay(aid_t des, message& m)
-{
-  detail::pack* pk = base_type::alloc_pack(owner_);
-  if (m.req_.valid())
-  {
-    pk->tag_ = m.req_;
-    m.req_ = detail::request_t();
-  }
-  else
-  {
-    pk->tag_ = get_aid();
-  }
-  pk->recver_ = des;
-  pk->msg_ = m;
-
-  des.get_actor_ptr(
-    owner_->get_ctxid(),
-    owner_->get_context().get_timestamp()
-    )->on_recv(pk);
-}
-///----------------------------------------------------------------------------
-response_t mixin::request(aid_t target, message const& m)
-{
-  aid_t sender = get_aid();
-  response_t res(base_type::new_request(), sender);
-  detail::request_t req(res.get_id(), sender);
-
-  detail::pack* pk = base_type::alloc_pack(owner_);
-  pk->tag_ = req;
-  pk->recver_ = target;
-  pk->msg_ = m;
-
-  target.get_actor_ptr(
-    owner_->get_ctxid(),
-    owner_->get_context().get_timestamp()
-    )->on_recv(pk);
-  return res;
-}
-///----------------------------------------------------------------------------
-void mixin::reply(aid_t recver, message const& m)
-{
-  base_type* a =
-    recver.get_actor_ptr(
-      owner_->get_ctxid(),
-      owner_->get_context().get_timestamp()
-      );
-  detail::request_t req;
-  detail::pack* pk = base_type::alloc_pack(owner_);
-  if (mb_.pop(recver, req))
-  {
-    response_t res(req.get_id(), get_aid());
-    pk->tag_ = res;
-    pk->recver_ = recver;
-    pk->msg_ = m;
-  }
-  else
-  {
-    pk->tag_ = get_aid();
-    pk->recver_ = recver;
-    pk->msg_ = m;
-  }
-  a->on_recv(pk);
-}
-///----------------------------------------------------------------------------
 aid_t mixin::recv(response_t res, message& msg, duration_t tmo)
 {
   detail::scope scp(boost::bind(&mixin::gc, this));
   aid_t sender;
 
-  move_pack(this, mb_, pack_que_, owner_, this);
+  move_pack(this, mb_, pack_que_, user_, this);
   if (!mb_.pop(res, msg))
   {
     if (tmo > zero)
     {
       boost::unique_lock<boost::shared_mutex> lock(mtx_);
-      move_pack(this, mb_, pack_que_, owner_, this);
+      move_pack(this, mb_, pack_que_, user_, this);
       if (!mb_.pop(res, msg))
       {
         bool has_msg = false;
@@ -247,7 +171,7 @@ aid_t mixin::recv(response_t res, message& msg, duration_t tmo)
             return sender;
           }
 
-          move_pack(this, mb_, pack_que_, owner_, this);
+          move_pack(this, mb_, pack_que_, user_, this);
           has_msg = mb_.pop(res, msg);
           if (!has_msg && tmo != infin)
           {
@@ -275,17 +199,12 @@ void mixin::wait(duration_t dur)
 ///----------------------------------------------------------------------------
 void mixin::link(aid_t target)
 {
-  base_type::link(detail::link_t(linked, target), owner_);
+  base_type::link(detail::link_t(linked, target), user_);
 }
 ///----------------------------------------------------------------------------
 void mixin::monitor(aid_t target)
 {
-  base_type::link(detail::link_t(monitored, target), owner_);
-}
-///----------------------------------------------------------------------------
-void mixin::set_ctxid(ctxid_t ctxid)
-{
-  owner_->get_context().set_ctxid(ctxid, owner_);
+  base_type::link(detail::link_t(monitored, target), user_);
 }
 ///------------------------------------------------------------------------------
 detail::cache_pool* mixin::select_cache_pool()
@@ -315,19 +234,44 @@ void mixin::move_pack(
     while (pk)
     {
       detail::pack* next = detail::node_access::get_next(pk);
-      if (check(pk->recver_, user->get_ctxid(), user->get_context().get_timestamp()))
+      if (check(pk->recver_, base->get_aid().ctxid_, user->get_context().get_timestamp()))
       {
         if (aid_t* aid = boost::get<aid_t>(&pk->tag_))
         {
-          if (pk->msg_.get_type() == detail::msg_set_ctxid)
+          match_t type = pk->msg_.get_type();
+          if (type == detail::msg_reg_skt)
           {
             ctxid_t ctxid;
-            pk->msg_ >> ctxid;
+            aid_t skt;
+            pk->msg_ >> ctxid >> skt;
             BOOST_FOREACH(detail::cache_pool* cac_pool, mix->cache_pool_list_)
             {
               if (cac_pool)
               {
-                cac_pool->set_ctxid(ctxid);
+                cac_pool->register_socket(ctxid, skt);
+              }
+            }
+          }
+          else if (type == detail::msg_dereg_skt)
+          {
+            ctxid_t ctxid;
+            aid_t skt;
+            pk->msg_ >> ctxid >> skt;
+            BOOST_FOREACH(detail::cache_pool* cac_pool, mix->cache_pool_list_)
+            {
+              if (cac_pool)
+              {
+                cac_pool->deregister_socket(ctxid, skt);
+              }
+            }
+          }
+          else if (type == detail::msg_stop)
+          {
+            BOOST_FOREACH(detail::cache_pool* cac_pool, mix->cache_pool_list_)
+            {
+              if (cac_pool)
+              {
+                cac_pool->stop();
               }
             }
           }
@@ -414,16 +358,40 @@ void mixin::free_cache()
   }
 }
 ///----------------------------------------------------------------------------
-void mixin::set_ctxid(ctxid_t ctxid, detail::cache_pool* user)
+void mixin::register_socket(ctxid_t ctxid, aid_t skt, detail::cache_pool* user)
 {
   detail::pack* pk = base_type::alloc_pack(user);
   aid_t self = get_aid();
   pk->tag_ = self;
   pk->recver_ = self;
 
-  message m(detail::msg_set_ctxid);
-  m << ctxid;
+  message m(detail::msg_reg_skt);
+  m << ctxid << skt;
   pk->msg_ = m;
+  on_recv(pk);
+}
+///----------------------------------------------------------------------------
+void mixin::deregister_socket(ctxid_t ctxid, aid_t skt, detail::cache_pool* user)
+{
+  detail::pack* pk = base_type::alloc_pack(user);
+  aid_t self = get_aid();
+  pk->tag_ = self;
+  pk->recver_ = self;
+
+  message m(detail::msg_dereg_skt);
+  m << ctxid << skt;
+  pk->msg_ = m;
+  on_recv(pk);
+}
+///----------------------------------------------------------------------------
+void mixin::stop(detail::cache_pool* user)
+{
+  detail::pack* pk = base_type::alloc_pack(user);
+  aid_t self = get_aid();
+  pk->tag_ = self;
+  pk->recver_ = self;
+
+  pk->msg_ = message(detail::msg_stop);
   on_recv(pk);
 }
 ///----------------------------------------------------------------------------

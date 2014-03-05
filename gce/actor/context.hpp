@@ -11,6 +11,7 @@
 #define GCE_ACTOR_CONTEXT_HPP
 
 #include <gce/actor/config.hpp>
+#include <gce/actor/actor_id.hpp>
 #include <gce/detail/unique_ptr.hpp>
 #include <boost/thread/thread.hpp>
 #include <boost/atomic.hpp>
@@ -85,7 +86,9 @@ public:
   inline attributes const& get_attributes() const { return attrs_; }
   inline timestamp_t get_timestamp() const { return timestamp_; }
   detail::cache_pool* select_cache_pool(std::size_t i = size_nil);
-  void set_ctxid(ctxid_t, detail::cache_pool*);
+
+  void register_socket(ctxid_t ctxid, aid_t skt, detail::cache_pool*);
+  void deregister_socket(ctxid_t ctxid, aid_t skt, detail::cache_pool*);
 
 private:
   void run(
@@ -94,6 +97,7 @@ private:
     std::vector<thread_callback_t> const&
     );
   void stop();
+  void stop_mixin(detail::cache_pool*);
   void start_gc_timer(detail::cache_pool*);
   void gc(detail::cache_pool*, errcode_t const&);
 

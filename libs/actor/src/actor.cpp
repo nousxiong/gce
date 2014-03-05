@@ -26,7 +26,6 @@ actor::actor(context* ctx)
   : base_type(ctx->get_attributes().max_cache_match_size_, ctx->get_timestamp())
   , stat_(ready)
   , self_(*this)
-  , user_(0)
   , recving_(false)
   , responsing_(false)
   , tmr_(ctx->get_io_service())
@@ -89,83 +88,6 @@ aid_t actor::recv(message& msg, match const& mach)
   return sender;
 }
 ///----------------------------------------------------------------------------
-void actor::send(aid_t recver, message const& m)
-{
-  detail::pack* pk = base_type::alloc_pack(user_);
-  pk->tag_ = get_aid();
-  pk->recver_ = recver;
-  pk->msg_ = m;
-
-  recver.get_actor_ptr(
-    user_->get_ctxid(),
-    user_->get_context().get_timestamp()
-    )->on_recv(pk);
-}
-///----------------------------------------------------------------------------
-void actor::relay(aid_t des, message& m)
-{
-  detail::pack* pk = base_type::alloc_pack(user_);
-  if (m.req_.valid())
-  {
-    pk->tag_ = m.req_;
-    m.req_ = detail::request_t();
-  }
-  else
-  {
-    pk->tag_ = get_aid();
-  }
-  pk->recver_ = des;
-  pk->msg_ = m;
-
-  des.get_actor_ptr(
-    user_->get_ctxid(),
-    user_->get_context().get_timestamp()
-    )->on_recv(pk);
-}
-///----------------------------------------------------------------------------
-response_t actor::request(aid_t target, message const& m)
-{
-  aid_t sender = get_aid();
-  response_t res(base_type::new_request(), sender);
-  detail::request_t req(res.get_id(), sender);
-
-  detail::pack* pk = base_type::alloc_pack(user_);
-  pk->tag_ = req;
-  pk->recver_ = target;
-  pk->msg_ = m;
-
-  target.get_actor_ptr(
-    user_->get_ctxid(),
-    user_->get_context().get_timestamp()
-    )->on_recv(pk);
-  return res;
-}
-///----------------------------------------------------------------------------
-void actor::reply(aid_t recver, message const& m)
-{
-  basic_actor* a =
-    recver.get_actor_ptr(
-      user_->get_ctxid(),
-      user_->get_context().get_timestamp()
-      );
-  detail::request_t req;
-  detail::pack* pk = base_type::alloc_pack(user_);
-  if (mb_.pop(recver, req))
-  {
-    response_t res(req.get_id(), get_aid());
-    pk->tag_ = res;
-    pk->recver_ = recver;
-    pk->msg_ = m;
-  }
-  else
-  {
-    pk->tag_ = get_aid();
-    pk->recver_ = recver;
-    pk->msg_ = m;
-  }
-  a->on_recv(pk);
-}
-///----------------------------------------------------------------------------
 aid_t actor::recv(response_t res, message& msg, duration_t tmo)
 {
   aid_t sender;
@@ -218,11 +140,6 @@ void actor::link(aid_t target)
 void actor::monitor(aid_t target)
 {
   base_type::link(detail::link_t(monitored, target), user_);
-}
-///----------------------------------------------------------------------------
-void actor::set_ctxid(ctxid_t ctxid)
-{
-  user_->get_context().set_ctxid(ctxid, user_);
 }
 ///----------------------------------------------------------------------------
 detail::cache_pool* actor::get_cache_pool()
@@ -390,7 +307,7 @@ void actor::handle_recv_timeout(errcode_t const& ec, std::size_t tmr_sid)
 void actor::handle_recv(detail::pack* pk)
 {
   detail::scope scp(boost::bind(&basic_actor::dealloc_pack, user_, pk));
-  if (check(pk->recver_, user_->get_ctxid(), user_->get_context().get_timestamp()))
+  if (check(pk->recver_, get_aid().ctxid_, user_->get_context().get_timestamp()))
   {
     bool is_response = false;
 

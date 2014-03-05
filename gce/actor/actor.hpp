@@ -115,11 +115,6 @@ public:
       return a_.get_yield();
     }
 
-    inline void set_ctxid(ctxid_t ctxid)
-    {
-      a_.set_ctxid(ctxid);
-    }
-
     /// internal use
     inline void add_link(detail::link_t l)
     {
@@ -139,18 +134,11 @@ public:
 
 public:
   aid_t recv(message&, match const&);
-  void send(aid_t, message const&);
-  void relay(aid_t, message&);
-
-  response_t request(aid_t, message const&);
-  void reply(aid_t, message const&);
   aid_t recv(response_t, message&, duration_t);
   void wait(duration_t);
 
   void link(aid_t);
   void monitor(aid_t);
-
-  void set_ctxid(ctxid_t ctxid);
 
 public:
   detail::cache_pool* get_cache_pool();
@@ -179,7 +167,6 @@ private:
 
   GCE_CACHE_ALIGNED_VAR(status, stat_)
   GCE_CACHE_ALIGNED_VAR(self, self_)
-  GCE_CACHE_ALIGNED_VAR(detail::cache_pool*, user_)
   GCE_CACHE_ALIGNED_VAR(func_t, f_)
 
   typedef boost::function<void (actor_code)> yield_cb_t;

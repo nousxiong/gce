@@ -19,6 +19,7 @@ namespace gce
 ///----------------------------------------------------------------------------
 basic_actor::basic_actor(std::size_t cache_match_size, timestamp_t const timestamp)
   : owner_(0)
+  , user_(0)
   , mb_(cache_match_size)
   , req_id_(0)
   , timestamp_(timestamp)
@@ -28,6 +29,83 @@ basic_actor::basic_actor(std::size_t cache_match_size, timestamp_t const timesta
 ///----------------------------------------------------------------------------
 basic_actor::~basic_actor()
 {
+}
+///----------------------------------------------------------------------------
+void basic_actor::send(aid_t recver, message const& m)
+{
+  detail::pack* pk = alloc_pack(user_);
+  pk->tag_ = get_aid();
+  pk->recver_ = recver;
+  pk->msg_ = m;
+
+  recver.get_actor_ptr(
+    user_->get_ctxid(),
+    user_->get_context().get_timestamp()
+    )->on_recv(pk);
+}
+///----------------------------------------------------------------------------
+void basic_actor::relay(aid_t des, message& m)
+{
+  detail::pack* pk = alloc_pack(user_);
+  if (m.req_.valid())
+  {
+    pk->tag_ = m.req_;
+    m.req_ = detail::request_t();
+  }
+  else
+  {
+    pk->tag_ = get_aid();
+  }
+  pk->recver_ = des;
+  pk->msg_ = m;
+
+  des.get_actor_ptr(
+    user_->get_ctxid(),
+    user_->get_context().get_timestamp()
+    )->on_recv(pk);
+}
+///----------------------------------------------------------------------------
+response_t basic_actor::request(aid_t target, message const& m)
+{
+  aid_t sender = get_aid();
+  response_t res(new_request(), sender);
+  detail::request_t req(res.get_id(), sender);
+
+  detail::pack* pk = alloc_pack(user_);
+  pk->tag_ = req;
+  pk->recver_ = target;
+  pk->msg_ = m;
+
+  target.get_actor_ptr(
+    user_->get_ctxid(),
+    user_->get_context().get_timestamp()
+    )->on_recv(pk);
+  return res;
+}
+///----------------------------------------------------------------------------
+void basic_actor::reply(aid_t recver, message const& m)
+{
+  basic_actor* a =
+    recver.get_actor_ptr(
+      user_->get_ctxid(),
+      user_->get_context().get_timestamp()
+      );
+  detail::request_t req;
+  detail::pack* pk = alloc_pack(user_);
+  if (mb_.pop(recver, req))
+  {
+    response_t res(req.get_id(), get_aid());
+    pk->tag_ = res;
+    pk->recver_ = recver;
+    pk->msg_ = m;
+  }
+  else
+  {
+    pk->tag_ = get_aid();
+    pk->recver_ = recver;
+    pk->msg_ = m;
+  }
+  a->on_recv(pk);
 }
 ///----------------------------------------------------------------------------
 void basic_actor::on_free()

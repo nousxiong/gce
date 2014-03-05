@@ -22,6 +22,7 @@
 
 namespace gce
 {
+class basic_actor;
 class actor;
 class mixin;
 class slice;
@@ -360,6 +361,7 @@ private:
   detail::buffer_ptr large_;
   detail::buffer_ref buf_;
 
+  friend class basic_actor;
   friend class actor;
   friend class mixin;
   friend class slice;

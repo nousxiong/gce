@@ -116,20 +116,17 @@ detail::cache_pool* context::select_cache_pool(std::size_t i)
   }
 }
 ///------------------------------------------------------------------------------
-void context::set_ctxid(ctxid_t id, detail::cache_pool* user)
+void context::register_socket(ctxid_t ctxid, aid_t skt, detail::cache_pool* user)
 {
-  if (attrs_.id_ != ctxid_nil)
-  {
-    throw std::runtime_error("ctxid already set");
-  }
-
-  attrs_.id_ = id;
   BOOST_FOREACH(detail::cache_pool* cac_pool, cache_pool_list_)
   {
     if (cac_pool)
     {
       cac_pool->get_strand().dispatch(
-        boost::bind(&detail::cache_pool::set_ctxid, cac_pool, id)
+        boost::bind(
+          &detail::cache_pool::register_socket,
+          cac_pool, ctxid, skt
+          )
         );
     }
   }
@@ -138,7 +135,31 @@ void context::set_ctxid(ctxid_t id, detail::cache_pool* user)
   {
     if (mi)
     {
-      mi->set_ctxid(id, user);
+      mi->register_socket(ctxid, skt, user);
+    }
+  }
+}
+///------------------------------------------------------------------------------
+void context::deregister_socket(ctxid_t ctxid, aid_t skt, detail::cache_pool* user)
+{
+  BOOST_FOREACH(detail::cache_pool* cac_pool, cache_pool_list_)
+  {
+    if (cac_pool)
+    {
+      cac_pool->get_strand().dispatch(
+        boost::bind(
+          &detail::cache_pool::deregister_socket,
+          cac_pool, ctxid, skt
+          )
+        );
+    }
+  }
+
+  BOOST_FOREACH(mixin* mi, mixin_list_)
+  {
+    if (mi)
+    {
+      mi->deregister_socket(ctxid, skt, user);
     }
   }
 }
@@ -182,10 +203,22 @@ void context::stop()
     if (cac_pool)
     {
       cac_pool->get_strand().dispatch(
+        boost::bind(&context::stop_mixin, this, cac_pool)
+        );
+      break;
+    }
+  }
+
+  BOOST_FOREACH(detail::cache_pool* cac_pool, cache_pool_list_)
+  {
+    if (cac_pool)
+    {
+      cac_pool->get_strand().dispatch(
         boost::bind(&detail::cache_pool::stop, cac_pool)
         );
     }
   }
+
   thread_group_.join_all();
 
   BOOST_FOREACH(detail::cache_pool* cac_pool, cache_pool_list_)
@@ -212,6 +245,17 @@ void context::stop()
   BOOST_FOREACH(detail::cache_pool* cac_pool, cache_pool_list_)
   {
     delete cac_pool;
+  }
+}
+///------------------------------------------------------------------------------
+void context::stop_mixin(detail::cache_pool* user)
+{
+  BOOST_FOREACH(mixin* mi, mixin_list_)
+  {
+    if (mi)
+    {
+      mi->stop(user);
+    }
   }
 }
 ///------------------------------------------------------------------------------

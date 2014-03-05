@@ -66,6 +66,10 @@ public:
   void free_object();
   void free_cache();
 
+  void register_socket(ctxid_t ctxid, aid_t skt);
+  aid_t select_socket(ctxid_t ctxid);
+  void deregister_socket(ctxid_t ctxid, aid_t skt);
+
   void cache_socket(socket*);
   void cache_acceptor(acceptor*);
   void remove_socket(socket*);
@@ -74,8 +78,6 @@ public:
   void stop();
   inline bool stopped() const { return stopped_; }
   inline ctxid_t get_ctxid() const { return ctxid_; }
-
-  void set_ctxid(ctxid_t);
 
 private:
   template <typename T, typename FreeQueue>
@@ -176,6 +178,12 @@ private:
   std::vector<socket_cache_t*> socket_cache_dirty_list_;
   std::vector<acceptor_cache_t*> acceptor_cache_dirty_list_;
   std::vector<pack_cache_t*> pack_cache_dirty_list_;
+
+  typedef std::list<aid_t> skt_list_t;
+  typedef std::map<ctxid_t, skt_list_t> conn_list_t;
+  conn_list_t conn_list_;
+  skt_list_t::iterator curr_skt_;
+  skt_list_t dummy_;
 
   std::set<socket*> socket_list_;
   std::set<acceptor*> acceptor_list_;

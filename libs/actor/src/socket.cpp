@@ -57,20 +57,23 @@ void socket::init(cache_pool* user, cache_pool* owner, net_option opt)
   base_type::update_aid(user_->get_ctxid());
 }
 ///----------------------------------------------------------------------------
-void socket::connect(std::string const& ep)
+void socket::connect(ctxid_t target, std::string const& ep)
 {
+  owner_->register_socket(target, get_aid());
+
   boost::asio::spawn(
     user_->get_strand(),
     boost::bind(
-      &socket::run_conn, this, ep, _1
+      &socket::run_conn, this, target, ep, _1
       ),
     boost::coroutines::attributes(default_stacksize())
     );
 }
 ///----------------------------------------------------------------------------
-void socket::start(socket_ptr skt)
+void socket::start(std::map<match_t, actor_func_t> const& remote_list, socket_ptr skt)
 {
   conn_ = true;
+  remote_list_ = remote_list;
 
   boost::asio::spawn(
     user_->get_strand(),
@@ -83,7 +86,7 @@ void socket::start(socket_ptr skt)
 ///----------------------------------------------------------------------------
 void socket::stop()
 {
-  user_->get_strand().dispatch(boost::bind(&socket::close, this));
+  close();
 }
 ///----------------------------------------------------------------------------
 void socket::on_free()
@@ -94,6 +97,7 @@ void socket::on_free()
   recv_cache_.clear();
   conn_ = false;
   curr_reconn_ = 0;
+  remote_list_.clear();
 }
 ///----------------------------------------------------------------------------
 void socket::on_recv(pack* pk)
@@ -159,14 +163,16 @@ void socket::send_msg_hb()
   send(message(detail::msg_hb));
 }
 ///----------------------------------------------------------------------------
-void socket::run_conn(std::string const& ep, yield_t yield)
+void socket::run_conn(ctxid_t target, std::string const& ep, yield_t yield)
 {
   exit_code_t exc = exit_normal;
   std::string exit_msg("exit normal");
 
   if (!user_->stopped())
   {
+    context& ctx = user_->get_context();
     user_->cache_socket(this);
+    ctx.register_socket(target, get_aid(), user_);
 
     try
     {
@@ -192,6 +198,18 @@ void socket::run_conn(std::string const& ep, yield_t yield)
         }
         else
         {
+          match_t type = msg.get_type();
+          if (type == msg_login_ret)
+          {
+            ctxid_t ctxid;
+            msg >> ctxid;
+            if (ctxid != target)
+            {
+              ctx.deregister_socket(target, get_aid(), user_);
+              ctx.register_socket(ctxid, get_aid(), user_);
+              target = ctxid;
+            }
+          }
           hb_.beat();
         }
       }
@@ -209,16 +227,18 @@ void socket::run_conn(std::string const& ep, yield_t yield)
       close();
     }
   }
-  free_self(exc, exit_msg, yield);
+  free_self(target, exc, exit_msg, yield);
 }
 ///----------------------------------------------------------------------------
 void socket::run(socket_ptr skt, yield_t yield)
 {
   exit_code_t exc = exit_normal;
   std::string exit_msg("exit normal");
+  ctxid_t ctxid = ctxid_nil;
 
   if (!user_->stopped())
   {
+    context& ctx = user_->get_context();
     user_->cache_socket(this);
 
     try
@@ -239,8 +259,20 @@ void socket::run(socket_ptr skt, yield_t yield)
           exit_msg = "network error";
           break;
         }
-
-        hb_.beat();
+        else
+        {
+          match_t type = msg.get_type();
+          if (type == msg_login)
+          {
+            BOOST_ASSERT(ctxid == ctxid_nil);
+            msg >> ctxid;
+            ctx.register_socket(ctxid, get_aid(), user_);
+            message m(msg_login_ret);
+            m << user_->get_ctxid();
+            send(m);
+          }
+          hb_.beat();
+        }
       }
     }
     catch (std::exception& ex)
@@ -256,7 +288,7 @@ void socket::run(socket_ptr skt, yield_t yield)
       close();
     }
   }
-  free_self(exc, exit_msg, yield);
+  free_self(ctxid, exc, exit_msg, yield);
 }
 ///----------------------------------------------------------------------------
 socket_ptr socket::make_socket(std::string const& ep)
@@ -391,7 +423,7 @@ void socket::connect(yield_t yield)
       }
 
       skt_->connect(yield[ec]);
-      if (!ec)
+      if (!ec || stat_ != on)
       {
         break;
       }
@@ -409,6 +441,10 @@ void socket::connect(yield_t yield)
 
     conn_ = true;
     start_heartbeat(boost::bind(&socket::reconn, this));
+
+    message m(msg_login);
+    m << user_->get_ctxid();
+    send(m);
   }
 }
 ///----------------------------------------------------------------------------
@@ -464,7 +500,10 @@ void socket::start_heartbeat(F f)
   hb_.start();
 }
 ///----------------------------------------------------------------------------
-void socket::free_self(exit_code_t exc, std::string const& exit_msg, yield_t yield)
+void socket::free_self(
+  ctxid_t ctxid, exit_code_t exc,
+  std::string const& exit_msg, yield_t yield
+  )
 {
   try
   {
@@ -481,6 +520,12 @@ void socket::free_self(exit_code_t exc, std::string const& exit_msg, yield_t yie
   skt_.reset();
 
   hb_.clear();
+  if (ctxid != ctxid_nil)
+  {
+    user_->deregister_socket(ctxid, get_aid());
+    user_->get_context().deregister_socket(ctxid, get_aid(), user_);
+  }
+
   user_->remove_socket(this);
   base_type::send_exit(exc, exit_msg, user_);
   base_type::update_aid(user_->get_ctxid());

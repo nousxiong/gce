@@ -226,6 +226,46 @@ void cache_pool::free_cache()
   }
 }
 ///------------------------------------------------------------------------------
+void cache_pool::register_socket(ctxid_t ctxid, aid_t skt)
+{
+  std::pair<conn_list_t::iterator, bool> pr =
+    conn_list_.insert(std::make_pair(ctxid, dummy_));
+  pr.first->second.push_back(skt);
+}
+///------------------------------------------------------------------------------
+aid_t cache_pool::select_socket(ctxid_t ctxid)
+{
+  aid_t skt;
+  conn_list_t::iterator itr(conn_list_.find(ctxid));
+  if (itr != conn_list_.end())
+  {
+    skt_list_t& skt_list = itr->second;
+    if (!skt_list.empty())
+    {
+      if (curr_skt_ != skt_list.end())
+      {
+        skt = *curr_skt_;
+      }
+      ++curr_skt_;
+      if (curr_skt_ == skt_list.end())
+      {
+        curr_skt_ = skt_list.begin();
+      }
+    }
+  }
+  return skt;
+}
+///------------------------------------------------------------------------------
+void cache_pool::deregister_socket(ctxid_t ctxid, aid_t skt)
+{
+  conn_list_t::iterator itr(conn_list_.find(ctxid));
+  if (itr != conn_list_.end())
+  {
+    itr->second.remove(skt);
+    curr_skt_ = itr->second.begin();
+  }
+}
+///------------------------------------------------------------------------------
 void cache_pool::cache_socket(socket* s)
 {
   socket_list_.insert(s);
@@ -263,11 +303,6 @@ void cache_pool::stop()
     a->stop();
   }
   acceptor_list_.clear();
-}
-///------------------------------------------------------------------------------
-void cache_pool::set_ctxid(ctxid_t id)
-{
-  ctxid_ = id;
 }
 ///------------------------------------------------------------------------------
 }

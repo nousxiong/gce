@@ -37,6 +37,13 @@ public:
   virtual ~basic_actor();
 
 public:
+  void send(aid_t, message const&);
+  void relay(aid_t, message&);
+
+  response_t request(aid_t, message const&);
+  void reply(aid_t, message const&);
+
+public:
   virtual void on_recv(detail::pack*) = 0;
   virtual void link(aid_t) = 0;
   virtual void monitor(aid_t) = 0;
@@ -80,6 +87,7 @@ private:
 
 protected:
   GCE_CACHE_ALIGNED_VAR(detail::cache_pool*, owner_)
+  GCE_CACHE_ALIGNED_VAR(detail::cache_pool*, user_)
   GCE_CACHE_ALIGNED_VAR(detail::mailbox, mb_)
   GCE_CACHE_ALIGNED_VAR(detail::pack_queue_t, pack_que_)
 

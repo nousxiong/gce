@@ -18,48 +18,77 @@
 #include <gce/actor/mixin.hpp>
 #include <gce/actor/net_option.hpp>
 #include <gce/actor/detail/cache_pool.hpp>
+#include <vector>
+#include <utility>
 
 namespace gce
 {
 namespace detail
 {
-template <typename Sire>
 inline void connect(
-  Sire& sire, cache_pool* user, cache_pool* owner, 
-  std::string const& ep, net_option opt
+  cache_pool* user, cache_pool* owner,
+  ctxid_t target, std::string const& ep, net_option opt
   )
 {
   context& ctx = owner->get_context();
   if (!user)
   {
     user = ctx.select_cache_pool();
+  }
+
+  if (target == ctxid_nil)
+  {
+    throw std::runtime_error("target invalid");
+  }
+
+  if (user->get_ctxid() == ctxid_nil)
+  {
+    throw std::runtime_error(
+      "ctxid haven't set, please set it before connect"
+      );
   }
 
   socket* s = owner->get_socket();
   s->init(user, owner, opt);
-  s->connect(ep);
+  s->connect(target, ep);
 }
 
-template <typename Sire>
 inline void bind(
-  Sire& sire, cache_pool* user, cache_pool* owner, 
-  std::string const& ep, net_option opt
+  cache_pool* user,
+  cache_pool* owner, std::string const& ep,
+  remote_func_list_t const& remote_func_list,
+  net_option opt
   )
 {
+  if (remote_func_list.empty())
+  {
+    throw std::runtime_error("remote_func_list must not empty");
+  }
+
   context& ctx = owner->get_context();
   if (!user)
   {
     user = ctx.select_cache_pool();
   }
 
+  if (user->get_ctxid() == ctxid_nil)
+  {
+    throw std::runtime_error(
+      "ctxid haven't set, please set it before bind"
+      );
+  }
+
   acceptor* a = owner->get_acceptor();
   a->init(user, owner, opt);
-  a->bind(ep);
+  a->bind(remote_func_list, ep);
 }
 }
 
 /// connect
-inline void connect(mixin_t sire, std::string const& ep, net_option opt = net_option())
+inline void connect(
+  mixin_t sire, ctxid_t target,
+  std::string const& ep, net_option opt = net_option()
+  )
 {
   detail::cache_pool* owner = sire.select_cache_pool();
   context& ctx = owner->get_context();
@@ -71,18 +100,25 @@ inline void connect(mixin_t sire, std::string const& ep, net_option opt = net_op
   ///   So, if using mixin(means in main or other user thread(s)),
   /// We spawn actor(s) with only one cache_pool(means only one asio::strand).
   detail::cache_pool* user = ctx.select_cache_pool(0);
-  detail::connect(sire, user, owner, ep, opt);
+  detail::connect(user, owner, target, ep, opt);
 }
 
-inline void connect(self_t sire, std::string const& ep, net_option opt = net_option())
+inline void connect(
+  self_t sire, ctxid_t target,
+  std::string const& ep, net_option opt = net_option()
+  )
 {
   detail::cache_pool* user = 0;
   detail::cache_pool* owner = sire.get_cache_pool();
-  detail::connect(sire, user, owner, ep, opt);
+  detail::connect(user, owner, target, ep, opt);
 }
 
 /// bind
-inline void bind(mixin_t sire, std::string const& ep, net_option opt = net_option())
+inline void bind(
+  mixin_t sire, std::string const& ep,
+  remote_func_list_t const& remote_func_list,
+  net_option opt = net_option()
+  )
 {
   detail::cache_pool* owner = sire.select_cache_pool();
   context& ctx = owner->get_context();
@@ -94,14 +130,18 @@ inline void bind(mixin_t sire, std::string const& ep, net_option opt = net_optio
   ///   So, if using mixin(means in main or other user thread(s)),
   /// We spawn actor(s) with only one cache_pool(means only one asio::strand).
   detail::cache_pool* user = ctx.select_cache_pool(0);
-  detail::bind(sire, user, owner, ep, opt);
+  detail::bind(user, owner, ep, remote_func_list, opt);
 }
 
-inline void bind(self_t sire, std::string const& ep, net_option opt = net_option())
+inline void bind(
+  self_t sire, std::string const& ep,
+  remote_func_list_t const& remote_func_list,
+  net_option opt = net_option()
+  )
 {
   detail::cache_pool* user = 0;
   detail::cache_pool* owner = sire.get_cache_pool();
-  detail::bind(sire, user, owner, ep, opt);
+  detail::bind(user, owner, ep, remote_func_list, opt);
 }
 }
 

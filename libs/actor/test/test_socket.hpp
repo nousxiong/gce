@@ -18,16 +18,6 @@
 
 namespace gce
 {
-struct echo_data
-{
-  std::string hi_;
-  int i_;
-};
-}
-GCE_PACK(gce::echo_data, (hi_)(i_&sfix));
-
-namespace gce
-{
 class socket_ut
 {
 public:
@@ -43,21 +33,44 @@ public:
   {
     try
     {
-      std::size_t client_num = 5;
-      std::size_t echo_num = 10;
-      context ctx;
+      attributes attrs;
+      attrs.id_ = atom("ctx_one");
+      context ctx1(attrs);
+      attrs.id_ = atom("ctx_two");
+      context ctx2(attrs);
 
-      mixin& base = spawn(ctx);
-      aid_t base_id = base.get_aid();
-      spawn(
-        base,
-        boost::bind(
-          &socket_ut::echo_server, _1,
-          base_id, client_num, echo_num
+      mixin_t base1 = spawn(ctx1);
+      mixin_t base2 = spawn(ctx2);
+
+//      base1.set_ctxid(atom("ctx_one"));
+//      base2.set_ctxid(atom("ctx_two"));
+
+      recv(base1, zero);
+      recv(base2, zero);
+
+      remote_func_list_t func_list;
+      func_list.push_back(
+        std::make_pair(
+          atom("echo_client"),
+          boost::bind(&socket_ut::dummy, _1)
           )
         );
+      gce::bind(base2, "tcp://127.0.0.1:14923", func_list);
 
-      recv(base, atom("bye"));
+      //wait(base1, boost::chrono::milliseconds(200));
+      net_option opt;
+      opt.reconn_period_ = seconds_t(5);
+      connect(base1, atom("ctx_two"), "tcp://127.0.0.1:14923", opt);
+
+      spawn(
+        base1,
+        boost::bind(
+          &socket_ut::dummy, _1
+          ),
+        monitored
+        );
+
+      recv(base1);
     }
     catch (std::exception& ex)
     {
@@ -65,99 +78,16 @@ public:
     }
   }
 
-  static void echo_server(
-    self_t self, aid_t base_id,
-    std::size_t client_num, std::size_t echo_num
-    )
+  static void dummy(self_t self)
   {
     try
     {
-      bind(self, "tcp://127.0.0.1:14923");
-      for (std::size_t i=0; i<client_num; ++i)
-      {
-        spawn(
-          self,
-          boost::bind(
-            &socket_ut::echo_client, _1, base_id, echo_num
-            )
-          );
-      }
-
-      while (true)
-      {
-        message msg;
-        aid_t cln = self.recv(msg);
-        match_t type = msg.get_type();
-        if (type == atom("echo"))
-        {
-          self.send(cln, msg);
-        }
-        else if (type == atom("end"))
-        {
-          if (--client_num == 0)
-          {
-            break;
-          }
-        }
-      }
-
-      send(self, base_id, atom("bye"));
+      connect(self, atom("null"), "tcp://127.0.0.1:14923");
+      connect(self, atom("ctx_two"), "tcp://127.0.0.1:14923");
     }
     catch (std::exception& ex)
     {
-      std::cerr << "echo_server except: " << ex.what() << std::endl;
-    }
-  }
-
-  static void echo_client(self_t self, aid_t base_id, std::size_t echo_num)
-  {
-    try
-    {
-      /// wait server setup
-      wait(self, boost::chrono::milliseconds(100));
-
-      /// establish a proxy to server
-      aid_t svr = connect(self, "tcp://127.0.0.1:14923");
-
-      echo_data d;
-      d.hi_ = "hello";
-      d.i_ = 1;
-
-      message m(atom("echo"));
-      m << d << std::string("tag") << int(2);
-
-      for (std::size_t i=0; i<echo_num; ++i)
-      {
-        self.send(svr, m);
-
-        message msg;
-        self.recv(msg);
-
-        if (msg.get_type() == exit)
-        {
-          exit_code_t exc;
-          std::string exit_msg;
-          msg >> exc >> exit_msg;
-          std::cout << exit_msg << std::endl;
-          return;
-        }
-
-        echo_data ret;
-        int it;
-        std::string tag;
-        BOOST_ASSERT(msg.get_type() == m.get_type());
-        msg >> ret >> tag >> it;
-        BOOST_ASSERT(d.hi_ == ret.hi_);
-        BOOST_ASSERT(d.i_ == ret.i_);
-        BOOST_ASSERT(tag == "tag");
-        BOOST_ASSERT(it == 2);
-      }
-
-      send(self, svr, atom("end"));
-    }
-    catch (std::exception& ex)
-    {
-      std::cerr << "echo_client except: " << ex.what() << std::endl;
+      std::cerr << "dummy except: " << ex.what() << std::endl;
     }
   }
 };

@@ -20,6 +20,7 @@
 #include <boost/bind.hpp>
 #include <boost/variant/get.hpp>
 #include <boost/lexical_cast.hpp>
+#include <boost/foreach.hpp>
 
 namespace gce
 {
@@ -50,8 +51,13 @@ void acceptor::init(cache_pool* user, cache_pool* owner, net_option opt)
   base_type::update_aid(user_->get_ctxid());
 }
 ///----------------------------------------------------------------------------
-void acceptor::bind(std::string const& ep)
+void acceptor::bind(remote_func_list_t const& remote_func_list, std::string const& ep)
 {
+  BOOST_FOREACH(remote_func_t const& f, remote_func_list)
+  {
+    remote_func_list_.insert(std::make_pair(f.first, f.second));
+  }
+
   boost::asio::spawn(
     user_->get_strand(),
     boost::bind(
@@ -63,7 +69,7 @@ void acceptor::bind(std::string const& ep)
 ///----------------------------------------------------------------------------
 void acceptor::stop()
 {
-  user_->get_strand().dispatch(boost::bind(&acceptor::close, this));
+  close();
 }
 ///----------------------------------------------------------------------------
 void acceptor::on_free()
@@ -71,6 +77,7 @@ void acceptor::on_free()
   base_type::on_free();
 
   stat_ = ready;
+  remote_func_list_.clear();
 }
 ///----------------------------------------------------------------------------
 void acceptor::on_recv(pack* pk)
@@ -109,7 +116,7 @@ void acceptor::run(std::string const& ep, yield_t yield)
 
         socket* s = user_->get_socket();
         s->init(ctx_.select_cache_pool(), user_, opt_);
-        s->start(prot);
+        s->start(remote_func_list_, prot);
       }
     }
     catch (std::exception& ex)

@@ -77,7 +77,11 @@ namespace detail
 {
 typedef std::basic_string<byte_t, std::char_traits<byte_t>, std::allocator<byte_t> > bytes_t;
 static match_t const msg_hb = atom("gce_msg_hb");
-static match_t const msg_set_ctxid = atom("gce_set_ctxid");
+static match_t const msg_reg_skt = atom("gce_reg_skt");
+static match_t const msg_dereg_skt = atom("gce_dereg_skt");
+static match_t const msg_login = atom("gce_login");
+static match_t const msg_login_ret = atom("gce_login_ret");
+static match_t const msg_stop = atom("gce_stop");
 } /// namespce detail
 } /// namespace gce
 

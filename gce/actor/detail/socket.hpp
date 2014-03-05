@@ -11,6 +11,7 @@
 #define GCE_ACTOR_DETAIL_SOCKET_HPP
 
 #include <gce/actor/config.hpp>
+#include <gce/actor/actor.hpp>
 #include <gce/actor/message.hpp>
 #include <gce/actor/detail/heartbeat.hpp>
 #include <gce/actor/basic_actor.hpp>
@@ -21,6 +22,7 @@
 #include <gce/actor/detail/pack.hpp>
 #include <gce/actor/match.hpp>
 #include <gce/actor/detail/buffer_ref.hpp>
+#include <map>
 #include <queue>
 #include <deque>
 
@@ -51,10 +53,10 @@ public:
 
 public:
   void init(cache_pool* user, cache_pool* owner, net_option);
-  void connect(std::string const&);
+  void connect(ctxid_t target, std::string const&);
 
 public:
-  void start(socket_ptr);
+  void start(std::map<match_t, actor_func_t> const&, socket_ptr);
   void stop();
   void on_free();
   void on_recv(pack*);
@@ -67,7 +69,7 @@ private:
   void send(message const&);
   void send_msg(message const&);
   void send_msg_hb();
-  void run_conn(std::string const&, yield_t);
+  void run_conn(ctxid_t target, std::string const&, yield_t);
   void run(socket_ptr, yield_t);
   socket_ptr make_socket(std::string const&);
   void handle_recv(pack*);
@@ -80,7 +82,10 @@ private:
   void reconn();
   template <typename F>
   void start_heartbeat(F);
-  void free_self(exit_code_t, std::string const&, yield_t);
+  void free_self(
+    ctxid_t, exit_code_t,
+    std::string const&, yield_t
+    );
 
 private:
   byte_t pad0_[GCE_CACHE_LINE_SIZE]; /// Ensure start from a new cache line.
@@ -101,6 +106,8 @@ private:
   bool conn_;
   std::queue<message, std::deque<message> > conn_cache_;
   std::size_t curr_reconn_;
+
+  std::map<match_t, actor_func_t> remote_list_;
 };
 }
 

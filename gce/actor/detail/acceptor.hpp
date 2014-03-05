@@ -11,6 +11,7 @@
 #define GCE_ACTOR_DETAIL_ACCEPTOR_HPP
 
 #include <gce/actor/config.hpp>
+#include <gce/actor/actor.hpp>
 #include <gce/actor/message.hpp>
 #include <gce/actor/basic_actor.hpp>
 #include <gce/actor/net_option.hpp>
@@ -19,9 +20,13 @@
 #include <gce/actor/detail/pack.hpp>
 #include <gce/actor/match.hpp>
 #include <boost/scoped_ptr.hpp>
+#include <map>
 
 namespace gce
 {
+typedef std::pair<match_t, actor_func_t> remote_func_t;
+typedef std::vector<remote_func_t> remote_func_list_t;
+
 class mixin;
 class context;
 namespace detail
@@ -49,7 +54,7 @@ public:
 
 public:
   void init(cache_pool* user, cache_pool* owner, net_option);
-  void bind(std::string const&);
+  void bind(remote_func_list_t const&, std::string const&);
 
 public:
   void stop();
@@ -78,6 +83,7 @@ private:
   /// thread local vals
   context& ctx_;
   boost::scoped_ptr<basic_acceptor> acpr_;
+  std::map<match_t, actor_func_t> remote_func_list_;
 };
 }
 }

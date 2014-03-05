@@ -42,19 +42,13 @@ public:
 
 public:
   inline context& get_context() { return *ctx_; }
-  aid_t recv(message&, match const& mach = match());
-  void send(aid_t, message const&);
-  void relay(aid_t, message&);
 
-  response_t request(aid_t, message const&);
-  void reply(aid_t, message const&);
+  aid_t recv(message&, match const& mach = match());
   aid_t recv(response_t, message&, duration_t);
   void wait(duration_t);
 
   void link(aid_t);
   void monitor(aid_t);
-
-  void set_ctxid(ctxid_t);
 
 public:
   /// internal use
@@ -73,7 +67,9 @@ public:
   void free_slice(slice*);
   void free_cache();
 
-  void set_ctxid(ctxid_t, detail::cache_pool*);
+  void register_socket(ctxid_t, aid_t skt, detail::cache_pool*);
+  void deregister_socket(ctxid_t, aid_t skt, detail::cache_pool*);
+  void stop(detail::cache_pool*);
 
 private:
   void delete_cache();
