@@ -11,15 +11,9 @@
 #define GCE_ACTOR_DETAIL_PACK_HPP
 
 #include <gce/actor/config.hpp>
+#include <gce/actor/message.hpp>
 #include <gce/actor/detail/object_pool.hpp>
 #include <gce/detail/mpsc_queue.hpp>
-#include <gce/actor/message.hpp>
-#include <gce/actor/detail/request.hpp>
-#include <gce/actor/response.hpp>
-#include <gce/actor/detail/link.hpp>
-#include <gce/actor/detail/exit.hpp>
-#include <gce/actor/actor_id.hpp>
-#include <boost/variant/variant.hpp>
 
 namespace gce
 {
@@ -30,27 +24,28 @@ struct pack
   : public object_pool<pack>::object
   , public mpsc_queue<pack>::node
 {
-  typedef boost::variant<aid_t, request_t, response_t, link_t, exit_t> tag_t;
   pack()
-    : owner_(0)
-    , is_err_ret_(false)
+    : is_err_ret_(false)
+    , owner_(0)
   {
   }
 
   inline void on_free()
   {
-    tag_ = tag_t();
+    tag_ = detail::tag_t();
     recver_ = aid_t();
-    msg_ = message();
+    skt_ = aid_t();
     is_err_ret_ = false;
+    msg_ = message();
   }
 
-  tag_t tag_;
+  detail::tag_t tag_;
   aid_t recver_;
+  aid_t skt_;
+  bool is_err_ret_;
   message msg_;
 
   cache_pool* owner_;
-  bool is_err_ret_;
 };
 
 typedef object_pool<pack> pack_pool_t;

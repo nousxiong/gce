@@ -28,8 +28,6 @@ public:
     , timestamp_(0)
     , uintptr_(0)
     , sid_(sid_nil)
-    , skt_(0)
-    , skt_sid_(0)
   {
   }
 
@@ -41,11 +39,12 @@ public:
     , timestamp_(timestamp)
     , uintptr_((boost::uint64_t)ptr)
     , sid_(sid)
-    , skt_(0)
-    , skt_sid_(0)
   {
   }
-  ~actor_id() {}
+
+  ~actor_id()
+  {
+  }
 
 public:
   inline operator bool() const
@@ -125,10 +124,6 @@ public:
   timestamp_t timestamp_;
   boost::uint64_t uintptr_;
   sid_t sid_;
-
-  /// local cache
-  detail::socket* skt_;
-  sid_t skt_sid_;
 };
 
 typedef actor_id aid_t;

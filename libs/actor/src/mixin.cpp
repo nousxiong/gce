@@ -25,42 +25,22 @@ namespace gce
 mixin::mixin(context& ctx, std::size_t id, attributes const& attrs)
   : base_type(attrs.max_cache_match_size_, ctx.get_timestamp())
   , ctx_(&ctx)
-  , curr_cache_pool_(size_nil)
-  , cache_pool_size_(attrs.per_mixin_cache_)
+  , cac_pool_(new detail::cache_pool(ctx, id, attrs, true))
   , ctxid_(attrs.id_)
 {
-  cache_pool_list_.reserve(attrs.per_mixin_cache_);
-
-  try
-  {
-    std::size_t index = id;
-    for (std::size_t i=0; i<attrs.per_mixin_cache_; ++i, ++index)
-    {
-      cache_pool_list_.push_back((detail::cache_pool*)0);
-      detail::cache_pool*& cac_pool = cache_pool_list_.back();
-      cac_pool = new detail::cache_pool(ctx, index, attrs, true);
-    }
-
-    owner_ = select_cache_pool();
-    user_ = select_cache_pool();
-    base_type::update_aid(owner_->get_ctxid());
-    slice_pool_ =
-      boost::in_place(
-        owner_, this,
-        size_nil,
-        attrs.slice_pool_reserve_size_
-        );
-  }
-  catch (...)
-  {
-    delete_cache();
-    throw;
-  }
+  owner_ = get_cache_pool();
+  user_ = get_cache_pool();
+  base_type::update_aid();
+  slice_pool_ =
+    boost::in_place(
+      owner_, this,
+      size_nil,
+      attrs.slice_pool_reserve_size_
+      );
 }
 ///----------------------------------------------------------------------------
 mixin::~mixin()
 {
-  delete_cache();
 }
 ///----------------------------------------------------------------------------
 aid_t mixin::recv(message& msg, match const& mach)
@@ -194,6 +174,7 @@ aid_t mixin::recv(response_t res, message& msg, duration_t tmo)
 ///----------------------------------------------------------------------------
 void mixin::wait(duration_t dur)
 {
+  move_pack(this, mb_, pack_que_, user_, this);
   boost::this_thread::sleep_for(dur);
 }
 ///----------------------------------------------------------------------------
@@ -206,17 +187,16 @@ void mixin::monitor(aid_t target)
 {
   base_type::link(detail::link_t(monitored, target), user_);
 }
-///------------------------------------------------------------------------------
-detail::cache_pool* mixin::select_cache_pool()
+///----------------------------------------------------------------------------
+void mixin::update()
 {
-  std::size_t curr_cache_pool = curr_cache_pool_;
-  ++curr_cache_pool;
-  if (curr_cache_pool >= cache_pool_size_)
-  {
-    curr_cache_pool = 0;
-  }
-  curr_cache_pool_ = curr_cache_pool;
-  return cache_pool_list_[curr_cache_pool];
+  move_pack(this, mb_, pack_que_, user_, this);
+  gc();
+}
+///------------------------------------------------------------------------------
+detail::cache_pool* mixin::get_cache_pool()
+{
+  return cac_pool_.get();
 }
 ///----------------------------------------------------------------------------
 void mixin::move_pack(
@@ -244,36 +224,18 @@ void mixin::move_pack(
             ctxid_t ctxid;
             aid_t skt;
             pk->msg_ >> ctxid >> skt;
-            BOOST_FOREACH(detail::cache_pool* cac_pool, mix->cache_pool_list_)
-            {
-              if (cac_pool)
-              {
-                cac_pool->register_socket(ctxid, skt);
-              }
-            }
+            mix->cac_pool_->register_socket(ctxid, skt);
           }
           else if (type == detail::msg_dereg_skt)
           {
             ctxid_t ctxid;
             aid_t skt;
             pk->msg_ >> ctxid >> skt;
-            BOOST_FOREACH(detail::cache_pool* cac_pool, mix->cache_pool_list_)
-            {
-              if (cac_pool)
-              {
-                cac_pool->deregister_socket(ctxid, skt);
-              }
-            }
+            mix->cac_pool_->deregister_socket(ctxid, skt);
           }
           else if (type == detail::msg_stop)
           {
-            BOOST_FOREACH(detail::cache_pool* cac_pool, mix->cache_pool_list_)
-            {
-              if (cac_pool)
-              {
-                cac_pool->stop();
-              }
-            }
+            mix->cac_pool_->stop();
           }
           else
           {
@@ -327,14 +289,8 @@ void mixin::on_recv(detail::pack* pk)
 ///----------------------------------------------------------------------------
 void mixin::gc()
 {
-  BOOST_FOREACH(detail::cache_pool* cac_pool, cache_pool_list_)
-  {
-    if (cac_pool)
-    {
-      cac_pool->free_cache();
-      cac_pool->free_object();
-    }
-  }
+  cac_pool_->free_cache();
+  cac_pool_->free_object();
 }
 ///----------------------------------------------------------------------------
 slice* mixin::get_slice()
@@ -349,13 +305,7 @@ void mixin::free_slice(slice* t)
 ///----------------------------------------------------------------------------
 void mixin::free_cache()
 {
-  BOOST_FOREACH(detail::cache_pool* cac_pool, cache_pool_list_)
-  {
-    if (cac_pool)
-    {
-      cac_pool->free_cache();
-    }
-  }
+  cac_pool_->free_cache();
 }
 ///----------------------------------------------------------------------------
 void mixin::register_socket(ctxid_t ctxid, aid_t skt, detail::cache_pool* user)
@@ -393,14 +343,6 @@ void mixin::stop(detail::cache_pool* user)
 
   pk->msg_ = message(detail::msg_stop);
   on_recv(pk);
-}
-///----------------------------------------------------------------------------
-void mixin::delete_cache()
-{
-  BOOST_FOREACH(detail::cache_pool* cac_pool, cache_pool_list_)
-  {
-    delete cac_pool;
-  }
 }
 ///----------------------------------------------------------------------------
 }

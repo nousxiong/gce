@@ -25,7 +25,7 @@ cache_pool::cache_pool(
   )
   : ctx_(&ctx)
   , id_(id)
-  , cache_num_(attrs.thread_num_*attrs.per_thread_cache_ + attrs.mixin_num_*attrs.per_mixin_cache_)
+  , cache_num_(attrs.thread_num_*attrs.per_thread_cache_ + attrs.mixin_num_)
   , cache_match_size_(attrs.max_cache_match_size_)
   , mixed_(mixed)
   , snd_(ctx.get_io_service())
@@ -230,7 +230,12 @@ void cache_pool::register_socket(ctxid_t ctxid, aid_t skt)
 {
   std::pair<conn_list_t::iterator, bool> pr =
     conn_list_.insert(std::make_pair(ctxid, dummy_));
-  pr.first->second.push_back(skt);
+  skt_list_t& skt_list = pr.first->second;
+  skt_list.insert(skt);
+  if (skt_list.size() == 1)
+  {
+    curr_skt_ = skt_list.begin();
+  }
 }
 ///------------------------------------------------------------------------------
 aid_t cache_pool::select_socket(ctxid_t ctxid)
@@ -261,7 +266,7 @@ void cache_pool::deregister_socket(ctxid_t ctxid, aid_t skt)
   conn_list_t::iterator itr(conn_list_.find(ctxid));
   if (itr != conn_list_.end())
   {
-    itr->second.remove(skt);
+    itr->second.erase(skt);
     curr_skt_ = itr->second.begin();
   }
 }

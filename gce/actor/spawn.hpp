@@ -55,7 +55,7 @@ inline aid_t spawn(
   std::size_t stack_size = default_stacksize()
   )
 {
-  detail::cache_pool* owner = sire.select_cache_pool();
+  detail::cache_pool* owner = sire.get_cache_pool();
   context& ctx = owner->get_context();
 
   ///   In boost 1.54 & 1.55, boost::asio::spawn will crash

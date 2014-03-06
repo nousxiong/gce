@@ -81,6 +81,10 @@ static match_t const msg_reg_skt = atom("gce_reg_skt");
 static match_t const msg_dereg_skt = atom("gce_dereg_skt");
 static match_t const msg_login = atom("gce_login");
 static match_t const msg_login_ret = atom("gce_login_ret");
+static match_t const msg_send = atom("gce_send");
+static match_t const msg_relay = atom("gce_relay");
+static match_t const msg_request = atom("gce_request");
+static match_t const msg_reply = atom("gce_reply");
 static match_t const msg_stop = atom("gce_stop");
 } /// namespce detail
 } /// namespace gce

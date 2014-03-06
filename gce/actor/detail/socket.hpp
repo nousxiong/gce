@@ -65,7 +65,8 @@ public:
   void monitor(aid_t) {}
 
 private:
-  void send(aid_t, message const&);
+  void handle_net_msg(message&);
+  void send(detail::pack*);
   void send(message const&);
   void send_msg(message const&);
   void send_msg_hb();
@@ -91,7 +92,6 @@ private:
   byte_t pad0_[GCE_CACHE_LINE_SIZE]; /// Ensure start from a new cache line.
 
   GCE_CACHE_ALIGNED_VAR(status, stat_)
-  GCE_CACHE_ALIGNED_VAR(cache_pool*, user_)
   GCE_CACHE_ALIGNED_VAR(net_option, opt_)
 
   /// thread local vals
@@ -109,17 +109,6 @@ private:
 
   std::map<match_t, actor_func_t> remote_list_;
 };
-}
-
-inline void set_socket(aid_t& aid, detail::socket* skt)
-{
-  aid.skt_ = skt;
-  aid.skt_sid_ = skt->get_aid().sid_;
-}
-
-inline bool check_socket(aid_t const& id)
-{
-  return id.skt_ && id.skt_->get_aid().sid_ == id.skt_sid_;
 }
 }
 

@@ -85,7 +85,10 @@ public:
       a_.wait(dur);
     }
 
-    inline aid_t recv(response_t res, message& msg, duration_t tmo = infin)
+    inline aid_t recv(
+      response_t res, message& msg,
+      duration_t tmo = seconds_t(GCE_DEFAULT_REQUEST_TIMEOUT_SEC)
+      )
     {
       return a_.recv(res, msg, tmo);
     }

@@ -19,6 +19,7 @@
 #include <boost/noncopyable.hpp>
 #include <vector>
 #include <set>
+#include <map>
 
 namespace gce
 {
@@ -179,7 +180,7 @@ private:
   std::vector<acceptor_cache_t*> acceptor_cache_dirty_list_;
   std::vector<pack_cache_t*> pack_cache_dirty_list_;
 
-  typedef std::list<aid_t> skt_list_t;
+  typedef std::set<aid_t> skt_list_t;
   typedef std::map<ctxid_t, skt_list_t> conn_list_t;
   conn_list_t conn_list_;
   skt_list_t::iterator curr_skt_;

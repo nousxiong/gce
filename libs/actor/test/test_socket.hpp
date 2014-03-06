@@ -29,10 +29,16 @@ public:
   }
 
 public:
+  static void dummy(self_t)
+  {
+  }
+
   static void test_base()
   {
     try
     {
+      std::size_t echo_num = 100;
+
       attributes attrs;
       attrs.id_ = atom("ctx_one");
       context ctx1(attrs);
@@ -42,9 +48,6 @@ public:
       mixin_t base1 = spawn(ctx1);
       mixin_t base2 = spawn(ctx2);
 
-//      base1.set_ctxid(atom("ctx_one"));
-//      base2.set_ctxid(atom("ctx_two"));
-
       recv(base1, zero);
       recv(base2, zero);
 
@@ -52,25 +55,35 @@ public:
       func_list.push_back(
         std::make_pair(
           atom("echo_client"),
-          boost::bind(&socket_ut::dummy, _1)
+          boost::bind(
+            &socket_ut::dummy, _1
+            )
           )
         );
       gce::bind(base2, "tcp://127.0.0.1:14923", func_list);
 
-      //wait(base1, boost::chrono::milliseconds(200));
+      aid_t dummy_id =
+        spawn(
+          base2,
+          boost::bind(
+            &socket_ut::echo, _1
+            ),
+          monitored
+          );
+
+      wait(base1, boost::chrono::milliseconds(100));
       net_option opt;
-      opt.reconn_period_ = seconds_t(5);
+      opt.reconn_period_ = seconds_t(1);
       connect(base1, atom("ctx_two"), "tcp://127.0.0.1:14923", opt);
 
-      spawn(
-        base1,
-        boost::bind(
-          &socket_ut::dummy, _1
-          ),
-        monitored
-        );
+      for (std::size_t i=0; i<echo_num; ++i)
+      {
+        send(base1, dummy_id, atom("echo"));
+        recv(base1, atom("echo"));
+      }
+      send(base1, dummy_id, atom("end"));
 
-      recv(base1);
+      recv(base2);
     }
     catch (std::exception& ex)
     {
@@ -78,12 +91,24 @@ public:
     }
   }
 
-  static void dummy(self_t self)
+  static void echo(self_t self)
   {
     try
     {
-      connect(self, atom("null"), "tcp://127.0.0.1:14923");
-      connect(self, atom("ctx_two"), "tcp://127.0.0.1:14923");
+      while (true)
+      {
+        message msg;
+        aid_t sender = self.recv(msg);
+        match_t type = msg.get_type();
+        if (type == atom("echo"))
+        {
+          self.send(sender, msg);
+        }
+        else
+        {
+          break;
+        }
+      }
     }
     catch (std::exception& ex)
     {

@@ -14,8 +14,13 @@
 #include <gce/actor/detail/buffer.hpp>
 #include <gce/actor/detail/buffer_ref.hpp>
 #include <gce/actor/detail/request.hpp>
+#include <gce/actor/response.hpp>
+#include <gce/actor/detail/link.hpp>
+#include <gce/actor/detail/exit.hpp>
 #include <gce/amsg/amsg.hpp>
 #include <gce/amsg/zerocopy.hpp>
+#include <boost/variant/variant.hpp>
+#include <boost/variant/get.hpp>
 #include <boost/utility/string_ref.hpp>
 #include <utility>
 #include <iostream>
@@ -26,23 +31,41 @@ class basic_actor;
 class actor;
 class mixin;
 class slice;
+namespace detail
+{
+class socket;
+static match_t const tag_aid_t = atom("gce_aid_t");
+static match_t const tag_request_t = atom("gce_request_t");
+static match_t const tag_link_t = atom("gce_link_t");
+static match_t const tag_exit_t = atom("gce_exit_t");
+static match_t const tag_response_t = atom("gce_response_t");
+
+typedef boost::variant<aid_t, request_t, response_t, link_t, exit_t> tag_t;
+}
+
 class message
 {
 public:
   message()
     : type_(match_nil)
+    , tag_offset_(u32_nil)
     , buf_(small_, GCE_SMALL_MSG_SIZE)
   {
   }
 
   message(match_t type)
     : type_(type)
+    , tag_offset_(u32_nil)
     , buf_(small_, GCE_SMALL_MSG_SIZE)
   {
   }
 
-  message(match_t type, byte_t const* data, std::size_t size)
+  message(
+    match_t type, byte_t const* data,
+    std::size_t size, boost::uint32_t tag_offset
+    )
     : type_(type)
+    , tag_offset_(tag_offset)
   {
     if (size <= GCE_SMALL_MSG_SIZE)
     {
@@ -59,6 +82,7 @@ public:
 
   message(message const& other)
     : type_(other.type_)
+    , tag_offset_(other.tag_offset_)
   {
     detail::buffer_ref const& buf = other.buf_;
     large_ = other.large_;
@@ -80,6 +104,7 @@ public:
     if (this != &rhs)
     {
       type_ = rhs.type_;
+      tag_offset_ = rhs.tag_offset_;
       detail::buffer_ref const& buf = rhs.buf_;
       buf_.clear();
 
@@ -159,9 +184,11 @@ public:
   {
     boost::uint32_t msg_size = m.size();
     match_t msg_type = m.get_type();
+    boost::uint32_t tag_offset = m.tag_offset_;
     boost::amsg::error_code_t ec = boost::amsg::success;
     std::size_t size = boost::amsg::size_of(msg_size, ec);
     size += boost::amsg::size_of(msg_type, ec);
+    size += boost::amsg::size_of(tag_offset, ec);
     size += msg_size;
     if (ec != boost::amsg::success)
     {
@@ -180,6 +207,8 @@ public:
     BOOST_ASSERT(!writer.bad());
     boost::amsg::write(writer, msg_type);
     BOOST_ASSERT(!writer.bad());
+    boost::amsg::write(writer, tag_offset);
+    BOOST_ASSERT(!writer.bad());
 
     buf_.write(writer.write_length());
     byte_t* write_data = buf_.get_write_data();
@@ -192,6 +221,7 @@ public:
   {
     boost::uint32_t msg_size;
     match_t msg_type;
+    boost::uint32_t tag_offset;
     boost::amsg::zero_copy_buffer reader(
       buf_.get_read_data(), buf_.remain_read_size()
       );
@@ -208,10 +238,16 @@ public:
       throw std::runtime_error("read data overflow");
     }
 
+    boost::amsg::read(reader, tag_offset);
+    if (reader.bad())
+    {
+      throw std::runtime_error("read data overflow");
+    }
+
     buf_.read(reader.read_length());
     byte_t* read_data = buf_.get_read_data();
     buf_.read(msg_size);
-    msg = message(msg_type, read_data, msg_size);
+    msg = message(msg_type, read_data, msg_size, tag_offset);
     return *this;
   }
 
@@ -307,6 +343,85 @@ public:
   }
 
 private:
+  void append_tag(detail::tag_t& tag, aid_t recver, aid_t skt, bool is_err_ret)
+  {
+    tag_offset_ = buf_.write_size();
+    boost::uint16_t err_ret = is_err_ret ? 1 : 0;
+    if (aid_t* aid = boost::get<aid_t>(&tag))
+    {
+      *this << detail::tag_aid_t << *aid << recver << skt << err_ret;
+    }
+    else if (detail::request_t* req = boost::get<detail::request_t>(&tag))
+    {
+      *this << detail::tag_request_t << req->get_id() << req->get_aid() << recver << skt << err_ret;
+    }
+    else if (detail::link_t* link = boost::get<detail::link_t>(&tag))
+    {
+      *this << detail::tag_link_t << (boost::uint16_t)link->get_type() << link->get_aid() << recver << skt << err_ret;
+    }
+    else if (detail::exit_t* ex = boost::get<detail::exit_t>(&tag))
+    {
+      *this << detail::tag_exit_t << ex->get_code() << ex->get_aid() << recver << skt << err_ret;
+    }
+    else if (response_t* res = boost::get<response_t>(&tag))
+    {
+      *this << detail::tag_response_t << res->get_id() << res->get_aid() << recver << skt << err_ret;
+    }
+  }
+
+  bool pop_tag(detail::tag_t& tag, aid_t& recver, aid_t& skt, bool& is_err_ret)
+  {
+    bool has_tag = false;
+    if (tag_offset_ != u32_nil)
+    {
+      BOOST_ASSERT(tag_offset_ < buf_.write_size());
+      buf_.read(tag_offset_);
+      match_t tag_type;
+      boost::uint16_t err_ret;
+      has_tag = true;
+      *this >> tag_type;
+      if (tag_type == detail::tag_aid_t)
+      {
+        aid_t aid;
+        *this >> aid >> recver >> skt >> err_ret;
+        tag = aid;
+      }
+      else if (tag_type == detail::tag_request_t)
+      {
+        sid_t id;
+        aid_t aid;
+        *this >> id >> aid >> recver >> skt >> err_ret;
+        tag = detail::request_t(id, aid);
+      }
+      else if (tag_type == detail::tag_link_t)
+      {
+        boost::uint16_t type;
+        aid_t aid;
+        *this >> type >> aid >> recver >> skt >> err_ret;
+        tag = detail::link_t((link_type)type, aid);
+      }
+      else if (tag_type == detail::tag_exit_t)
+      {
+        exit_code_t ec;
+        aid_t aid;
+        *this >> ec >> aid >> recver >> skt >> err_ret;
+        tag = detail::exit_t(ec, aid);
+      }
+      else if (tag_type == detail::tag_response_t)
+      {
+        sid_t id;
+        aid_t aid;
+        *this >> id >> aid >> recver >> skt >> err_ret;
+        tag = response_t(id, aid);
+      }
+
+      is_err_ret = err_ret != 0;
+      buf_.clear();
+      buf_.write(tag_offset_);
+    }
+    return has_tag;
+  }
+
   inline void reserve(std::size_t size)
   {
     std::size_t old_buf_capacity = buf_.size();
@@ -357,6 +472,7 @@ private:
 
 private:
   match_t type_;
+  boost::uint32_t tag_offset_;
   byte_t small_[GCE_SMALL_MSG_SIZE];
   detail::buffer_ptr large_;
   detail::buffer_ref buf_;
@@ -365,6 +481,7 @@ private:
   friend class actor;
   friend class mixin;
   friend class slice;
+  friend class detail::socket;
   detail::request_t req_;
 };
 }

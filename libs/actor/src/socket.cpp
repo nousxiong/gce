@@ -54,12 +54,16 @@ void socket::init(cache_pool* user, cache_pool* owner, net_option opt)
   opt_ = opt;
   curr_reconn_ = u32_nil;
 
-  base_type::update_aid(user_->get_ctxid());
+  base_type::update_aid();
 }
 ///----------------------------------------------------------------------------
 void socket::connect(ctxid_t target, std::string const& ep)
 {
   owner_->register_socket(target, get_aid());
+
+  message m(msg_login);
+  m << user_->get_ctxid();
+  send(m);
 
   boost::asio::spawn(
     user_->get_strand(),
@@ -109,14 +113,19 @@ void socket::on_recv(pack* pk)
     );
 }
 ///----------------------------------------------------------------------------
-void socket::send(aid_t recver, message const& m)
+void socket::handle_net_msg(message& msg)
 {
   pack* pk = base_type::alloc_pack(user_);
-  pk->tag_ = get_aid();
-  pk->recver_ = recver;
-  pk->msg_ = m;
+  bool has_tag = msg.pop_tag(pk->tag_, pk->recver_, pk->skt_, pk->is_err_ret_);
+  BOOST_ASSERT(has_tag);
+  pk->msg_ = msg;
 
-  recver.get_actor_ptr(
+  send(pk);
+}
+///----------------------------------------------------------------------------
+void socket::send(detail::pack* pk)
+{
+  pk->recver_.get_actor_ptr(
     user_->get_ctxid(),
     user_->get_context().get_timestamp()
     )->on_recv(pk);
@@ -124,11 +133,11 @@ void socket::send(aid_t recver, message const& m)
 ///----------------------------------------------------------------------------
 void socket::send(message const& m)
 {
-  BOOST_ASSERT(skt_);
   match_t type = m.get_type();
   std::size_t size = m.size();
   if (conn_)
   {
+    BOOST_ASSERT(skt_);
     while (!conn_cache_.empty())
     {
       message const& m = conn_cache_.front();
@@ -145,9 +154,11 @@ void socket::send(message const& m)
 ///----------------------------------------------------------------------------
 void socket::send_msg(message const& m)
 {
+  BOOST_ASSERT(skt_);
   msg::header hdr;
   hdr.size_ = m.size();
   hdr.type_ = m.get_type();
+  hdr.tag_offset_ = m.tag_offset_;
 
   byte_t buf[sizeof(msg::header)];
   boost::amsg::zero_copy_buffer zbuf(buf, sizeof(msg::header));
@@ -195,6 +206,9 @@ void socket::run_conn(ctxid_t target, std::string const& ep, yield_t yield)
             break;
           }
           connect(yield);
+          message m(msg_login);
+          m << user_->get_ctxid();
+          send(m);
         }
         else
         {
@@ -209,6 +223,10 @@ void socket::run_conn(ctxid_t target, std::string const& ep, yield_t yield)
               ctx.register_socket(ctxid, get_aid(), user_);
               target = ctxid;
             }
+          }
+          else if (type != msg_hb)
+          {
+            handle_net_msg(msg);
           }
           hb_.beat();
         }
@@ -270,6 +288,10 @@ void socket::run(socket_ptr skt, yield_t yield)
             message m(msg_login_ret);
             m << user_->get_ctxid();
             send(m);
+          }
+          else if (type != msg_hb)
+          {
+            handle_net_msg(msg);
           }
           hb_.beat();
         }
@@ -334,20 +356,16 @@ socket_ptr socket::make_socket(std::string const& ep)
 void socket::handle_recv(pack* pk)
 {
   scope scp(boost::bind(&basic_actor::dealloc_pack, user_, pk));
-  if (check(pk->recver_, user_->get_ctxid(), user_->get_context().get_timestamp()))
+  if (check(pk->skt_, get_aid().ctxid_, user_->get_context().get_timestamp()))
   {
-    if (boost::get<aid_t>(&pk->tag_))
-    {
-      send(pk->msg_);
-    }
-    else if (link_t* link = boost::get<link_t>(&pk->tag_))
-    {
-      add_link(link->get_aid());
-    }
-    else if (exit_t* ex = boost::get<exit_t>(&pk->tag_))
-    {
-      base_type::remove_link(ex->get_aid());
-    }
+//    if (link_t* link = boost::get<link_t>(&pk->tag_))
+//    {
+//    }
+//    else if (exit_t* ex = boost::get<exit_t>(&pk->tag_))
+//    {
+//    }
+    pk->msg_.append_tag(pk->tag_, pk->recver_, pk->skt_, pk->is_err_ret_);
+    send(pk->msg_);
   }
   else if (!pk->is_err_ret_)
   {
@@ -389,7 +407,7 @@ bool socket::parse_message(message& msg)
   }
 
   recv_cache_.read(header_size + hdr.size_);
-  msg = message(hdr.type_, data + header_size, hdr.size_);
+  msg = message(hdr.type_, data + header_size, hdr.size_, hdr.tag_offset_);
 
   /// reset read_cache
   if (recv_cache_.read_size() > GCE_SOCKET_RECV_MAX_SIZE)
@@ -441,10 +459,6 @@ void socket::connect(yield_t yield)
 
     conn_ = true;
     start_heartbeat(boost::bind(&socket::reconn, this));
-
-    message m(msg_login);
-    m << user_->get_ctxid();
-    send(m);
   }
 }
 ///----------------------------------------------------------------------------
@@ -527,8 +541,8 @@ void socket::free_self(
   }
 
   user_->remove_socket(this);
-  base_type::send_exit(exc, exit_msg, user_);
-  base_type::update_aid(user_->get_ctxid());
+  base_type::send_exit(exc, exit_msg);
+  base_type::update_aid();
   user_->free_socket(owner_, this);
 }
 ///----------------------------------------------------------------------------

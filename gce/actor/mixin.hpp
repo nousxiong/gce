@@ -17,6 +17,7 @@
 #include <boost/thread/condition_variable.hpp>
 #include <boost/thread/shared_mutex.hpp>
 #include <boost/optional.hpp>
+#include <boost/scoped_ptr.hpp>
 #include <vector>
 
 namespace gce
@@ -44,15 +45,20 @@ public:
   inline context& get_context() { return *ctx_; }
 
   aid_t recv(message&, match const& mach = match());
-  aid_t recv(response_t, message&, duration_t);
+  aid_t recv(
+    response_t, message&,
+    duration_t tmo = seconds_t(GCE_DEFAULT_REQUEST_TIMEOUT_SEC)
+    );
   void wait(duration_t);
 
   void link(aid_t);
   void monitor(aid_t);
 
+  void update();
+
 public:
   /// internal use
-  detail::cache_pool* select_cache_pool();
+  detail::cache_pool* get_cache_pool();
   static void move_pack(
     basic_actor* base,
     detail::mailbox&,
@@ -72,21 +78,14 @@ public:
   void stop(detail::cache_pool*);
 
 private:
-  void delete_cache();
-
-private:
   byte_t pad0_[GCE_CACHE_LINE_SIZE]; /// Ensure start from a new cache line.
 
   GCE_CACHE_ALIGNED_VAR(context*, ctx_)
 
-  /// select cache pool
-  GCE_CACHE_ALIGNED_VAR(std::size_t, curr_cache_pool_)
-  GCE_CACHE_ALIGNED_VAR(std::size_t, cache_pool_size_)
-
   GCE_CACHE_ALIGNED_VAR(boost::shared_mutex, mtx_)
   GCE_CACHE_ALIGNED_VAR(boost::condition_variable_any, cv_)
 
-  GCE_CACHE_ALIGNED_VAR(std::vector<detail::cache_pool*>, cache_pool_list_)
+  GCE_CACHE_ALIGNED_VAR(boost::scoped_ptr<detail::cache_pool>, cac_pool_)
 
   /// pools
   GCE_CACHE_ALIGNED_VAR(boost::optional<detail::slice_pool_t>, slice_pool_)

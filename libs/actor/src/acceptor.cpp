@@ -48,7 +48,7 @@ void acceptor::init(cache_pool* user, cache_pool* owner, net_option opt)
   owner_ = owner;
   opt_ = opt;
 
-  base_type::update_aid(user_->get_ctxid());
+  base_type::update_aid();
 }
 ///----------------------------------------------------------------------------
 void acceptor::bind(remote_func_list_t const& remote_func_list, std::string const& ep)
@@ -174,7 +174,7 @@ basic_acceptor* acceptor::make_acceptor(std::string const& ep)
 void acceptor::handle_recv(pack* pk)
 {
   scope scp(boost::bind(&basic_actor::dealloc_pack, user_, pk));
-  if (check(pk->recver_, user_->get_ctxid(), user_->get_context().get_timestamp()))
+  if (check(pk->recver_, get_aid().ctxid_, user_->get_context().get_timestamp()))
   {
     if (exit_t* ex = boost::get<exit_t>(&pk->tag_))
     {
@@ -211,8 +211,8 @@ void acceptor::free_self(exit_code_t exc, std::string const& exit_msg, yield_t y
   acpr_.reset();
 
   user_->remove_acceptor(this);
-  base_type::send_exit(exc, exit_msg, user_);
-  base_type::update_aid(user_->get_ctxid());
+  base_type::send_exit(exc, exit_msg);
+  base_type::update_aid();
   user_->free_acceptor(owner_, this);
 }
 ///----------------------------------------------------------------------------

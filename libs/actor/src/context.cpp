@@ -63,11 +63,7 @@ context::context(attributes attrs)
         );
     }
 
-    for (
-      std::size_t i=0;
-      i<attrs_.mixin_num_;
-      ++i, index+=attrs_.per_mixin_cache_
-      )
+    for (std::size_t i=0; i<attrs_.mixin_num_; ++i, ++index)
     {
       mixin_list_.push_back((mixin*)0);
       mixin*& mi = mixin_list_.back();

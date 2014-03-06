@@ -183,7 +183,7 @@ void actor::init(
   user_ = user;
   owner_ = owner;
   f_ = f;
-  base_type::update_aid(user_->get_ctxid());
+  base_type::update_aid();
 
   if (link_tgt)
   {
@@ -267,8 +267,8 @@ actor::actor_code actor::yield()
 ///----------------------------------------------------------------------------
 void actor::free_self()
 {
-  base_type::send_exit(ec_, exit_msg_, user_);
-  base_type::update_aid(user_->get_ctxid());
+  base_type::send_exit(ec_, exit_msg_);
+  base_type::update_aid();
   user_->free_actor(owner_, this);
 }
 ///----------------------------------------------------------------------------

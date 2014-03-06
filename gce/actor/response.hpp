@@ -18,8 +18,8 @@ namespace gce
 class response_t
 {
 public:
-  response_t() : id_(sid_nil), ec_(0) {}
-  response_t(sid_t id, aid_t aid) : id_(id), aid_(aid), ec_(0) {}
+  response_t() : id_(sid_nil) {}
+  response_t(sid_t id, aid_t aid) : id_(id), aid_(aid) {}
   ~response_t() {}
 
 public:
@@ -30,7 +30,6 @@ public:
 private:
   sid_t id_;
   aid_t aid_;
-  errcode_t* ec_;
 };
 }
 

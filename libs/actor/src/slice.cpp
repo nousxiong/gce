@@ -29,8 +29,8 @@ slice::slice(mixin* sire)
   , detail::ref_count_st(boost::bind(&slice::free, this))
   , sire_(sire)
 {
-  owner_ = sire_->select_cache_pool();
-  user_ = sire_->select_cache_pool();
+  owner_ = sire_->get_cache_pool();
+  user_ = sire_->get_cache_pool();
 }
 ///----------------------------------------------------------------------------
 slice::~slice()
@@ -91,7 +91,7 @@ void slice::monitor(aid_t target)
 ///----------------------------------------------------------------------------
 void slice::init(aid_t link_tgt)
 {
-  base_type::update_aid(user_->get_ctxid());
+  base_type::update_aid();
   if (link_tgt)
   {
     base_type::add_link(link_tgt);
@@ -110,8 +110,8 @@ void slice::on_recv(detail::pack* pk)
 ///----------------------------------------------------------------------------
 void slice::free()
 {
-  base_type::send_exit(exit_normal, "exit normal", user_);
-  base_type::update_aid(user_->get_ctxid());
+  base_type::send_exit(exit_normal, "exit normal");
+  base_type::update_aid();
   sire_->free_slice(this);
 }
 ///----------------------------------------------------------------------------

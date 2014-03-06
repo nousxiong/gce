@@ -21,15 +21,17 @@ struct header
   header()
     : size_(0)
     , type_(match_nil)
+    , tag_offset_(u32_nil)
   {
   }
 
   boost::uint32_t size_;
   match_t type_;
+  boost::uint32_t tag_offset_;
 };
 }
 }
 
-GCE_PACK(gce::msg::header, (size_&sfix)(type_));
+GCE_PACK(gce::msg::header, (size_&sfix)(type_)(tag_offset_));
 
 #endif /// GCE_ACTOR_IMPL_PROTOCOL_HPP

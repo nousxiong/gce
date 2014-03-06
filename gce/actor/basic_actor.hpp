@@ -63,24 +63,23 @@ protected:
   friend class mixin;
   friend class slice;
 
-  inline void update_aid(ctxid_t ctxid)
-  {
-    aid_ = aid_t(ctxid, aid_.timestamp_, this, aid_.sid_ + 1);
-  }
-
-  inline sid_t new_request()
-  {
-    return ++req_id_;
-  }
+  void update_aid();
+  sid_t new_request();
 
   static detail::pack* alloc_pack(detail::cache_pool*);
   static void dealloc_pack(detail::cache_pool*, detail::pack*);
   void add_link(aid_t);
   void link(detail::link_t, detail::cache_pool* user = 0);
-  void send_exit(exit_code_t, std::string const&, detail::cache_pool*);
+  void send_exit(exit_code_t, std::string const&);
   void remove_link(aid_t);
   void send_already_exited(aid_t recver, aid_t sender, detail::cache_pool*);
   void send_already_exited(aid_t recver, response_t res, detail::cache_pool*);
+
+private:
+  static aid_t filter_aid(aid_t const& src, detail::cache_pool*);
+  static void send(
+    aid_t const& recver, detail::pack*, detail::cache_pool*
+    );
 
 private:
   byte_t pad0_[GCE_CACHE_LINE_SIZE]; /// Ensure start from a new cache line.

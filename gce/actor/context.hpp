@@ -30,7 +30,6 @@ struct attributes
     , thread_num_(boost::thread::hardware_concurrency())
     , mixin_num_(1)
     , per_thread_cache_(1)
-    , per_mixin_cache_(1)
     , actor_pool_reserve_size_(8)
     , slice_pool_reserve_size_(8)
     , socket_pool_reserve_size_(8)
@@ -47,7 +46,6 @@ struct attributes
   std::size_t thread_num_;
   std::size_t mixin_num_;
   std::size_t per_thread_cache_;
-  std::size_t per_mixin_cache_;
   std::size_t actor_pool_reserve_size_;
   std::size_t slice_pool_reserve_size_;
   std::size_t socket_pool_reserve_size_;
