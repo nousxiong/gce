@@ -311,7 +311,7 @@ void actor::handle_recv(detail::pack* pk)
     }
     else if (detail::link_t* link = boost::get<detail::link_t>(&pk->tag_))
     {
-      add_link(link->get_aid());
+      add_link(link->get_aid(), pk->skt_);
       return;
     }
     else if (detail::exit_t* ex = boost::get<detail::exit_t>(&pk->tag_))

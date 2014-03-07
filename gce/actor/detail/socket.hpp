@@ -23,7 +23,6 @@
 #include <gce/actor/match.hpp>
 #include <gce/actor/detail/buffer_ref.hpp>
 #include <map>
-#include <queue>
 #include <deque>
 
 namespace gce
@@ -65,15 +64,22 @@ public:
   void monitor(aid_t) {}
 
 private:
-  void handle_net_msg(message&);
+  ctxid_t handle_net_msg(message&, ctxid_t curr_ctxid);
   void send(detail::pack*);
   void send(message const&);
   void send_msg(message const&);
   void send_msg_hb();
+
   void run_conn(ctxid_t target, std::string const&, yield_t);
   void run(socket_ptr, yield_t);
+
   socket_ptr make_socket(std::string const&);
   void handle_recv(pack*);
+  void add_straight_link(aid_t src, aid_t des);
+  void remove_straight_link(aid_t src, aid_t des);
+
+  void on_neterr(errcode_t ec = errcode_t());
+  ctxid_t sync_ctxid(ctxid_t new_ctxid, ctxid_t curr_ctxid);
 
 private:
   bool parse_message(message&);
@@ -104,11 +110,13 @@ private:
   detail::buffer_ref recv_cache_;
 
   bool conn_;
-  std::queue<message, std::deque<message> > conn_cache_;
+  std::deque<message> conn_cache_;
   std::size_t curr_reconn_;
 
   /// remote links
-  std::map<aid_t, std::set<aid_t> > straight_link_list_;
+  typedef std::map<aid_t, std::set<aid_t> > straight_link_list_t;
+  straight_link_list_t straight_link_list_;
+  std::set<aid_t> dummy_;
 
   /// remote spawn's funcs
   std::map<match_t, actor_func_t> remote_list_;

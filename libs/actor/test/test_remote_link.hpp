@@ -9,14 +9,14 @@
 
 namespace gce
 {
-class socket_ut
+class remote_link_ut
 {
 public:
   static void run()
   {
-    std::cout << "socket_ut begin." << std::endl;
+    std::cout << "remote_link_ut begin." << std::endl;
     test_base();
-    std::cout << "socket_ut end." << std::endl;
+    std::cout << "remote_link_ut end." << std::endl;
   }
 
 public:
@@ -28,7 +28,7 @@ public:
   {
     try
     {
-      std::size_t echo_num = 100;
+      std::size_t quiter_num = 100;
 
       attributes attrs;
       attrs.id_ = atom("ctx_one");
@@ -39,42 +39,44 @@ public:
       mixin_t base1 = spawn(ctx1);
       mixin_t base2 = spawn(ctx2);
 
-      recv(base1, zero);
-      recv(base2, zero);
-
       remote_func_list_t func_list;
       func_list.push_back(
         std::make_pair(
           atom("dummy"),
-          boost::bind(
-            &socket_ut::dummy, _1
-            )
+          boost::bind(&remote_link_ut::dummy, _1)
           )
         );
       gce::bind(base2, "tcp://127.0.0.1:14923", func_list);
-
-      aid_t echo_aid =
-        spawn(
-          base2,
-          boost::bind(
-            &socket_ut::echo, _1
-            ),
-          monitored
-          );
 
       wait(base1, boost::chrono::milliseconds(100));
       net_option opt;
       opt.reconn_period_ = seconds_t(1);
       connect(base1, atom("ctx_two"), "tcp://127.0.0.1:14923", opt);
 
-      for (std::size_t i=0; i<echo_num; ++i)
+      std::vector<aid_t> quiter_list(quiter_num);
+      for (std::size_t i=0; i<quiter_num; ++i)
       {
-        send(base1, echo_aid, atom("echo"));
-        recv(base1, atom("echo"));
+        quiter_list[i] =
+          spawn(
+            base2,
+            boost::bind(
+              &remote_link_ut::quiter, _1
+              ),
+            monitored
+            );
+        base1.link(quiter_list[i]);
       }
-      send(base1, echo_aid, atom("end"));
 
-      recv(base2);
+      for (std::size_t i=0; i<quiter_num; ++i)
+      {
+        send(base1, quiter_list[i]);
+      }
+
+      for (std::size_t i=0; i<quiter_num; ++i)
+      {
+        recv(base1);
+        recv(base2);
+      }
     }
     catch (std::exception& ex)
     {
@@ -82,28 +84,15 @@ public:
     }
   }
 
-  static void echo(self_t self)
+  static void quiter(self_t self)
   {
     try
     {
-      while (true)
-      {
-        message msg;
-        aid_t sender = self.recv(msg);
-        match_t type = msg.get_type();
-        if (type == atom("echo"))
-        {
-          self.send(sender, msg);
-        }
-        else
-        {
-          break;
-        }
-      }
+      recv(self);
     }
     catch (std::exception& ex)
     {
-      std::cerr << "echo except: " << ex.what() << std::endl;
+      std::cerr << "quiter except: " << ex.what() << std::endl;
     }
   }
 };

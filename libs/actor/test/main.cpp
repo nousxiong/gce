@@ -32,6 +32,7 @@
 #include "test_match.hpp"
 #include "test_link.hpp"
 #include "test_socket.hpp"
+#include "test_remote_link.hpp"
 //#include "test_remote.hpp"
 #include "test_message.hpp"
 #include "test_send_recv.hpp"
@@ -52,6 +53,7 @@ int main()
     gce::link_ut::run();
     gce::socket_ut::run();
 //    gce::remote_ut::run();
+    gce::remote_link_ut::run();
     gce::message_ut::run();
     gce::relay_ut::run();
   }

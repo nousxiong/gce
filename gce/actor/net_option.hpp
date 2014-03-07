@@ -19,13 +19,15 @@ struct net_option
   net_option()
     : heartbeat_period_(30)
     , heartbeat_count_(3)
-    , reconn_period_(15)
+    , reconn_period_(10)
+    , reconn_try_(3)
   {
   }
 
   seconds_t heartbeat_period_;
   std::size_t heartbeat_count_;
   seconds_t reconn_period_; /// in one reconn, between two connects' period
+  std::size_t reconn_try_; /// how many try to reconnect before drop cache msgs
 };
 }
 

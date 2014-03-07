@@ -243,7 +243,7 @@ void mixin::move_pack(
         }
         else if (detail::link_t* link = boost::get<detail::link_t>(&pk->tag_))
         {
-          base->add_link(link->get_aid());
+          base->add_link(link->get_aid(), pk->skt_);
           return;
         }
         else if (response_t* res = boost::get<response_t>(&pk->tag_))

@@ -343,33 +343,38 @@ public:
   }
 
 private:
-  void append_tag(detail::tag_t& tag, aid_t recver, aid_t skt, bool is_err_ret)
+  void append_tag(detail::tag_t& tag, aid_t recver, aid_t skt, bool is_err_ret, ctxid_t ctxid)
   {
     tag_offset_ = buf_.write_size();
     boost::uint16_t err_ret = is_err_ret ? 1 : 0;
     if (aid_t* aid = boost::get<aid_t>(&tag))
     {
-      *this << detail::tag_aid_t << *aid << recver << skt << err_ret;
+      *this << detail::tag_aid_t << *aid <<
+        recver << skt << err_ret << ctxid;
     }
     else if (detail::request_t* req = boost::get<detail::request_t>(&tag))
     {
-      *this << detail::tag_request_t << req->get_id() << req->get_aid() << recver << skt << err_ret;
+      *this << detail::tag_request_t << req->get_id() <<
+        req->get_aid() << recver << skt << err_ret << ctxid;
     }
     else if (detail::link_t* link = boost::get<detail::link_t>(&tag))
     {
-      *this << detail::tag_link_t << (boost::uint16_t)link->get_type() << link->get_aid() << recver << skt << err_ret;
+      *this << detail::tag_link_t << (boost::uint16_t)link->get_type() <<
+        link->get_aid() << recver << skt << err_ret << ctxid;
     }
     else if (detail::exit_t* ex = boost::get<detail::exit_t>(&tag))
     {
-      *this << detail::tag_exit_t << ex->get_code() << ex->get_aid() << recver << skt << err_ret;
+      *this << detail::tag_exit_t << ex->get_code() <<
+        ex->get_aid() << recver << skt << err_ret << ctxid;
     }
     else if (response_t* res = boost::get<response_t>(&tag))
     {
-      *this << detail::tag_response_t << res->get_id() << res->get_aid() << recver << skt << err_ret;
+      *this << detail::tag_response_t << res->get_id() <<
+        res->get_aid() << recver << skt << err_ret << ctxid;
     }
   }
 
-  bool pop_tag(detail::tag_t& tag, aid_t& recver, aid_t& skt, bool& is_err_ret)
+  bool pop_tag(detail::tag_t& tag, aid_t& recver, aid_t& skt, bool& is_err_ret, ctxid_t& ctxid)
   {
     bool has_tag = false;
     if (tag_offset_ != u32_nil)
@@ -383,35 +388,35 @@ private:
       if (tag_type == detail::tag_aid_t)
       {
         aid_t aid;
-        *this >> aid >> recver >> skt >> err_ret;
+        *this >> aid >> recver >> skt >> err_ret >> ctxid;
         tag = aid;
       }
       else if (tag_type == detail::tag_request_t)
       {
         sid_t id;
         aid_t aid;
-        *this >> id >> aid >> recver >> skt >> err_ret;
+        *this >> id >> aid >> recver >> skt >> err_ret >> ctxid;
         tag = detail::request_t(id, aid);
       }
       else if (tag_type == detail::tag_link_t)
       {
         boost::uint16_t type;
         aid_t aid;
-        *this >> type >> aid >> recver >> skt >> err_ret;
+        *this >> type >> aid >> recver >> skt >> err_ret >> ctxid;
         tag = detail::link_t((link_type)type, aid);
       }
       else if (tag_type == detail::tag_exit_t)
       {
         exit_code_t ec;
         aid_t aid;
-        *this >> ec >> aid >> recver >> skt >> err_ret;
+        *this >> ec >> aid >> recver >> skt >> err_ret >> ctxid;
         tag = detail::exit_t(ec, aid);
       }
       else if (tag_type == detail::tag_response_t)
       {
         sid_t id;
         aid_t aid;
-        *this >> id >> aid >> recver >> skt >> err_ret;
+        *this >> id >> aid >> recver >> skt >> err_ret >> ctxid;
         tag = response_t(id, aid);
       }
 

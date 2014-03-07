@@ -208,7 +208,7 @@ void basic_actor::link(detail::link_t l, detail::cache_pool* user)
     detail::pack* pk = alloc_pack(user);
     pk->tag_ = detail::link_t(l.get_type(), get_aid());
     pk->recver_ = recver;
-    pk->skt_ = target;
+    pk->skt_ = skt;
 
     send(target, pk, user);
   }

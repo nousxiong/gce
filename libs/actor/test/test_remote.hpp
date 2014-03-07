@@ -7,15 +7,6 @@
 /// See https://github.com/nousxiong/gce for latest version.
 ///
 
-#include <gce/actor/actor.hpp>
-#include <gce/actor/detail/socket.hpp>
-#include <gce/actor/message.hpp>
-#include <gce/actor/spawn.hpp>
-#include <gce/actor/remote.hpp>
-#include <gce/actor/atom.hpp>
-#include <gce/amsg/amsg.hpp>
-#include <boost/atomic.hpp>
-
 namespace gce
 {
 struct echo_data
