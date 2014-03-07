@@ -101,6 +101,7 @@ void socket::on_free()
   recv_cache_.clear();
   conn_ = false;
   curr_reconn_ = 0;
+  straight_link_list_.clear();
   remote_list_.clear();
 }
 ///----------------------------------------------------------------------------
@@ -372,13 +373,13 @@ void socket::handle_recv(pack* pk)
     if (detail::link_t* link = boost::get<detail::link_t>(&pk->tag_))
     {
       /// send actor exit msg
-      base_type::send_already_exited(link->get_aid(), pk->recver_, user_);
+      base_type::send_already_exited(link->get_aid(), pk->recver_);
     }
     else if (detail::request_t* req = boost::get<detail::request_t>(&pk->tag_))
     {
       /// reply actor exit msg
       response_t res(req->get_id(), pk->recver_);
-      base_type::send_already_exited(req->get_aid(), res, user_);
+      base_type::send_already_exited(req->get_aid(), res);
     }
   }
 }

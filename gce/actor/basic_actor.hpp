@@ -18,6 +18,7 @@
 #include <gce/actor/actor_id.hpp>
 #include <gce/actor/detail/pack.hpp>
 #include <boost/function.hpp>
+#include <map>
 #include <set>
 
 namespace gce
@@ -43,17 +44,18 @@ public:
   response_t request(aid_t, message const&);
   void reply(aid_t, message const&);
 
-public:
   virtual void on_recv(detail::pack*) = 0;
-  virtual void link(aid_t) = 0;
-  virtual void monitor(aid_t) = 0;
-  void on_free();
+  void link(aid_t);
+  void monitor(aid_t);
 
   inline aid_t get_aid() const
   {
     return aid_;
   }
 
+public:
+  /// internal use
+  void on_free();
   inline void add_link(detail::link_t l)
   {
     link(l);
@@ -68,12 +70,12 @@ protected:
 
   static detail::pack* alloc_pack(detail::cache_pool*);
   static void dealloc_pack(detail::cache_pool*, detail::pack*);
-  void add_link(aid_t);
+  void add_link(aid_t, sktaid_t skt = aid_t());
   void link(detail::link_t, detail::cache_pool* user = 0);
   void send_exit(exit_code_t, std::string const&);
   void remove_link(aid_t);
-  void send_already_exited(aid_t recver, aid_t sender, detail::cache_pool*);
-  void send_already_exited(aid_t recver, response_t res, detail::cache_pool*);
+  void send_already_exited(aid_t recver, aid_t sender);
+  void send_already_exited(aid_t recver, response_t res);
 
 private:
   static aid_t filter_aid(aid_t const& src, detail::cache_pool*);
@@ -95,8 +97,10 @@ private:
 
   /// local vals
   sid_t req_id_;
-  std::set<aid_t> link_list_;
-  std::set<aid_t> monitor_list_;
+  typedef std::map<aid_t, sktaid_t> link_list_t;
+  typedef std::set<aid_t> monitor_list_t;
+  link_list_t link_list_;
+  monitor_list_t monitor_list_;
   timestamp_t const timestamp_;
 };
 

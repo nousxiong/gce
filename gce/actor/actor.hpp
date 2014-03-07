@@ -140,12 +140,11 @@ public:
   aid_t recv(response_t, message&, duration_t);
   void wait(duration_t);
 
-  void link(aid_t);
-  void monitor(aid_t);
-
-public:
   detail::cache_pool* get_cache_pool();
   yield_t get_yield();
+
+public:
+  /// internal use
   void start(std::size_t);
   void init(
     detail::cache_pool* user, detail::cache_pool* owner,

@@ -127,6 +127,7 @@ public:
 };
 
 typedef actor_id aid_t;
+typedef actor_id sktaid_t;
 }
 
 template<typename CharT, typename TraitsT>

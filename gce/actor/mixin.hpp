@@ -50,10 +50,6 @@ public:
     duration_t tmo = seconds_t(GCE_DEFAULT_REQUEST_TIMEOUT_SEC)
     );
   void wait(duration_t);
-
-  void link(aid_t);
-  void monitor(aid_t);
-
   void update();
 
 public:

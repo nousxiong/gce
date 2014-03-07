@@ -132,16 +132,6 @@ void actor::wait(duration_t dur)
   yield();
 }
 ///----------------------------------------------------------------------------
-void actor::link(aid_t target)
-{
-  base_type::link(detail::link_t(linked, target), user_);
-}
-///----------------------------------------------------------------------------
-void actor::monitor(aid_t target)
-{
-  base_type::link(detail::link_t(monitored, target), user_);
-}
-///----------------------------------------------------------------------------
 detail::cache_pool* actor::get_cache_pool()
 {
   return user_;
@@ -371,13 +361,13 @@ void actor::handle_recv(detail::pack* pk)
     if (detail::link_t* link = boost::get<detail::link_t>(&pk->tag_))
     {
       /// send actor exit msg
-      base_type::send_already_exited(link->get_aid(), pk->recver_, user_);
+      base_type::send_already_exited(link->get_aid(), pk->recver_);
     }
     else if (detail::request_t* req = boost::get<detail::request_t>(&pk->tag_))
     {
       /// reply actor exit msg
       response_t res(req->get_id(), pk->recver_);
-      base_type::send_already_exited(req->get_aid(), res, user_);
+      base_type::send_already_exited(req->get_aid(), res);
     }
   }
 }

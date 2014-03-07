@@ -107,6 +107,10 @@ private:
   std::queue<message, std::deque<message> > conn_cache_;
   std::size_t curr_reconn_;
 
+  /// remote links
+  std::map<aid_t, std::set<aid_t> > straight_link_list_;
+
+  /// remote spawn's funcs
   std::map<match_t, actor_func_t> remote_list_;
 };
 }

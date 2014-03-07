@@ -79,16 +79,6 @@ aid_t slice::recv(response_t res, message& msg)
   return sender;
 }
 ///----------------------------------------------------------------------------
-void slice::link(aid_t target)
-{
-  basic_actor::link(detail::link_t(linked, target), user_);
-}
-///----------------------------------------------------------------------------
-void slice::monitor(aid_t target)
-{
-  basic_actor::link(detail::link_t(monitored, target), user_);
-}
-///----------------------------------------------------------------------------
 void slice::init(aid_t link_tgt)
 {
   base_type::update_aid();

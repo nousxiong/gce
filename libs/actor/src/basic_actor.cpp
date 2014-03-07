@@ -71,7 +71,7 @@ void basic_actor::relay(aid_t recver, message& m)
   {
     /// reply actor exit msg
     response_t res(m.req_.get_id(), recver);
-    send_already_exited(m.req_.get_aid(), res, user_);
+    send_already_exited(m.req_.get_aid(), res);
   }
 }
 ///----------------------------------------------------------------------------
@@ -95,7 +95,7 @@ response_t basic_actor::request(aid_t recver, message const& m)
   {
     /// reply actor exit msg
     response_t res(req.get_id(), recver);
-    send_already_exited(req.get_aid(), res, user_);
+    send_already_exited(req.get_aid(), res);
   }
   return res;
 }
@@ -121,6 +121,16 @@ void basic_actor::reply(aid_t recver, message const& m)
     pk->msg_ = m;
     send(target, pk, user_);
   }
+}
+///----------------------------------------------------------------------------
+void basic_actor::link(aid_t target)
+{
+  link(detail::link_t(linked, target), user_);
+}
+///----------------------------------------------------------------------------
+void basic_actor::monitor(aid_t target)
+{
+  link(detail::link_t(monitored, target), user_);
 }
 ///----------------------------------------------------------------------------
 void basic_actor::on_free()
@@ -160,17 +170,30 @@ void basic_actor::dealloc_pack(detail::cache_pool* owner, detail::pack* pk)
   }
 }
 ///----------------------------------------------------------------------------
-void basic_actor::add_link(aid_t target)
+void basic_actor::add_link(aid_t target, sktaid_t skt)
 {
-  link_list_.insert(target);
+  link_list_.insert(std::make_pair(target, skt));
 }
 ///----------------------------------------------------------------------------
 void basic_actor::link(detail::link_t l, detail::cache_pool* user)
 {
   aid_t recver = l.get_aid();
+  aid_t skt;
+  bool is_local = check_local(recver, user_->get_ctxid());
+  if (!is_local)
+  {
+    BOOST_ASSERT(user);
+    skt = user->select_socket(recver.ctxid_);
+    if (!skt)
+    {
+      send_already_exited(get_aid(), recver);
+      return;
+    }
+  }
+
   if (l.get_type() == linked)
   {
-    add_link(recver);
+    add_link(recver, skt);
   }
   else
   {
@@ -179,22 +202,15 @@ void basic_actor::link(detail::link_t l, detail::cache_pool* user)
 
   if (user)
   {
-    aid_t target = filter_aid(recver, user);
-    detail::link_t lk = detail::link_t(l.get_type(), get_aid());
-    if (target)
-    {
-      detail::pack* pk = alloc_pack(user);
-      pk->tag_ = lk;
-      pk->recver_ = recver;
-      pk->skt_ = target;
+    aid_t target = is_local ? recver : skt;
+    BOOST_ASSERT(target);
 
-      send(target, pk, user);
-    }
-    else
-    {
-      /// send actor exit msg
-      send_already_exited(lk.get_aid(), recver, user);
-    }
+    detail::pack* pk = alloc_pack(user);
+    pk->tag_ = detail::link_t(l.get_type(), get_aid());
+    pk->recver_ = recver;
+    pk->skt_ = target;
+
+    send(target, pk, user);
   }
 }
 ///----------------------------------------------------------------------------
@@ -202,14 +218,14 @@ void basic_actor::send_exit(
   exit_code_t ec, std::string const& exit_msg
   )
 {
-  BOOST_FOREACH(aid_t aid, link_list_)
+  BOOST_FOREACH(link_list_t::value_type& pr, link_list_)
   {
-    aid_t target = filter_aid(aid, user_);
+    aid_t target = pr.second ? pr.second : pr.first;
     if (target)
     {
       detail::pack* pk = alloc_pack(user_);
       pk->tag_ = detail::exit_t(ec, get_aid());
-      pk->recver_ = aid;
+      pk->recver_ = pr.first;
       pk->skt_ = target;
       pk->msg_ = message(exit);
       pk->msg_ << ec << exit_msg;
@@ -225,9 +241,7 @@ void basic_actor::remove_link(aid_t aid)
   monitor_list_.erase(aid);
 }
 ///----------------------------------------------------------------------------
-void basic_actor::send_already_exited(
-  aid_t recver, aid_t sender, detail::cache_pool* user
-  )
+void basic_actor::send_already_exited(aid_t recver, aid_t sender)
 {
   aid_t target = filter_aid(recver, user_);
   if (target)
@@ -236,7 +250,7 @@ void basic_actor::send_already_exited(
     std::string exit_msg("already exited");
     m << exit_already << exit_msg;
 
-    detail::pack* pk = alloc_pack(user);
+    detail::pack* pk = alloc_pack(user_);
     pk->tag_ = sender;
     pk->recver_ = recver;
     pk->skt_ = target;
@@ -247,9 +261,7 @@ void basic_actor::send_already_exited(
   }
 }
 ///----------------------------------------------------------------------------
-void basic_actor::send_already_exited(
-  aid_t recver, response_t res, detail::cache_pool* user
-  )
+void basic_actor::send_already_exited(aid_t recver, response_t res)
 {
   aid_t target = filter_aid(recver, user_);
   if (target)
@@ -258,7 +270,7 @@ void basic_actor::send_already_exited(
     std::string exit_msg("already exited");
     m << exit_already << exit_msg;
 
-    detail::pack* pk = alloc_pack(user);
+    detail::pack* pk = alloc_pack(user_);
     pk->tag_ = res;
     pk->recver_ = recver;
     pk->skt_ = target;

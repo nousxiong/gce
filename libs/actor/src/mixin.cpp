@@ -178,16 +178,6 @@ void mixin::wait(duration_t dur)
   boost::this_thread::sleep_for(dur);
 }
 ///----------------------------------------------------------------------------
-void mixin::link(aid_t target)
-{
-  base_type::link(detail::link_t(linked, target), user_);
-}
-///----------------------------------------------------------------------------
-void mixin::monitor(aid_t target)
-{
-  base_type::link(detail::link_t(monitored, target), user_);
-}
-///----------------------------------------------------------------------------
 void mixin::update()
 {
   move_pack(this, mb_, pack_que_, user_, this);
@@ -266,13 +256,13 @@ void mixin::move_pack(
         if (detail::link_t* link = boost::get<detail::link_t>(&pk->tag_))
         {
           /// send actor exit msg
-          base->send_already_exited(link->get_aid(), pk->recver_, user);
+          base->send_already_exited(link->get_aid(), pk->recver_);
         }
         else if (detail::request_t* req = boost::get<detail::request_t>(&pk->tag_))
         {
           /// reply actor exit msg
           response_t res(req->get_id(), pk->recver_);
-          base->send_already_exited(req->get_aid(), res, user);
+          base->send_already_exited(req->get_aid(), res);
         }
       }
       pk = next;

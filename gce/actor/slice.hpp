@@ -34,10 +34,8 @@ public:
   aid_t recv(message&, match_list_t const& match_list = match_list_t());
   aid_t recv(response_t, message&);
 
-  void link(aid_t);
-  void monitor(aid_t);
-
 public:
+  /// internal use
   void init(aid_t);
   void on_free();
   void on_recv(detail::pack*);
