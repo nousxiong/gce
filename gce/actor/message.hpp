@@ -40,7 +40,10 @@ static match_t const tag_link_t = atom("gce_link_t");
 static match_t const tag_exit_t = atom("gce_exit_t");
 static match_t const tag_response_t = atom("gce_response_t");
 
-typedef boost::variant<aid_t, request_t, response_t, link_t, exit_t> tag_t;
+typedef boost::variant<
+  aid_t, request_t, response_t, link_t,
+  exit_t, fwd_link_t, fwd_exit_t
+  > tag_t;
 }
 
 class message

@@ -32,6 +32,32 @@ private:
   link_type type_;
   aid_t aid_;
 };
+
+class fwd_link_t
+{
+public:
+  fwd_link_t() : type_(no_link) {}
+  fwd_link_t(link_type type, aid_t aid, aid_t skt)
+    : type_(type)
+    , aid_(aid)
+    , skt_(skt)
+  {
+  }
+
+  ~fwd_link_t()
+  {
+  }
+
+public:
+  inline link_type get_type() const { return type_; }
+  inline aid_t get_aid() const { return aid_; }
+  inline aid_t get_skt() const { return skt_; }
+
+private:
+  link_type type_;
+  aid_t aid_;
+  aid_t skt_;
+};
 }
 }
 

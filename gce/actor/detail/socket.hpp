@@ -65,7 +65,6 @@ public:
 
 private:
   ctxid_pair_t handle_net_msg(message&, ctxid_pair_t);
-  void send(detail::pack*);
   void send(message const&);
   void send_msg(message const&);
   void send_msg_hb();
@@ -77,6 +76,8 @@ private:
   void handle_recv(pack*);
   void add_straight_link(aid_t src, aid_t des);
   void remove_straight_link(aid_t src, aid_t des);
+  void add_router_link(aid_t src, aid_t des, sktaid_t skt);
+  sktaid_t remove_router_link(aid_t src, aid_t des);
 
   void on_neterr(errcode_t ec = errcode_t());
   ctxid_pair_t sync_ctxid(ctxid_pair_t new_pr, ctxid_pair_t curr_pr);
@@ -116,7 +117,11 @@ private:
   /// remote links
   typedef std::map<aid_t, std::set<aid_t> > straight_link_list_t;
   straight_link_list_t straight_link_list_;
-  std::set<aid_t> dummy_;
+  std::set<aid_t> straight_dummy_;
+
+  typedef std::map<aid_t, std::map<aid_t, sktaid_t> > router_link_list_t;
+  router_link_list_t router_link_list_;
+  std::map<aid_t, sktaid_t> router_dummy_;
 
   /// remote spawn's funcs
   std::map<match_t, actor_func_t> remote_list_;

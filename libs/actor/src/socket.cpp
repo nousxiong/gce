@@ -147,27 +147,53 @@ ctxid_pair_t socket::handle_net_msg(message& msg, ctxid_pair_t curr_pr)
 
   if (link_t* link = boost::get<detail::link_t>(&pk->tag_))
   {
-    pk->skt_ = get_aid();
-    if (link->get_type() == linked)
+    if (is_router_)
     {
-      add_straight_link(pk->recver_, link->get_aid());
+      sktaid_t skt = user_->select_straight_socket(pk->recver_.ctxid_);
+      if (!skt)
+      {
+        /// no socket found, send already exit back
+        base_type::send_already_exited(link->get_aid(), pk->recver_);
+      }
+      else
+      {
+        pk->tag_ = fwd_link_t(link->get_type(), link->get_aid(), get_aid());
+        pk->skt_ = skt;
+        if (link->get_type() == linked)
+        {
+          add_router_link(pk->recver_, link->get_aid(), skt);
+        }
+        base_type::send(pk->skt_, pk, user_);
+      }
+    }
+    else
+    {
+      pk->skt_ = get_aid();
+      if (link->get_type() == linked)
+      {
+        add_straight_link(pk->recver_, link->get_aid());
+      }
+      base_type::send(pk->recver_, pk, user_);
     }
   }
   else if (exit_t* ex = boost::get<exit_t>(&pk->tag_))
   {
-    remove_straight_link(pk->recver_, ex->get_aid());
+    if (is_router_)
+    {
+      sktaid_t skt = remove_router_link(pk->recver_, ex->get_aid());
+      BOOST_ASSERT(skt);
+      pk->tag_ = fwd_exit_t(ex->get_code(), ex->get_aid(), get_aid());
+      pk->skt_ = skt;
+      base_type::send(skt, pk, user_);
+    }
+    else
+    {
+      remove_straight_link(pk->recver_, ex->get_aid());
+      base_type::send(pk->recver_, pk, user_);
+    }
   }
 
-  send(pk);
   return curr_pr;
-}
-///----------------------------------------------------------------------------
-void socket::send(detail::pack* pk)
-{
-  pk->recver_.get_actor_ptr(
-    user_->get_ctxid(),
-    user_->get_context().get_timestamp()
-    )->on_recv(pk);
 }
 ///----------------------------------------------------------------------------
 void socket::send(message const& m)
@@ -405,6 +431,16 @@ void socket::handle_recv(pack* pk)
     {
       remove_straight_link(ex->get_aid(), pk->recver_);
     }
+    else if (fwd_link_t* link = boost::get<fwd_link_t>(&pk->tag_))
+    {
+      add_router_link(link->get_aid(), pk->recver_, link->get_skt());
+      pk->tag_ = link_t(link->get_type(), link->get_aid());
+    }
+    else if (fwd_exit_t* ex = boost::get<fwd_exit_t>(&pk->tag_))
+    {
+      remove_router_link(ex->get_aid(), pk->recver_);
+      pk->tag_ = exit_t(ex->get_code(), ex->get_aid());
+    }
     pk->msg_.append_tag(pk->tag_, pk->recver_, pk->skt_, pk->is_err_ret_, ctxid_pr);
     send(pk->msg_);
   }
@@ -427,7 +463,7 @@ void socket::handle_recv(pack* pk)
 void socket::add_straight_link(aid_t src, aid_t des)
 {
   std::pair<straight_link_list_t::iterator, bool> pr =
-    straight_link_list_.insert(std::make_pair(src, dummy_));
+    straight_link_list_.insert(std::make_pair(src, straight_dummy_));
   pr.first->second.insert(des);
 }
 ///----------------------------------------------------------------------------
@@ -440,6 +476,32 @@ void socket::remove_straight_link(aid_t src, aid_t des)
   {
     itr->second.erase(des);
   }
+}
+///----------------------------------------------------------------------------
+void socket::add_router_link(aid_t src, aid_t des, sktaid_t skt)
+{
+  std::pair<router_link_list_t::iterator, bool> pr =
+    router_link_list_.insert(std::make_pair(src, router_dummy_));
+  pr.first->second.insert(std::make_pair(des, skt));
+}
+///----------------------------------------------------------------------------
+sktaid_t socket::remove_router_link(aid_t src, aid_t des)
+{
+  sktaid_t skt;
+  router_link_list_t::iterator itr(
+    router_link_list_.find(src)
+    );
+  if (itr != router_link_list_.end())
+  {
+    std::map<aid_t, sktaid_t>& skt_list = itr->second;
+    std::map<aid_t, sktaid_t>::iterator skt_itr(skt_list.find(des));
+    if (skt_itr != skt_list.end())
+    {
+      skt = skt_itr->second;
+      skt_list.erase(skt_itr);
+    }
+  }
+  return skt;
 }
 ///----------------------------------------------------------------------------
 void socket::on_neterr(errcode_t ec)
@@ -463,7 +525,7 @@ void socket::on_neterr(errcode_t ec)
       pk->msg_ = message(exit);
       pk->msg_ << exit_neterr << errmsg;
 
-      send(pk);
+      base_type::send(pk->recver_, pk, user_);
     }
   }
   straight_link_list_.clear();

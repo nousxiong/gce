@@ -76,12 +76,12 @@ protected:
   void remove_link(aid_t);
   void send_already_exited(aid_t recver, aid_t sender);
   void send_already_exited(aid_t recver, response_t res);
-
-private:
-  static aid_t filter_aid(aid_t const& src, detail::cache_pool*);
   static void send(
     aid_t const& recver, detail::pack*, detail::cache_pool*
     );
+
+private:
+  static aid_t filter_aid(aid_t const& src, detail::cache_pool*);
 
 private:
   byte_t pad0_[GCE_CACHE_LINE_SIZE]; /// Ensure start from a new cache line.

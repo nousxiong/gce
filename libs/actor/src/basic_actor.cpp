@@ -281,6 +281,17 @@ void basic_actor::send_already_exited(aid_t recver, response_t res)
   }
 }
 ///----------------------------------------------------------------------------
+void basic_actor::send(
+  aid_t const& recver, detail::pack* pk,
+  detail::cache_pool* user
+  )
+{
+  recver.get_actor_ptr(
+    user->get_ctxid(),
+    user->get_context().get_timestamp()
+    )->on_recv(pk);
+}
+///----------------------------------------------------------------------------
 aid_t basic_actor::filter_aid(aid_t const& src, detail::cache_pool* user)
 {
   aid_t target;
@@ -300,17 +311,6 @@ aid_t basic_actor::filter_aid(aid_t const& src, detail::cache_pool* user)
     }
   }
   return target;
-}
-///----------------------------------------------------------------------------
-void basic_actor::send(
-  aid_t const& recver, detail::pack* pk,
-  detail::cache_pool* user
-  )
-{
-  recver.get_actor_ptr(
-    user->get_ctxid(),
-    user->get_context().get_timestamp()
-    )->on_recv(pk);
 }
 ///----------------------------------------------------------------------------
 }
