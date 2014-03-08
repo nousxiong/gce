@@ -52,10 +52,10 @@ public:
 
 public:
   void init(cache_pool* user, cache_pool* owner, net_option);
-  void connect(ctxid_t target, std::string const&);
+  void connect(ctxid_t target, std::string const&, bool target_is_router);
 
 public:
-  void start(std::map<match_t, actor_func_t> const&, socket_ptr);
+  void start(std::map<match_t, actor_func_t> const&, socket_ptr, bool is_router);
   void stop();
   void on_free();
   void on_recv(pack*);
@@ -64,13 +64,13 @@ public:
   void monitor(aid_t) {}
 
 private:
-  ctxid_t handle_net_msg(message&, ctxid_t curr_ctxid);
+  ctxid_pair_t handle_net_msg(message&, ctxid_pair_t);
   void send(detail::pack*);
   void send(message const&);
   void send_msg(message const&);
   void send_msg_hb();
 
-  void run_conn(ctxid_t target, std::string const&, yield_t);
+  void run_conn(ctxid_pair_t, std::string const&, yield_t);
   void run(socket_ptr, yield_t);
 
   socket_ptr make_socket(std::string const&);
@@ -79,7 +79,7 @@ private:
   void remove_straight_link(aid_t src, aid_t des);
 
   void on_neterr(errcode_t ec = errcode_t());
-  ctxid_t sync_ctxid(ctxid_t new_ctxid, ctxid_t curr_ctxid);
+  ctxid_pair_t sync_ctxid(ctxid_pair_t new_pr, ctxid_pair_t curr_pr);
 
 private:
   bool parse_message(message&);
@@ -90,7 +90,7 @@ private:
   template <typename F>
   void start_heartbeat(F);
   void free_self(
-    ctxid_t, exit_code_t,
+    ctxid_pair_t, exit_code_t,
     std::string const&, yield_t
     );
 
@@ -120,6 +120,8 @@ private:
 
   /// remote spawn's funcs
   std::map<match_t, actor_func_t> remote_list_;
+
+  bool is_router_;
 };
 }
 }

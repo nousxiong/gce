@@ -54,7 +54,7 @@ public:
 
 public:
   void init(cache_pool* user, cache_pool* owner, net_option);
-  void bind(remote_func_list_t const&, std::string const&);
+  void bind(remote_func_list_t const&, std::string const&, bool is_router);
 
 public:
   void stop();
@@ -83,6 +83,7 @@ private:
   context& ctx_;
   boost::scoped_ptr<basic_acceptor> acpr_;
   std::map<match_t, actor_func_t> remote_func_list_;
+  bool is_router_;
 };
 }
 }

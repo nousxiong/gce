@@ -54,6 +54,7 @@ cache_pool::cache_pool(
   , socket_cache_list_(cache_num_)
   , acceptor_cache_list_(cache_num_)
   , pack_cache_list_(cache_num_)
+  , curr_router_list_(router_list_.end())
   , stopped_(false)
   , ctxid_(attrs.id_)
 {
@@ -226,19 +227,48 @@ void cache_pool::free_cache()
   }
 }
 ///------------------------------------------------------------------------------
-void cache_pool::register_socket(ctxid_t ctxid, aid_t skt)
+void cache_pool::register_socket(ctxid_pair_t ctxid_pr, aid_t skt)
 {
-  std::pair<conn_list_t::iterator, bool> pr =
-    conn_list_.insert(std::make_pair(ctxid, dummy_));
-  skt_list_t& skt_list = pr.first->second;
-  skt_list.insert(skt);
-  if (skt_list.size() == 1)
+  if (ctxid_pr.second)
   {
-    curr_skt_ = skt_list.begin();
+    std::pair<conn_list_t::iterator, bool> pr =
+      router_list_.insert(std::make_pair(ctxid_pr.first, dummy_));
+    skt_list_t& skt_list = pr.first->second;
+    skt_list.insert(skt);
+    if (skt_list.size() == 1)
+    {
+      curr_router_ = skt_list.begin();
+    }
+
+    if (router_list_.size() == 1)
+    {
+      curr_router_list_ = router_list_.begin();
+    }
+  }
+  else
+  {
+    std::pair<conn_list_t::iterator, bool> pr =
+      conn_list_.insert(std::make_pair(ctxid_pr.first, dummy_));
+    skt_list_t& skt_list = pr.first->second;
+    skt_list.insert(skt);
+    if (skt_list.size() == 1)
+    {
+      curr_skt_ = skt_list.begin();
+    }
   }
 }
 ///------------------------------------------------------------------------------
 aid_t cache_pool::select_socket(ctxid_t ctxid)
+{
+  aid_t skt = select_straight_socket(ctxid);
+  if (!skt)
+  {
+    skt = select_router();
+  }
+  return skt;
+}
+///------------------------------------------------------------------------------
+aid_t cache_pool::select_straight_socket(ctxid_t ctxid)
 {
   aid_t skt;
   conn_list_t::iterator itr(conn_list_.find(ctxid));
@@ -261,22 +291,65 @@ aid_t cache_pool::select_socket(ctxid_t ctxid)
   return skt;
 }
 ///------------------------------------------------------------------------------
-void cache_pool::deregister_socket(ctxid_t ctxid, aid_t skt)
+aid_t cache_pool::select_router()
 {
-  conn_list_t::iterator itr(conn_list_.find(ctxid));
-  if (itr != conn_list_.end())
+  aid_t skt;
+  if (!router_list_.empty())
   {
-    itr->second.erase(skt);
-    curr_skt_ = itr->second.begin();
+    if (curr_router_list_ != router_list_.end())
+    {
+      skt_list_t& skt_list = curr_router_list_->second;
+      if (!skt_list.empty())
+      {
+        if (curr_router_ != skt_list.end())
+        {
+          skt = *curr_router_;
+        }
+        ++curr_router_;
+        if (curr_router_ == skt_list.end())
+        {
+          curr_router_ = skt_list.begin();
+        }
+      }
+    }
+
+    ++curr_router_list_;
+    if (curr_router_list_ == router_list_.end())
+    {
+      curr_router_list_ = router_list_.begin();
+    }
+  }
+  return skt;
+}
+///------------------------------------------------------------------------------
+void cache_pool::deregister_socket(ctxid_pair_t ctxid_pr, aid_t skt)
+{
+  if (ctxid_pr.second)
+  {
+    conn_list_t::iterator itr(router_list_.find(ctxid_pr.first));
+    if (itr != router_list_.end())
+    {
+      itr->second.erase(skt);
+      curr_router_ = itr->second.begin();
+    }
+  }
+  else
+  {
+    conn_list_t::iterator itr(conn_list_.find(ctxid_pr.first));
+    if (itr != conn_list_.end())
+    {
+      itr->second.erase(skt);
+      curr_skt_ = itr->second.begin();
+    }
   }
 }
 ///------------------------------------------------------------------------------
-void cache_pool::cache_socket(socket* s)
+void cache_pool::add_socket(socket* s)
 {
   socket_list_.insert(s);
 }
 ///------------------------------------------------------------------------------
-void cache_pool::cache_acceptor(acceptor* a)
+void cache_pool::add_acceptor(acceptor* a)
 {
   acceptor_list_.insert(a);
 }

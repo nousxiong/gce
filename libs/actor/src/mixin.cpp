@@ -211,17 +211,17 @@ void mixin::move_pack(
           match_t type = pk->msg_.get_type();
           if (type == detail::msg_reg_skt)
           {
-            ctxid_t ctxid;
+            ctxid_pair_t ctxid_pr;
             aid_t skt;
-            pk->msg_ >> ctxid >> skt;
-            mix->cac_pool_->register_socket(ctxid, skt);
+            pk->msg_ >> ctxid_pr >> skt;
+            mix->cac_pool_->register_socket(ctxid_pr, skt);
           }
           else if (type == detail::msg_dereg_skt)
           {
-            ctxid_t ctxid;
+            ctxid_pair_t ctxid_pr;
             aid_t skt;
-            pk->msg_ >> ctxid >> skt;
-            mix->cac_pool_->deregister_socket(ctxid, skt);
+            pk->msg_ >> ctxid_pr >> skt;
+            mix->cac_pool_->deregister_socket(ctxid_pr, skt);
           }
           else if (type == detail::msg_stop)
           {
@@ -298,7 +298,10 @@ void mixin::free_cache()
   cac_pool_->free_cache();
 }
 ///----------------------------------------------------------------------------
-void mixin::register_socket(ctxid_t ctxid, aid_t skt, detail::cache_pool* user)
+void mixin::register_socket(
+  ctxid_pair_t ctxid_pr,
+  aid_t skt, detail::cache_pool* user
+  )
 {
   detail::pack* pk = base_type::alloc_pack(user);
   aid_t self = get_aid();
@@ -306,12 +309,15 @@ void mixin::register_socket(ctxid_t ctxid, aid_t skt, detail::cache_pool* user)
   pk->recver_ = self;
 
   message m(detail::msg_reg_skt);
-  m << ctxid << skt;
+  m << ctxid_pr << skt;
   pk->msg_ = m;
   on_recv(pk);
 }
 ///----------------------------------------------------------------------------
-void mixin::deregister_socket(ctxid_t ctxid, aid_t skt, detail::cache_pool* user)
+void mixin::deregister_socket(
+  ctxid_pair_t ctxid_pr,
+  aid_t skt, detail::cache_pool* user
+  )
 {
   detail::pack* pk = base_type::alloc_pack(user);
   aid_t self = get_aid();
@@ -319,7 +325,7 @@ void mixin::deregister_socket(ctxid_t ctxid, aid_t skt, detail::cache_pool* user
   pk->recver_ = self;
 
   message m(detail::msg_dereg_skt);
-  m << ctxid << skt;
+  m << ctxid_pr << skt;
   pk->msg_ = m;
   on_recv(pk);
 }

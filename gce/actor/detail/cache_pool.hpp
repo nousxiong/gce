@@ -67,12 +67,14 @@ public:
   void free_object();
   void free_cache();
 
-  void register_socket(ctxid_t ctxid, aid_t skt);
+  void register_socket(ctxid_pair_t, aid_t skt);
   aid_t select_socket(ctxid_t ctxid);
-  void deregister_socket(ctxid_t ctxid, aid_t skt);
+  aid_t select_straight_socket(ctxid_t ctxid);
+  aid_t select_router();
+  void deregister_socket(ctxid_pair_t, aid_t skt);
 
-  void cache_socket(socket*);
-  void cache_acceptor(acceptor*);
+  void add_socket(socket*);
+  void add_acceptor(acceptor*);
   void remove_socket(socket*);
   void remove_acceptor(acceptor*);
 
@@ -184,6 +186,9 @@ private:
   typedef std::map<ctxid_t, skt_list_t> conn_list_t;
   conn_list_t conn_list_;
   skt_list_t::iterator curr_skt_;
+  conn_list_t router_list_;
+  conn_list_t::iterator curr_router_list_;
+  skt_list_t::iterator curr_router_;
   skt_list_t dummy_;
 
   std::set<socket*> socket_list_;

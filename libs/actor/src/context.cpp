@@ -112,7 +112,7 @@ detail::cache_pool* context::select_cache_pool(std::size_t i)
   }
 }
 ///------------------------------------------------------------------------------
-void context::register_socket(ctxid_t ctxid, aid_t skt, detail::cache_pool* user)
+void context::register_socket(ctxid_pair_t ctxid_pr, aid_t skt, detail::cache_pool* user)
 {
   BOOST_FOREACH(detail::cache_pool* cac_pool, cache_pool_list_)
   {
@@ -121,7 +121,7 @@ void context::register_socket(ctxid_t ctxid, aid_t skt, detail::cache_pool* user
       cac_pool->get_strand().dispatch(
         boost::bind(
           &detail::cache_pool::register_socket,
-          cac_pool, ctxid, skt
+          cac_pool, ctxid_pr, skt
           )
         );
     }
@@ -131,12 +131,12 @@ void context::register_socket(ctxid_t ctxid, aid_t skt, detail::cache_pool* user
   {
     if (mi)
     {
-      mi->register_socket(ctxid, skt, user);
+      mi->register_socket(ctxid_pr, skt, user);
     }
   }
 }
 ///------------------------------------------------------------------------------
-void context::deregister_socket(ctxid_t ctxid, aid_t skt, detail::cache_pool* user)
+void context::deregister_socket(ctxid_pair_t ctxid_pr, aid_t skt, detail::cache_pool* user)
 {
   BOOST_FOREACH(detail::cache_pool* cac_pool, cache_pool_list_)
   {
@@ -145,7 +145,7 @@ void context::deregister_socket(ctxid_t ctxid, aid_t skt, detail::cache_pool* us
       cac_pool->get_strand().dispatch(
         boost::bind(
           &detail::cache_pool::deregister_socket,
-          cac_pool, ctxid, skt
+          cac_pool, ctxid_pr, skt
           )
         );
     }
@@ -155,7 +155,7 @@ void context::deregister_socket(ctxid_t ctxid, aid_t skt, detail::cache_pool* us
   {
     if (mi)
     {
-      mi->deregister_socket(ctxid, skt, user);
+      mi->deregister_socket(ctxid_pr, skt, user);
     }
   }
 }

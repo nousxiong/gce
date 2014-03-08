@@ -85,8 +85,8 @@ public:
   inline timestamp_t get_timestamp() const { return timestamp_; }
   detail::cache_pool* select_cache_pool(std::size_t i = size_nil);
 
-  void register_socket(ctxid_t ctxid, aid_t skt, detail::cache_pool*);
-  void deregister_socket(ctxid_t ctxid, aid_t skt, detail::cache_pool*);
+  void register_socket(ctxid_pair_t, aid_t skt, detail::cache_pool*);
+  void deregister_socket(ctxid_pair_t ctxid_pr, aid_t skt, detail::cache_pool*);
 
 private:
   void run(

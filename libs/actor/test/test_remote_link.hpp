@@ -20,10 +20,6 @@ public:
   }
 
 public:
-  static void dummy(self_t)
-  {
-  }
-
   static void test_base()
   {
     try
@@ -39,19 +35,12 @@ public:
       mixin_t base1 = spawn(ctx1);
       mixin_t base2 = spawn(ctx2);
 
-      remote_func_list_t func_list;
-      func_list.push_back(
-        std::make_pair(
-          atom("dummy"),
-          boost::bind(&remote_link_ut::dummy, _1)
-          )
-        );
-      gce::bind(base2, "tcp://127.0.0.1:14923", func_list);
+      gce::bind(base2, "tcp://127.0.0.1:14923");
 
       wait(base1, boost::chrono::milliseconds(100));
       net_option opt;
       opt.reconn_period_ = seconds_t(1);
-      connect(base1, atom("ctx_two"), "tcp://127.0.0.1:14923", opt);
+      connect(base1, atom("ctx_two"), "tcp://127.0.0.1:14923", false, opt);
 
       std::vector<aid_t> quiter_list(quiter_num);
       for (std::size_t i=0; i<quiter_num; ++i)

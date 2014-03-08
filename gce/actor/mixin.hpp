@@ -69,8 +69,14 @@ public:
   void free_slice(slice*);
   void free_cache();
 
-  void register_socket(ctxid_t, aid_t skt, detail::cache_pool*);
-  void deregister_socket(ctxid_t, aid_t skt, detail::cache_pool*);
+  void register_socket(
+    ctxid_pair_t ctxid_pr,
+    aid_t skt, detail::cache_pool*
+    );
+  void deregister_socket(
+    ctxid_pair_t ctxid_pr,
+    aid_t skt, detail::cache_pool*
+    );
   void stop(detail::cache_pool*);
 
 private:

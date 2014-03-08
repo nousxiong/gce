@@ -20,10 +20,6 @@ public:
   }
 
 public:
-  static void dummy(self_t)
-  {
-  }
-
   static void test_base()
   {
     try
@@ -42,16 +38,7 @@ public:
       recv(base1, zero);
       recv(base2, zero);
 
-      remote_func_list_t func_list;
-      func_list.push_back(
-        std::make_pair(
-          atom("dummy"),
-          boost::bind(
-            &socket_ut::dummy, _1
-            )
-          )
-        );
-      gce::bind(base2, "tcp://127.0.0.1:14923", func_list);
+      gce::bind(base2, "tcp://127.0.0.1:14923");
 
       aid_t echo_aid =
         spawn(
@@ -65,7 +52,7 @@ public:
       wait(base1, boost::chrono::milliseconds(100));
       net_option opt;
       opt.reconn_period_ = seconds_t(1);
-      connect(base1, atom("ctx_two"), "tcp://127.0.0.1:14923", opt);
+      connect(base1, atom("ctx_two"), "tcp://127.0.0.1:14923", false, opt);
 
       for (std::size_t i=0; i<echo_num; ++i)
       {

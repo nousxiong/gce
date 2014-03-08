@@ -29,6 +29,7 @@
 #include <boost/asio/spawn.hpp>
 #include <vector>
 #include <string>
+#include <utility>
 
 #define GCE_MAX_MSG_SIZE (GCE_SOCKET_RECV_CACHE_SIZE - GCE_SOCKET_RECV_MAX_SIZE)
 
@@ -54,6 +55,7 @@ typedef std::vector<match_t> match_list_t;
 
 typedef match_t ctxid_t;
 static match_t const ctxid_nil = static_cast<boost::uint64_t>(-1);
+typedef std::pair<ctxid_t, bool> ctxid_pair_t;
 
 typedef boost::uint32_t timestamp_t;
 
