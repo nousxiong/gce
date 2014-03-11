@@ -9,14 +9,14 @@
 
 namespace gce
 {
-class remote_link_ut
+class router_link_ut
 {
 public:
   static void run()
   {
-    std::cout << "remote_link_ut begin." << std::endl;
+    std::cout << "router_link_ut begin." << std::endl;
     test_base();
-    std::cout << "remote_link_ut end." << std::endl;
+    std::cout << "router_link_ut end." << std::endl;
   }
 
 public:
@@ -27,20 +27,25 @@ public:
       std::size_t quiter_num = 100;
 
       attributes attrs;
+      attrs.id_ = atom("router");
+      context ctx(attrs);
       attrs.id_ = atom("one");
       context ctx1(attrs);
       attrs.id_ = atom("two");
       context ctx2(attrs);
 
+      mixin_t router = spawn(ctx);
+      gce::bind(router, "tcp://127.0.0.1:14923", true);
+
       mixin_t base1 = spawn(ctx1);
       mixin_t base2 = spawn(ctx2);
-
-      gce::bind(base2, "tcp://127.0.0.1:14923");
 
       wait(base1, boost::chrono::milliseconds(100));
       net_option opt;
       opt.reconn_period_ = seconds_t(1);
-      connect(base1, atom("two"), "tcp://127.0.0.1:14923", false, opt);
+      connect(base1, atom("router"), "tcp://127.0.0.1:14923", true, opt);
+      connect(base2, atom("router"), "tcp://127.0.0.1:14923", true, opt);
+      wait(base2, boost::chrono::milliseconds(100));
 
       std::vector<aid_t> quiter_list(quiter_num);
       for (std::size_t i=0; i<quiter_num; ++i)
@@ -49,7 +54,7 @@ public:
           spawn(
             base2,
             boost::bind(
-              &remote_link_ut::quiter, _1
+              &router_link_ut::quiter, _1
               ),
             monitored
             );
@@ -86,3 +91,4 @@ public:
   }
 };
 }
+

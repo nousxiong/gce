@@ -9,14 +9,14 @@
 
 namespace gce
 {
-class socket_ut
+class router_ut
 {
 public:
   static void run()
   {
-    std::cout << "socket_ut begin." << std::endl;
+    std::cout << "router_ut begin." << std::endl;
     test_base();
-    std::cout << "socket_ut end." << std::endl;
+    std::cout << "router_ut end." << std::endl;
   }
 
 public:
@@ -27,18 +27,18 @@ public:
       std::size_t echo_num = 100;
 
       attributes attrs;
+      attrs.id_ = atom("router");
+      context ctx(attrs);
       attrs.id_ = atom("one");
       context ctx1(attrs);
       attrs.id_ = atom("two");
       context ctx2(attrs);
 
+      mixin_t router = spawn(ctx);
+      gce::bind(router, "tcp://127.0.0.1:14923", true);
+
       mixin_t base1 = spawn(ctx1);
       mixin_t base2 = spawn(ctx2);
-
-      recv(base1, zero);
-      recv(base2, zero);
-
-      gce::bind(base2, "tcp://127.0.0.1:14923");
 
       aid_t echo_aid =
         spawn(
@@ -52,7 +52,9 @@ public:
       wait(base1, boost::chrono::milliseconds(100));
       net_option opt;
       opt.reconn_period_ = seconds_t(1);
-      connect(base1, atom("two"), "tcp://127.0.0.1:14923", false, opt);
+      connect(base1, atom("router"), "tcp://127.0.0.1:14923", true, opt);
+      connect(base2, atom("router"), "tcp://127.0.0.1:14923", true, opt);
+      wait(base2, boost::chrono::milliseconds(100));
 
       for (std::size_t i=0; i<echo_num; ++i)
       {

@@ -233,11 +233,11 @@ void cache_pool::register_socket(ctxid_pair_t ctxid_pr, aid_t skt)
   {
     std::pair<conn_list_t::iterator, bool> pr =
       router_list_.insert(std::make_pair(ctxid_pr.first, dummy_));
-    skt_list_t& skt_list = pr.first->second;
+    skt_list_t& skt_list = pr.first->second.skt_list_;
     skt_list.insert(skt);
     if (skt_list.size() == 1)
     {
-      curr_router_ = skt_list.begin();
+      pr.first->second.curr_skt_ = skt_list.begin();
     }
 
     if (router_list_.size() == 1)
@@ -249,11 +249,11 @@ void cache_pool::register_socket(ctxid_pair_t ctxid_pr, aid_t skt)
   {
     std::pair<conn_list_t::iterator, bool> pr =
       conn_list_.insert(std::make_pair(ctxid_pr.first, dummy_));
-    skt_list_t& skt_list = pr.first->second;
+    skt_list_t& skt_list = pr.first->second.skt_list_;
     skt_list.insert(skt);
     if (skt_list.size() == 1)
     {
-      curr_skt_ = skt_list.begin();
+      pr.first->second.curr_skt_ = skt_list.begin();
     }
   }
 }
@@ -274,17 +274,18 @@ aid_t cache_pool::select_straight_socket(ctxid_t ctxid)
   conn_list_t::iterator itr(conn_list_.find(ctxid));
   if (itr != conn_list_.end())
   {
-    skt_list_t& skt_list = itr->second;
+    skt_list_t& skt_list = itr->second.skt_list_;
+    skt_list_t::iterator& curr_skt = itr->second.curr_skt_;
     if (!skt_list.empty())
     {
-      if (curr_skt_ != skt_list.end())
+      if (curr_skt != skt_list.end())
       {
-        skt = *curr_skt_;
+        skt = *curr_skt;
       }
-      ++curr_skt_;
-      if (curr_skt_ == skt_list.end())
+      ++curr_skt;
+      if (curr_skt == skt_list.end())
       {
-        curr_skt_ = skt_list.begin();
+        curr_skt = skt_list.begin();
       }
     }
   }
@@ -298,17 +299,18 @@ aid_t cache_pool::select_router()
   {
     if (curr_router_list_ != router_list_.end())
     {
-      skt_list_t& skt_list = curr_router_list_->second;
+      skt_list_t& skt_list = curr_router_list_->second.skt_list_;
+      skt_list_t::iterator& curr_skt = curr_router_list_->second.curr_skt_;
       if (!skt_list.empty())
       {
-        if (curr_router_ != skt_list.end())
+        if (curr_skt != skt_list.end())
         {
-          skt = *curr_router_;
+          skt = *curr_skt;
         }
-        ++curr_router_;
-        if (curr_router_ == skt_list.end())
+        ++curr_skt;
+        if (curr_skt == skt_list.end())
         {
-          curr_router_ = skt_list.begin();
+          curr_skt = skt_list.begin();
         }
       }
     }
@@ -329,8 +331,9 @@ void cache_pool::deregister_socket(ctxid_pair_t ctxid_pr, aid_t skt)
     conn_list_t::iterator itr(router_list_.find(ctxid_pr.first));
     if (itr != router_list_.end())
     {
-      itr->second.erase(skt);
-      curr_router_ = itr->second.begin();
+      socket_list& skt_list = itr->second;
+      skt_list.skt_list_.erase(skt);
+      skt_list.curr_skt_ = skt_list.skt_list_.begin();
     }
   }
   else
@@ -338,8 +341,9 @@ void cache_pool::deregister_socket(ctxid_pair_t ctxid_pr, aid_t skt)
     conn_list_t::iterator itr(conn_list_.find(ctxid_pr.first));
     if (itr != conn_list_.end())
     {
-      itr->second.erase(skt);
-      curr_skt_ = itr->second.begin();
+      socket_list& skt_list = itr->second;
+      skt_list.skt_list_.erase(skt);
+      skt_list.curr_skt_ = skt_list.skt_list_.begin();
     }
   }
 }

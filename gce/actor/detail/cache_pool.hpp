@@ -183,13 +183,17 @@ private:
   std::vector<pack_cache_t*> pack_cache_dirty_list_;
 
   typedef std::set<aid_t> skt_list_t;
-  typedef std::map<ctxid_t, skt_list_t> conn_list_t;
+  struct socket_list
+  {
+    skt_list_t skt_list_;
+    skt_list_t::iterator curr_skt_;
+  };
+
+  typedef std::map<ctxid_t, socket_list> conn_list_t;
   conn_list_t conn_list_;
-  skt_list_t::iterator curr_skt_;
   conn_list_t router_list_;
   conn_list_t::iterator curr_router_list_;
-  skt_list_t::iterator curr_router_;
-  skt_list_t dummy_;
+  socket_list dummy_;
 
   std::set<socket*> socket_list_;
   std::set<acceptor*> acceptor_list_;
