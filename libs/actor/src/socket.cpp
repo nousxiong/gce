@@ -192,6 +192,32 @@ ctxid_pair_t socket::handle_net_msg(message& msg, ctxid_pair_t curr_pr)
       base_type::send(pk->recver_, pk, user_);
     }
   }
+  else
+  {
+    if (is_router_)
+    {
+      sktaid_t skt = user_->select_straight_socket(pk->recver_.ctxid_);
+      if (detail::request_t* req = boost::get<detail::request_t>(&pk->tag_))
+      {
+        if (!skt)
+        {
+          /// reply actor exit msg
+          response_t res(req->get_id(), pk->recver_);
+          base_type::send_already_exited(req->get_aid(), res);
+        }
+      }
+
+      if (skt)
+      {
+        pk->skt_ = skt;
+        base_type::send(pk->skt_, pk, user_);
+      }
+    }
+    else
+    {
+      base_type::send(pk->recver_, pk, user_);
+    }
+  }
 
   return curr_pr;
 }
@@ -266,7 +292,6 @@ void socket::run_conn(ctxid_pair_t target, std::string const& ep, yield_t yield)
         if (ec)
         {
           on_neterr(ec);
-
           --curr_reconn_;
           if (curr_reconn_ == 0)
           {
@@ -514,6 +539,9 @@ void socket::on_neterr(errcode_t ec)
     errmsg = ec.message();
   }
 
+  message m(exit);
+  m << exit_neterr << errmsg;
+
   BOOST_FOREACH(straight_link_list_t::value_type& pr, straight_link_list_)
   {
     BOOST_FOREACH(aid_t const& des, pr.second)
@@ -522,13 +550,27 @@ void socket::on_neterr(errcode_t ec)
       pk->tag_ = detail::exit_t(exit_neterr, des);
       pk->recver_ = pr.first;
       pk->skt_ = pr.first;
-      pk->msg_ = message(exit);
-      pk->msg_ << exit_neterr << errmsg;
+      pk->msg_ = m;
 
       base_type::send(pk->recver_, pk, user_);
     }
   }
   straight_link_list_.clear();
+
+  BOOST_FOREACH(router_link_list_t::value_type& pr, router_link_list_)
+  {
+    BOOST_FOREACH(router_link_list_t::mapped_type::value_type& des, pr.second)
+    {
+      detail::pack* pk = alloc_pack(user_);
+      pk->tag_ = fwd_exit_t(exit_neterr, des.first, get_aid());
+      pk->recver_ = pr.first;
+      pk->skt_ = des.second;
+      pk->msg_ = m;
+
+      base_type::send(pk->skt_, pk, user_);
+    }
+  }
+  router_link_list_.clear();
 }
 ///----------------------------------------------------------------------------
 ctxid_pair_t socket::sync_ctxid(ctxid_pair_t new_pr, ctxid_pair_t curr_pr)

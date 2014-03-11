@@ -218,20 +218,21 @@ void basic_actor::send_exit(
   exit_code_t ec, std::string const& exit_msg
   )
 {
+  message m(exit);
+  m << ec << exit_msg;
+
   BOOST_FOREACH(link_list_t::value_type& pr, link_list_)
   {
     aid_t target = pr.second ? pr.second : pr.first;
-    if (target)
-    {
-      detail::pack* pk = alloc_pack(user_);
-      pk->tag_ = detail::exit_t(ec, get_aid());
-      pk->recver_ = pr.first;
-      pk->skt_ = target;
-      pk->msg_ = message(exit);
-      pk->msg_ << ec << exit_msg;
+    BOOST_ASSERT(target);
 
-      send(target, pk, user_);
-    }
+    detail::pack* pk = alloc_pack(user_);
+    pk->tag_ = detail::exit_t(ec, get_aid());
+    pk->recver_ = pr.first;
+    pk->skt_ = target;
+    pk->msg_ = m;
+
+    send(target, pk, user_);
   }
 }
 ///----------------------------------------------------------------------------
