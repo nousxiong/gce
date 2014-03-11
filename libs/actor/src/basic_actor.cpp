@@ -209,6 +209,7 @@ void basic_actor::link(detail::link_t l, detail::cache_pool* user)
     pk->tag_ = detail::link_t(l.get_type(), get_aid());
     pk->recver_ = recver;
     pk->skt_ = skt;
+    pk->msg_ = message(detail::msg_link);
 
     send(target, pk, user);
   }

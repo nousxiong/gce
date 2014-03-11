@@ -313,6 +313,7 @@ void socket::run_conn(ctxid_pair_t target, std::string const& ep, yield_t yield)
           }
           else
           {
+            std::string type_str = atom(type);
             curr_pr = handle_net_msg(msg, curr_pr);
           }
           hb_.beat();
@@ -691,6 +692,14 @@ errcode_t socket::recv(message& msg, yield_t yield)
     }
 
     recv_cache_.write(size);
+  }
+
+  if (stat_ == off && !ec)
+  {
+    ec =
+      boost::asio::error::make_error_code(
+        boost::asio::error::operation_aborted
+        );
   }
 
   return ec;

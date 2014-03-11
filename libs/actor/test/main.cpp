@@ -13,6 +13,7 @@
 #include <boost/shared_ptr.hpp>
 #include <boost/make_shared.hpp>
 #include <boost/lexical_cast.hpp>
+#include <boost/foreach.hpp>
 #include <boost/bind.hpp>
 #include <boost/function.hpp>
 #include <boost/array.hpp>
@@ -32,6 +33,7 @@
 #include "test_match.hpp"
 #include "test_link.hpp"
 #include "test_socket.hpp"
+#include "test_socket_broken.hpp"
 #include "test_remote_link.hpp"
 #include "test_router.hpp"
 #include "test_router_link.hpp"
@@ -54,6 +56,7 @@ int main()
     gce::match_ut::run();
     gce::link_ut::run();
     gce::socket_ut::run();
+    gce::socket_broken_ut::run();
 //    gce::remote_ut::run();
     gce::remote_link_ut::run();
     gce::router_ut::run();
