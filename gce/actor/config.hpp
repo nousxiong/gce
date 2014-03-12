@@ -57,7 +57,7 @@ typedef match_t ctxid_t;
 static match_t const ctxid_nil = static_cast<boost::uint64_t>(-1);
 typedef std::pair<ctxid_t, bool> ctxid_pair_t;
 
-typedef boost::uint32_t timestamp_t;
+typedef boost::uint64_t timestamp_t;
 
 enum link_type
 {

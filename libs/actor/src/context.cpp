@@ -23,7 +23,7 @@ namespace gce
 ///------------------------------------------------------------------------------
 context::context(attributes attrs)
   : attrs_(attrs)
-  , timestamp_((timestamp_t)std::time(NULL))
+  , timestamp_((timestamp_t)boost::chrono::system_clock::now().time_since_epoch().count())
   , curr_cache_pool_(size_nil)
   , cache_pool_size_(attrs_.thread_num_ * attrs_.per_thread_cache_)
   , curr_mixin_(0)
