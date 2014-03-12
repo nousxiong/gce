@@ -55,6 +55,7 @@ cache_pool::cache_pool(
   , acceptor_cache_list_(cache_num_)
   , pack_cache_list_(cache_num_)
   , curr_router_list_(router_list_.end())
+  , curr_socket_list_(conn_list_.end())
   , stopped_(false)
   , ctxid_(attrs.id_)
 {
@@ -255,44 +256,80 @@ void cache_pool::register_socket(ctxid_pair_t ctxid_pr, aid_t skt)
     {
       pr.first->second.curr_skt_ = skt_list.begin();
     }
+
+    if (conn_list_.size() == 1)
+    {
+      curr_socket_list_ = conn_list_.begin();
+    }
   }
 }
 ///------------------------------------------------------------------------------
-aid_t cache_pool::select_socket(ctxid_t ctxid)
+aid_t cache_pool::select_socket(ctxid_t ctxid, ctxid_t* target)
 {
-  aid_t skt = select_straight_socket(ctxid);
+  aid_t skt = select_straight_socket(ctxid, target);
   if (!skt)
   {
-    skt = select_router();
+    skt = select_router(target);
   }
   return skt;
 }
 ///------------------------------------------------------------------------------
-aid_t cache_pool::select_straight_socket(ctxid_t ctxid)
+aid_t cache_pool::select_straight_socket(ctxid_t ctxid, ctxid_t* target)
 {
   aid_t skt;
-  conn_list_t::iterator itr(conn_list_.find(ctxid));
-  if (itr != conn_list_.end())
+  skt_list_t* skt_list = 0;
+  skt_list_t::iterator* curr_skt = 0;
+
+  if (ctxid != ctxid_nil)
   {
-    skt_list_t& skt_list = itr->second.skt_list_;
-    skt_list_t::iterator& curr_skt = itr->second.curr_skt_;
-    if (!skt_list.empty())
+    conn_list_t::iterator itr(conn_list_.find(ctxid));
+    if (itr != conn_list_.end())
     {
-      if (curr_skt != skt_list.end())
+      skt_list = &itr->second.skt_list_;
+      curr_skt = &itr->second.curr_skt_;
+    }
+  }
+  else
+  {
+    if (!conn_list_.empty())
+    {
+      if (curr_socket_list_ != conn_list_.end())
       {
-        skt = *curr_skt;
+        skt_list = &curr_socket_list_->second.skt_list_;
+        curr_skt = &curr_socket_list_->second.curr_skt_;
+        if (target)
+        {
+          *target = curr_socket_list_->first;
+        }
       }
-      ++curr_skt;
-      if (curr_skt == skt_list.end())
+
+      ++curr_socket_list_;
+      if (curr_socket_list_ == conn_list_.end())
       {
-        curr_skt = skt_list.begin();
+        curr_socket_list_ = conn_list_.begin();
       }
     }
   }
+
+  if (skt_list && !skt_list->empty())
+  {
+    BOOST_ASSERT(curr_skt);
+    skt_list_t::iterator& itr = *curr_skt;
+    if (itr != skt_list->end())
+    {
+      skt = *itr;
+    }
+    ++itr;
+    if (itr == skt_list->end())
+    {
+      itr = skt_list->begin();
+    }
+  }
+
   return skt;
 }
 ///------------------------------------------------------------------------------
-aid_t cache_pool::select_router()
+aid_t cache_pool::select_router(ctxid_t* target)
 {
   aid_t skt;
   if (!router_list_.empty())
@@ -301,6 +338,11 @@ aid_t cache_pool::select_router()
     {
       skt_list_t& skt_list = curr_router_list_->second.skt_list_;
       skt_list_t::iterator& curr_skt = curr_router_list_->second.curr_skt_;
+      if (target)
+      {
+        *target = curr_router_list_->first;
+      }
+
       if (!skt_list.empty())
       {
         if (curr_skt != skt_list.end())

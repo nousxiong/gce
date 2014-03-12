@@ -61,6 +61,8 @@ public:
     link(l);
   }
 
+  sid_t spawn(match_t func, match_t ctxid, std::size_t stack_size);
+
 protected:
   friend class mixin;
   friend class slice;

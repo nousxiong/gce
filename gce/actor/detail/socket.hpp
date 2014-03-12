@@ -65,6 +65,7 @@ public:
 
 private:
   ctxid_pair_t handle_net_msg(message&, ctxid_pair_t);
+  void send_spawn_ret(spawn_t*, pack*, spawn_error, aid_t aid, bool is_err_ret);
   void send(message const&);
   void send_msg(message const&);
   void send_msg_hb();

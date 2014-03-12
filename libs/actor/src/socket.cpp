@@ -9,6 +9,7 @@
 
 #include <gce/actor/detail/socket.hpp>
 #include <gce/actor/detail/cache_pool.hpp>
+#include <gce/actor/spawn.hpp>
 #include <gce/actor/mixin.hpp>
 #include <gce/actor/context.hpp>
 #include <gce/actor/impl/tcp/socket.hpp>
@@ -134,6 +135,8 @@ ctxid_pair_t socket::handle_net_msg(message& msg, ctxid_pair_t curr_pr)
   }
 
   pack* pk = base_type::alloc_pack(user_);
+  scope scp(boost::bind(&basic_actor::dealloc_pack, user_, pk));
+
   ctxid_pair_t ctxid_pr;
   bool has_tag =
     msg.pop_tag(
@@ -163,6 +166,7 @@ ctxid_pair_t socket::handle_net_msg(message& msg, ctxid_pair_t curr_pr)
         {
           add_router_link(pk->recver_, link->get_aid(), skt);
         }
+        scp.reset();
         base_type::send(pk->skt_, pk, user_);
       }
     }
@@ -173,11 +177,13 @@ ctxid_pair_t socket::handle_net_msg(message& msg, ctxid_pair_t curr_pr)
       {
         add_straight_link(pk->recver_, link->get_aid());
       }
+      scp.reset();
       base_type::send(pk->recver_, pk, user_);
     }
   }
   else if (exit_t* ex = boost::get<exit_t>(&pk->tag_))
   {
+    scp.reset();
     if (is_router_)
     {
       sktaid_t skt = remove_router_link(pk->recver_, ex->get_aid());
@@ -189,6 +195,70 @@ ctxid_pair_t socket::handle_net_msg(message& msg, ctxid_pair_t curr_pr)
     else
     {
       remove_straight_link(pk->recver_, ex->get_aid());
+      base_type::send(pk->recver_, pk, user_);
+    }
+  }
+  else if (spawn_t* spw = boost::get<spawn_t>(&pk->tag_))
+  {
+    if (is_router_)
+    {
+      sktaid_t skt = user_->select_straight_socket(spw->get_ctxid());
+      if (!skt)
+      {
+        send_spawn_ret(spw, pk, spawn_no_socket, aid_t(), true);
+      }
+      else
+      {
+        pk->skt_ = skt;
+        scp.reset();
+        base_type::send(pk->skt_, pk, user_);
+      }
+    }
+    else
+    {
+      /// spawn actor
+      std::map<match_t, actor_func_t>::iterator itr(
+        remote_list_.find(spw->get_func())
+        );
+      if (itr == remote_list_.end())
+      {
+        send_spawn_ret(spw, pk, spawn_func_not_found, aid_t(), true);
+      }
+      else
+      {
+        context& ctx = user_->get_context();
+        cache_pool* user = ctx.select_cache_pool();
+        aid_t aid =
+          make_actor(
+            *this, user, user_,
+            boost::bind<void>(itr->second, _1),
+            no_link, spw->get_stack_size()
+            );
+        send_spawn_ret(spw, pk, spawn_ok, aid, false);
+      }
+    }
+  }
+  else if (spawn_ret_t* spr = boost::get<spawn_ret_t>(&pk->tag_))
+  {
+    if (is_router_)
+    {
+      sktaid_t skt = user_->select_straight_socket(pk->recver_.ctxid_);
+      if (skt)
+      {
+        pk->skt_ = skt;
+        scp.reset();
+        base_type::send(pk->skt_, pk, user_);
+      }
+    }
+    else
+    {
+      /// fwd to spawner
+      message m(msg_spawn_ret);
+      m << (boost::uint16_t)spr->get_error() << spr->get_id();
+      pk->tag_ = spr->get_aid();
+      pk->msg_ = m;
+
+      scp.reset();
       base_type::send(pk->recver_, pk, user_);
     }
   }
@@ -210,16 +280,33 @@ ctxid_pair_t socket::handle_net_msg(message& msg, ctxid_pair_t curr_pr)
       if (skt)
       {
         pk->skt_ = skt;
+        scp.reset();
         base_type::send(pk->skt_, pk, user_);
       }
     }
     else
     {
+      scp.reset();
       base_type::send(pk->recver_, pk, user_);
     }
   }
 
   return curr_pr;
+}
+///----------------------------------------------------------------------------
+void socket::send_spawn_ret(
+  spawn_t* spw, pack* pk, spawn_error err,
+  aid_t aid, bool is_err_ret
+  )
+{
+  pk->recver_ = spw->get_aid();
+  pk->skt_ = spw->get_aid();
+  pk->tag_ = spawn_ret_t(err, spw->get_id(), aid);
+  ctxid_pair_t ctxid_pr = std::make_pair(get_aid().ctxid_, is_router_);
+  pk->is_err_ret_ = is_err_ret;
+  pk->msg_.set_type(msg_spawn_ret);
+  pk->msg_.append_tag(pk->tag_, pk->recver_, pk->skt_, pk->is_err_ret_, ctxid_pr);
+  send(pk->msg_);
 }
 ///----------------------------------------------------------------------------
 void socket::send(message const& m)

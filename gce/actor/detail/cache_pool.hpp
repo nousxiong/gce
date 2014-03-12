@@ -68,9 +68,9 @@ public:
   void free_cache();
 
   void register_socket(ctxid_pair_t, aid_t skt);
-  aid_t select_socket(ctxid_t ctxid);
-  aid_t select_straight_socket(ctxid_t ctxid);
-  aid_t select_router();
+  aid_t select_socket(ctxid_t ctxid = ctxid_nil, ctxid_t* target = 0);
+  aid_t select_straight_socket(ctxid_t ctxid = ctxid_nil, ctxid_t* target = 0);
+  aid_t select_router(ctxid_t* target = 0);
   void deregister_socket(ctxid_pair_t, aid_t skt);
 
   void add_socket(socket*);
@@ -193,6 +193,7 @@ private:
   conn_list_t conn_list_;
   conn_list_t router_list_;
   conn_list_t::iterator curr_router_list_;
+  conn_list_t::iterator curr_socket_list_;
   socket_list dummy_;
 
   std::set<socket*> socket_list_;

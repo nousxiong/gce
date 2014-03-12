@@ -34,17 +34,17 @@ public:
   {
     try
     {
-      std::size_t client_num = 5;
+      std::size_t client_num = 10;
       std::size_t echo_num = 10;
 
       attributes attrs;
-      attrs.id_ = atom("my_ctx1");
-      context ctx1(attrs);
-      attrs.id_ = atom("my_ctx2");
-      context ctx2(attrs);
+      attrs.id_ = atom("server");
+      context ctx_svr(attrs);
+      attrs.id_ = atom("client");
+      context ctx_cln(attrs);
 
-      mixin& base1 = spawn(ctx1);
-      mixin& base2 = spawn(ctx2);
+      mixin_t base_svr = spawn(ctx_svr);
+      mixin_t base_cln = spawn(ctx_cln);
 
       remote_func_list_t func_list;
       func_list.push_back(
@@ -53,12 +53,15 @@ public:
           boost::bind(&remote_ut::echo_client, _1)
           )
         );
-      bind(base2, "tcp://127.0.0.1:14923", func_list);
-      connect(base1, atom("my_ctx2"), "tcp://127.0.0.1:14923");
+      gce::bind(base_cln, "tcp://127.0.0.1:14923", false, func_list);
+      wait(base_svr, boost::chrono::milliseconds(100));
+      net_option opt;
+      opt.reconn_period_ = seconds_t(1);
+      connect(base_svr, atom("client"), "tcp://127.0.0.1:14923", false, opt);
 
       aid_t svr =
         spawn(
-          base1,
+          base_svr,
           boost::bind(
             &remote_ut::echo_server, _1, client_num
             ),
@@ -69,13 +72,14 @@ public:
       {
         aid_t cln =
           spawn(
-            base1, atom("my_ctx2"),
-            atom("echo_client")
+            base_svr,
+            atom("echo_client"),
+            atom("client")
             );
-        send(base1, cln, atom("init"), svr, echo_num);
+        send(base_svr, cln, atom("init"), svr, echo_num);
       }
 
-      recv(base1);
+      recv(base_svr);
     }
     catch (std::exception& ex)
     {

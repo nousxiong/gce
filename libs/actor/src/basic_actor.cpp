@@ -141,6 +141,30 @@ void basic_actor::on_free()
   dealloc_pack(owner_, pack_que_.pop_all_reverse());
 }
 ///----------------------------------------------------------------------------
+sid_t basic_actor::spawn(match_t func, match_t ctxid, std::size_t stack_size)
+{
+  ctxid_t target;
+  aid_t skt = user_->select_socket(ctxid, &target);
+  if (!skt)
+  {
+    throw std::runtime_error("no socket available");
+  }
+
+  if (ctxid == ctxid_nil)
+  {
+    ctxid = target;
+  }
+
+  detail::pack* pk = alloc_pack(user_);
+  sid_t sid = new_request();
+  pk->tag_ = detail::spawn_t(func, ctxid, stack_size, sid, get_aid());
+  pk->skt_ = skt;
+  pk->msg_ = message(detail::msg_spawn);
+
+  send(skt, pk, user_);
+  return sid;
+}
+///----------------------------------------------------------------------------
 void basic_actor::update_aid()
 {
   BOOST_ASSERT(user_);

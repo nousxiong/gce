@@ -15,6 +15,7 @@
 #include <gce/actor/detail/buffer_ref.hpp>
 #include <gce/actor/detail/request.hpp>
 #include <gce/actor/response.hpp>
+#include <gce/actor/detail/spawn.hpp>
 #include <gce/actor/detail/link.hpp>
 #include <gce/actor/detail/exit.hpp>
 #include <gce/amsg/amsg.hpp>
@@ -39,10 +40,12 @@ static match_t const tag_request_t = atom("gce_request_t");
 static match_t const tag_link_t = atom("gce_link_t");
 static match_t const tag_exit_t = atom("gce_exit_t");
 static match_t const tag_response_t = atom("gce_response_t");
+static match_t const tag_spawn_t = atom("gce_spw_t");
+static match_t const tag_spawn_ret_t = atom("gce_spw_ret_t");
 
 typedef boost::variant<
-  aid_t, request_t, response_t, link_t,
-  exit_t, fwd_link_t, fwd_exit_t
+  aid_t, request_t, response_t, link_t, exit_t,
+  fwd_link_t, fwd_exit_t, spawn_t, spawn_ret_t
   > tag_t;
 }
 
@@ -392,6 +395,18 @@ private:
       *this << detail::tag_response_t << res->get_id() <<
         res->get_aid() << recver << skt << is_err_ret << ctxid_pr;
     }
+    else if (detail::spawn_t* spw = boost::get<detail::spawn_t>(&tag))
+    {
+      *this << detail::tag_spawn_t << spw->get_func() <<
+        spw->get_ctxid() << spw->get_stack_size() <<
+        spw->get_id() << spw->get_aid() <<
+        recver << skt << is_err_ret << ctxid_pr;
+    }
+    else if (detail::spawn_ret_t* spr = boost::get<detail::spawn_ret_t>(&tag))
+    {
+      *this << detail::tag_spawn_ret_t << (boost::uint16_t)spr->get_error() <<
+        spr->get_id() << spr->get_aid() << recver << skt << is_err_ret << ctxid_pr;
+    }
   }
 
   bool pop_tag(
@@ -440,6 +455,26 @@ private:
         aid_t aid;
         *this >> id >> aid >> recver >> skt >> is_err_ret >> ctxid_pr;
         tag = response_t(id, aid);
+      }
+      else if (tag_type == detail::tag_spawn_t)
+      {
+        match_t func;
+        match_t ctxid;
+        std::size_t stack_size;
+        sid_t sid;
+        aid_t aid;
+        *this >> func >> ctxid >> stack_size >> sid >> aid >>
+          recver >> skt >> is_err_ret >> ctxid_pr;
+        tag = detail::spawn_t(func, ctxid, stack_size, sid, aid);
+      }
+      else if (tag_type == detail::tag_spawn_ret_t)
+      {
+        boost::uint16_t err;
+        sid_t sid;
+        aid_t aid;
+        *this >> err >> sid >> aid >> recver >>
+          skt >> is_err_ret >> ctxid_pr;
+        tag = detail::spawn_ret_t((detail::spawn_error)err, sid, aid);
       }
 
       buf_.clear();

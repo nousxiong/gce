@@ -89,6 +89,8 @@ static match_t const msg_relay = atom("gce_relay");
 static match_t const msg_request = atom("gce_request");
 static match_t const msg_reply = atom("gce_reply");
 static match_t const msg_stop = atom("gce_stop");
+static match_t const msg_spawn = atom("gce_spawn");
+static match_t const msg_spawn_ret = atom("gce_spawn_ret");
 } /// namespce detail
 } /// namespace gce
 

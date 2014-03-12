@@ -38,7 +38,7 @@
 #include "test_router.hpp"
 #include "test_router_link.hpp"
 #include "test_router_broken.hpp"
-//#include "test_remote.hpp"
+#include "test_remote.hpp"
 #include "test_message.hpp"
 #include "test_send_recv.hpp"
 #include "test_relay.hpp"
@@ -58,7 +58,7 @@ int main()
     gce::link_ut::run();
     gce::socket_ut::run();
     gce::socket_broken_ut::run();
-//    gce::remote_ut::run();
+    gce::remote_ut::run();
     gce::remote_link_ut::run();
     gce::router_ut::run();
     gce::router_link_ut::run();
