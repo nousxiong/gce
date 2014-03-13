@@ -74,7 +74,7 @@ protected:
   static void dealloc_pack(detail::cache_pool*, detail::pack*);
   void add_link(aid_t, sktaid_t skt = aid_t());
   void link(detail::link_t, detail::cache_pool* user = 0);
-  void send_exit(exit_code_t, std::string const&);
+  void send_exit(aid_t self_aid, exit_code_t, std::string const&);
   void remove_link(aid_t);
   void send_already_exited(aid_t recver, aid_t sender);
   void send_already_exited(aid_t recver, response_t res);

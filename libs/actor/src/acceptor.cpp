@@ -217,8 +217,9 @@ void acceptor::free_self(exit_code_t exc, std::string const& exit_msg, yield_t y
   acpr_.reset();
 
   user_->remove_acceptor(this);
-  base_type::send_exit(exc, exit_msg);
+  aid_t self_aid = get_aid();
   base_type::update_aid();
+  base_type::send_exit(self_aid, exc, exit_msg);
   user_->free_acceptor(owner_, this);
 }
 ///----------------------------------------------------------------------------

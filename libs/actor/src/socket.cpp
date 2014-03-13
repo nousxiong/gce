@@ -378,7 +378,7 @@ void socket::run_conn(ctxid_pair_t target, std::string const& ep, yield_t yield)
         errcode_t ec = recv(msg, yield);
         if (ec)
         {
-          on_neterr(ec);
+          on_neterr(get_aid(), ec);
           --curr_reconn_;
           if (curr_reconn_ == 0)
           {
@@ -447,7 +447,7 @@ void socket::run(socket_ptr skt, yield_t yield)
         errcode_t ec = recv(msg, yield);
         if (ec)
         {
-          on_neterr(ec);
+          on_neterr(get_aid(), ec);
           close();
           exc = exit_neterr;
           exit_msg = ec.message();
@@ -617,7 +617,7 @@ sktaid_t socket::remove_router_link(aid_t src, aid_t des)
   return skt;
 }
 ///----------------------------------------------------------------------------
-void socket::on_neterr(errcode_t ec)
+void socket::on_neterr(aid_t self_aid, errcode_t ec)
 {
   conn_ = false;
   conn_cache_.clear();
@@ -650,7 +650,7 @@ void socket::on_neterr(errcode_t ec)
     BOOST_FOREACH(router_link_list_t::mapped_type::value_type& des, pr.second)
     {
       detail::pack* pk = alloc_pack(user_);
-      pk->tag_ = fwd_exit_t(exit_neterr, des.first, get_aid());
+      pk->tag_ = fwd_exit_t(exit_neterr, des.first, self_aid);
       pk->recver_ = pr.first;
       pk->skt_ = des.second;
       pk->msg_ = m;
@@ -721,7 +721,7 @@ void socket::connect(yield_t yield)
       if (retry > opt_.reconn_try_)
       {
         retry = 0;
-        on_neterr();
+        on_neterr(get_aid());
       }
 
       if (i > 0)
@@ -847,9 +847,10 @@ void socket::free_self(
   }
 
   user_->remove_socket(this);
-  on_neterr();
-  base_type::send_exit(exc, exit_msg);
+  aid_t self_aid = get_aid();
   base_type::update_aid();
+  on_neterr(self_aid);
+  base_type::send_exit(self_aid, exc, exit_msg);
   user_->free_socket(owner_, this);
 }
 ///----------------------------------------------------------------------------

@@ -80,7 +80,7 @@ private:
   void add_router_link(aid_t src, aid_t des, sktaid_t skt);
   sktaid_t remove_router_link(aid_t src, aid_t des);
 
-  void on_neterr(errcode_t ec = errcode_t());
+  void on_neterr(aid_t self_aid, errcode_t ec = errcode_t());
   ctxid_pair_t sync_ctxid(ctxid_pair_t new_pr, ctxid_pair_t curr_pr);
 
 private:

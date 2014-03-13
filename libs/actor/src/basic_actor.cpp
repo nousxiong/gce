@@ -240,7 +240,9 @@ void basic_actor::link(detail::link_t l, detail::cache_pool* user)
 }
 ///----------------------------------------------------------------------------
 void basic_actor::send_exit(
-  exit_code_t ec, std::string const& exit_msg
+  aid_t self_aid,
+  exit_code_t ec,
+  std::string const& exit_msg
   )
 {
   message m(exit);
@@ -252,7 +254,7 @@ void basic_actor::send_exit(
     BOOST_ASSERT(target);
 
     detail::pack* pk = alloc_pack(user_);
-    pk->tag_ = detail::exit_t(ec, get_aid());
+    pk->tag_ = detail::exit_t(ec, self_aid);
     pk->recver_ = pr.first;
     pk->skt_ = target;
     pk->msg_ = m;

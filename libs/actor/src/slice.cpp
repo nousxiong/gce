@@ -100,8 +100,9 @@ void slice::on_recv(detail::pack* pk)
 ///----------------------------------------------------------------------------
 void slice::free()
 {
-  base_type::send_exit(exit_normal, "exit normal");
+  aid_t self_aid = get_aid();
   base_type::update_aid();
+  base_type::send_exit(self_aid, exit_normal, "exit normal");
   sire_->free_slice(this);
 }
 ///----------------------------------------------------------------------------

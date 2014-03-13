@@ -257,8 +257,9 @@ actor::actor_code actor::yield()
 ///----------------------------------------------------------------------------
 void actor::free_self()
 {
-  base_type::send_exit(ec_, exit_msg_);
+  aid_t self_aid = get_aid();
   base_type::update_aid();
+  base_type::send_exit(self_aid, ec_, exit_msg_);
   user_->free_actor(owner_, this);
 }
 ///----------------------------------------------------------------------------
