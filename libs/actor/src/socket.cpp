@@ -60,8 +60,15 @@ void socket::init(cache_pool* user, cache_pool* owner, net_option opt)
   base_type::update_aid();
 }
 ///----------------------------------------------------------------------------
-void socket::connect(ctxid_t target, std::string const& ep, bool target_is_router)
+void socket::connect(
+  remote_func_list_t const& remote_func_list, ctxid_t target,
+  std::string const& ep, bool target_is_router
+  )
 {
+  BOOST_FOREACH(remote_func_t const& f, remote_func_list)
+  {
+    remote_list_.insert(std::make_pair(f.first, f.second));
+  }
   ctxid_pair_t ctxid_pr = std::make_pair(target, target_is_router);
   owner_->register_socket(ctxid_pr, get_aid());
 
@@ -255,7 +262,13 @@ ctxid_pair_t socket::handle_net_msg(message& msg, ctxid_pair_t curr_pr)
       /// fwd to spawner
       message m(msg_spawn_ret);
       m << (boost::uint16_t)spr->get_error() << spr->get_id();
-      pk->tag_ = spr->get_aid();
+      aid_t aid = spr->get_aid();
+      if (!aid)
+      {
+        /// we should make sure no timeout miss.
+        aid = get_aid();
+      }
+      pk->tag_ = aid;
       pk->msg_ = m;
 
       scp.reset();

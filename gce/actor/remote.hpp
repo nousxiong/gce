@@ -31,6 +31,7 @@ inline void connect(
   ctxid_t target,
   std::string const& ep,
   bool target_is_router,
+  remote_func_list_t const& remote_func_list,
   net_option opt
   )
 {
@@ -54,7 +55,7 @@ inline void connect(
 
   socket* s = owner->get_socket();
   s->init(user, owner, opt);
-  s->connect(target, ep, target_is_router);
+  s->connect(remote_func_list, target, ep, target_is_router);
 }
 
 inline void bind(
@@ -91,7 +92,8 @@ inline void connect(
   ctxid_t target, /// connect target
   std::string const& ep, /// endpoint
   bool target_is_router = false, /// if target is router, set it true
-  net_option opt = net_option()
+  net_option opt = net_option(),
+  remote_func_list_t const& remote_func_list = remote_func_list_t()
   )
 {
   detail::cache_pool* owner = sire.get_cache_pool();
@@ -104,7 +106,7 @@ inline void connect(
   ///   So, if using mixin(means in main or other user thread(s)),
   /// We spawn actor(s) with only one cache_pool(means only one asio::strand).
   detail::cache_pool* user = ctx.select_cache_pool(0);
-  detail::connect(user, owner, target, ep, target_is_router, opt);
+  detail::connect(user, owner, target, ep, target_is_router, remote_func_list, opt);
 }
 
 inline void connect(
@@ -112,12 +114,13 @@ inline void connect(
   ctxid_t target, /// connect target
   std::string const& ep, /// endpoint
   bool target_is_router = false, /// if target is router, set it true
-  net_option opt = net_option()
+  net_option opt = net_option(),
+  remote_func_list_t const& remote_func_list = remote_func_list_t()
   )
 {
   detail::cache_pool* user = 0;
   detail::cache_pool* owner = sire.get_cache_pool();
-  detail::connect(user, owner, target, ep, target_is_router, opt);
+  detail::connect(user, owner, target, ep, target_is_router, remote_func_list, opt);
 }
 
 /// bind

@@ -52,7 +52,10 @@ public:
 
 public:
   void init(cache_pool* user, cache_pool* owner, net_option);
-  void connect(ctxid_t target, std::string const&, bool target_is_router);
+  void connect(
+    remote_func_list_t const&, ctxid_t target,
+    std::string const&, bool target_is_router
+    );
 
 public:
   void start(std::map<match_t, actor_func_t> const&, socket_ptr, bool is_router);

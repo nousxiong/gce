@@ -24,9 +24,6 @@
 
 namespace gce
 {
-typedef std::pair<match_t, actor_func_t> remote_func_t;
-typedef std::vector<remote_func_t> remote_func_list_t;
-
 class mixin;
 class context;
 namespace detail

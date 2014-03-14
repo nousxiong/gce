@@ -190,6 +190,8 @@ private:
 
 typedef actor::self& self_t;
 typedef boost::function<void (self_t)> actor_func_t;
+typedef std::pair<match_t, actor_func_t> remote_func_t;
+typedef std::vector<remote_func_t> remote_func_list_t;
 }
 
 #endif /// GCE_ACTOR_ACTOR_HPP

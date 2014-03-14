@@ -123,7 +123,7 @@ inline aid_t spawn(
 {
   aid_t aid;
   sid_t sid = sire.spawn(func, ctxid, stack_size);
-  boost::uint16_t err;
+  boost::uint16_t err = 0;
   sid_t ret_sid = sid_nil;
 
   duration_t curr_tmo = tmo;
