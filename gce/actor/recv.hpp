@@ -62,6 +62,11 @@ inline aid_t recv(Recver& recver, message& msg, match& mach)
     msg >> exc >> errmsg;
     throw std::runtime_error(errmsg);
   }
+
+  if (!sender)
+  {
+    throw std::runtime_error("recv timeout");
+  }
   return sender;
 }
 
@@ -94,6 +99,11 @@ inline aid_t recv(Recver& recver, response_t res, message& msg, duration_t tmo)
     std::string errmsg;
     msg >> exc >> errmsg;
     throw std::runtime_error(errmsg);
+  }
+
+  if (!sender)
+  {
+    throw std::runtime_error("recv response timeout");
   }
   return sender;
 }

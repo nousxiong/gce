@@ -116,7 +116,7 @@ public:
     try
     {
       context ctx;
-      my_3d_engine engine(ctx, 100);
+      my_3d_engine engine(ctx, 10);
       engine.run();
     }
     catch (std::exception& ex)

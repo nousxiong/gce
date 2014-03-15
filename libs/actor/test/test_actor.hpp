@@ -49,9 +49,10 @@ private:
     for (std::size_t i=0; i<size; ++i)
     {
       aid_t aid;
+      message msg;
       do
       {
-        aid = recv(self, res_list[i], seconds_t(1));
+        aid = self.recv(res_list[i], msg, seconds_t(1));
       }
       while (!aid);
     }

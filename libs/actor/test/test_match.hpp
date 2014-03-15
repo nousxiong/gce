@@ -22,7 +22,6 @@ public:
   static void my_actor_child(self_t self)
   {
     aid_t aid = recv(self, 3);
-    wait(self, seconds_t(3));
     reply(self, aid);
   }
 
@@ -38,12 +37,7 @@ public:
 
     for (std::size_t i=0; i<size; ++i)
     {
-      aid_t aid;
-      do
-      {
-        aid = recv(self, res_list[i], seconds_t(1));
-      }
-      while (!aid);
+      recv(self, res_list[i]);
     }
     send(self, base_id, 1);
   }

@@ -139,11 +139,6 @@ inline aid_t spawn(
       break;
     }
 
-    if (!aid)
-    {
-      throw std::runtime_error("spawn timeout");
-    }
-
     if (tmo != infin)
     {
       duration_t pass_time = clock_t::now() - begin_tp;

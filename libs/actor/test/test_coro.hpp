@@ -22,7 +22,7 @@ public:
 private:
   static void my_actor(self_t self, aid_t base)
   {
-    std::size_t loop_num = 100;
+    std::size_t loop_num = 10;
     yield_t yield = self.get_yield();
     timer_t tmr(self.get_cache_pool()->get_context().get_io_service());
 

@@ -94,7 +94,7 @@ private:
   template <typename Op>
   static void run_test(Op* op, bool st)
   {
-    for (std::size_t i=0; i<100; ++i)
+    for (std::size_t i=0; i<10; ++i)
     {
       {
         my_data* md = op->get();
@@ -110,7 +110,7 @@ private:
         }
       }
 
-      for (std::size_t j=0; j<200; ++j)
+      for (std::size_t j=0; j<100; ++j)
       {
         std::vector<my_data*> my_data_list(1000, (my_data*)0);
         for (std::size_t i=0; i<my_data_list.size(); ++i)

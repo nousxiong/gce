@@ -46,6 +46,7 @@ private:
       attributes attrs;
       attrs.id_ = atom("router");
       attrs.mixin_num_ = 1 + root_num;
+      attrs.thread_num_ = 1;
       context ctx(attrs);
 
       mixin_t base = spawn(ctx);
@@ -90,6 +91,7 @@ private:
     {
       attributes attrs;
       attrs.id_ = id;
+      attrs.thread_num_ = 1;
       context ctx(attrs);
 
       mixin_t base = spawn(ctx);
@@ -103,7 +105,7 @@ private:
           )
         );
       connect(base, atom("router"), "tcp://127.0.0.1:14924", true, opt, func_list);
-      wait(base, boost::chrono::milliseconds(200));
+      wait(base, boost::chrono::milliseconds(100));
 
       aid_t last_id;
       aid_t first_id;
