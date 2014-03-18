@@ -14,7 +14,6 @@
 #include <gce/actor/detail/socket.hpp>
 #include <gce/actor/detail/acceptor.hpp>
 #include <gce/actor/actor.hpp>
-#include <gce/actor/slice.hpp>
 #include <gce/actor/mixin.hpp>
 #include <gce/actor/net_option.hpp>
 #include <gce/actor/detail/cache_pool.hpp>

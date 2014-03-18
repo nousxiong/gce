@@ -69,6 +69,9 @@ public:
   void free_slice(slice*);
   void free_cache();
 
+  void register_service(match_t name, aid_t svc, detail::cache_pool*);
+  void deregister_service(match_t name, aid_t svc, detail::cache_pool*);
+
   void register_socket(
     ctxid_pair_t ctxid_pr,
     aid_t skt, detail::cache_pool*

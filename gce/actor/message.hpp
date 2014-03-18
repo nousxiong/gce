@@ -14,6 +14,7 @@
 #include <gce/actor/detail/buffer.hpp>
 #include <gce/actor/detail/buffer_ref.hpp>
 #include <gce/actor/detail/request.hpp>
+#include <gce/actor/service_id.hpp>
 #include <gce/actor/response.hpp>
 #include <gce/actor/detail/spawn.hpp>
 #include <gce/actor/detail/link.hpp>
@@ -364,53 +365,55 @@ public:
   }
 
 private:
-  void append_tag(
-    detail::tag_t& tag, aid_t recver, aid_t skt,
+  void push_tag(
+    detail::tag_t& tag, aid_t recver, svcid_t svc, aid_t skt,
     bool is_err_ret, ctxid_pair_t ctxid_pr
     )
   {
     tag_offset_ = buf_.write_size();
     if (aid_t* aid = boost::get<aid_t>(&tag))
     {
-      *this << detail::tag_aid_t << *aid <<
-        recver << skt << is_err_ret << ctxid_pr;
+      *this << detail::tag_aid_t << *aid;
     }
     else if (detail::request_t* req = boost::get<detail::request_t>(&tag))
     {
-      *this << detail::tag_request_t << req->get_id() <<
-        req->get_aid() << recver << skt << is_err_ret << ctxid_pr;
+      *this << detail::tag_request_t << req->get_id() << req->get_aid();
     }
     else if (detail::link_t* link = boost::get<detail::link_t>(&tag))
     {
-      *this << detail::tag_link_t << (boost::uint16_t)link->get_type() <<
-        link->get_aid() << recver << skt << is_err_ret << ctxid_pr;
+      *this << detail::tag_link_t <<
+        (boost::uint16_t)link->get_type() << link->get_aid();
     }
     else if (detail::exit_t* ex = boost::get<detail::exit_t>(&tag))
     {
-      *this << detail::tag_exit_t << ex->get_code() <<
-        ex->get_aid() << recver << skt << is_err_ret << ctxid_pr;
+      *this << detail::tag_exit_t <<
+        ex->get_code() << ex->get_aid();
     }
     else if (response_t* res = boost::get<response_t>(&tag))
     {
-      *this << detail::tag_response_t << res->get_id() <<
-        res->get_aid() << recver << skt << is_err_ret << ctxid_pr;
+      *this << detail::tag_response_t <<
+        res->get_id() << res->get_aid();
     }
     else if (detail::spawn_t* spw = boost::get<detail::spawn_t>(&tag))
     {
       *this << detail::tag_spawn_t << spw->get_func() <<
         spw->get_ctxid() << spw->get_stack_size() <<
-        spw->get_id() << spw->get_aid() <<
-        recver << skt << is_err_ret << ctxid_pr;
+        spw->get_id() << spw->get_aid();
     }
     else if (detail::spawn_ret_t* spr = boost::get<detail::spawn_ret_t>(&tag))
     {
       *this << detail::tag_spawn_ret_t << (boost::uint16_t)spr->get_error() <<
-        spr->get_id() << spr->get_aid() << recver << skt << is_err_ret << ctxid_pr;
+        spr->get_id() << spr->get_aid();
     }
+    else
+    {
+      BOOST_ASSERT(false);
+    }
+    *this << recver << svc << skt << is_err_ret << ctxid_pr;
   }
 
   bool pop_tag(
-    detail::tag_t& tag, aid_t& recver, aid_t& skt,
+    detail::tag_t& tag, aid_t& recver, svcid_t& svc, aid_t& skt,
     bool& is_err_ret, ctxid_pair_t& ctxid_pr
     )
   {
@@ -425,35 +428,35 @@ private:
       if (tag_type == detail::tag_aid_t)
       {
         aid_t aid;
-        *this >> aid >> recver >> skt >> is_err_ret >> ctxid_pr;
+        *this >> aid;
         tag = aid;
       }
       else if (tag_type == detail::tag_request_t)
       {
         sid_t id;
         aid_t aid;
-        *this >> id >> aid >> recver >> skt >> is_err_ret >> ctxid_pr;
+        *this >> id >> aid;
         tag = detail::request_t(id, aid);
       }
       else if (tag_type == detail::tag_link_t)
       {
         boost::uint16_t type;
         aid_t aid;
-        *this >> type >> aid >> recver >> skt >> is_err_ret >> ctxid_pr;
+        *this >> type >> aid;
         tag = detail::link_t((link_type)type, aid);
       }
       else if (tag_type == detail::tag_exit_t)
       {
         exit_code_t ec;
         aid_t aid;
-        *this >> ec >> aid >> recver >> skt >> is_err_ret >> ctxid_pr;
+        *this >> ec >> aid;
         tag = detail::exit_t(ec, aid);
       }
       else if (tag_type == detail::tag_response_t)
       {
         sid_t id;
         aid_t aid;
-        *this >> id >> aid >> recver >> skt >> is_err_ret >> ctxid_pr;
+        *this >> id >> aid;
         tag = response_t(id, aid);
       }
       else if (tag_type == detail::tag_spawn_t)
@@ -463,8 +466,7 @@ private:
         std::size_t stack_size;
         sid_t sid;
         aid_t aid;
-        *this >> func >> ctxid >> stack_size >> sid >> aid >>
-          recver >> skt >> is_err_ret >> ctxid_pr;
+        *this >> func >> ctxid >> stack_size >> sid >> aid;
         tag = detail::spawn_t(func, ctxid, stack_size, sid, aid);
       }
       else if (tag_type == detail::tag_spawn_ret_t)
@@ -472,10 +474,14 @@ private:
         boost::uint16_t err;
         sid_t sid;
         aid_t aid;
-        *this >> err >> sid >> aid >> recver >>
-          skt >> is_err_ret >> ctxid_pr;
+        *this >> err >> sid >> aid;
         tag = detail::spawn_ret_t((detail::spawn_error)err, sid, aid);
       }
+      else
+      {
+        BOOST_ASSERT(false);
+      }
+      *this >> recver >> svc >> skt >> is_err_ret >> ctxid_pr;
 
       buf_.clear();
       buf_.write(tag_offset_);

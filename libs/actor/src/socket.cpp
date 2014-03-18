@@ -147,8 +147,8 @@ ctxid_pair_t socket::handle_net_msg(message& msg, ctxid_pair_t curr_pr)
   ctxid_pair_t ctxid_pr;
   bool has_tag =
     msg.pop_tag(
-      pk->tag_, pk->recver_, pk->skt_,
-      pk->is_err_ret_, ctxid_pr
+      pk->tag_, pk->recver_, pk->svc_,
+      pk->skt_, pk->is_err_ret_, ctxid_pr
       );
   BOOST_ASSERT(has_tag);
   pk->msg_ = msg;
@@ -277,12 +277,19 @@ ctxid_pair_t socket::handle_net_msg(message& msg, ctxid_pair_t curr_pr)
   }
   else
   {
+    bool is_svc = pk->svc_ && !pk->recver_;
+    if (is_svc)
+    {
+      BOOST_ASSERT(pk->svc_ && !pk->recver_);
+    }
+
     if (is_router_)
     {
-      sktaid_t skt = user_->select_straight_socket(pk->recver_.ctxid_);
+      ctxid_t ctxid = is_svc ? pk->svc_.ctxid_ : pk->recver_.ctxid_;
+      sktaid_t skt = user_->select_straight_socket(ctxid);
       if (detail::request_t* req = boost::get<detail::request_t>(&pk->tag_))
       {
-        if (!skt)
+        if (!skt && !is_svc)
         {
           /// reply actor exit msg
           response_t res(req->get_id(), pk->recver_);
@@ -299,8 +306,20 @@ ctxid_pair_t socket::handle_net_msg(message& msg, ctxid_pair_t curr_pr)
     }
     else
     {
-      scp.reset();
-      base_type::send(pk->recver_, pk, user_);
+      if (is_svc)
+      {
+        aid_t svc = user_->find_service(pk->svc_.name_);
+        if (svc)
+        {
+          pk->recver_ = svc;
+        }
+      }
+
+      if (pk->recver_)
+      {
+        scp.reset();
+        base_type::send(pk->recver_, pk, user_);
+      }
     }
   }
 
@@ -318,7 +337,10 @@ void socket::send_spawn_ret(
   ctxid_pair_t ctxid_pr = std::make_pair(get_aid().ctxid_, is_router_);
   pk->is_err_ret_ = is_err_ret;
   pk->msg_.set_type(msg_spawn_ret);
-  pk->msg_.append_tag(pk->tag_, pk->recver_, pk->skt_, pk->is_err_ret_, ctxid_pr);
+  pk->msg_.push_tag(
+    pk->tag_, pk->recver_, pk->svc_,
+    pk->skt_, pk->is_err_ret_, ctxid_pr
+    );
   send(pk->msg_);
 }
 ///----------------------------------------------------------------------------
@@ -567,7 +589,10 @@ void socket::handle_recv(pack* pk)
       remove_router_link(ex->get_aid(), pk->recver_);
       pk->tag_ = exit_t(ex->get_code(), ex->get_aid());
     }
-    pk->msg_.append_tag(pk->tag_, pk->recver_, pk->skt_, pk->is_err_ret_, ctxid_pr);
+    pk->msg_.push_tag(
+      pk->tag_, pk->recver_, pk->svc_,
+      pk->skt_, pk->is_err_ret_, ctxid_pr
+      );
     send(pk->msg_);
   }
   else if (!pk->is_err_ret_)

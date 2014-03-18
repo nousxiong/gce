@@ -45,6 +45,22 @@ void basic_actor::send(aid_t recver, message const& m)
     send(target, pk, user_);
   }
 }
+
+///----------------------------------------------------------------------------
+void basic_actor::send(svcid_t recver, message const& m)
+{
+  aid_t target = filter_svcid(recver, user_);
+  if (target)
+  {
+    detail::pack* pk = alloc_pack(user_);
+    pk->tag_ = get_aid();
+    pk->svc_ = recver;
+    pk->skt_ = target;
+    pk->msg_ = m;
+
+    send(target, pk, user_);
+  }
+}
 ///----------------------------------------------------------------------------
 void basic_actor::relay(aid_t recver, message& m)
 {
@@ -75,6 +91,29 @@ void basic_actor::relay(aid_t recver, message& m)
   }
 }
 ///----------------------------------------------------------------------------
+void basic_actor::relay(svcid_t recver, message& m)
+{
+  aid_t target = filter_svcid(recver, user_);
+  if (target)
+  {
+    detail::pack* pk = alloc_pack(user_);
+    if (m.req_.valid())
+    {
+      pk->tag_ = m.req_;
+      m.req_ = detail::request_t();
+    }
+    else
+    {
+      pk->tag_ = get_aid();
+    }
+    pk->svc_ = recver;
+    pk->skt_ = target;
+    pk->msg_ = m;
+
+    send(target, pk, user_);
+  }
+}
+///----------------------------------------------------------------------------
 response_t basic_actor::request(aid_t recver, message const& m)
 {
   aid_t target = filter_aid(recver, user_);
@@ -96,6 +135,25 @@ response_t basic_actor::request(aid_t recver, message const& m)
     /// reply actor exit msg
     response_t res(req.get_id(), recver);
     send_already_exited(req.get_aid(), res);
+  }
+  return res;
+}
+///----------------------------------------------------------------------------
+response_t basic_actor::request(svcid_t recver, message const& m)
+{
+  aid_t target = filter_svcid(recver, user_);
+  aid_t sender = get_aid();
+  response_t res(new_request(), sender);
+  detail::request_t req(res.get_id(), sender);
+  if (target)
+  {
+    detail::pack* pk = alloc_pack(user_);
+    pk->tag_ = req;
+    pk->svc_ = recver;
+    pk->skt_ = target;
+    pk->msg_ = m;
+
+    send(target, pk, user_);
   }
   return res;
 }
@@ -337,6 +395,22 @@ aid_t basic_actor::filter_aid(aid_t const& src, detail::cache_pool* user)
     {
       target = user->select_socket(src.ctxid_);
     }
+  }
+  return target;
+}
+///----------------------------------------------------------------------------
+aid_t basic_actor::filter_svcid(svcid_t const& src, detail::cache_pool* user)
+{
+  aid_t target;
+  ctxid_t ctxid = user->get_ctxid();
+
+  if (src.ctxid_ == ctxid_nil || src.ctxid_ == ctxid)
+  {
+    target = user->find_service(src);
+  }
+  else
+  {
+    target = user->select_socket(src.ctxid_);
   }
   return target;
 }

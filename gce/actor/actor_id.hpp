@@ -16,10 +16,6 @@
 namespace gce
 {
 class basic_actor;
-namespace detail
-{
-class socket;
-}
 class actor_id
 {
 public:
@@ -52,7 +48,7 @@ public:
     return uintptr_ != 0;
   }
 
-  bool operator!() const
+  inline bool operator!() const
   {
     return uintptr_ == 0;
   }

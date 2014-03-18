@@ -67,6 +67,10 @@ public:
   void free_object();
   void free_cache();
 
+  void register_service(match_t name, aid_t svc);
+  aid_t find_service(match_t name);
+  void deregister_service(match_t name, aid_t svc);
+
   void register_socket(ctxid_pair_t, aid_t skt);
   aid_t select_socket(ctxid_t ctxid = ctxid_nil, ctxid_t* target = 0);
   aid_t select_straight_socket(ctxid_t ctxid = ctxid_nil, ctxid_t* target = 0);
@@ -195,6 +199,9 @@ private:
   conn_list_t::iterator curr_router_list_;
   conn_list_t::iterator curr_socket_list_;
   socket_list dummy_;
+
+  typedef std::map<match_t, aid_t> service_list_t;
+  service_list_t service_list_;
 
   std::set<socket*> socket_list_;
   std::set<acceptor*> acceptor_list_;

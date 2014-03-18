@@ -228,6 +228,31 @@ void cache_pool::free_cache()
   }
 }
 ///------------------------------------------------------------------------------
+void cache_pool::register_service(match_t name, aid_t svc)
+{
+  service_list_.insert(std::make_pair(name, svc));
+}
+///------------------------------------------------------------------------------
+aid_t cache_pool::find_service(match_t name)
+{
+  aid_t svc;
+  service_list_t::iterator itr(service_list_.find(name));
+  if (itr != service_list_.end())
+  {
+    svc = itr->second;
+  }
+  return svc;
+}
+///------------------------------------------------------------------------------
+void cache_pool::deregister_service(match_t name, aid_t svc)
+{
+  service_list_t::iterator itr(service_list_.find(name));
+  if (itr != service_list_.end() && itr->second == svc)
+  {
+    service_list_.erase(itr);
+  }
+}
+///------------------------------------------------------------------------------
 void cache_pool::register_socket(ctxid_pair_t ctxid_pr, aid_t skt)
 {
   if (ctxid_pr.second)

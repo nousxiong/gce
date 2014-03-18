@@ -11,6 +11,7 @@
 #define GCE_ACTOR_DETAIL_PACK_HPP
 
 #include <gce/actor/config.hpp>
+#include <gce/actor/service_id.hpp>
 #include <gce/actor/message.hpp>
 #include <gce/actor/detail/object_pool.hpp>
 #include <gce/detail/mpsc_queue.hpp>
@@ -35,6 +36,7 @@ struct pack
     tag_ = detail::tag_t();
     recver_ = aid_t();
     skt_ = aid_t();
+    svc_ = svcid_t();
     is_err_ret_ = false;
     msg_ = message();
   }
@@ -42,6 +44,7 @@ struct pack
   detail::tag_t tag_;
   aid_t recver_;
   aid_t skt_;
+  svcid_t svc_;
   bool is_err_ret_;
   message msg_;
 

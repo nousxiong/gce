@@ -223,6 +223,20 @@ void mixin::move_pack(
             pk->msg_ >> ctxid_pr >> skt;
             mix->cac_pool_->deregister_socket(ctxid_pr, skt);
           }
+          else if (type == detail::msg_reg_svc)
+          {
+            match_t name;
+            aid_t svc;
+            pk->msg_ >> name >> svc;
+            mix->cac_pool_->register_service(name, svc);
+          }
+          else if (type == detail::msg_dereg_svc)
+          {
+            match_t name;
+            aid_t svc;
+            pk->msg_ >> name >> svc;
+            mix->cac_pool_->deregister_service(name, svc);
+          }
           else if (type == detail::msg_stop)
           {
             mix->cac_pool_->stop();
@@ -296,6 +310,32 @@ void mixin::free_slice(slice* t)
 void mixin::free_cache()
 {
   cac_pool_->free_cache();
+}
+///----------------------------------------------------------------------------
+void mixin::register_service(match_t name, aid_t svc, detail::cache_pool* user)
+{
+  detail::pack* pk = base_type::alloc_pack(user);
+  aid_t self = get_aid();
+  pk->tag_ = self;
+  pk->recver_ = self;
+
+  message m(detail::msg_reg_svc);
+  m << name << svc;
+  pk->msg_ = m;
+  on_recv(pk);
+}
+///----------------------------------------------------------------------------
+void mixin::deregister_service(match_t name, aid_t svc, detail::cache_pool* user)
+{
+  detail::pack* pk = base_type::alloc_pack(user);
+  aid_t self = get_aid();
+  pk->tag_ = self;
+  pk->recver_ = self;
+
+  message m(detail::msg_dereg_svc);
+  m << name << svc;
+  pk->msg_ = m;
+  on_recv(pk);
 }
 ///----------------------------------------------------------------------------
 void mixin::register_socket(

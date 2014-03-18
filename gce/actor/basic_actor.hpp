@@ -11,6 +11,7 @@
 #define GCE_ACTOR_BASIC_ACTOR_HPP
 
 #include <gce/actor/config.hpp>
+#include <gce/actor/service_id.hpp>
 #include <gce/actor/response.hpp>
 #include <gce/actor/detail/mailbox.hpp>
 #include <gce/actor/detail/request.hpp>
@@ -39,9 +40,12 @@ public:
 
 public:
   void send(aid_t, message const&);
+  void send(svcid_t, message const&);
   void relay(aid_t, message&);
+  void relay(svcid_t, message&);
 
   response_t request(aid_t, message const&);
+  response_t request(svcid_t, message const&);
   void reply(aid_t, message const&);
 
   virtual void on_recv(detail::pack*) = 0;
@@ -84,6 +88,7 @@ protected:
 
 private:
   static aid_t filter_aid(aid_t const& src, detail::cache_pool*);
+  static aid_t filter_svcid(svcid_t const& src, detail::cache_pool*);
 
 private:
   byte_t pad0_[GCE_CACHE_LINE_SIZE]; /// Ensure start from a new cache line.

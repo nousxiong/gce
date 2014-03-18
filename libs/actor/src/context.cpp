@@ -112,6 +112,54 @@ detail::cache_pool* context::select_cache_pool(std::size_t i)
   }
 }
 ///------------------------------------------------------------------------------
+void context::register_service(match_t name, aid_t svc, detail::cache_pool* user)
+{
+  BOOST_FOREACH(detail::cache_pool* cac_pool, cache_pool_list_)
+  {
+    if (cac_pool)
+    {
+      cac_pool->get_strand().dispatch(
+        boost::bind(
+          &detail::cache_pool::register_service,
+          cac_pool, name, svc
+          )
+        );
+    }
+  }
+
+  BOOST_FOREACH(mixin* mi, mixin_list_)
+  {
+    if (mi)
+    {
+      mi->register_service(name, svc, user);
+    }
+  }
+}
+///------------------------------------------------------------------------------
+void context::deregister_service(match_t name, aid_t svc, detail::cache_pool* user)
+{
+  BOOST_FOREACH(detail::cache_pool* cac_pool, cache_pool_list_)
+  {
+    if (cac_pool)
+    {
+      cac_pool->get_strand().dispatch(
+        boost::bind(
+          &detail::cache_pool::deregister_service,
+          cac_pool, name, svc
+          )
+        );
+    }
+  }
+
+  BOOST_FOREACH(mixin* mi, mixin_list_)
+  {
+    if (mi)
+    {
+      mi->deregister_service(name, svc, user);
+    }
+  }
+}
+///------------------------------------------------------------------------------
 void context::register_socket(ctxid_pair_t ctxid_pr, aid_t skt, detail::cache_pool* user)
 {
   BOOST_FOREACH(detail::cache_pool* cac_pool, cache_pool_list_)
