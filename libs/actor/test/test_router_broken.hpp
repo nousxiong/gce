@@ -101,6 +101,7 @@ public:
     }
     catch (std::exception& ex)
     {
+      std::cerr << "router except: " << ex.what() << std::endl;
     }
   }
 
