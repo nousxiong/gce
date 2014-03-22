@@ -100,7 +100,8 @@ private:
     );
 
 private:
-  byte_t pad0_[GCE_CACHE_LINE_SIZE]; /// Ensure start from a new cache line.
+  /// Ensure start from a new cache line.
+  byte_t pad0_[GCE_CACHE_LINE_SIZE];
 
   GCE_CACHE_ALIGNED_VAR(status, stat_)
   GCE_CACHE_ALIGNED_VAR(net_option, opt_)

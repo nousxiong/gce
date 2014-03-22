@@ -65,12 +65,27 @@ public:
       a_.send(recver, m);
     }
 
+    inline void send(svcid_t recver, message const& m)
+    {
+      a_.send(recver, m);
+    }
+
     inline void relay(aid_t des, message& m)
     {
       a_.relay(des, m);
     }
 
+    inline void relay(svcid_t des, message& m)
+    {
+      a_.relay(des, m);
+    }
+
     inline response_t request(aid_t recver, message const& m)
+    {
+      return a_.request(recver, m);
+    }
+
+    inline response_t request(svcid_t recver, message const& m)
     {
       return a_.request(recver, m);
     }
@@ -165,7 +180,8 @@ private:
   void handle_recv(detail::pack*);
 
 private:
-  byte_t pad0_[GCE_CACHE_LINE_SIZE]; /// Ensure start from a new cache line.
+  /// Ensure start from a new cache line.
+  byte_t pad0_[GCE_CACHE_LINE_SIZE];
 
   GCE_CACHE_ALIGNED_VAR(status, stat_)
   GCE_CACHE_ALIGNED_VAR(self, self_)

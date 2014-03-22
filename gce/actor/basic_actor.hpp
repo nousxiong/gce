@@ -91,7 +91,8 @@ private:
   static aid_t filter_svcid(svcid_t const& src, detail::cache_pool*);
 
 private:
-  byte_t pad0_[GCE_CACHE_LINE_SIZE]; /// Ensure start from a new cache line.
+  /// Ensure start from a new cache line.
+  byte_t pad0_[GCE_CACHE_LINE_SIZE];
 
 protected:
   GCE_CACHE_ALIGNED_VAR(detail::cache_pool*, owner_)

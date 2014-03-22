@@ -71,7 +71,8 @@ private:
   void free_self(exit_code_t, std::string const&, yield_t);
 
 private:
-  byte_t pad0_[GCE_CACHE_LINE_SIZE]; /// Ensure start from a new cache line.
+  /// Ensure start from a new cache line.
+  byte_t pad0_[GCE_CACHE_LINE_SIZE];
 
   GCE_CACHE_ALIGNED_VAR(status, stat_)
   GCE_CACHE_ALIGNED_VAR(net_option, opt_)

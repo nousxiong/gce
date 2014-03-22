@@ -145,7 +145,8 @@ private:
   void free_object(Pool&, FreeQueue&);
 
 private:
-  byte_t pad0_[GCE_CACHE_LINE_SIZE]; /// Ensure start from a new cache line.
+  /// Ensure start from a new cache line.
+  byte_t pad0_[GCE_CACHE_LINE_SIZE];
 
   GCE_CACHE_ALIGNED_VAR(context*, ctx_)
 

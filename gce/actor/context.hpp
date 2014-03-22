@@ -103,7 +103,8 @@ private:
   void gc(detail::cache_pool*, errcode_t const&);
 
 private:
-  byte_t pad0_[GCE_CACHE_LINE_SIZE]; /// Ensure start from a new cache line.
+  /// Ensure start from a new cache line.
+  byte_t pad0_[GCE_CACHE_LINE_SIZE];
 
   GCE_CACHE_ALIGNED_VAR(attributes, attrs_)
   GCE_CACHE_ALIGNED_VAR(timestamp_t const, timestamp_)

@@ -143,6 +143,7 @@ public:
 
   inline std::size_t size() const { return buf_.write_size(); }
   inline match_t get_type() const { return type_; }
+  inline boost::uint32_t get_tag_offset() const { return tag_offset_; }
   inline void set_type(match_t type) { type_ = type; }
 
   template <typename T>
