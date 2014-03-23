@@ -90,7 +90,7 @@ void gate::run(gce::self_t self)
       pos = cln_ep_.size();
 
       host = address;
-      boost::uint16_t port =
+      port =
         boost::lexical_cast<boost::uint16_t>(
           cln_ep_.substr(begin, pos - begin)
           );
