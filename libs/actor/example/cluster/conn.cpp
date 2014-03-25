@@ -8,8 +8,8 @@
 ///
 
 #include "conn.hpp"
-#include "hash.hpp"
 #include <gce/detail/scope.hpp>
+#include <boost/foreach.hpp>
 
 ///----------------------------------------------------------------------------
 conn::conn()
@@ -19,15 +19,15 @@ conn::conn()
 conn::~conn()
 {
 }
-//-----------------------------------------------------------------------------
-void quit_callback(gce::self_t self, gce::aid_t group_aid, endpoint cid)
+///----------------------------------------------------------------------------
+void quit_callback(gce::self_t self, gce::aid_t group_aid)
 {
-  gce::send(self, group_aid, gce::atom("rmv_conn"), cid);
+  gce::send(self, group_aid, gce::atom("rmv_conn"));
 }
 ///----------------------------------------------------------------------------
 void conn::run(
-  gce::self_t self, socket_ptr skt, gce::aid_t group_aid,
-  endpoint cid, app_ctxid_list_t game_list
+  gce::self_t self, socket_ptr skt,
+  gce::aid_t group_aid, app_ctxid_list_t game_list
   )
 {
   try
@@ -38,7 +38,7 @@ void conn::run(
     gce::response_t res =
       gce::request(
         self, group_aid,
-        gce::atom("add_conn"), cid
+        gce::atom("add_conn")
         );
     gce::message msg;
     self.recv(res, msg);
@@ -49,8 +49,7 @@ void conn::run(
 
     gce::detail::scope quit_scp(
       boost::bind(
-        &quit_callback, boost::ref(self),
-        group_aid, cid
+        &quit_callback, boost::ref(self), group_aid
         )
       );
 
@@ -65,7 +64,7 @@ void conn::run(
       gce::spawn(
         self,
         boost::bind(
-          &conn::recv, _1, skt, cid,
+          &conn::recv, _1, skt,
           tmo_aid, self.get_aid(), game_list
           ),
         gce::linked,
@@ -126,7 +125,7 @@ void conn::timeout(gce::self_t self)
         {
           curr_count = max_count;
         }
-        else if (type == gce::atom("logon"))
+        else if (type == gce::atom("online"))
         {
           curr_tmo = boost::chrono::seconds(30);
           curr_count = 3;
@@ -154,19 +153,8 @@ void conn::timeout(gce::self_t self)
   }
 }
 ///----------------------------------------------------------------------------
-gce::svcid_t select_game_app(
-  app_ctxid_list_t const& game_list,
-  std::string const& username
-  )
-{
-  hash_t h = hash(username.data(), username.size());
-  gce::match_t i = h % game_list.size();
-  BOOST_ASSERT(i <= game_list.size());
-  return game_list[i];
-}
-///----------------------------------------------------------------------------
 void conn::recv(
-  gce::self_t self, socket_ptr skt, endpoint cid,
+  gce::self_t self, socket_ptr skt,
   gce::aid_t tmo_aid, gce::aid_t conn_aid,
   app_ctxid_list_t game_list
   )
@@ -198,7 +186,7 @@ void conn::recv(
           msg >> username;
           game_svcid = select_game_app(game_list, username);
 
-          msg << conn_aid << cid;
+          msg << conn_aid;
           gce::response_t res = self.request(game_svcid, msg);
           std::string errmsg;
           gce::recv(self, res, errmsg, gce::seconds_t(60));
@@ -206,8 +194,24 @@ void conn::recv(
           {
             throw std::runtime_error(errmsg);
           }
+
           stat = online;
-          gce::send(self, tmo_aid, gce::atom("logon"));
+          gce::message m(gce::atom("cln_login_ret"));
+          m << errmsg;
+          gce::send(self, conn_aid, gce::atom("fwd_msg"), m);
+          gce::send(self, tmo_aid, gce::atom("online"));
+        }
+        else if (type == gce::atom("chat"))
+        {
+          if (stat != online)
+          {
+            throw std::runtime_error("conn status error, must be online");
+          }
+
+          BOOST_FOREACH(gce::svcid_t svc, game_list)
+          {
+            self.send(svc, msg);
+          }
         }
         else
         {
@@ -230,13 +234,7 @@ void conn::recv(
   {
     std::printf("conn::recv except: %s\n", ex.what());
     std::string errstr = boost::diagnostic_information(ex);
-
-    std::printf(
-      "kick, cid: <%u, %u>, err: %s\n",
-      cid.get_group_index(),
-      cid.get_session_id(),
-      errstr.c_str()
-      );
+    std::printf("kick, err: %s\n", errstr.c_str());
 
     gce::message m(gce::atom("kick"));
     m << errstr;

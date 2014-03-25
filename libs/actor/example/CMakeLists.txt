@@ -1,7 +1,7 @@
 #
 # This file is part of the CMake build system for Gce
 #
-# CMake auto-generated configuration options. 
+# CMake auto-generated configuration options.
 # Do not check in modified versions of this file.
 #
 # Copyright (c) 2009-2014 Nous Xiong (348944179 at qq dot com)
@@ -24,6 +24,9 @@ add_subdirectory (asio)
 
 # Gce cluster.
 add_subdirectory (cluster)
+
+# Gce cluster client.
+add_subdirectory (cluster_client)
 
 # Two actors pingpong.
 add_subdirectory (pingpong)

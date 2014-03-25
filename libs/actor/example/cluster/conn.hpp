@@ -7,14 +7,13 @@
 /// See https://github.com/nousxiong/gce for latest version.
 ///
 
-#ifndef GCE_ACTOR_EXAMPLE_CLUSTER_CONFIG_HPP
-#define GCE_ACTOR_EXAMPLE_CLUSTER_CONFIG_HPP
+#ifndef GCE_ACTOR_EXAMPLE_CLUSTER_CONN_HPP
+#define GCE_ACTOR_EXAMPLE_CLUSTER_CONN_HPP
 
-#include "endpoint.hpp"
+#include "app.hpp"
 #include "socket.hpp"
 #include <gce/actor/all.hpp>
 
-typedef std::vector<gce::svcid_t> app_ctxid_list_t;
 typedef boost::shared_ptr<tcp_socket> socket_ptr;
 class conn
 {
@@ -30,12 +29,13 @@ public:
 
 public:
   static void run(
-    gce::self_t, socket_ptr, gce::aid_t group_aid,
-    endpoint cid, app_ctxid_list_t game_list
+    gce::self_t, socket_ptr,
+    gce::aid_t group_aid,
+    app_ctxid_list_t game_list
     );
   static void timeout(gce::self_t);
   static void recv(
-    gce::self_t, socket_ptr skt, endpoint cid,
+    gce::self_t, socket_ptr skt,
     gce::aid_t tmo_aid, gce::aid_t conn_aid,
     app_ctxid_list_t game_list
     );

@@ -81,6 +81,9 @@ void node::run(gce::self_t self, gce::actor_func_t init_func)
           std::string errmsg;
           msg >> type >> errmsg;
 
+          /// one of apps quit;
+          /// here, just quit;
+          /// for more, you can restart the error app
           throw std::runtime_error(errmsg);
         }
       }

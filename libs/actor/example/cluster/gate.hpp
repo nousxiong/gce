@@ -12,7 +12,6 @@
 
 #include "conn.hpp"
 #include "basic_app.hpp"
-#include "endpoint.hpp"
 #include <gce/actor/all.hpp>
 #include <boost/asio.hpp>
 #include <boost/scoped_ptr.hpp>

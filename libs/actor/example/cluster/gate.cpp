@@ -41,7 +41,7 @@ gce::aid_t gate::start(gce::self_t sire)
       gce::monitored
       );
 }
-//-----------------------------------------------------------------------------
+///----------------------------------------------------------------------------
 void quit_callback(
   gce::self_t self, std::vector<gce::aid_t>& conn_group_list
   )
@@ -203,23 +203,17 @@ void gate::accept(gce::self_t self, std::vector<gce::aid_t> conn_group_list)
       {
         curr_group = 0;
       }
-      endpoint cid(curr_group, ++sid_base);
 
       socket_ptr skt(boost::make_shared<tcp_socket>(boost::ref(ios)));
       acpr_->async_accept(skt->get_socket(), yield[ec]);
       if (!ec)
       {
-        std::printf(
-          "new client conn, cid: <%u, %u>\n",
-          cid.get_group_index(),
-          cid.get_session_id()
-          );
+        std::printf("new client conn\n");
         gce::spawn(
           self,
           boost::bind(
             &conn::run, _1, skt,
-            conn_group_list[curr_group],
-            cid, game_list_
+            conn_group_list[curr_group], game_list_
             )
           );
       }
@@ -238,7 +232,7 @@ void gate::accept(gce::self_t self, std::vector<gce::aid_t> conn_group_list)
 ///----------------------------------------------------------------------------
 void gate::conn_group(gce::self_t self, gce::aid_t ga_id)
 {
-  typedef std::map<endpoint, gce::aid_t> conn_list_t;
+  typedef std::set<gce::aid_t> conn_list_t;
   try
   {
     conn_list_t conn_list;
@@ -251,9 +245,9 @@ void gate::conn_group(gce::self_t self, gce::aid_t ga_id)
       if (type == gce::exit || type == gce::atom("stop"))
       {
         running = false;
-        BOOST_FOREACH(conn_list_t::value_type& pr, conn_list)
+        BOOST_FOREACH(gce::aid_t cid, conn_list)
         {
-          self.send(pr.second, msg);
+          self.send(cid, msg);
         }
 
         if (type == gce::atom("stop"))
@@ -263,44 +257,15 @@ void gate::conn_group(gce::self_t self, gce::aid_t ga_id)
       }
       else if (type == gce::atom("add_conn"))
       {
-        endpoint cid;
-        msg >> cid;
         std::pair<conn_list_t::iterator, bool> pr =
-          conn_list.insert(std::make_pair(cid, sender));
+          conn_list.insert(sender);
         BOOST_ASSERT(pr.second);
-
-        std::printf(
-          "add_conn: <%u, %u>\n",
-          cid.get_group_index(),
-          cid.get_session_id()
-          );
 
         gce::reply(self, sender, gce::atom("ok"));
       }
       else if (type == gce::atom("rmv_conn"))
       {
-        endpoint cid;
-        msg >> cid;
-        conn_list.erase(cid);
-
-        std::printf(
-          "rmv_conn: <%u, %u>\n",
-          cid.get_group_index(),
-          cid.get_session_id()
-          );
-      }
-      else if (type == gce::atom("cln_msg"))
-      {
-        /// forward to conn
-        boost::string_ref ignored;
-        endpoint cid;
-        msg >> ignored >> cid;
-
-        conn_list_t::iterator itr(conn_list.find(cid));
-        if (itr != conn_list.end())
-        {
-          self.send(itr->second, msg);
-        }
+        conn_list.erase(sender);
       }
       else
       {

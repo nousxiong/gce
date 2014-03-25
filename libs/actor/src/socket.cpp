@@ -277,12 +277,7 @@ ctxid_pair_t socket::handle_net_msg(message& msg, ctxid_pair_t curr_pr)
   }
   else
   {
-    bool is_svc = pk->svc_ && !pk->recver_;
-    if (is_svc)
-    {
-      BOOST_ASSERT(pk->svc_ && !pk->recver_);
-    }
-
+    bool is_svc = pk->svc_;
     if (is_router_)
     {
       ctxid_t ctxid = is_svc ? pk->svc_.ctxid_ : pk->recver_.ctxid_;
@@ -308,11 +303,7 @@ ctxid_pair_t socket::handle_net_msg(message& msg, ctxid_pair_t curr_pr)
     {
       if (is_svc)
       {
-        aid_t svc = user_->find_service(pk->svc_.name_);
-        if (svc)
-        {
-          pk->recver_ = svc;
-        }
+        pk->recver_ = user_->find_service(pk->svc_.name_);
       }
 
       if (pk->recver_)
@@ -613,43 +604,55 @@ void socket::handle_recv(pack* pk)
 ///----------------------------------------------------------------------------
 void socket::add_straight_link(aid_t src, aid_t des)
 {
-  std::pair<straight_link_list_t::iterator, bool> pr =
-    straight_link_list_.insert(std::make_pair(src, straight_dummy_));
-  pr.first->second.insert(des);
+  if (des)
+  {
+    std::pair<straight_link_list_t::iterator, bool> pr =
+      straight_link_list_.insert(std::make_pair(src, straight_dummy_));
+    pr.first->second.insert(des);
+  }
 }
 ///----------------------------------------------------------------------------
 void socket::remove_straight_link(aid_t src, aid_t des)
 {
-  straight_link_list_t::iterator itr(
-    straight_link_list_.find(src)
-    );
-  if (itr != straight_link_list_.end())
+  if (des)
   {
-    itr->second.erase(des);
+    straight_link_list_t::iterator itr(
+      straight_link_list_.find(src)
+      );
+    if (itr != straight_link_list_.end())
+    {
+      itr->second.erase(des);
+    }
   }
 }
 ///----------------------------------------------------------------------------
 void socket::add_router_link(aid_t src, aid_t des, sktaid_t skt)
 {
-  std::pair<router_link_list_t::iterator, bool> pr =
-    router_link_list_.insert(std::make_pair(src, router_dummy_));
-  pr.first->second.insert(std::make_pair(des, skt));
+  if (des)
+  {
+    std::pair<router_link_list_t::iterator, bool> pr =
+      router_link_list_.insert(std::make_pair(src, router_dummy_));
+    pr.first->second.insert(std::make_pair(des, skt));
+  }
 }
 ///----------------------------------------------------------------------------
 sktaid_t socket::remove_router_link(aid_t src, aid_t des)
 {
   sktaid_t skt;
-  router_link_list_t::iterator itr(
-    router_link_list_.find(src)
-    );
-  if (itr != router_link_list_.end())
+  if (des)
   {
-    std::map<aid_t, sktaid_t>& skt_list = itr->second;
-    std::map<aid_t, sktaid_t>::iterator skt_itr(skt_list.find(des));
-    if (skt_itr != skt_list.end())
+    router_link_list_t::iterator itr(
+      router_link_list_.find(src)
+      );
+    if (itr != router_link_list_.end())
     {
-      skt = skt_itr->second;
-      skt_list.erase(skt_itr);
+      std::map<aid_t, sktaid_t>& skt_list = itr->second;
+      std::map<aid_t, sktaid_t>::iterator skt_itr(skt_list.find(des));
+      if (skt_itr != skt_list.end())
+      {
+        skt = skt_itr->second;
+        skt_list.erase(skt_itr);
+      }
     }
   }
   return skt;

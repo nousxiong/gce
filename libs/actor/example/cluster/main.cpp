@@ -8,6 +8,7 @@
 ///
 
 #include "gate.hpp"
+#include "game.hpp"
 #include "node.hpp"
 #include <gce/actor/all.hpp>
 #include <boost/lexical_cast.hpp>
@@ -17,40 +18,67 @@
 #include <algorithm>
 #include <iostream>
 
-typedef std::pair<gce::ctxid_t, std::string> game_init_t;
+typedef std::pair<gce::ctxid_t, std::string> app_init_t;
 
 void init_node(
   gce::self_t node,
-  gce::ctxid_t node_id,
   std::size_t gate_count,
   std::vector<std::size_t> game_list,
-  std::vector<game_init_t> all_game_list
+  std::vector<app_init_t> all_game_list,
+  std::vector<std::size_t> router_list,
+  std::vector<app_init_t> all_router_list
   )
 {
-  BOOST_FOREACH(std::size_t index, game_list)
+  BOOST_FOREACH(std::size_t index, router_list)
   {
-    game_init_t const& game_init = all_game_list.at(index);
-    gce::bind(node, game_init.second);
+    app_init_t const& app_init = all_router_list.at(index);
+    gce::bind(node, app_init.second, true);
+  }
+
+  BOOST_FOREACH(std::size_t index, router_list)
+  {
+    app_init_t const& app_init = all_router_list[index];
+    all_router_list.erase(
+      std::remove(
+        all_router_list.begin(),
+        all_router_list.end(),
+        app_init
+        )
+      );
+  }
+
+  if (game_list.size() < all_game_list.size())
+  {
+    BOOST_FOREACH(std::size_t index, game_list)
+    {
+      app_init_t const& app_init = all_game_list.at(index);
+      gce::bind(node, app_init.second);
+    }
   }
 
   BOOST_FOREACH(std::size_t index, game_list)
   {
-    game_init_t const& game_init = all_game_list[index];
+    app_init_t const& app_init = all_game_list[index];
     all_game_list.erase(
       std::remove(
         all_game_list.begin(),
         all_game_list.end(),
-        game_init
+        app_init
         )
       );
   }
 
   if (gate_count > 0)
   {
-    BOOST_FOREACH(game_init_t const& game_init, all_game_list)
+    BOOST_FOREACH(app_init_t const& app_init, all_game_list)
     {
-      gce::connect(node, game_init.first, game_init.second);
+      gce::connect(node, app_init.first, app_init.second);
     }
+  }
+
+  BOOST_FOREACH(app_init_t const& app_init, all_router_list)
+  {
+    gce::connect(node, app_init.first, app_init.second, true);
   }
 }
 
@@ -58,28 +86,29 @@ int main(int argc, char* argv[])
 {
   try
   {
-    if (argc < 4)
+    if (argc < 6)
     {
       std::cerr <<
         "Usage: <node ctxid> \
         <gate_count> [<cln_ep> ...] \
         <all game_count> [<gate_ep> <node_id> <name> ...] \
-        <game_count> [<index at all game list> ...]"
+        <game_count> [<index at all game list> ...] \
+        <all router count> [<router_ep> <node_id> ...] \
+        <router count> [<index at all router list> ...]"
         << std::endl;
       return 0;
     }
 
     std::vector<std::string> gate_list;
-    std::vector<game_init_t> all_game_list;
+    std::vector<app_init_t> all_game_list, all_router_list;
     app_ctxid_list_t game_svcid_list;
-    std::vector<std::size_t> game_list;
+    std::vector<std::size_t> game_list, router_list;
 
     gce::ctxid_t node_id = gce::atom(argv[1]);
-    std::string node_ep(argv[2]);
 
     std::size_t gate_count =
-      boost::lexical_cast<std::size_t>(argv[3]);
-    std::size_t i = 4;
+      boost::lexical_cast<std::size_t>(argv[2]);
+    std::size_t i = 3;
     for (std::size_t j=0; j<gate_count; ++i, ++j)
     {
       gate_list.push_back(argv[i]);
@@ -113,6 +142,27 @@ int main(int argc, char* argv[])
       game_list.push_back(index);
     }
 
+    std::size_t all_router_count =
+      boost::lexical_cast<std::size_t>(argv[i]);
+    ++i;
+    for (std::size_t j=0; j<all_router_count; i+=2, ++j)
+    {
+      char const* router_ep = argv[i];
+      char const* ctxid = argv[i+1];
+      all_router_list.push_back(
+        std::make_pair(gce::atom(ctxid), router_ep)
+        );
+    }
+
+    std::size_t router_count =
+      boost::lexical_cast<std::size_t>(argv[i]);
+    ++i;
+    for (std::size_t j=0; j<router_count; ++i, ++j)
+    {
+      std::size_t index = boost::lexical_cast<std::size_t>(argv[i]);
+      router_list.push_back(index);
+    }
+
     gce::attributes attrs;
     attrs.id_ = node_id;
 
@@ -127,10 +177,21 @@ int main(int argc, char* argv[])
         );
     }
 
+    BOOST_FOREACH(std::size_t index, game_list)
+    {
+      gce::svcid_t svc = game_svcid_list.at(index);
+      nod.add_app(
+        basic_app_ptr(
+          new game(svc.name_, game_svcid_list)
+          )
+        );
+    }
+
     nod.start(
       boost::bind(
-        &init_node, _1, node_id,
-        gate_count, game_list, all_game_list
+        &init_node, _1, gate_count,
+        game_list, all_game_list,
+        router_list, all_router_list
         )
       );
     nod.wait_end();

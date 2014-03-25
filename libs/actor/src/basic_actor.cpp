@@ -54,6 +54,11 @@ void basic_actor::send(svcid_t recver, message const& m)
   {
     detail::pack* pk = alloc_pack(user_);
     pk->tag_ = get_aid();
+    if (recver.ctxid_ == ctxid_nil || recver.ctxid_ == user_->get_ctxid())
+    {
+      /// is local none socket actor
+      pk->recver_ = target;
+    }
     pk->svc_ = recver;
     pk->skt_ = target;
     pk->msg_ = m;
@@ -106,6 +111,12 @@ void basic_actor::relay(svcid_t recver, message& m)
     {
       pk->tag_ = get_aid();
     }
+
+    if (recver.ctxid_ == ctxid_nil || recver.ctxid_ == user_->get_ctxid())
+    {
+      /// is local none socket actor
+      pk->recver_ = target;
+    }
     pk->svc_ = recver;
     pk->skt_ = target;
     pk->msg_ = m;
@@ -149,6 +160,11 @@ response_t basic_actor::request(svcid_t recver, message const& m)
   {
     detail::pack* pk = alloc_pack(user_);
     pk->tag_ = req;
+    if (recver.ctxid_ == ctxid_nil || recver.ctxid_ == user_->get_ctxid())
+    {
+      /// is local none socket actor
+      pk->recver_ = target;
+    }
     pk->svc_ = recver;
     pk->skt_ = target;
     pk->msg_ = m;
@@ -406,7 +422,7 @@ aid_t basic_actor::filter_svcid(svcid_t const& src, detail::cache_pool* user)
 
   if (src.ctxid_ == ctxid_nil || src.ctxid_ == ctxid)
   {
-    target = user->find_service(src);
+    target = user->find_service(src.name_);
   }
   else
   {
