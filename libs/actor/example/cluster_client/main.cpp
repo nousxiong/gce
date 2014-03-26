@@ -24,9 +24,7 @@ int main(int argc, char* argv[])
       return 0;
     }
 
-    std::string gate_ep(argv[1]);
-
-    client cln(gate_ep);
+    client cln(argv[1]);
     cln.run();
   }
   catch (std::exception& ex)
