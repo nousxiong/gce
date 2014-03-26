@@ -11,7 +11,8 @@
 
 ///----------------------------------------------------------------------------
 void user::run(
-  gce::self_t self, gce::aid_t old_usr_aid, gce::aid_t master,
+  gce::self_t self, app_ctxid_list_t game_list,
+  gce::aid_t old_usr_aid, gce::aid_t master,
   cid_t cid, std::string username, std::string passwd
   )
 {
@@ -59,6 +60,24 @@ void user::run(
         m << msg;
         self.send(cid, m);
       }
+      else if (type == gce::atom("chat_to"))
+      {
+        std::string target;
+        msg >> target;
+        if (target != username)
+        {
+          /// find game app and send chat msg
+          gce::svcid_t game_svcid = select_game_app(game_list, target);
+          self.send(game_svcid, msg);
+        }
+        else
+        {
+          /// send to self
+          gce::message m(gce::atom("fwd_msg"));
+          m << msg;
+          self.send(cid, m);
+        }
+      }
       else if (type == gce::atom("cln_logout"))
       {
         running = false;
@@ -70,6 +89,8 @@ void user::run(
         throw std::runtime_error(errmsg);
       }
     }
+
+    std::printf("user quit\n");
   }
   catch (std::exception& ex)
   {

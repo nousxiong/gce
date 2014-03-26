@@ -67,7 +67,7 @@ public:
   void monitor(aid_t) {}
 
 private:
-  ctxid_pair_t handle_net_msg(message&, ctxid_pair_t);
+  void handle_net_msg(message&);
   void send_spawn_ret(spawn_t*, pack*, spawn_error, aid_t aid, bool is_err_ret);
   void send(message const&);
   void send_msg(message const&);

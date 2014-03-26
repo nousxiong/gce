@@ -35,10 +35,6 @@ void heartbeat::start()
 {
   curr_count_ = max_count_;
   stopped_ = false;
-  if (tick_)
-  {
-    tick_();
-  }
   start_timer();
 }
 ///----------------------------------------------------------------------------

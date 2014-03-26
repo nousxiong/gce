@@ -345,6 +345,20 @@ public:
     return *this;
   }
 
+  message& operator<<(ctxid_pair_t const& pr)
+  {
+    *this << pr.first << (boost::uint16_t)pr.second;
+    return *this;
+  }
+
+  message& operator>>(ctxid_pair_t& pr)
+  {
+    boost::uint16_t type;
+    *this >> pr.first >> type;
+    pr.second = (detail::socket_type)type;
+    return *this;
+  }
+
   message& operator<<(bool flag)
   {
     boost::uint16_t f = flag ? 1 : 0;
@@ -367,8 +381,8 @@ public:
 
 private:
   void push_tag(
-    detail::tag_t& tag, aid_t recver, svcid_t svc, aid_t skt,
-    bool is_err_ret, ctxid_pair_t ctxid_pr
+    detail::tag_t& tag, aid_t recver,
+    svcid_t svc, aid_t skt, bool is_err_ret
     )
   {
     tag_offset_ = buf_.write_size();
@@ -410,12 +424,12 @@ private:
     {
       BOOST_ASSERT(false);
     }
-    *this << recver << svc << skt << is_err_ret << ctxid_pr;
+    *this << recver << svc << skt << is_err_ret;
   }
 
   bool pop_tag(
-    detail::tag_t& tag, aid_t& recver, svcid_t& svc, aid_t& skt,
-    bool& is_err_ret, ctxid_pair_t& ctxid_pr
+    detail::tag_t& tag, aid_t& recver,
+    svcid_t& svc, aid_t& skt, bool& is_err_ret
     )
   {
     bool has_tag = false;
@@ -482,7 +496,7 @@ private:
       {
         BOOST_ASSERT(false);
       }
-      *this >> recver >> svc >> skt >> is_err_ret >> ctxid_pr;
+      *this >> recver >> svc >> skt >> is_err_ret;
 
       buf_.clear();
       buf_.write(tag_offset_);

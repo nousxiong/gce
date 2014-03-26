@@ -45,7 +45,6 @@ void basic_actor::send(aid_t recver, message const& m)
     send(target, pk, user_);
   }
 }
-
 ///----------------------------------------------------------------------------
 void basic_actor::send(svcid_t recver, message const& m)
 {

@@ -127,7 +127,7 @@ void conn::timeout(gce::self_t self)
         }
         else if (type == gce::atom("online"))
         {
-          curr_tmo = boost::chrono::seconds(30);
+          curr_tmo = boost::chrono::seconds(10);
           curr_count = 3;
         }
         else
@@ -163,6 +163,7 @@ void conn::recv(
   {
     gce::yield_t yield = self.get_yield();
     gce::svcid_t game_svcid;
+    gce::aid_t usr_aid;
     status stat = conned;
 
     while (true)
@@ -189,7 +190,7 @@ void conn::recv(
           msg << conn_aid;
           gce::response_t res = self.request(game_svcid, msg);
           std::string errmsg;
-          gce::recv(self, res, errmsg, gce::seconds_t(60));
+          usr_aid = gce::recv(self, res, errmsg, gce::seconds_t(60));
           if (!errmsg.empty())
           {
             throw std::runtime_error(errmsg);
@@ -219,8 +220,9 @@ void conn::recv(
           {
             throw std::runtime_error("conn status error, must be online");
           }
-          /// forward to game_app
-          self.send(game_svcid, msg);
+
+          /// forward to user
+          self.send(usr_aid, msg);
         }
       }
       else

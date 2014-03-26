@@ -10,6 +10,7 @@
 #ifndef GCE_ACTOR_EXAMPLE_CLUSTER_USER_HPP
 #define GCE_ACTOR_EXAMPLE_CLUSTER_USER_HPP
 
+#include "app.hpp"
 #include <gce/actor/all.hpp>
 #include <boost/shared_ptr.hpp>
 
@@ -18,7 +19,8 @@ class user
 {
 public:
   static void run(
-    gce::self_t, gce::aid_t old_usr_aid, gce::aid_t master,
+    gce::self_t, app_ctxid_list_t game_list,
+    gce::aid_t old_usr_aid, gce::aid_t master,
     cid_t cid, std::string username, std::string passwd
     );
 };

@@ -55,7 +55,6 @@ typedef std::vector<match_t> match_list_t;
 
 typedef match_t ctxid_t;
 static match_t const ctxid_nil = static_cast<boost::uint64_t>(-1);
-typedef std::pair<ctxid_t, bool> ctxid_pair_t;
 
 typedef boost::uint64_t timestamp_t;
 
@@ -93,7 +92,16 @@ static match_t const msg_reply = atom("gce_reply");
 static match_t const msg_stop = atom("gce_stop");
 static match_t const msg_spawn = atom("gce_spawn");
 static match_t const msg_spawn_ret = atom("gce_spawn_ret");
+
+enum socket_type
+{
+  socket_comm = 0,
+  socket_router,
+  socket_joint
+};
 } /// namespce detail
+
+typedef std::pair<ctxid_t, detail::socket_type> ctxid_pair_t;
 } /// namespace gce
 
 #ifndef GCE_PACK

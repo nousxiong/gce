@@ -35,25 +35,10 @@ void init_node(
     gce::bind(node, app_init.second, true);
   }
 
-  BOOST_FOREACH(std::size_t index, router_list)
+  BOOST_FOREACH(std::size_t index, game_list)
   {
-    app_init_t const& app_init = all_router_list[index];
-    all_router_list.erase(
-      std::remove(
-        all_router_list.begin(),
-        all_router_list.end(),
-        app_init
-        )
-      );
-  }
-
-  if (game_list.size() < all_game_list.size())
-  {
-    BOOST_FOREACH(std::size_t index, game_list)
-    {
-      app_init_t const& app_init = all_game_list.at(index);
-      gce::bind(node, app_init.second);
-    }
+    app_init_t const& app_init = all_game_list.at(index);
+    gce::bind(node, app_init.second);
   }
 
   BOOST_FOREACH(std::size_t index, game_list)

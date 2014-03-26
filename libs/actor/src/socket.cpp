@@ -69,7 +69,11 @@ void socket::connect(
   {
     remote_list_.insert(std::make_pair(f.first, f.second));
   }
-  ctxid_pair_t ctxid_pr = std::make_pair(target, target_is_router);
+  ctxid_pair_t ctxid_pr =
+    std::make_pair(
+      target,
+      target_is_router ? socket_router : socket_comm
+      );
   owner_->register_socket(ctxid_pr, get_aid());
 
   message m(msg_login);
@@ -132,34 +136,24 @@ void socket::on_recv(pack* pk)
     );
 }
 ///----------------------------------------------------------------------------
-ctxid_pair_t socket::handle_net_msg(message& msg, ctxid_pair_t curr_pr)
+void socket::handle_net_msg(message& msg)
 {
-  if (msg.get_type() == msg_hb)
-  {
-    ctxid_pair_t ctxid_pr;
-    msg >> ctxid_pr;
-    return sync_ctxid(ctxid_pr, curr_pr);
-  }
-
   pack* pk = base_type::alloc_pack(user_);
   scope scp(boost::bind(&basic_actor::dealloc_pack, user_, pk));
 
-  ctxid_pair_t ctxid_pr;
   bool has_tag =
     msg.pop_tag(
       pk->tag_, pk->recver_, pk->svc_,
-      pk->skt_, pk->is_err_ret_, ctxid_pr
+      pk->skt_, pk->is_err_ret_
       );
   BOOST_ASSERT(has_tag);
   pk->msg_ = msg;
-
-  curr_pr = sync_ctxid(ctxid_pr, curr_pr);
 
   if (link_t* link = boost::get<detail::link_t>(&pk->tag_))
   {
     if (is_router_)
     {
-      sktaid_t skt = user_->select_straight_socket(pk->recver_.ctxid_);
+      sktaid_t skt = user_->select_joint_socket(pk->recver_.ctxid_);
       if (!skt)
       {
         /// no socket found, send already exit back
@@ -209,7 +203,7 @@ ctxid_pair_t socket::handle_net_msg(message& msg, ctxid_pair_t curr_pr)
   {
     if (is_router_)
     {
-      sktaid_t skt = user_->select_straight_socket(spw->get_ctxid());
+      sktaid_t skt = user_->select_joint_socket(spw->get_ctxid());
       if (!skt)
       {
         send_spawn_ret(spw, pk, spawn_no_socket, aid_t(), true);
@@ -249,7 +243,7 @@ ctxid_pair_t socket::handle_net_msg(message& msg, ctxid_pair_t curr_pr)
   {
     if (is_router_)
     {
-      sktaid_t skt = user_->select_straight_socket(pk->recver_.ctxid_);
+      sktaid_t skt = user_->select_joint_socket(pk->recver_.ctxid_);
       if (skt)
       {
         pk->skt_ = skt;
@@ -281,7 +275,7 @@ ctxid_pair_t socket::handle_net_msg(message& msg, ctxid_pair_t curr_pr)
     if (is_router_)
     {
       ctxid_t ctxid = is_svc ? pk->svc_.ctxid_ : pk->recver_.ctxid_;
-      sktaid_t skt = user_->select_straight_socket(ctxid);
+      sktaid_t skt = user_->select_joint_socket(ctxid);
       if (detail::request_t* req = boost::get<detail::request_t>(&pk->tag_))
       {
         if (!skt && !is_svc)
@@ -313,8 +307,6 @@ ctxid_pair_t socket::handle_net_msg(message& msg, ctxid_pair_t curr_pr)
       }
     }
   }
-
-  return curr_pr;
 }
 ///----------------------------------------------------------------------------
 void socket::send_spawn_ret(
@@ -325,12 +317,11 @@ void socket::send_spawn_ret(
   pk->recver_ = spw->get_aid();
   pk->skt_ = spw->get_aid();
   pk->tag_ = spawn_ret_t(err, spw->get_id(), aid);
-  ctxid_pair_t ctxid_pr = std::make_pair(get_aid().ctxid_, is_router_);
   pk->is_err_ret_ = is_err_ret;
   pk->msg_.set_type(msg_spawn_ret);
   pk->msg_.push_tag(
     pk->tag_, pk->recver_, pk->svc_,
-    pk->skt_, pk->is_err_ret_, ctxid_pr
+    pk->skt_, pk->is_err_ret_
     );
   send(pk->msg_);
 }
@@ -375,9 +366,7 @@ void socket::send_msg(message const& m)
 ///----------------------------------------------------------------------------
 void socket::send_msg_hb()
 {
-  message m(detail::msg_hb);
-  m << std::make_pair(user_->get_ctxid(), is_router_);
-  send(m);
+  send(message(detail::msg_hb));
 }
 ///----------------------------------------------------------------------------
 void socket::run_conn(ctxid_pair_t target, std::string const& ep, yield_t yield)
@@ -424,10 +413,9 @@ void socket::run_conn(ctxid_pair_t target, std::string const& ep, yield_t yield)
             msg >> ctxid_pr;
             curr_pr = sync_ctxid(ctxid_pr, curr_pr);
           }
-          else
+          else if (type != detail::msg_hb)
           {
-            std::string type_str = atom(type);
-            curr_pr = handle_net_msg(msg, curr_pr);
+            handle_net_msg(msg);
           }
           hb_.beat();
         }
@@ -453,7 +441,11 @@ void socket::run(socket_ptr skt, yield_t yield)
 {
   exit_code_t exc = exit_normal;
   std::string exit_msg("exit normal");
-  ctxid_pair_t curr_pr = std::make_pair(ctxid_nil, false);
+  ctxid_pair_t curr_pr =
+    std::make_pair(
+      ctxid_nil,
+      is_router_ ? socket_joint : socket_comm
+      );
 
   if (!user_->stopped())
   {
@@ -484,16 +476,23 @@ void socket::run(socket_ptr skt, yield_t yield)
           match_t type = msg.get_type();
           if (type == msg_login)
           {
-            ctxid_pair_t ctxid_pr = std::make_pair(u32_nil, false);
+            ctxid_pair_t ctxid_pr =
+              std::make_pair(
+                ctxid_nil,
+                is_router_ ? socket_joint : socket_comm
+                );
             msg >> ctxid_pr.first;
             curr_pr = sync_ctxid(ctxid_pr, curr_pr);
             message m(msg_login_ret);
-            m << std::make_pair(user_->get_ctxid(), is_router_);
+            m << std::make_pair(
+              user_->get_ctxid(),
+              is_router_ ? socket_router : socket_comm
+              );
             send(m);
           }
-          else
+          else if (type != detail::msg_hb)
           {
-            curr_pr = handle_net_msg(msg, curr_pr);
+            handle_net_msg(msg);
           }
           hb_.beat();
         }
@@ -557,11 +556,11 @@ socket_ptr socket::make_socket(std::string const& ep)
 ///----------------------------------------------------------------------------
 void socket::handle_recv(pack* pk)
 {
-  ctxid_pair_t ctxid_pr = std::make_pair(get_aid().ctxid_, is_router_);
+  ctxid_t ctxid = get_aid().ctxid_;
   scope scp(boost::bind(&basic_actor::dealloc_pack, user_, pk));
-  if (check(pk->skt_, ctxid_pr.first, user_->get_context().get_timestamp()))
+  if (check(pk->skt_, ctxid, user_->get_context().get_timestamp()))
   {
-    BOOST_ASSERT(!check_local(pk->recver_, ctxid_pr.first));
+    BOOST_ASSERT(!check_local(pk->recver_, ctxid));
     if (link_t* link = boost::get<link_t>(&pk->tag_))
     {
       add_straight_link(link->get_aid(), pk->recver_);
@@ -582,7 +581,7 @@ void socket::handle_recv(pack* pk)
     }
     pk->msg_.push_tag(
       pk->tag_, pk->recver_, pk->svc_,
-      pk->skt_, pk->is_err_ret_, ctxid_pr
+      pk->skt_, pk->is_err_ret_
       );
     send(pk->msg_);
   }

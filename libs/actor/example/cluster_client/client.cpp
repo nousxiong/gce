@@ -87,6 +87,14 @@ void client::command(std::string cmd, gce::aid_t cln_aid)
       }
       gce::send(base_, cln_aid, gce::atom("chat"), username_, tok_list[1]);
     }
+    else if (tok_list[0] == "chat_to")
+    {
+      if (tok_list.size() < 3)
+      {
+        throw std::runtime_error("not enough params; Usage: chat_to <username> <content>");
+      }
+      gce::send(base_, cln_aid, gce::atom("chat_to"), tok_list[1], username_, tok_list[2]);
+    }
     else if (tok_list[0] == "logout")
     {
       gce::send(base_, cln_aid, gce::atom("cln_logout"), tok_list[1]);
@@ -173,7 +181,11 @@ void client::pri_run(gce::self_t self)
       {
         running = false;
       }
-      else if (type == gce::atom("cln_login") || type == gce::atom("chat"))
+      else if (
+        type == gce::atom("cln_login") ||
+        type == gce::atom("chat") ||
+        type == gce::atom("chat_to")
+        )
       {
         skt.send(msg, yield);
       }
@@ -232,6 +244,12 @@ void client::recv(gce::self_t self, tcp_socket& skt)
           std::string username, chat_msg;
           msg >> username >> chat_msg;
           std::printf("[%s] %s\n", username.c_str(), chat_msg.c_str());
+        }
+        else if (type == gce::atom("chat_to"))
+        {
+          std::string self_name, username, chat_msg;
+          msg >> self_name >> username >> chat_msg;
+          std::printf("[%s]<in private> %s\n", username.c_str(), chat_msg.c_str());
         }
         else
         {

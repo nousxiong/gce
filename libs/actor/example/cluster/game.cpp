@@ -80,7 +80,7 @@ void game::run(gce::self_t self)
           gce::spawn(
             self,
             boost::bind(
-              &user::run, _1, old_usr_aid,
+              &user::run, _1, game_list_, old_usr_aid,
               self.get_aid(), cid, username, passwd
               )
             );
@@ -92,6 +92,17 @@ void game::run(gce::self_t self)
         BOOST_FOREACH(user_list_t::value_type& pr, user_list)
         {
           self.send(pr.second, msg);
+        }
+      }
+      else if (type == gce::atom("chat_to"))
+      {
+        /// find target and send chat msg
+        std::string username;
+        msg >> username;
+        user_list_t::iterator itr(user_list.find(username));
+        if (itr != user_list.end())
+        {
+          self.send(itr->second, msg);
         }
       }
       else if (type == gce::atom("rmv_user"))

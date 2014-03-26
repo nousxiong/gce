@@ -74,6 +74,7 @@ public:
   void register_socket(ctxid_pair_t, aid_t skt);
   aid_t select_socket(ctxid_t ctxid = ctxid_nil, ctxid_t* target = 0);
   aid_t select_straight_socket(ctxid_t ctxid = ctxid_nil, ctxid_t* target = 0);
+  aid_t select_joint_socket(ctxid_t ctxid = ctxid_nil, ctxid_t* target = 0);
   aid_t select_router(ctxid_t* target = 0);
   void deregister_socket(ctxid_pair_t, aid_t skt);
 
@@ -196,9 +197,11 @@ private:
 
   typedef std::map<ctxid_t, socket_list> conn_list_t;
   conn_list_t conn_list_;
+  conn_list_t joint_list_;
   conn_list_t router_list_;
   conn_list_t::iterator curr_router_list_;
   conn_list_t::iterator curr_socket_list_;
+  conn_list_t::iterator curr_joint_list_;
   socket_list dummy_;
 
   typedef std::map<match_t, aid_t> service_list_t;
