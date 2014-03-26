@@ -34,6 +34,13 @@ void client::run()
       gce::monitored
       );
 
+  std::cout << "Usage commands: login, chat, chat_to, logout\n" <<
+    " login <username> <passwd>\n" <<
+    " chat <chat content>\n" <<
+    " chat_to <username> <chat content>\n" <<
+    " logout" << std::endl;
+
+
   try
   {
     std::string cmd;
