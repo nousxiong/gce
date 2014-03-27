@@ -16,8 +16,8 @@ cmake_minimum_required (VERSION 2.8.6 FATAL_ERROR)
 project (gce)
 
 # The version number.
-set (GCE_VERSION_MAJOR 0)
-set (GCE_VERSION_MINOR 8)
+set (GCE_VERSION_MAJOR 1)
+set (GCE_VERSION_MINOR 0)
 
 # Provide user options to customise the build process.
 set (GCE_ASIO_ALLOC_HANDLER_SIZE "1024" CACHE STRING "Boost.Asio handler allocator size")
