@@ -9,7 +9,7 @@ Get the Sources
 ---------------
 
 * git clone git://github.com/nousxiong/gce.git
-* or
+or
 * svn checkout https://github.com/nousxiong/gce/trunk
 
 Dependencies
@@ -36,7 +36,7 @@ Supported Compilers
 -------------------
 
 * GCC >= 4.6
-* VC >= 9
+* VC >= 9.0 (sp1)
 
 Build (Linux)
 -----------
@@ -45,7 +45,7 @@ Build (Linux)
 * cd ..
 * mkdir gce_build
 * cd gce_build
-* cmake -G "Unix Makefiles" -DCMAKE_BUILD_TYPE=Release -DBOOST_ROOT=<your_boost_root_dir> -DSUB_LIBRARYS="actor amsg" ../gce
+* cmake -G "Unix Makefiles" -DCMAKE_BUILD_TYPE=Release -DBOOST_ROOT=your_boost_root_dir -DSUB_LIBRARYS="actor amsg" ../gce
 * make
 * *Optional:* make install (if set CMAKE_INSTALL_PREFIX when run cmake, for example: -DCMAKE_INSTALL_PREFIX=../install)
 
@@ -56,7 +56,7 @@ Build (Windows)
 * cd ..
 * mkdir gce_build
 * cd gce_build
-* cmake -G "Visual Studio 9" -DBOOST_ROOT=<your_boost_root_dir> -DSUB_LIBRARYS="actor amsg" ..\gce
+* cmake -G "Visual Studio 9" -DBOOST_ROOT=your_boost_root_dir -DSUB_LIBRARYS="actor amsg" ..\gce
 * (open generated vc sln, and build ALL_BUILD project)
 * *Optional:* (build INSTALL project)(if set CMAKE_INSTALL_PREFIX when run cmake, for example: -DCMAKE_INSTALL_PREFIX=..\install)
 
