@@ -9,7 +9,9 @@ Get the Sources
 ---------------
 
 * git clone git://github.com/nousxiong/gce.git
+
 or
+
 * svn checkout https://github.com/nousxiong/gce/trunk
 
 Dependencies
@@ -20,15 +22,15 @@ Dependencies
 
 Need build sub librares:
 
-Boost.Atomic 
-Boost.Coroutine 
-Boost.Context 
-Boost.System 
-Boost.Regex 
-Boost.Date_time 
-Boost.Timer 
-Boost.Chrono 
-Boost.Thread
+* Boost.Atomic 
+* Boost.Coroutine 
+* Boost.Context 
+* Boost.System 
+* Boost.Regex 
+* Boost.Date_time 
+* Boost.Timer 
+* Boost.Chrono 
+* Boost.Thread
 
 Please build boost with stage mode (for example: b2 ... stage)
 
