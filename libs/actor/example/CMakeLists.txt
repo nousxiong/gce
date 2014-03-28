@@ -28,6 +28,9 @@ add_subdirectory (cluster)
 # Gce cluster client.
 add_subdirectory (cluster_client)
 
+# Helloworld.
+add_subdirectory (helloworld)
+
 # Two actors pingpong.
 add_subdirectory (pingpong)
 
