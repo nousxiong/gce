@@ -127,3 +127,90 @@ int main()
   return 0;
 }
 ```
+
+Type matching
+-----------
+
+```cpp
+#include <gce/actor/all.hpp>
+#include <iostream>
+
+void echo(gce::self_t self)
+{
+  /// wait for "start" message. 
+  /// if and only if after fetch "start", then others
+  gce::recv(self, gce::atom("start"));
+  std::cout << "start!" << std::endl;
+
+  /// handle other messages
+  gce::message msg;
+  gce::aid_t sender = self.recv(msg);
+  std::cout << "recv message: " << gce::atom(msg.get_type()) << std::endl;
+
+  /// reply
+  gce::send(self, sender);
+}
+
+int main()
+{
+  gce::context ctx;
+
+  gce::mixin_t base = gce::spawn(ctx);
+
+  gce::aid_t echo_actor = gce::spawn(base, boost::bind(&echo, _1));
+
+  /// send "hi" message to echo
+  gce::send(base, echo_actor, gce::atom("hi"));
+
+  /// send "start" message to echo, after "hi" message
+  gce::send(base, echo_actor, gce::atom("start"));
+
+  /// ... and wait for a response
+  gce::recv(base);
+
+  return 0;
+}
+```
+
+Actor link
+-----------
+
+```cpp
+#include <gce/actor/all.hpp>
+#include <iostream>
+
+void quiter(gce::self_t self)
+{
+  /// wait for gce::exit from link actor
+  gce::recv(self);
+}
+
+void link(gce::self_t self)
+{
+  /// create 10 actor and link with them
+  for (std::size_t i=0; i<10; ++i)
+  {
+    gce::spawn(self, boost::bind(&quiter, _1), gce::linked);
+  }
+
+  /// quit, will send 10 gce::exit to quiter actors 
+  /// and 1 gce::exit to base actor(in main)
+}
+
+int main()
+{
+  gce::context ctx;
+
+  gce::mixin_t base = gce::spawn(ctx);
+
+  /// create a link actor and monitor it.
+  gce::spawn(base, boost::bind(&link, _1), gce::monitored);
+
+  /// wait for gce::exit message
+  gce::recv(base);
+
+  std::cout << "end" << std::endl;
+
+  return 0;
+}
+```
