@@ -25,8 +25,21 @@ add_subdirectory (asio)
 # Gce cluster.
 add_subdirectory (cluster)
 
+
+
 # Gce cluster client.
 add_subdirectory (cluster_client)
+
+
+
+# Helloworld.
+add_subdirectory (helloworld)
+
+# Link.
+add_subdirectory (link)
+
+# Matching.
+add_subdirectory (matching)
 
 # Two actors pingpong.
 add_subdirectory (pingpong)
