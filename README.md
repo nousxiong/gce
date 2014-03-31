@@ -70,7 +70,7 @@ Build (Windows)
 * cd ..
 * mkdir gce_build
 * cd gce_build
-* cmake -G "Visual Studio 9" -DBOOST_ROOT=your_boost_root_dir -DSUB_LIBRARYS="actor amsg" ..\gce
+* cmake -G "Visual Studio 9 2008" -DBOOST_ROOT=your_boost_root_dir -DSUB_LIBRARYS="actor amsg" ..\gce
 * (open generated vc sln, and build ALL_BUILD project)
 * *Optional:* (build INSTALL project)(if set CMAKE_INSTALL_PREFIX when run cmake, for example: -DCMAKE_INSTALL_PREFIX=..\install)
 
