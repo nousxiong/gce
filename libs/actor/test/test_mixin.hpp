@@ -58,7 +58,6 @@ private:
     {
       std::size_t user_thr_num = 5;
       attributes attrs;
-      attrs.mixin_num_ = user_thr_num + 1;
       context ctx(attrs);
 
       boost::thread_group thrs;

@@ -56,7 +56,7 @@ public:
 public:
   void stop();
   void on_free();
-  void on_recv(pack*);
+  void on_recv(pack&, base_type::send_hint);
 
   void link(aid_t) {}
   void monitor(aid_t) {}
@@ -64,7 +64,7 @@ public:
 private:
   void run(std::string const&, yield_t);
   basic_acceptor* make_acceptor(std::string const&);
-  void handle_recv(pack*);
+  void handle_recv(pack&);
 
 private:
   void close();

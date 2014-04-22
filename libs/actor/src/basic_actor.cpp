@@ -10,6 +10,7 @@
 #include <gce/actor/basic_actor.hpp>
 #include <gce/actor/context.hpp>
 #include <gce/actor/detail/cache_pool.hpp>
+#include <gce/actor/detail/pack.hpp>
 #include <gce/detail/scope.hpp>
 #include <boost/variant/get.hpp>
 #include <boost/foreach.hpp>
@@ -31,61 +32,61 @@ basic_actor::~basic_actor()
 {
 }
 ///----------------------------------------------------------------------------
-void basic_actor::send(aid_t recver, message const& m)
+void basic_actor::pri_send(aid_t recver, message const& m, send_hint hint)
 {
   aid_t target = filter_aid(recver, user_);
   if (target)
   {
-    detail::pack* pk = alloc_pack(user_);
-    pk->tag_ = get_aid();
-    pk->recver_ = recver;
-    pk->skt_ = target;
-    pk->msg_ = m;
+    detail::pack pk;
+    pk.tag_ = get_aid();
+    pk.recver_ = recver;
+    pk.skt_ = target;
+    pk.msg_ = m;
 
-    send(target, pk, user_);
+    send(target, pk, user_, hint);
   }
 }
 ///----------------------------------------------------------------------------
-void basic_actor::send(svcid_t recver, message const& m)
+void basic_actor::pri_send_svc(svcid_t recver, message const& m, send_hint hint)
 {
   aid_t target = filter_svcid(recver, user_);
   if (target)
   {
-    detail::pack* pk = alloc_pack(user_);
-    pk->tag_ = get_aid();
+    detail::pack pk;
+    pk.tag_ = get_aid();
     if (recver.ctxid_ == ctxid_nil || recver.ctxid_ == user_->get_ctxid())
     {
       /// is local none socket actor
-      pk->recver_ = target;
+      pk.recver_ = target;
     }
-    pk->svc_ = recver;
-    pk->skt_ = target;
-    pk->msg_ = m;
+    pk.svc_ = recver;
+    pk.skt_ = target;
+    pk.msg_ = m;
 
-    send(target, pk, user_);
+    send(target, pk, user_, hint);
   }
 }
 ///----------------------------------------------------------------------------
-void basic_actor::relay(aid_t recver, message& m)
+void basic_actor::pri_relay(aid_t recver, message& m, send_hint hint)
 {
   aid_t target = filter_aid(recver, user_);
   if (target)
   {
-    detail::pack* pk = alloc_pack(user_);
+    detail::pack pk;
     if (m.req_.valid())
     {
-      pk->tag_ = m.req_;
+      pk.tag_ = m.req_;
       m.req_ = detail::request_t();
     }
     else
     {
-      pk->tag_ = get_aid();
+      pk.tag_ = get_aid();
     }
-    pk->recver_ = recver;
-    pk->skt_ = target;
-    pk->msg_ = m;
+    pk.recver_ = recver;
+    pk.skt_ = target;
+    pk.msg_ = m;
 
-    send(target, pk, user_);
+    send(target, pk, user_, hint);
   }
   else if (m.req_.valid())
   {
@@ -95,50 +96,49 @@ void basic_actor::relay(aid_t recver, message& m)
   }
 }
 ///----------------------------------------------------------------------------
-void basic_actor::relay(svcid_t recver, message& m)
+void basic_actor::pri_relay_svc(svcid_t recver, message& m, send_hint hint)
 {
   aid_t target = filter_svcid(recver, user_);
   if (target)
   {
-    detail::pack* pk = alloc_pack(user_);
+    detail::pack pk;
     if (m.req_.valid())
     {
-      pk->tag_ = m.req_;
+      pk.tag_ = m.req_;
       m.req_ = detail::request_t();
     }
     else
     {
-      pk->tag_ = get_aid();
+      pk.tag_ = get_aid();
     }
 
     if (recver.ctxid_ == ctxid_nil || recver.ctxid_ == user_->get_ctxid())
     {
       /// is local none socket actor
-      pk->recver_ = target;
+      pk.recver_ = target;
     }
-    pk->svc_ = recver;
-    pk->skt_ = target;
-    pk->msg_ = m;
+    pk.svc_ = recver;
+    pk.skt_ = target;
+    pk.msg_ = m;
 
-    send(target, pk, user_);
+    send(target, pk, user_, hint);
   }
 }
 ///----------------------------------------------------------------------------
-response_t basic_actor::request(aid_t recver, message const& m)
+void basic_actor::pri_request(response_t res, aid_t recver, message const& m, send_hint hint)
 {
   aid_t target = filter_aid(recver, user_);
   aid_t sender = get_aid();
-  response_t res(new_request(), sender);
   detail::request_t req(res.get_id(), sender);
   if (target)
   {
-    detail::pack* pk = alloc_pack(user_);
-    pk->tag_ = req;
-    pk->recver_ = recver;
-    pk->skt_ = target;
-    pk->msg_ = m;
+    detail::pack pk;
+    pk.tag_ = req;
+    pk.recver_ = recver;
+    pk.skt_ = target;
+    pk.msg_ = m;
 
-    send(target, pk, user_);
+    send(target, pk, user_, hint);
   }
   else
   {
@@ -146,75 +146,67 @@ response_t basic_actor::request(aid_t recver, message const& m)
     response_t res(req.get_id(), recver);
     send_already_exited(req.get_aid(), res);
   }
-  return res;
 }
 ///----------------------------------------------------------------------------
-response_t basic_actor::request(svcid_t recver, message const& m)
+void basic_actor::pri_request_svc(response_t res, svcid_t recver, message const& m, send_hint hint)
 {
   aid_t target = filter_svcid(recver, user_);
   aid_t sender = get_aid();
-  response_t res(new_request(), sender);
   detail::request_t req(res.get_id(), sender);
   if (target)
   {
-    detail::pack* pk = alloc_pack(user_);
-    pk->tag_ = req;
+    detail::pack pk;
+    pk.tag_ = req;
     if (recver.ctxid_ == ctxid_nil || recver.ctxid_ == user_->get_ctxid())
     {
       /// is local none socket actor
-      pk->recver_ = target;
+      pk.recver_ = target;
     }
-    pk->svc_ = recver;
-    pk->skt_ = target;
-    pk->msg_ = m;
+    pk.svc_ = recver;
+    pk.skt_ = target;
+    pk.msg_ = m;
 
-    send(target, pk, user_);
+    send(target, pk, user_, hint);
   }
-  return res;
 }
 ///----------------------------------------------------------------------------
-void basic_actor::reply(aid_t recver, message const& m)
+void basic_actor::pri_reply(aid_t recver, message const& m, send_hint hint)
 {
   aid_t target = filter_aid(recver, user_);
   if (target)
   {
     detail::request_t req;
-    detail::pack* pk = alloc_pack(user_);
+    detail::pack pk;
     if (mb_.pop(recver, req))
     {
       response_t res(req.get_id(), get_aid());
-      pk->tag_ = res;
+      pk.tag_ = res;
     }
     else
     {
-      pk->tag_ = get_aid();
+      pk.tag_ = get_aid();
     }
-    pk->recver_ = recver;
-    pk->skt_ = target;
-    pk->msg_ = m;
-    send(target, pk, user_);
+    pk.recver_ = recver;
+    pk.skt_ = target;
+    pk.msg_ = m;
+    send(target, pk, user_, hint);
   }
 }
 ///----------------------------------------------------------------------------
-void basic_actor::link(aid_t target)
+void basic_actor::pri_link(aid_t target, send_hint hint)
 {
-  link(detail::link_t(linked, target), user_);
+  link(detail::link_t(linked, target), hint, user_);
 }
 ///----------------------------------------------------------------------------
-void basic_actor::monitor(aid_t target)
+void basic_actor::pri_monitor(aid_t target, send_hint hint)
 {
-  link(detail::link_t(monitored, target), user_);
+  link(detail::link_t(monitored, target), hint, user_);
 }
 ///----------------------------------------------------------------------------
-void basic_actor::on_free()
-{
-  mb_.clear();
-  link_list_.clear();
-  monitor_list_.clear();
-  dealloc_pack(owner_, pack_que_.pop_all_reverse());
-}
-///----------------------------------------------------------------------------
-sid_t basic_actor::spawn(match_t func, match_t ctxid, std::size_t stack_size)
+void basic_actor::pri_spawn(
+  sid_t sid, match_t func, match_t ctxid, 
+  std::size_t stack_size, send_hint hint
+  )
 {
   ctxid_t target;
   aid_t skt = user_->select_socket(ctxid, &target);
@@ -228,14 +220,19 @@ sid_t basic_actor::spawn(match_t func, match_t ctxid, std::size_t stack_size)
     ctxid = target;
   }
 
-  detail::pack* pk = alloc_pack(user_);
-  sid_t sid = new_request();
-  pk->tag_ = detail::spawn_t(func, ctxid, stack_size, sid, get_aid());
-  pk->skt_ = skt;
-  pk->msg_ = message(detail::msg_spawn);
+  detail::pack pk;
+  pk.tag_ = detail::spawn_t(func, ctxid, stack_size, sid, get_aid());
+  pk.skt_ = skt;
+  pk.msg_ = message(detail::msg_spawn);
 
-  send(skt, pk, user_);
-  return sid;
+  send(skt, pk, user_, hint);
+}
+///----------------------------------------------------------------------------
+void basic_actor::on_free()
+{
+  mb_.clear();
+  link_list_.clear();
+  monitor_list_.clear();
 }
 ///----------------------------------------------------------------------------
 void basic_actor::update_aid()
@@ -249,30 +246,12 @@ sid_t basic_actor::new_request()
   return ++req_id_;
 }
 ///----------------------------------------------------------------------------
-detail::pack* basic_actor::alloc_pack(detail::cache_pool* owner)
-{
-  detail::pack* pk = owner->get_pack();
-  pk->owner_ = owner;
-  return pk;
-}
-///----------------------------------------------------------------------------
-void basic_actor::dealloc_pack(detail::cache_pool* owner, detail::pack* pk)
-{
-  while (pk)
-  {
-    detail::pack* next = detail::node_access::get_next(pk);
-    detail::node_access::set_next(pk, (detail::pack*)0);
-    owner->free_pack(pk->owner_, pk);
-    pk = next;
-  }
-}
-///----------------------------------------------------------------------------
 void basic_actor::add_link(aid_t target, sktaid_t skt)
 {
   link_list_.insert(std::make_pair(target, skt));
 }
 ///----------------------------------------------------------------------------
-void basic_actor::link(detail::link_t l, detail::cache_pool* user)
+void basic_actor::link(detail::link_t l, send_hint hint, detail::cache_pool* user)
 {
   aid_t recver = l.get_aid();
   aid_t skt;
@@ -302,13 +281,13 @@ void basic_actor::link(detail::link_t l, detail::cache_pool* user)
     aid_t target = is_local ? recver : skt;
     BOOST_ASSERT(target);
 
-    detail::pack* pk = alloc_pack(user);
-    pk->tag_ = detail::link_t(l.get_type(), get_aid());
-    pk->recver_ = recver;
-    pk->skt_ = skt;
-    pk->msg_ = message(detail::msg_link);
+    detail::pack pk;
+    pk.tag_ = detail::link_t(l.get_type(), get_aid());
+    pk.recver_ = recver;
+    pk.skt_ = skt;
+    pk.msg_ = message(detail::msg_link);
 
-    send(target, pk, user);
+    send(target, pk, user, hint);
   }
 }
 ///----------------------------------------------------------------------------
@@ -326,13 +305,13 @@ void basic_actor::send_exit(
     aid_t target = pr.second ? pr.second : pr.first;
     BOOST_ASSERT(target);
 
-    detail::pack* pk = alloc_pack(user_);
-    pk->tag_ = detail::exit_t(ec, self_aid);
-    pk->recver_ = pr.first;
-    pk->skt_ = target;
-    pk->msg_ = m;
+    detail::pack pk;
+    pk.tag_ = detail::exit_t(ec, self_aid);
+    pk.recver_ = pr.first;
+    pk.skt_ = target;
+    pk.msg_ = m;
 
-    send(target, pk, user_);
+    send(target, pk, user_, async);
   }
 }
 ///----------------------------------------------------------------------------
@@ -351,14 +330,14 @@ void basic_actor::send_already_exited(aid_t recver, aid_t sender)
     std::string exit_msg("already exited");
     m << exit_already << exit_msg;
 
-    detail::pack* pk = alloc_pack(user_);
-    pk->tag_ = sender;
-    pk->recver_ = recver;
-    pk->skt_ = target;
-    pk->msg_ = m;
-    pk->is_err_ret_ = true;
+    detail::pack pk;
+    pk.tag_ = sender;
+    pk.recver_ = recver;
+    pk.skt_ = target;
+    pk.msg_ = m;
+    pk.is_err_ret_ = true;
 
-    send(target, pk, user_);
+    send(target, pk, user_, async);
   }
 }
 ///----------------------------------------------------------------------------
@@ -371,26 +350,26 @@ void basic_actor::send_already_exited(aid_t recver, response_t res)
     std::string exit_msg("already exited");
     m << exit_already << exit_msg;
 
-    detail::pack* pk = alloc_pack(user_);
-    pk->tag_ = res;
-    pk->recver_ = recver;
-    pk->skt_ = target;
-    pk->msg_ = m;
-    pk->is_err_ret_ = true;
+    detail::pack pk;
+    pk.tag_ = res;
+    pk.recver_ = recver;
+    pk.skt_ = target;
+    pk.msg_ = m;
+    pk.is_err_ret_ = true;
 
-    send(target, pk, user_);
+    send(target, pk, user_, async);
   }
 }
 ///----------------------------------------------------------------------------
 void basic_actor::send(
-  aid_t const& recver, detail::pack* pk,
-  detail::cache_pool* user
+  aid_t const& recver, detail::pack& pk,
+  detail::cache_pool* user, send_hint hint
   )
 {
   recver.get_actor_ptr(
     user->get_ctxid(),
     user->get_context().get_timestamp()
-    )->on_recv(pk);
+    )->on_recv(pk, hint);
 }
 ///----------------------------------------------------------------------------
 aid_t basic_actor::filter_aid(aid_t const& src, detail::cache_pool* user)

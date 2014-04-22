@@ -11,7 +11,6 @@
 #define GCE_ACTOR_SEND_HPP
 
 #include <gce/actor/config.hpp>
-#include <gce/actor/slice.hpp>
 #include <gce/actor/response.hpp>
 #include <gce/actor/actor_id.hpp>
 #include <gce/actor/service_id.hpp>
@@ -27,33 +26,16 @@ inline void send(Sender& sender, Recver recver, message& m)
   sender.send(recver, m);
 }
 
-template <typename Recver>
-inline void send(slice_t& sender, Recver recver, message& m)
-{
-  sender->send(recver, m);
-}
-
 template <typename Sender, typename Recver>
 inline response_t request(Sender& sender, Recver recver, message& m)
 {
   return sender.request(recver, m);
 }
 
-template <typename Recver>
-inline response_t request(slice_t& sender, Recver recver, message& m)
-{
-  return sender->request(recver, m);
-}
-
 template <typename Sender>
 inline void reply(Sender& sender, aid_t recver, message& m)
 {
   sender.reply(recver, m);
-}
-
-inline void reply(slice_t& sender, aid_t recver, message& m)
-{
-  sender->reply(recver, m);
 }
 }
 ///----------------------------------------------------------------------------

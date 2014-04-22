@@ -12,11 +12,11 @@
 #ifndef GCE_CONFIG_HPP
 #define GCE_CONFIG_HPP
 
-#include <boost/config.hpp>
+#include <boost/predef.h>
 #include <gce/user.hpp>
 
 /// Suppress some vc warnings.
-#ifdef BOOST_MSVC
+#ifdef BOOST_COMP_MSVC
 # pragma warning(disable : 4251 4231 4660 4275 4355 4244 4307)
 #endif
 

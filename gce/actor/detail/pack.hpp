@@ -13,32 +13,16 @@
 #include <gce/actor/config.hpp>
 #include <gce/actor/service_id.hpp>
 #include <gce/actor/message.hpp>
-#include <gce/actor/detail/object_pool.hpp>
-#include <gce/detail/mpsc_queue.hpp>
 
 namespace gce
 {
 namespace detail
 {
-class cache_pool;
 struct pack
-  : public object_pool<pack>::object
-  , public mpsc_queue<pack>::node
 {
   pack()
     : is_err_ret_(false)
-    , owner_(0)
   {
-  }
-
-  inline void on_free()
-  {
-    tag_ = detail::tag_t();
-    recver_ = aid_t();
-    skt_ = aid_t();
-    svc_ = svcid_t();
-    is_err_ret_ = false;
-    msg_ = message();
   }
 
   detail::tag_t tag_;
@@ -47,12 +31,7 @@ struct pack
   svcid_t svc_;
   bool is_err_ret_;
   message msg_;
-
-  cache_pool* owner_;
 };
-
-typedef object_pool<pack> pack_pool_t;
-typedef mpsc_queue<pack> pack_queue_t;
 }
 }
 

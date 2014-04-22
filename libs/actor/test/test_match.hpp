@@ -58,7 +58,6 @@ public:
       std::size_t user_thr_num = 5;
       std::size_t my_actor_size = 10;
       attributes attrs;
-      attrs.mixin_num_ = user_thr_num + 1;
       context ctx(attrs);
 
       mixin_t base = spawn(ctx);

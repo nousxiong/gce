@@ -16,7 +16,6 @@
 #include <gce/actor/wait.hpp>
 #include <gce/actor/actor.hpp>
 #include <gce/actor/mixin.hpp>
-#include <gce/actor/slice.hpp>
 #include <gce/actor/message.hpp>
 #include <gce/actor/remote.hpp>
 #include <gce/actor/spawn.hpp>

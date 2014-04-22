@@ -28,8 +28,8 @@
 #include "test_coro.hpp"
 #include "test_actor.hpp"
 #include "test_mixin.hpp"
-#include "test_slice.hpp"
 #include "test_actor_pingpong.hpp"
+#include "test_mixin_pingpong.hpp"
 #include "test_match.hpp"
 #include "test_link.hpp"
 #include "test_message.hpp"
@@ -54,8 +54,8 @@ int main()
     gce::send_recv_ut::run();
     gce::actor_ut::run();
     gce::mixin_ut::run();
-    gce::slice_ut::run();
     gce::actor_pingpong_ut::run();
+    gce::mixin_pingpong_ut::run();
     gce::match_ut::run();
     gce::link_ut::run();
     gce::relay_ut::run();

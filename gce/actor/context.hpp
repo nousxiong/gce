@@ -13,6 +13,7 @@
 #include <gce/actor/config.hpp>
 #include <gce/actor/actor_id.hpp>
 #include <gce/detail/unique_ptr.hpp>
+#include <gce/detail/mpsc_queue.hpp>
 #include <boost/thread/thread.hpp>
 #include <boost/atomic.hpp>
 #include <boost/optional.hpp>
@@ -28,14 +29,10 @@ struct attributes
     : ios_(0)
     , id_(ctxid_nil)
     , thread_num_(boost::thread::hardware_concurrency())
-    , mixin_num_(1)
     , per_thread_cache_(1)
     , actor_pool_reserve_size_(8)
-    , slice_pool_reserve_size_(8)
     , socket_pool_reserve_size_(8)
     , acceptor_pool_reserve_size_(8)
-    , pack_pool_reserve_size_(8)
-    , pack_pool_free_size_(8)
     , max_cache_match_size_(32)
     , gc_period_(1000)
   {
@@ -44,14 +41,10 @@ struct attributes
   io_service_t* ios_;
   ctxid_t id_;
   std::size_t thread_num_;
-  std::size_t mixin_num_;
   std::size_t per_thread_cache_;
   std::size_t actor_pool_reserve_size_;
-  std::size_t slice_pool_reserve_size_;
   std::size_t socket_pool_reserve_size_;
   std::size_t acceptor_pool_reserve_size_;
-  std::size_t pack_pool_reserve_size_;
-  std::size_t pack_pool_free_size_;
   std::size_t max_cache_match_size_;
   boost::chrono::milliseconds gc_period_;
   std::vector<thread_callback_t> thread_begin_cb_list_;
@@ -83,13 +76,13 @@ public:
   /// internal use
   inline attributes const& get_attributes() const { return attrs_; }
   inline timestamp_t get_timestamp() const { return timestamp_; }
-  detail::cache_pool* select_cache_pool(std::size_t i = size_nil);
+  detail::cache_pool* select_cache_pool();
 
-  void register_service(match_t name, aid_t svc, detail::cache_pool*);
-  void deregister_service(match_t name, aid_t svc, detail::cache_pool*);
+  void register_service(match_t name, aid_t svc);
+  void deregister_service(match_t name, aid_t svc);
 
-  void register_socket(ctxid_pair_t, aid_t skt, detail::cache_pool*);
-  void deregister_socket(ctxid_pair_t ctxid_pr, aid_t skt, detail::cache_pool*);
+  void register_socket(ctxid_pair_t, aid_t skt);
+  void deregister_socket(ctxid_pair_t ctxid_pr, aid_t skt);
 
 private:
   void run(
@@ -98,7 +91,6 @@ private:
     std::vector<thread_callback_t> const&
     );
   void stop();
-  void stop_mixin(detail::cache_pool*);
   void start_gc_timer(detail::cache_pool*);
   void gc(detail::cache_pool*, errcode_t const&);
 
@@ -119,8 +111,7 @@ private:
   GCE_CACHE_ALIGNED_VAR(boost::thread_group, thread_group_)
   GCE_CACHE_ALIGNED_VAR(std::vector<detail::cache_pool*>, cache_pool_list_)
 
-  GCE_CACHE_ALIGNED_VAR(std::vector<mixin*>, mixin_list_)
-  GCE_CACHE_ALIGNED_VAR(boost::atomic_size_t, curr_mixin_)
+  GCE_CACHE_ALIGNED_VAR(detail::mpsc_queue<mixin>, mixin_list_)
 };
 }
 

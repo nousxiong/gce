@@ -28,7 +28,6 @@ public:
 
       attributes attrs;
       attrs.id_ = atom("one");
-      attrs.mixin_num_ = 2;
       context ctx1(attrs);
       attrs.id_ = atom("two");
       context ctx2(attrs);

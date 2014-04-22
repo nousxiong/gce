@@ -22,7 +22,7 @@ inline void register_service(Self& self, match_t name)
   detail::cache_pool* owner = self.get_cache_pool();
   context& ctx = owner->get_context();
   owner->register_service(name, self.get_aid());
-  ctx.register_service(name, self.get_aid(), owner);
+  ctx.register_service(name, self.get_aid());
 }
 
 
@@ -32,7 +32,7 @@ inline void deregister_service(Self& self, match_t name)
   detail::cache_pool* owner = self.get_cache_pool();
   context& ctx = owner->get_context();
   owner->deregister_service(name, self.get_aid());
-  ctx.deregister_service(name, self.get_aid(), owner);
+  ctx.deregister_service(name, self.get_aid());
 }
 }
 

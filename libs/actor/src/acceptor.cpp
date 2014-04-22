@@ -86,7 +86,7 @@ void acceptor::on_free()
   is_router_ = false;
 }
 ///----------------------------------------------------------------------------
-void acceptor::on_recv(pack* pk)
+void acceptor::on_recv(pack& pk, base_type::send_hint)
 {
   user_->get_strand().dispatch(
     boost::bind(
@@ -177,27 +177,26 @@ basic_acceptor* acceptor::make_acceptor(std::string const& ep)
   throw std::runtime_error("unsupported protocol");
 }
 ///----------------------------------------------------------------------------
-void acceptor::handle_recv(pack* pk)
+void acceptor::handle_recv(pack& pk)
 {
-  scope scp(boost::bind(&basic_actor::dealloc_pack, user_, pk));
-  if (check(pk->recver_, get_aid().ctxid_, user_->get_context().get_timestamp()))
+  if (check(pk.recver_, get_aid().ctxid_, user_->get_context().get_timestamp()))
   {
-    if (exit_t* ex = boost::get<exit_t>(&pk->tag_))
+    if (exit_t* ex = boost::get<exit_t>(&pk.tag_))
     {
       base_type::remove_link(ex->get_aid());
     }
   }
-  else if (!pk->is_err_ret_)
+  else if (!pk.is_err_ret_)
   {
-    if (detail::link_t* link = boost::get<detail::link_t>(&pk->tag_))
+    if (detail::link_t* link = boost::get<detail::link_t>(&pk.tag_))
     {
       /// send actor exit msg
-      base_type::send_already_exited(link->get_aid(), pk->recver_);
+      base_type::send_already_exited(link->get_aid(), pk.recver_);
     }
-    else if (detail::request_t* req = boost::get<detail::request_t>(&pk->tag_))
+    else if (detail::request_t* req = boost::get<detail::request_t>(&pk.tag_))
     {
       /// reply actor exit msg
-      response_t res(req->get_id(), pk->recver_);
+      response_t res(req->get_id(), pk.recver_);
       base_type::send_already_exited(req->get_aid(), res);
     }
   }

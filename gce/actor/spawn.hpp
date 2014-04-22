@@ -16,16 +16,18 @@
 #include <gce/actor/mixin.hpp>
 #include <gce/actor/context.hpp>
 #include <gce/actor/detail/cache_pool.hpp>
-#include <gce/actor/slice.hpp>
 
 namespace gce
 {
 namespace detail
 {
+typedef boost::promise<aid_t> actor_promise_t;
+typedef boost::unique_future<aid_t> actor_future_t;
+
 template <typename Sire, typename F>
 inline aid_t make_actor(
   Sire& sire, cache_pool* user, cache_pool* owner,
-  F f, link_type type, std::size_t stack_size
+  F& f, link_type type, std::size_t stack_size
   )
 {
   aid_t link_tgt;
@@ -50,27 +52,39 @@ inline aid_t make_actor(
   a->start(stack_size);
   return aid;
 }
+
+inline void make_actor(
+  actor_promise_t& p, mixin_t sire, actor_func_t const& func, 
+  link_type type, std::size_t stack_size
+  )
+{
+  detail::cache_pool* user = 0;
+  detail::cache_pool* owner = sire.get_cache_pool();
+  aid_t aid = make_actor(sire, user, owner, func, type, stack_size);
+  p.set_value(aid);
+}
 }
 
 /// Spawn a actor using given mixin
 template <typename F>
 inline aid_t spawn(
-  mixin_t sire, F f,
+  mixin_t sire, F func,
   link_type type = no_link,
   std::size_t stack_size = default_stacksize()
   )
 {
-  detail::cache_pool* owner = sire.get_cache_pool();
-  context& ctx = owner->get_context();
+  detail::actor_promise_t p;
+  detail::actor_future_t f = p.get_future();
 
-  ///   In boost 1.54 & 1.55, boost::asio::spawn will crash
-  /// When spwan multi-coros at main thread
-  /// With multi-threads run io_service::run (vc11)
-  ///   I'don't know this wheather or not a bug.
-  ///   So, if using mixin(means in main or other user thread(s)),
-  /// We spawn actor(s) with only one cache_pool(means only one asio::strand).
-  detail::cache_pool* user = ctx.select_cache_pool(0);
-  return make_actor(sire, user, owner, f, type, stack_size);
+  detail::cache_pool* owner = sire.get_cache_pool();
+  owner->get_strand().post(
+    boost::bind(
+      &detail::make_actor, 
+      boost::ref(p), boost::ref(sire), 
+      actor_func_t(func), type, stack_size
+      )
+    );
+  return f.get();
 }
 
 /// Spawn a actor using given actor
@@ -95,20 +109,6 @@ inline aid_t spawn(
 inline mixin_t spawn(context& ctx)
 {
   return ctx.make_mixin();
-}
-
-/// Spawn a slice using given mixin
-inline slice_t spawn(mixin_t sire, link_type type = no_link)
-{
-  aid_t link_tgt;
-  if (type != no_link)
-  {
-    link_tgt = sire.get_aid();
-  }
-  slice_t s(sire.get_slice());
-  s->init(link_tgt);
-  sire.add_link(detail::link_t(type, s->get_aid()));
-  return s;
 }
 
 /// Spawn a actor on remote context

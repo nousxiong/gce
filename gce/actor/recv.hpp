@@ -11,10 +11,10 @@
 #define GCE_ACTOR_RECV_HPP
 
 #include <gce/actor/config.hpp>
-#include <gce/actor/slice.hpp>
 #include <gce/actor/response.hpp>
 #include <gce/actor/actor_id.hpp>
 #include <gce/actor/message.hpp>
+#include <gce/actor/match.hpp>
 #include <boost/bind.hpp>
 #include <algorithm>
 
@@ -70,25 +70,6 @@ inline aid_t recv(Recver& recver, message& msg, match& mach)
   return sender;
 }
 
-inline aid_t recv(slice_t& recver, message& msg, match& mach)
-{
-  bool has_exit = check_exit(mach.match_list_);
-  if (!has_exit)
-  {
-    mach.match_list_.push_back(exit);
-  }
-
-  aid_t sender = recver->recv(msg, mach.match_list_);
-  if (!has_exit && msg.get_type() == exit)
-  {
-    exit_code_t exc;
-    std::string errmsg;
-    msg >> exc >> errmsg;
-    throw std::runtime_error(errmsg);
-  }
-  return sender;
-}
-
 template <typename Recver>
 inline aid_t recv(Recver& recver, response_t res, message& msg, duration_t tmo)
 {
@@ -104,19 +85,6 @@ inline aid_t recv(Recver& recver, response_t res, message& msg, duration_t tmo)
   if (!sender)
   {
     throw std::runtime_error("recv response timeout");
-  }
-  return sender;
-}
-
-inline aid_t recv(slice_t& recver, response_t res, message& msg, duration_t)
-{
-  aid_t sender = recver->recv(res, msg);
-  if (msg.get_type() == exit)
-  {
-    exit_code_t exc;
-    std::string errmsg;
-    msg >> exc >> errmsg;
-    throw std::runtime_error(errmsg);
   }
   return sender;
 }

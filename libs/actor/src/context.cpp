@@ -26,7 +26,6 @@ context::context(attributes attrs)
   , timestamp_((timestamp_t)boost::chrono::system_clock::now().time_since_epoch().count())
   , curr_cache_pool_(size_nil)
   , cache_pool_size_(attrs_.thread_num_ * attrs_.per_thread_cache_)
-  , curr_mixin_(0)
 {
   if (attrs_.ios_)
   {
@@ -37,9 +36,7 @@ context::context(attributes attrs)
     ios_.reset(new io_service_t(attrs_.thread_num_));
   }
   work_ = boost::in_place(boost::ref(*ios_));
-
   cache_pool_list_.reserve(cache_pool_size_);
-  mixin_list_.reserve(attrs_.mixin_num_);
 
   try
   {
@@ -62,13 +59,6 @@ context::context(attributes attrs)
           )
         );
     }
-
-    for (std::size_t i=0; i<attrs_.mixin_num_; ++i, ++index)
-    {
-      mixin_list_.push_back((mixin*)0);
-      mixin*& mi = mixin_list_.back();
-      mi = new mixin(*this, index, attrs_);
-    }
   }
   catch (...)
   {
@@ -84,35 +74,24 @@ context::~context()
 ///------------------------------------------------------------------------------
 mixin& context::make_mixin()
 {
-  std::size_t i = curr_mixin_.fetch_add(1, boost::memory_order_relaxed);
-  if (i >= mixin_list_.size())
-  {
-    throw std::runtime_error("out of mixin fix num");
-  }
-  return *(mixin_list_[i]);
+  mixin* mix = new mixin(*this, attrs_);
+  mixin_list_.push(mix);
+  return *mix;
 }
 ///------------------------------------------------------------------------------
-detail::cache_pool* context::select_cache_pool(std::size_t i)
+detail::cache_pool* context::select_cache_pool()
 {
-  if (i == size_nil)
+  std::size_t curr_cache_pool = curr_cache_pool_;
+  ++curr_cache_pool;
+  if (curr_cache_pool >= cache_pool_size_)
   {
-    std::size_t curr_cache_pool = curr_cache_pool_;
-    ++curr_cache_pool;
-    if (curr_cache_pool >= cache_pool_size_)
-    {
-      curr_cache_pool = 0;
-    }
-    curr_cache_pool_ = curr_cache_pool;
-    return cache_pool_list_[curr_cache_pool];
+    curr_cache_pool = 0;
   }
-  else
-  {
-    BOOST_ASSERT(i < cache_pool_list_.size());
-    return cache_pool_list_[i];
-  }
+  curr_cache_pool_ = curr_cache_pool;
+  return cache_pool_list_[curr_cache_pool];
 }
 ///------------------------------------------------------------------------------
-void context::register_service(match_t name, aid_t svc, detail::cache_pool* user)
+void context::register_service(match_t name, aid_t svc)
 {
   BOOST_FOREACH(detail::cache_pool* cac_pool, cache_pool_list_)
   {
@@ -126,17 +105,9 @@ void context::register_service(match_t name, aid_t svc, detail::cache_pool* user
         );
     }
   }
-
-  BOOST_FOREACH(mixin* mi, mixin_list_)
-  {
-    if (mi)
-    {
-      mi->register_service(name, svc, user);
-    }
-  }
 }
 ///------------------------------------------------------------------------------
-void context::deregister_service(match_t name, aid_t svc, detail::cache_pool* user)
+void context::deregister_service(match_t name, aid_t svc)
 {
   BOOST_FOREACH(detail::cache_pool* cac_pool, cache_pool_list_)
   {
@@ -150,17 +121,9 @@ void context::deregister_service(match_t name, aid_t svc, detail::cache_pool* us
         );
     }
   }
-
-  BOOST_FOREACH(mixin* mi, mixin_list_)
-  {
-    if (mi)
-    {
-      mi->deregister_service(name, svc, user);
-    }
-  }
 }
 ///------------------------------------------------------------------------------
-void context::register_socket(ctxid_pair_t ctxid_pr, aid_t skt, detail::cache_pool* user)
+void context::register_socket(ctxid_pair_t ctxid_pr, aid_t skt)
 {
   BOOST_FOREACH(detail::cache_pool* cac_pool, cache_pool_list_)
   {
@@ -174,17 +137,9 @@ void context::register_socket(ctxid_pair_t ctxid_pr, aid_t skt, detail::cache_po
         );
     }
   }
-
-  BOOST_FOREACH(mixin* mi, mixin_list_)
-  {
-    if (mi)
-    {
-      mi->register_socket(ctxid_pr, skt, user);
-    }
-  }
 }
 ///------------------------------------------------------------------------------
-void context::deregister_socket(ctxid_pair_t ctxid_pr, aid_t skt, detail::cache_pool* user)
+void context::deregister_socket(ctxid_pair_t ctxid_pr, aid_t skt)
 {
   BOOST_FOREACH(detail::cache_pool* cac_pool, cache_pool_list_)
   {
@@ -196,14 +151,6 @@ void context::deregister_socket(ctxid_pair_t ctxid_pr, aid_t skt, detail::cache_
           cac_pool, ctxid_pr, skt
           )
         );
-    }
-  }
-
-  BOOST_FOREACH(mixin* mi, mixin_list_)
-  {
-    if (mi)
-    {
-      mi->deregister_socket(ctxid_pr, skt, user);
     }
   }
 }
@@ -247,17 +194,6 @@ void context::stop()
     if (cac_pool)
     {
       cac_pool->get_strand().dispatch(
-        boost::bind(&context::stop_mixin, this, cac_pool)
-        );
-      break;
-    }
-  }
-
-  BOOST_FOREACH(detail::cache_pool* cac_pool, cache_pool_list_)
-  {
-    if (cac_pool)
-    {
-      cac_pool->get_strand().dispatch(
         boost::bind(&detail::cache_pool::stop, cac_pool)
         );
     }
@@ -273,33 +209,18 @@ void context::stop()
     }
   }
 
-  BOOST_FOREACH(mixin* mi, mixin_list_)
+  mixin* mix = mixin_list_.pop_all_reverse();
+  while (mix)
   {
-    if (mi)
-    {
-      mi->free_cache();
-    }
-  }
-
-  BOOST_FOREACH(mixin* mi, mixin_list_)
-  {
-    delete mi;
+    mixin* next = detail::node_access::get_next(mix);
+    detail::node_access::set_next(mix, (mixin*)0);
+    delete mix;
+    mix = next;
   }
 
   BOOST_FOREACH(detail::cache_pool* cac_pool, cache_pool_list_)
   {
     delete cac_pool;
-  }
-}
-///------------------------------------------------------------------------------
-void context::stop_mixin(detail::cache_pool* user)
-{
-  BOOST_FOREACH(mixin* mi, mixin_list_)
-  {
-    if (mi)
-    {
-      mi->stop(user);
-    }
   }
 }
 ///------------------------------------------------------------------------------

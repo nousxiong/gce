@@ -25,7 +25,7 @@ cache_pool::cache_pool(
   )
   : ctx_(&ctx)
   , id_(id)
-  , cache_num_(attrs.thread_num_*attrs.per_thread_cache_ + attrs.mixin_num_)
+  , cache_num_(attrs.thread_num_*attrs.per_thread_cache_)
   , cache_match_size_(attrs.max_cache_match_size_)
   , mixed_(mixed)
   , snd_(ctx.get_io_service())
@@ -45,15 +45,9 @@ cache_pool::cache_pool(
       size_nil,
       attrs.acceptor_pool_reserve_size_
       )
-  , pack_pool_(
-      this,
-      attrs.pack_pool_free_size_,
-      attrs.pack_pool_reserve_size_
-      )
   , actor_cache_list_(cache_num_)
   , socket_cache_list_(cache_num_)
   , acceptor_cache_list_(cache_num_)
-  , pack_cache_list_(cache_num_)
   , curr_router_list_(router_list_.end())
   , curr_socket_list_(conn_list_.end())
   , curr_joint_list_(joint_list_.end())
@@ -63,7 +57,6 @@ cache_pool::cache_pool(
   actor_cache_dirty_list_.reserve(cache_num_);
   socket_cache_dirty_list_.reserve(cache_num_);
   acceptor_cache_dirty_list_.reserve(cache_num_);
-  pack_cache_dirty_list_.reserve(cache_num_);
 }
 ///------------------------------------------------------------------------------
 cache_pool::~cache_pool()
@@ -101,16 +94,6 @@ acceptor* cache_pool::get_acceptor()
   return acceptor_pool_.get();
 }
 ///------------------------------------------------------------------------------
-pack* cache_pool::get_pack()
-{
-  if (!mixed_ && !snd_.running_in_this_thread())
-  {
-    throw std::runtime_error("get_pack strand thread error");
-  }
-
-  return pack_pool_.get();
-}
-///------------------------------------------------------------------------------
 void cache_pool::free_actor(cache_pool* owner, actor* a)
 {
   free_object(
@@ -132,14 +115,6 @@ void cache_pool::free_acceptor(cache_pool* owner, acceptor* acpr)
   free_object(
     owner, acpr, acceptor_cache_list_, acceptor_pool_,
     owner->acceptor_free_queue_, acceptor_cache_dirty_list_
-    );
-}
-///------------------------------------------------------------------------------
-void cache_pool::free_pack(cache_pool* owner, pack* pk)
-{
-  free_object(
-    owner, pk, pack_cache_list_, pack_pool_,
-    owner->pack_free_queue_, pack_cache_dirty_list_
     );
 }
 ///------------------------------------------------------------------------------
@@ -187,7 +162,6 @@ void cache_pool::free_object()
   free_object<actor>(actor_pool_, actor_free_queue_);
   free_object<socket>(socket_pool_, socket_free_queue_);
   free_object<acceptor>(acceptor_pool_, acceptor_free_queue_);
-  free_object<pack>(pack_pool_, pack_free_queue_);
 }
 ///------------------------------------------------------------------------------
 void cache_pool::free_cache()
@@ -217,15 +191,6 @@ void cache_pool::free_cache()
       cac->free();
     }
     acceptor_cache_dirty_list_.clear();
-  }
-
-  if (!pack_cache_dirty_list_.empty())
-  {
-    BOOST_FOREACH(pack_cache_t* cac, pack_cache_dirty_list_)
-    {
-      cac->free();
-    }
-    pack_cache_dirty_list_.clear();
   }
 }
 ///------------------------------------------------------------------------------

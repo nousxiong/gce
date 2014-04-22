@@ -14,35 +14,46 @@
 #include <gce/actor/basic_actor.hpp>
 #include <gce/actor/detail/pack.hpp>
 #include <gce/actor/match.hpp>
-#include <boost/thread/condition_variable.hpp>
-#include <boost/thread/shared_mutex.hpp>
+#include <gce/detail/mpsc_queue.hpp>
+#include <boost/thread/future.hpp>
 #include <boost/optional.hpp>
 #include <boost/scoped_ptr.hpp>
 #include <vector>
 
 namespace gce
 {
-class slice;
 class mixin;
 class context;
 struct attributes;
 namespace detail
 {
 class cache_pool;
-typedef object_pool<slice, mixin*> slice_pool_t;
 }
 
 class mixin
-  : public basic_actor
+  : public detail::mpsc_queue<mixin>::node
+  , public basic_actor
 {
   typedef basic_actor base_type;
 
 public:
-  mixin(context& ctx, std::size_t id, attributes const& attrs);
+  mixin(context& ctx, attributes const& attrs);
   ~mixin();
 
 public:
   inline context& get_context() { return *ctx_; }
+
+  void send(aid_t, message const&);
+  void send(svcid_t, message const&);
+  void relay(aid_t, message&);
+  void relay(svcid_t, message&);
+
+  response_t request(aid_t, message const&);
+  response_t request(svcid_t, message const&);
+  void reply(aid_t, message const&);
+
+  void link(aid_t);
+  void monitor(aid_t);
 
   aid_t recv(message&, match const& mach = match());
   aid_t recv(
@@ -50,37 +61,29 @@ public:
     duration_t tmo = seconds_t(GCE_DEFAULT_REQUEST_TIMEOUT_SEC)
     );
   void wait(duration_t);
-  void update();
 
 public:
   /// internal use
   detail::cache_pool* get_cache_pool();
-  static void move_pack(
-    basic_actor* base,
-    detail::mailbox&,
-    detail::pack_queue_t&,
-    detail::cache_pool*,
-    mixin*
-    );
-  void on_recv(detail::pack*);
-  void gc();
+  void on_recv(detail::pack&, base_type::send_hint);
 
-  slice* get_slice();
-  void free_slice(slice*);
-  void free_cache();
+  sid_t spawn(match_t func, match_t ctxid, std::size_t stack_size);
 
-  void register_service(match_t name, aid_t svc, detail::cache_pool*);
-  void deregister_service(match_t name, aid_t svc, detail::cache_pool*);
+private:
+  typedef boost::optional<std::pair<detail::recv_t, message> > recv_optional_t;
+  typedef boost::optional<std::pair<response_t, message> > res_optional_t;
+  typedef boost::promise<recv_optional_t> recv_promise_t;
+  typedef boost::promise<res_optional_t> res_promise_t;
+  typedef boost::unique_future<recv_optional_t> recv_future_t;
+  typedef boost::unique_future<res_optional_t> res_future_t;
+  void try_recv(recv_promise_t&, match const&);
+  void try_response(res_promise_t&, response_t, duration_t);
+  void start_recv_timer(duration_t, recv_promise_t&);
+  void start_recv_timer(duration_t, res_promise_t&);
+  void handle_recv_timeout(errcode_t const&, recv_promise_t&, std::size_t);
+  void handle_res_timeout(errcode_t const&, res_promise_t&, std::size_t);
 
-  void register_socket(
-    ctxid_pair_t ctxid_pr,
-    aid_t skt, detail::cache_pool*
-    );
-  void deregister_socket(
-    ctxid_pair_t ctxid_pr,
-    aid_t skt, detail::cache_pool*
-    );
-  void stop(detail::cache_pool*);
+  void handle_recv(detail::pack&);
 
 private:
   /// Ensure start from a new cache line.
@@ -88,16 +91,13 @@ private:
 
   GCE_CACHE_ALIGNED_VAR(context*, ctx_)
 
-  GCE_CACHE_ALIGNED_VAR(boost::shared_mutex, mtx_)
-  GCE_CACHE_ALIGNED_VAR(boost::condition_variable_any, cv_)
-
-  GCE_CACHE_ALIGNED_VAR(boost::scoped_ptr<detail::cache_pool>, cac_pool_)
-
-  /// pools
-  GCE_CACHE_ALIGNED_VAR(boost::optional<detail::slice_pool_t>, slice_pool_)
-
   /// local
-  ctxid_t ctxid_;
+  recv_promise_t* recv_p_;
+  res_promise_t* res_p_;
+  response_t recving_res_;
+  match curr_match_;
+  timer_t tmr_;
+  std::size_t tmr_sid_;
 };
 
 typedef mixin& mixin_t;

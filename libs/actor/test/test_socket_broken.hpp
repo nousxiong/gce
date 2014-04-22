@@ -27,7 +27,6 @@ public:
       std::size_t quiter_num = 100;
 
       attributes attrs;
-      attrs.mixin_num_ = 2;
       attrs.id_ = atom("one");
       context ctx(attrs);
 

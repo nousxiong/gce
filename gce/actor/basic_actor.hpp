@@ -17,7 +17,6 @@
 #include <gce/actor/detail/request.hpp>
 #include <gce/actor/detail/link.hpp>
 #include <gce/actor/actor_id.hpp>
-#include <gce/actor/detail/pack.hpp>
 #include <boost/function.hpp>
 #include <map>
 #include <set>
@@ -26,10 +25,10 @@ namespace gce
 {
 class message;
 class mixin;
-class slice;
 namespace detail
 {
 class cache_pool;
+struct pack;
 }
 
 class basic_actor
@@ -39,23 +38,33 @@ public:
   virtual ~basic_actor();
 
 public:
-  void send(aid_t, message const&);
-  void send(svcid_t, message const&);
-  void relay(aid_t, message&);
-  void relay(svcid_t, message&);
+  inline aid_t get_aid() const { return aid_; }
 
-  response_t request(aid_t, message const&);
-  response_t request(svcid_t, message const&);
-  void reply(aid_t, message const&);
-
-  virtual void on_recv(detail::pack*) = 0;
-  void link(aid_t);
-  void monitor(aid_t);
-
-  inline aid_t get_aid() const
+protected:
+  enum send_hint
   {
-    return aid_;
-  }
+    async,
+    sync
+  };
+
+  void pri_send(aid_t, message const&, send_hint hint = async);
+  void pri_send_svc(svcid_t, message const&, send_hint hint = async);
+  void pri_relay(aid_t, message&, send_hint hint = async);
+  void pri_relay_svc(svcid_t, message&, send_hint hint = async);
+
+  void pri_request(response_t, aid_t, message const&, send_hint hint = async);
+  void pri_request_svc(response_t, svcid_t, message const&, send_hint hint = async);
+  void pri_reply(aid_t, message const&, send_hint hint = async);
+
+  void pri_link(aid_t, send_hint hint = async);
+  void pri_monitor(aid_t, send_hint hint = async);
+
+  void pri_spawn(
+    sid_t, match_t func, match_t ctxid, 
+    std::size_t stack_size, send_hint hint = async
+    );
+
+  virtual void on_recv(detail::pack&, send_hint hint) = 0;
 
 public:
   /// internal use
@@ -65,25 +74,21 @@ public:
     link(l);
   }
 
-  sid_t spawn(match_t func, match_t ctxid, std::size_t stack_size);
-
 protected:
   friend class mixin;
-  friend class slice;
 
   void update_aid();
   sid_t new_request();
 
-  static detail::pack* alloc_pack(detail::cache_pool*);
-  static void dealloc_pack(detail::cache_pool*, detail::pack*);
   void add_link(aid_t, sktaid_t skt = aid_t());
-  void link(detail::link_t, detail::cache_pool* user = 0);
+  void link(detail::link_t, send_hint hint = async, detail::cache_pool* user = 0);
   void send_exit(aid_t self_aid, exit_code_t, std::string const&);
   void remove_link(aid_t);
   void send_already_exited(aid_t recver, aid_t sender);
   void send_already_exited(aid_t recver, response_t res);
   static void send(
-    aid_t const& recver, detail::pack*, detail::cache_pool*
+    aid_t const& recver, detail::pack&, 
+    detail::cache_pool*, send_hint
     );
 
 private:
@@ -98,7 +103,6 @@ protected:
   GCE_CACHE_ALIGNED_VAR(detail::cache_pool*, owner_)
   GCE_CACHE_ALIGNED_VAR(detail::cache_pool*, user_)
   GCE_CACHE_ALIGNED_VAR(detail::mailbox, mb_)
-  GCE_CACHE_ALIGNED_VAR(detail::pack_queue_t, pack_que_)
 
 private:
   GCE_CACHE_ALIGNED_VAR(aid_t, aid_)

@@ -95,17 +95,15 @@ inline void connect(
   remote_func_list_t const& remote_func_list = remote_func_list_t()
   )
 {
+  detail::cache_pool* user = 0;
   detail::cache_pool* owner = sire.get_cache_pool();
-  context& ctx = owner->get_context();
-
-  ///   In boost 1.54 & 1.55, boost::asio::spawn will crash
-  /// When spwan multi-coros at main thread
-  /// With multi-threads run io_service::run (vc11)
-  ///   I'don't know this wheather or not a bug.
-  ///   So, if using mixin(means in main or other user thread(s)),
-  /// We spawn actor(s) with only one cache_pool(means only one asio::strand).
-  detail::cache_pool* user = ctx.select_cache_pool(0);
-  detail::connect(user, owner, target, ep, target_is_router, remote_func_list, opt);
+  owner->get_strand().post(
+    boost::bind(
+      &detail::connect, 
+      user, owner, target, ep, 
+      target_is_router, remote_func_list, opt
+      )
+    );
 }
 
 inline void connect(
@@ -131,17 +129,15 @@ inline void bind(
   net_option opt = net_option()
   )
 {
+  detail::cache_pool* user = 0;
   detail::cache_pool* owner = sire.get_cache_pool();
-  context& ctx = owner->get_context();
-
-  ///   In boost 1.54 & 1.55, boost::asio::spawn will crash
-  /// When spwan multi-coros at main thread
-  /// With multi-threads run io_service::run (vc11)
-  ///   I'don't know this wheather or not a bug.
-  ///   So, if using mixin(means in main or other user thread(s)),
-  /// We spawn actor(s) with only one cache_pool(means only one asio::strand).
-  detail::cache_pool* user = ctx.select_cache_pool(0);
-  detail::bind(user, owner, ep, is_router, remote_func_list, opt);
+  owner->get_strand().post(
+    boost::bind(
+      &detail::bind, 
+      user, owner, ep, is_router, 
+      remote_func_list, opt
+      )
+    );
 }
 
 inline void bind(

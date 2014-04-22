@@ -127,7 +127,7 @@ void socket::on_free()
   is_router_ = false;
 }
 ///----------------------------------------------------------------------------
-void socket::on_recv(pack* pk)
+void socket::on_recv(pack& pk, base_type::send_hint)
 {
   user_->get_strand().dispatch(
     boost::bind(
@@ -138,68 +138,64 @@ void socket::on_recv(pack* pk)
 ///----------------------------------------------------------------------------
 void socket::handle_net_msg(message& msg)
 {
-  pack* pk = base_type::alloc_pack(user_);
-  scope scp(boost::bind(&basic_actor::dealloc_pack, user_, pk));
+  pack pk;
 
   bool has_tag =
     msg.pop_tag(
-      pk->tag_, pk->recver_, pk->svc_,
-      pk->skt_, pk->is_err_ret_
+      pk.tag_, pk.recver_, pk.svc_,
+      pk.skt_, pk.is_err_ret_
       );
   BOOST_ASSERT(has_tag);
-  pk->msg_ = msg;
+  pk.msg_ = msg;
 
-  if (link_t* link = boost::get<detail::link_t>(&pk->tag_))
+  if (link_t* link = boost::get<detail::link_t>(&pk.tag_))
   {
     if (is_router_)
     {
-      sktaid_t skt = user_->select_joint_socket(pk->recver_.ctxid_);
+      sktaid_t skt = user_->select_joint_socket(pk.recver_.ctxid_);
       if (!skt)
       {
         /// no socket found, send already exit back
-        base_type::send_already_exited(link->get_aid(), pk->recver_);
+        base_type::send_already_exited(link->get_aid(), pk.recver_);
       }
       else
       {
-        pk->tag_ = fwd_link_t(link->get_type(), link->get_aid(), get_aid());
-        pk->skt_ = skt;
+        pk.tag_ = fwd_link_t(link->get_type(), link->get_aid(), get_aid());
+        pk.skt_ = skt;
         if (link->get_type() == linked)
         {
-          add_router_link(pk->recver_, link->get_aid(), skt);
+          add_router_link(pk.recver_, link->get_aid(), skt);
         }
-        scp.reset();
-        base_type::send(pk->skt_, pk, user_);
+        base_type::send(pk.skt_, pk, user_, sync);
       }
     }
     else
     {
-      pk->skt_ = get_aid();
+      pk.skt_ = get_aid();
       if (link->get_type() == linked)
       {
-        add_straight_link(pk->recver_, link->get_aid());
+        add_straight_link(pk.recver_, link->get_aid());
       }
-      scp.reset();
-      base_type::send(pk->recver_, pk, user_);
+      base_type::send(pk.recver_, pk, user_, sync);
     }
   }
-  else if (exit_t* ex = boost::get<exit_t>(&pk->tag_))
+  else if (exit_t* ex = boost::get<exit_t>(&pk.tag_))
   {
-    scp.reset();
     if (is_router_)
     {
-      sktaid_t skt = remove_router_link(pk->recver_, ex->get_aid());
+      sktaid_t skt = remove_router_link(pk.recver_, ex->get_aid());
       BOOST_ASSERT(skt);
-      pk->tag_ = fwd_exit_t(ex->get_code(), ex->get_aid(), get_aid());
-      pk->skt_ = skt;
-      base_type::send(skt, pk, user_);
+      pk.tag_ = fwd_exit_t(ex->get_code(), ex->get_aid(), get_aid());
+      pk.skt_ = skt;
+      base_type::send(skt, pk, user_, sync);
     }
     else
     {
-      remove_straight_link(pk->recver_, ex->get_aid());
-      base_type::send(pk->recver_, pk, user_);
+      remove_straight_link(pk.recver_, ex->get_aid());
+      base_type::send(pk.recver_, pk, user_, sync);
     }
   }
-  else if (spawn_t* spw = boost::get<spawn_t>(&pk->tag_))
+  else if (spawn_t* spw = boost::get<spawn_t>(&pk.tag_))
   {
     if (is_router_)
     {
@@ -210,9 +206,8 @@ void socket::handle_net_msg(message& msg)
       }
       else
       {
-        pk->skt_ = skt;
-        scp.reset();
-        base_type::send(pk->skt_, pk, user_);
+        pk.skt_ = skt;
+        base_type::send(pk.skt_, pk, user_, sync);
       }
     }
     else
@@ -239,16 +234,15 @@ void socket::handle_net_msg(message& msg)
       }
     }
   }
-  else if (spawn_ret_t* spr = boost::get<spawn_ret_t>(&pk->tag_))
+  else if (spawn_ret_t* spr = boost::get<spawn_ret_t>(&pk.tag_))
   {
     if (is_router_)
     {
-      sktaid_t skt = user_->select_joint_socket(pk->recver_.ctxid_);
+      sktaid_t skt = user_->select_joint_socket(pk.recver_.ctxid_);
       if (skt)
       {
-        pk->skt_ = skt;
-        scp.reset();
-        base_type::send(pk->skt_, pk, user_);
+        pk.skt_ = skt;
+        base_type::send(pk.skt_, pk, user_, sync);
       }
     }
     else
@@ -262,68 +256,65 @@ void socket::handle_net_msg(message& msg)
         /// we should make sure no timeout miss.
         aid = get_aid();
       }
-      pk->tag_ = aid;
-      pk->msg_ = m;
+      pk.tag_ = aid;
+      pk.msg_ = m;
 
-      scp.reset();
-      base_type::send(pk->recver_, pk, user_);
+      base_type::send(pk.recver_, pk, user_, sync);
     }
   }
   else
   {
-    bool is_svc = pk->svc_;
+    bool is_svc = pk.svc_;
     if (is_router_)
     {
-      ctxid_t ctxid = is_svc ? pk->svc_.ctxid_ : pk->recver_.ctxid_;
+      ctxid_t ctxid = is_svc ? pk.svc_.ctxid_ : pk.recver_.ctxid_;
       sktaid_t skt = user_->select_joint_socket(ctxid);
-      if (detail::request_t* req = boost::get<detail::request_t>(&pk->tag_))
+      if (detail::request_t* req = boost::get<detail::request_t>(&pk.tag_))
       {
         if (!skt && !is_svc)
         {
           /// reply actor exit msg
-          response_t res(req->get_id(), pk->recver_);
+          response_t res(req->get_id(), pk.recver_);
           base_type::send_already_exited(req->get_aid(), res);
         }
       }
 
       if (skt)
       {
-        pk->skt_ = skt;
-        scp.reset();
-        base_type::send(pk->skt_, pk, user_);
+        pk.skt_ = skt;
+        base_type::send(pk.skt_, pk, user_, sync);
       }
     }
     else
     {
       if (is_svc)
       {
-        pk->recver_ = user_->find_service(pk->svc_.name_);
+        pk.recver_ = user_->find_service(pk.svc_.name_);
       }
 
-      if (pk->recver_)
+      if (pk.recver_)
       {
-        scp.reset();
-        base_type::send(pk->recver_, pk, user_);
+        base_type::send(pk.recver_, pk, user_, sync);
       }
     }
   }
 }
 ///----------------------------------------------------------------------------
 void socket::send_spawn_ret(
-  spawn_t* spw, pack* pk, spawn_error err,
+  spawn_t* spw, pack& pk, spawn_error err,
   aid_t aid, bool is_err_ret
   )
 {
-  pk->recver_ = spw->get_aid();
-  pk->skt_ = spw->get_aid();
-  pk->tag_ = spawn_ret_t(err, spw->get_id(), aid);
-  pk->is_err_ret_ = is_err_ret;
-  pk->msg_.set_type(msg_spawn_ret);
-  pk->msg_.push_tag(
-    pk->tag_, pk->recver_, pk->svc_,
-    pk->skt_, pk->is_err_ret_
+  pk.recver_ = spw->get_aid();
+  pk.skt_ = spw->get_aid();
+  pk.tag_ = spawn_ret_t(err, spw->get_id(), aid);
+  pk.is_err_ret_ = is_err_ret;
+  pk.msg_.set_type(msg_spawn_ret);
+  pk.msg_.push_tag(
+    pk.tag_, pk.recver_, pk.svc_,
+    pk.skt_, pk.is_err_ret_
     );
-  send(pk->msg_);
+  send(pk.msg_);
 }
 ///----------------------------------------------------------------------------
 void socket::send(message const& m)
@@ -379,7 +370,7 @@ void socket::run_conn(ctxid_pair_t target, std::string const& ep, yield_t yield)
   {
     context& ctx = user_->get_context();
     user_->add_socket(this);
-    ctx.register_socket(target, get_aid(), user_);
+    ctx.register_socket(target, get_aid());
 
     try
     {
@@ -554,48 +545,47 @@ socket_ptr socket::make_socket(std::string const& ep)
   throw std::runtime_error("unsupported protocol");
 }
 ///----------------------------------------------------------------------------
-void socket::handle_recv(pack* pk)
+void socket::handle_recv(pack& pk)
 {
   ctxid_t ctxid = get_aid().ctxid_;
-  scope scp(boost::bind(&basic_actor::dealloc_pack, user_, pk));
-  if (check(pk->skt_, ctxid, user_->get_context().get_timestamp()))
+  if (check(pk.skt_, ctxid, user_->get_context().get_timestamp()))
   {
-    BOOST_ASSERT(!check_local(pk->recver_, ctxid));
-    if (link_t* link = boost::get<link_t>(&pk->tag_))
+    BOOST_ASSERT(!check_local(pk.recver_, ctxid));
+    if (link_t* link = boost::get<link_t>(&pk.tag_))
     {
-      add_straight_link(link->get_aid(), pk->recver_);
+      add_straight_link(link->get_aid(), pk.recver_);
     }
-    else if (exit_t* ex = boost::get<exit_t>(&pk->tag_))
+    else if (exit_t* ex = boost::get<exit_t>(&pk.tag_))
     {
-      remove_straight_link(ex->get_aid(), pk->recver_);
+      remove_straight_link(ex->get_aid(), pk.recver_);
     }
-    else if (fwd_link_t* link = boost::get<fwd_link_t>(&pk->tag_))
+    else if (fwd_link_t* link = boost::get<fwd_link_t>(&pk.tag_))
     {
-      add_router_link(link->get_aid(), pk->recver_, link->get_skt());
-      pk->tag_ = link_t(link->get_type(), link->get_aid());
+      add_router_link(link->get_aid(), pk.recver_, link->get_skt());
+      pk.tag_ = link_t(link->get_type(), link->get_aid());
     }
-    else if (fwd_exit_t* ex = boost::get<fwd_exit_t>(&pk->tag_))
+    else if (fwd_exit_t* ex = boost::get<fwd_exit_t>(&pk.tag_))
     {
-      remove_router_link(ex->get_aid(), pk->recver_);
-      pk->tag_ = exit_t(ex->get_code(), ex->get_aid());
+      remove_router_link(ex->get_aid(), pk.recver_);
+      pk.tag_ = exit_t(ex->get_code(), ex->get_aid());
     }
-    pk->msg_.push_tag(
-      pk->tag_, pk->recver_, pk->svc_,
-      pk->skt_, pk->is_err_ret_
+    pk.msg_.push_tag(
+      pk.tag_, pk.recver_, pk.svc_,
+      pk.skt_, pk.is_err_ret_
       );
-    send(pk->msg_);
+    send(pk.msg_);
   }
-  else if (!pk->is_err_ret_)
+  else if (!pk.is_err_ret_)
   {
-    if (detail::link_t* link = boost::get<detail::link_t>(&pk->tag_))
+    if (detail::link_t* link = boost::get<detail::link_t>(&pk.tag_))
     {
       /// send actor exit msg
-      base_type::send_already_exited(link->get_aid(), pk->recver_);
+      base_type::send_already_exited(link->get_aid(), pk.recver_);
     }
-    else if (detail::request_t* req = boost::get<detail::request_t>(&pk->tag_))
+    else if (detail::request_t* req = boost::get<detail::request_t>(&pk.tag_))
     {
       /// reply actor exit msg
-      response_t res(req->get_id(), pk->recver_);
+      response_t res(req->get_id(), pk.recver_);
       base_type::send_already_exited(req->get_aid(), res);
     }
   }
@@ -674,13 +664,13 @@ void socket::on_neterr(aid_t self_aid, errcode_t ec)
   {
     BOOST_FOREACH(aid_t const& des, pr.second)
     {
-      detail::pack* pk = alloc_pack(user_);
-      pk->tag_ = detail::exit_t(exit_neterr, des);
-      pk->recver_ = pr.first;
-      pk->skt_ = pr.first;
-      pk->msg_ = m;
+      detail::pack pk;
+      pk.tag_ = detail::exit_t(exit_neterr, des);
+      pk.recver_ = pr.first;
+      pk.skt_ = pr.first;
+      pk.msg_ = m;
 
-      base_type::send(pk->recver_, pk, user_);
+      base_type::send(pk.recver_, pk, user_, sync);
     }
   }
   straight_link_list_.clear();
@@ -689,13 +679,13 @@ void socket::on_neterr(aid_t self_aid, errcode_t ec)
   {
     BOOST_FOREACH(router_link_list_t::mapped_type::value_type& des, pr.second)
     {
-      detail::pack* pk = alloc_pack(user_);
-      pk->tag_ = fwd_exit_t(exit_neterr, des.first, self_aid);
-      pk->recver_ = pr.first;
-      pk->skt_ = des.second;
-      pk->msg_ = m;
+      detail::pack pk;
+      pk.tag_ = fwd_exit_t(exit_neterr, des.first, self_aid);
+      pk.recver_ = pr.first;
+      pk.skt_ = des.second;
+      pk.msg_ = m;
 
-      base_type::send(pk->skt_, pk, user_);
+      base_type::send(pk.skt_, pk, user_, sync);
     }
   }
   router_link_list_.clear();
@@ -706,8 +696,8 @@ ctxid_pair_t socket::sync_ctxid(ctxid_pair_t new_pr, ctxid_pair_t curr_pr)
   if (new_pr != curr_pr)
   {
     context& ctx = user_->get_context();
-    ctx.deregister_socket(curr_pr, get_aid(), user_);
-    ctx.register_socket(new_pr, get_aid(), user_);
+    ctx.deregister_socket(curr_pr, get_aid());
+    ctx.register_socket(new_pr, get_aid());
   }
   return new_pr;
 }
@@ -883,7 +873,7 @@ void socket::free_self(
   if (ctxid_pr.first != ctxid_nil)
   {
     user_->deregister_socket(ctxid_pr, get_aid());
-    user_->get_context().deregister_socket(ctxid_pr, get_aid(), user_);
+    user_->get_context().deregister_socket(ctxid_pr, get_aid());
   }
 
   user_->remove_socket(this);

@@ -13,6 +13,7 @@
 #include <gce/actor/mixin.hpp>
 #include <gce/actor/detail/mailbox.hpp>
 #include <gce/actor/detail/scoped_bool.hpp>
+#include <gce/actor/detail/pack.hpp>
 #include <gce/actor/message.hpp>
 #include <gce/detail/scope.hpp>
 #include <boost/asio/placeholders.hpp>
@@ -25,7 +26,6 @@ namespace gce
 actor::actor(context* ctx)
   : base_type(ctx->get_attributes().max_cache_match_size_, ctx->get_timestamp())
   , stat_(ready)
-  , self_(*this)
   , recving_(false)
   , responsing_(false)
   , tmr_(ctx->get_io_service())
@@ -198,13 +198,24 @@ void actor::on_free()
   exit_msg_.clear();
 }
 ///----------------------------------------------------------------------------
-void actor::on_recv(detail::pack* pk)
+void actor::on_recv(detail::pack& pk, base_type::send_hint hint)
 {
-  user_->get_strand().dispatch(
-    boost::bind(
-      &actor::handle_recv, this, pk
-      )
-    );
+  if (hint == base_type::async)
+  {
+    user_->get_strand().post(
+      boost::bind(
+        &actor::handle_recv, this, pk
+        )
+      );
+  }
+  else
+  {
+    user_->get_strand().dispatch(
+      boost::bind(
+        &actor::handle_recv, this, pk
+        )
+      );
+  }
 }
 ///----------------------------------------------------------------------------
 void actor::run(yield_t yld)
@@ -214,7 +225,7 @@ void actor::run(yield_t yld)
   try
   {
     stat_ = on;
-    f_(self_);
+    f_(*this);
     stop(exit_normal, "exit normal");
   }
   catch (boost::coroutines::detail::forced_unwind const&)
@@ -295,35 +306,34 @@ void actor::handle_recv_timeout(errcode_t const& ec, std::size_t tmr_sid)
   }
 }
 ///----------------------------------------------------------------------------
-void actor::handle_recv(detail::pack* pk)
+void actor::handle_recv(detail::pack& pk)
 {
-  detail::scope scp(boost::bind(&basic_actor::dealloc_pack, user_, pk));
-  if (check(pk->recver_, get_aid().ctxid_, user_->get_context().get_timestamp()))
+  if (check(pk.recver_, get_aid().ctxid_, user_->get_context().get_timestamp()))
   {
     bool is_response = false;
 
-    if (aid_t* aid = boost::get<aid_t>(&pk->tag_))
+    if (aid_t* aid = boost::get<aid_t>(&pk.tag_))
     {
-      mb_.push(*aid, pk->msg_);
+      mb_.push(*aid, pk.msg_);
     }
-    else if (detail::request_t* req = boost::get<detail::request_t>(&pk->tag_))
+    else if (detail::request_t* req = boost::get<detail::request_t>(&pk.tag_))
     {
-      mb_.push(*req, pk->msg_);
+      mb_.push(*req, pk.msg_);
     }
-    else if (detail::link_t* link = boost::get<detail::link_t>(&pk->tag_))
+    else if (detail::link_t* link = boost::get<detail::link_t>(&pk.tag_))
     {
-      add_link(link->get_aid(), pk->skt_);
+      add_link(link->get_aid(), pk.skt_);
       return;
     }
-    else if (detail::exit_t* ex = boost::get<detail::exit_t>(&pk->tag_))
+    else if (detail::exit_t* ex = boost::get<detail::exit_t>(&pk.tag_))
     {
-      mb_.push(*ex, pk->msg_);
+      mb_.push(*ex, pk.msg_);
       base_type::remove_link(ex->get_aid());
     }
-    else if (response_t* res = boost::get<response_t>(&pk->tag_))
+    else if (response_t* res = boost::get<response_t>(&pk.tag_))
     {
       is_response = true;
-      mb_.push(*res, pk->msg_);
+      mb_.push(*res, pk.msg_);
     }
 
     if (
@@ -357,17 +367,17 @@ void actor::handle_recv(detail::pack* pk)
       resume(actor_normal);
     }
   }
-  else if (!pk->is_err_ret_)
+  else if (!pk.is_err_ret_)
   {
-    if (detail::link_t* link = boost::get<detail::link_t>(&pk->tag_))
+    if (detail::link_t* link = boost::get<detail::link_t>(&pk.tag_))
     {
       /// send actor exit msg
-      base_type::send_already_exited(link->get_aid(), pk->recver_);
+      base_type::send_already_exited(link->get_aid(), pk.recver_);
     }
-    else if (detail::request_t* req = boost::get<detail::request_t>(&pk->tag_))
+    else if (detail::request_t* req = boost::get<detail::request_t>(&pk.tag_))
     {
       /// reply actor exit msg
-      response_t res(req->get_id(), pk->recver_);
+      response_t res(req->get_id(), pk.recver_);
       base_type::send_already_exited(req->get_aid(), res);
     }
   }
