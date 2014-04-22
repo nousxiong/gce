@@ -215,7 +215,7 @@ namespace boost{ namespace amsg{	namespace detail
 		static inline std::size_t size(const value_type& value , error_code_t& error_code)
 		{
 			int64_t temp = value;
-			return byte_size_of<int64_t,tag>::impl_type::size(temp,error_code);
+			return byte_size_of_impl<int64_t,tag>::size(temp,error_code);
 		}
 	};
 
@@ -677,7 +677,7 @@ namespace boost{ namespace amsg{	namespace detail
 		static inline void read(store_ty& store_data, value_type& value)
 		{
 			int64_t temp;
-			value_read_support<store_ty,int64_t,tag>::impl_type::read(store_data,temp);
+			value_read_support_impl<store_ty,int64_t,tag>::read(store_data,temp);
 			value = static_cast<ty>(temp);
 		}
 	};
@@ -689,7 +689,7 @@ namespace boost{ namespace amsg{	namespace detail
 		static inline void write(store_ty& store_data, const value_type& value)
 		{
 			int64_t temp = value;
-			value_write_support<store_ty,int64_t,tag>::impl_type::write(store_data,temp);
+			value_write_support_impl<store_ty,int64_t,tag>::write(store_data,temp);
 		}
 	};
 

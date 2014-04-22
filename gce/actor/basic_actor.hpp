@@ -39,8 +39,10 @@ public:
 
 public:
   inline aid_t get_aid() const { return aid_; }
+  inline void chain(bool flag) { chain_ = flag; }
 
 protected:
+  friend class mixin;
   enum send_hint
   {
     async,
@@ -60,7 +62,7 @@ protected:
   void pri_monitor(aid_t, send_hint hint = async);
 
   void pri_spawn(
-    sid_t, match_t func, match_t ctxid, 
+    sid_t, match_t func, match_t ctxid,
     std::size_t stack_size, send_hint hint = async
     );
 
@@ -75,8 +77,6 @@ public:
   }
 
 protected:
-  friend class mixin;
-
   void update_aid();
   sid_t new_request();
 
@@ -87,7 +87,7 @@ protected:
   void send_already_exited(aid_t recver, aid_t sender);
   void send_already_exited(aid_t recver, response_t res);
   static void send(
-    aid_t const& recver, detail::pack&, 
+    aid_t const& recver, detail::pack&,
     detail::cache_pool*, send_hint
     );
 
@@ -106,6 +106,7 @@ protected:
 
 private:
   GCE_CACHE_ALIGNED_VAR(aid_t, aid_)
+  GCE_CACHE_ALIGNED_VAR(bool, chain_)
 
   /// local vals
   sid_t req_id_;

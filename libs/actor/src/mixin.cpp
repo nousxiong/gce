@@ -78,7 +78,7 @@ response_t mixin::request(aid_t recver, message const& m)
   response_t res(base_type::new_request(), get_aid());
   user_->get_strand().post(
     boost::bind(
-      &base_type::pri_request, this, 
+      &base_type::pri_request, this,
       res, recver, m, base_type::sync
       )
     );
@@ -90,7 +90,7 @@ response_t mixin::request(svcid_t recver, message const& m)
   response_t res(base_type::new_request(), get_aid());
   user_->get_strand().post(
     boost::bind(
-      &base_type::pri_request_svc, this, 
+      &base_type::pri_request_svc, this,
       res, recver, m, base_type::sync
       )
     );
@@ -131,7 +131,7 @@ aid_t mixin::recv(message& msg, match const& mach)
 
   user_->get_strand().post(
     boost::bind(
-      &mixin::try_recv, this, 
+      &mixin::try_recv, this,
       boost::ref(p), boost::cref(mach)
       )
     );
@@ -166,7 +166,7 @@ aid_t mixin::recv(response_t res, message& msg, duration_t tmo)
 
   user_->get_strand().post(
     boost::bind(
-      &mixin::try_response, this, 
+      &mixin::try_response, this,
       boost::ref(p), res, tmo
       )
     );
@@ -242,7 +242,7 @@ void mixin::try_recv(recv_promise_t& p, match const& mach)
       return;
     }
   }
-  
+
   p.set_value(rcv);
 }
 ///----------------------------------------------------------------------------
@@ -263,7 +263,7 @@ void mixin::try_response(res_promise_t& p, response_t res, duration_t tmo)
       return;
     }
   }
-  
+
   p.set_value(res_pr);
 }
 ///----------------------------------------------------------------------------

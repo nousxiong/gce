@@ -23,6 +23,7 @@ public:
 private:
   static void my_child(self_t self, aid_t sire, aid_t base_id)
   {
+    self.chain(true);
     message msg;
     while (true)
     {
@@ -41,6 +42,7 @@ private:
 
   static void my_actor(self_t self, aid_t base_id)
   {
+    self.chain(true);
     aid_t aid =
       spawn(
         self,

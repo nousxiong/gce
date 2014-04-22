@@ -22,6 +22,7 @@ basic_actor::basic_actor(std::size_t cache_match_size, timestamp_t const timesta
   : owner_(0)
   , user_(0)
   , mb_(cache_match_size)
+  , chain_(false)
   , req_id_(0)
   , timestamp_(timestamp)
 {
@@ -43,6 +44,10 @@ void basic_actor::pri_send(aid_t recver, message const& m, send_hint hint)
     pk.skt_ = target;
     pk.msg_ = m;
 
+    if (chain_)
+    {
+      hint = sync;
+    }
     send(target, pk, user_, hint);
   }
 }
@@ -63,6 +68,10 @@ void basic_actor::pri_send_svc(svcid_t recver, message const& m, send_hint hint)
     pk.skt_ = target;
     pk.msg_ = m;
 
+    if (chain_)
+    {
+      hint = sync;
+    }
     send(target, pk, user_, hint);
   }
 }
@@ -86,6 +95,10 @@ void basic_actor::pri_relay(aid_t recver, message& m, send_hint hint)
     pk.skt_ = target;
     pk.msg_ = m;
 
+    if (chain_)
+    {
+      hint = sync;
+    }
     send(target, pk, user_, hint);
   }
   else if (m.req_.valid())
@@ -121,6 +134,10 @@ void basic_actor::pri_relay_svc(svcid_t recver, message& m, send_hint hint)
     pk.skt_ = target;
     pk.msg_ = m;
 
+    if (chain_)
+    {
+      hint = sync;
+    }
     send(target, pk, user_, hint);
   }
 }
@@ -138,6 +155,10 @@ void basic_actor::pri_request(response_t res, aid_t recver, message const& m, se
     pk.skt_ = target;
     pk.msg_ = m;
 
+    if (chain_)
+    {
+      hint = sync;
+    }
     send(target, pk, user_, hint);
   }
   else
@@ -166,6 +187,10 @@ void basic_actor::pri_request_svc(response_t res, svcid_t recver, message const&
     pk.skt_ = target;
     pk.msg_ = m;
 
+    if (chain_)
+    {
+      hint = sync;
+    }
     send(target, pk, user_, hint);
   }
 }
@@ -189,6 +214,11 @@ void basic_actor::pri_reply(aid_t recver, message const& m, send_hint hint)
     pk.recver_ = recver;
     pk.skt_ = target;
     pk.msg_ = m;
+
+    if (chain_)
+    {
+      hint = sync;
+    }
     send(target, pk, user_, hint);
   }
 }
@@ -204,7 +234,7 @@ void basic_actor::pri_monitor(aid_t target, send_hint hint)
 }
 ///----------------------------------------------------------------------------
 void basic_actor::pri_spawn(
-  sid_t sid, match_t func, match_t ctxid, 
+  sid_t sid, match_t func, match_t ctxid,
   std::size_t stack_size, send_hint hint
   )
 {
@@ -225,6 +255,10 @@ void basic_actor::pri_spawn(
   pk.skt_ = skt;
   pk.msg_ = message(detail::msg_spawn);
 
+  if (chain_)
+  {
+    hint = sync;
+  }
   send(skt, pk, user_, hint);
 }
 ///----------------------------------------------------------------------------
@@ -287,6 +321,10 @@ void basic_actor::link(detail::link_t l, send_hint hint, detail::cache_pool* use
     pk.skt_ = skt;
     pk.msg_ = message(detail::msg_link);
 
+    if (chain_)
+    {
+      hint = sync;
+    }
     send(target, pk, user, hint);
   }
 }

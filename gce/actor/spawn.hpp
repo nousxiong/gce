@@ -27,7 +27,7 @@ typedef boost::unique_future<aid_t> actor_future_t;
 template <typename Sire, typename F>
 inline aid_t make_actor(
   Sire& sire, cache_pool* user, cache_pool* owner,
-  F& f, link_type type, std::size_t stack_size
+  F f, link_type type, std::size_t stack_size
   )
 {
   aid_t link_tgt;
@@ -53,8 +53,8 @@ inline aid_t make_actor(
   return aid;
 }
 
-inline void make_actor(
-  actor_promise_t& p, mixin_t sire, actor_func_t const& func, 
+inline void make_actor_from_mixin(
+  actor_promise_t& p, mixin_t sire, actor_func_t const& func,
   link_type type, std::size_t stack_size
   )
 {
@@ -79,8 +79,8 @@ inline aid_t spawn(
   detail::cache_pool* owner = sire.get_cache_pool();
   owner->get_strand().post(
     boost::bind(
-      &detail::make_actor, 
-      boost::ref(p), boost::ref(sire), 
+      &detail::make_actor_from_mixin,
+      boost::ref(p), boost::ref(sire),
       actor_func_t(func), type, stack_size
       )
     );
