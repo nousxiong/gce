@@ -14,6 +14,7 @@
 #include <gce/actor/actor_fwd.hpp>
 #include <gce/actor/actor_id.hpp>
 #include <gce/actor/detail/object_pool.hpp>
+#include <gce/actor/detail/pack.hpp>
 #include <gce/detail/mpsc_queue.hpp>
 #include <gce/detail/unique_ptr.hpp>
 #include <boost/noncopyable.hpp>
@@ -23,6 +24,7 @@
 
 namespace gce
 {
+class thread;
 class context;
 class actor;
 struct attributes;
@@ -31,9 +33,9 @@ namespace detail
 {
 class socket;
 class acceptor;
-typedef object_pool<actor, context*> actor_pool_t;
-typedef object_pool<socket, context*> socket_pool_t;
-typedef object_pool<acceptor, context*> acceptor_pool_t;
+typedef object_pool<actor, thread*> actor_pool_t;
+typedef object_pool<socket, thread*> socket_pool_t;
+typedef object_pool<acceptor, thread*> acceptor_pool_t;
 typedef mpsc_queue<actor> actor_queue_t;
 typedef mpsc_queue<socket> socket_queue_t;
 typedef mpsc_queue<acceptor> acceptor_queue_t;
@@ -42,28 +44,21 @@ class cache_pool
   : private boost::noncopyable
 {
 public:
-  cache_pool(
-    context& ctx, std::size_t id,
-    attributes const& attrs, bool mixed
-    );
+  cache_pool(thread&, attributes const& attrs);
   ~cache_pool();
 
 public:
-  inline std::size_t get_id() const { return id_; };
-  inline context& get_context() { return *ctx_; }
-  inline strand_t& get_strand() { return snd_; }
-  inline timer_t& get_gc_timer() { return gc_tmr_; }
-
   actor* get_actor();
   socket* get_socket();
   acceptor* get_acceptor();
+  pack* get_pack();
 
-  void free_actor(cache_pool*, actor*);
-  void free_socket(cache_pool*, socket*);
-  void free_acceptor(cache_pool*, acceptor*);
+  void free_actor(actor*);
+  void free_socket(socket*);
+  void free_acceptor(acceptor*);
+  void free_pack(pack*);
 
   void free_object();
-  void free_cache();
 
   void register_service(match_t name, aid_t svc);
   aid_t find_service(match_t name);
@@ -83,63 +78,8 @@ public:
 
   void stop();
   inline bool stopped() const { return stopped_; }
-  inline ctxid_t get_ctxid() const { return ctxid_; }
 
 private:
-  template <typename T, typename FreeQueue>
-  struct cache
-  {
-    cache()
-      : obj_(0)
-      , que_(0)
-      , size_(0)
-    {
-    }
-
-    inline void push(T* obj, FreeQueue* que)
-    {
-      if (que_)
-      {
-        BOOST_ASSERT(que == que_);
-      }
-      que_ = que;
-
-      object_access::set_next(obj, obj_);
-      obj_ = obj;
-      ++size_;
-    }
-
-    inline void free()
-    {
-      if (obj_)
-      {
-        que_->push(obj_);
-        clear();
-      }
-    }
-
-    inline void clear()
-    {
-      obj_ = 0;
-      que_ = 0;
-      size_ = 0;
-    }
-
-    T* obj_;
-    FreeQueue* que_;
-    std::size_t size_;
-  };
-
-  template <
-    typename T, typename Pool,
-    typename FreeQueue, typename DirtyList
-    >
-  void free_object(
-    cache_pool*, T*,
-    std::vector<cache<T, FreeQueue> >&, Pool&,
-    FreeQueue&, DirtyList&
-    );
-
   template <typename T, typename Pool, typename FreeQueue>
   void free_object(Pool&, FreeQueue&);
 
@@ -147,40 +87,17 @@ private:
   /// Ensure start from a new cache line.
   byte_t pad0_[GCE_CACHE_LINE_SIZE];
 
-  GCE_CACHE_ALIGNED_VAR(context*, ctx_)
-
-  GCE_CACHE_ALIGNED_VAR(std::size_t, id_)
-  GCE_CACHE_ALIGNED_VAR(std::size_t, cache_num_)
-  GCE_CACHE_ALIGNED_VAR(std::size_t, cache_match_size_)
-
-  GCE_CACHE_ALIGNED_VAR(bool, mixed_)
-
-  GCE_CACHE_ALIGNED_VAR(strand_t, snd_)
-  GCE_CACHE_ALIGNED_VAR(timer_t, gc_tmr_)
+  GCE_CACHE_ALIGNED_VAR(thread*, thr_)
 
   /// pools
   GCE_CACHE_ALIGNED_VAR(actor_pool_t, actor_pool_)
   GCE_CACHE_ALIGNED_VAR(socket_pool_t, socket_pool_)
   GCE_CACHE_ALIGNED_VAR(acceptor_pool_t, acceptor_pool_)
+  GCE_CACHE_ALIGNED_VAR(pack_pool_t, pack_pool_)
 
-  /// queues
-  GCE_CACHE_ALIGNED_VAR(actor_queue_t, actor_free_queue_)
-  GCE_CACHE_ALIGNED_VAR(socket_queue_t, socket_free_queue_)
-  GCE_CACHE_ALIGNED_VAR(acceptor_queue_t, acceptor_free_queue_)
+  GCE_CACHE_ALIGNED_VAR(pack_queue_t, pack_free_queue_)
 
   /// thread local vals
-  typedef cache<actor, actor_queue_t> actor_cache_t;
-  typedef cache<socket, socket_queue_t> socket_cache_t;
-  typedef cache<acceptor, acceptor_queue_t> acceptor_cache_t;
-
-  std::vector<actor_cache_t> actor_cache_list_;
-  std::vector<socket_cache_t> socket_cache_list_;
-  std::vector<acceptor_cache_t> acceptor_cache_list_;
-
-  std::vector<actor_cache_t*> actor_cache_dirty_list_;
-  std::vector<socket_cache_t*> socket_cache_dirty_list_;
-  std::vector<acceptor_cache_t*> acceptor_cache_dirty_list_;
-
   typedef std::set<aid_t> skt_list_t;
   struct socket_list
   {
@@ -204,7 +121,6 @@ private:
   std::set<acceptor*> acceptor_list_;
 
   bool stopped_;
-  ctxid_t ctxid_;
 };
 }
 }

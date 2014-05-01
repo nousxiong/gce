@@ -19,12 +19,12 @@ namespace tcp
 {
 ///----------------------------------------------------------------------------
 acceptor::acceptor(
-  strand_t& snd,
+  io_service_t& ios,
   std::string const& host,
   boost::uint16_t port
   )
-  : snd_(snd)
-  , acpr_(snd_.get_io_service())
+  : ios_(ios)
+  , acpr_(ios)
   , host_(host)
   , port_(port)
 {
@@ -56,7 +56,7 @@ void acceptor::bind()
 ///----------------------------------------------------------------------------
 gce::detail::socket_ptr acceptor::accept(yield_t yield)
 {
-  gce::tcp::socket_ptr skt(new socket(snd_.get_io_service()));
+  gce::tcp::socket_ptr skt(new socket(ios_));
   acpr_.async_accept(skt->get_socket(), yield);
   return skt;
 }

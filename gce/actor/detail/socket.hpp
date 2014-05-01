@@ -28,12 +28,13 @@
 namespace gce
 {
 class mixin;
+class thread;
 namespace detail
 {
 class cache_pool;
 
 class socket
-  : public object_pool<socket, context*>::object
+  : public object_pool<socket, thread*>::object
   , public mpsc_queue<socket>::node
   , public basic_actor
 {
@@ -47,11 +48,11 @@ class socket
   };
 
 public:
-  explicit socket(context*);
+  explicit socket(thread*);
   ~socket();
 
 public:
-  void init(cache_pool* user, cache_pool* owner, net_option);
+  void init(net_option);
   void connect(
     remote_func_list_t const&, ctxid_t target,
     std::string const&, bool target_is_router
@@ -61,15 +62,17 @@ public:
   void start(std::map<match_t, actor_func_t> const&, socket_ptr, bool is_router);
   void stop();
   void on_free();
-  void on_recv(pack&, base_type::send_hint);
+  void on_recv(pack*);
 
   void link(aid_t) {}
   void monitor(aid_t) {}
 
 private:
   void handle_net_msg(message&);
-  void send_spawn_ret(spawn_t*, pack&, spawn_error, aid_t aid, bool is_err_ret);
-  void send(message const&);
+  void spawn_remote_actor(thread*, actor_func_t, spawn_t);
+  void spawn_remote_actor_ret(spawn_t, aid_t);
+  void send_spawn_ret(spawn_t*, pack*, spawn_error, aid_t aid, bool is_err_ret);
+  void send2net(message const&);
   void send_msg(message const&);
   void send_msg_hb();
 
@@ -77,7 +80,6 @@ private:
   void run(socket_ptr, yield_t);
 
   socket_ptr make_socket(std::string const&);
-  void handle_recv(pack&);
   void add_straight_link(aid_t src, aid_t des);
   void remove_straight_link(aid_t src, aid_t des);
   void add_router_link(aid_t src, aid_t des, sktaid_t skt);

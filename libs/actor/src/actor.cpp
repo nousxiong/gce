@@ -23,12 +23,12 @@
 namespace gce
 {
 ///----------------------------------------------------------------------------
-actor::actor(context* ctx)
-  : base_type(ctx->get_attributes().max_cache_match_size_, ctx->get_timestamp())
+actor::actor(thread* thr)
+  : base_type(thr)
   , stat_(ready)
   , recving_(false)
   , responsing_(false)
-  , tmr_(ctx->get_io_service())
+  , tmr_(thr->get_io_service())
   , tmr_sid_(0)
   , yld_(0)
 {
@@ -132,11 +132,6 @@ void actor::wait(duration_t dur)
   yield();
 }
 ///----------------------------------------------------------------------------
-detail::cache_pool* actor::get_cache_pool()
-{
-  return user_;
-}
-///----------------------------------------------------------------------------
 yield_t actor::get_yield()
 {
   BOOST_ASSERT(yld_);
@@ -155,7 +150,7 @@ void actor::start(std::size_t stack_size)
   }
 
   boost::asio::spawn(
-    user_->get_strand(),
+    thr_->get_io_service(),
     boost::bind(
       &actor::run, this, _1
       ),
@@ -163,22 +158,11 @@ void actor::start(std::size_t stack_size)
     );
 }
 ///----------------------------------------------------------------------------
-void actor::init(
-  detail::cache_pool* user, detail::cache_pool* owner,
-  actor_func_t const& f,
-  aid_t link_tgt
-  )
+void actor::init(actor_func_t const& f)
 {
   BOOST_ASSERT_MSG(stat_ == ready, "actor status error");
-  user_ = user;
-  owner_ = owner;
   f_ = f;
   base_type::update_aid();
-
-  if (link_tgt)
-  {
-    base_type::add_link(link_tgt);
-  }
 }
 ///----------------------------------------------------------------------------
 void actor::on_free()
@@ -198,23 +182,80 @@ void actor::on_free()
   exit_msg_.clear();
 }
 ///----------------------------------------------------------------------------
-void actor::on_recv(detail::pack& pk, base_type::send_hint hint)
+void actor::on_recv(detail::pack* pk)
 {
-  if (hint == base_type::async)
+  if (check(pk->recver_, ctxid_, timestamp_))
   {
-    user_->get_strand().post(
-      boost::bind(
-        &actor::handle_recv, this, pk
-        )
-      );
+    bool is_response = false;
+
+    if (aid_t* aid = boost::get<aid_t>(&pk->tag_))
+    {
+      mb_.push(*aid, pk->msg_);
+    }
+    else if (detail::request_t* req = boost::get<detail::request_t>(&pk->tag_))
+    {
+      mb_.push(*req, pk->msg_);
+    }
+    else if (detail::link_t* link = boost::get<detail::link_t>(&pk->tag_))
+    {
+      add_link(link->get_aid(), pk->skt_);
+      return;
+    }
+    else if (detail::exit_t* ex = boost::get<detail::exit_t>(&pk->tag_))
+    {
+      mb_.push(*ex, pk->msg_);
+      base_type::remove_link(ex->get_aid());
+    }
+    else if (response_t* res = boost::get<response_t>(&pk->tag_))
+    {
+      is_response = true;
+      mb_.push(*res, pk->msg_);
+    }
+
+    if (
+      (recving_ && !is_response) ||
+      (responsing_ && is_response)
+      )
+    {
+      if (recving_ && !is_response)
+      {
+        bool ret = mb_.pop(recving_rcv_, recving_msg_, curr_match_.match_list_);
+        if (!ret)
+        {
+          return;
+        }
+        curr_match_.clear();
+      }
+
+      if (responsing_ && is_response)
+      {
+        BOOST_ASSERT(recving_res_.valid());
+        bool ret = mb_.pop(recving_res_, recving_msg_);
+        if (!ret)
+        {
+          return;
+        }
+      }
+
+      ++tmr_sid_;
+      errcode_t ec;
+      tmr_.cancel(ec);
+      resume(actor_normal);
+    }
   }
-  else
+  else if (!pk->is_err_ret_)
   {
-    user_->get_strand().dispatch(
-      boost::bind(
-        &actor::handle_recv, this, pk
-        )
-      );
+    if (detail::link_t* link = boost::get<detail::link_t>(&pk->tag_))
+    {
+      /// send actor exit msg
+      base_type::send_already_exited(link->get_aid(), pk->recver_);
+    }
+    else if (detail::request_t* req = boost::get<detail::request_t>(&pk->tag_))
+    {
+      /// reply actor exit msg
+      response_t res(req->get_id(), pk->recver_);
+      base_type::send_already_exited(req->get_aid(), res);
+    }
   }
 }
 ///----------------------------------------------------------------------------
@@ -271,13 +312,13 @@ void actor::free_self()
   aid_t self_aid = get_aid();
   base_type::update_aid();
   base_type::send_exit(self_aid, ec_, exit_msg_);
-  user_->free_actor(owner_, this);
+  thr_->get_cache_pool().free_actor(this);
 }
 ///----------------------------------------------------------------------------
 void actor::stop(exit_code_t ec, std::string const& exit_msg)
 {
   /// Trigger a context switch, ensure we stop coro using actor::resume.
-  user_->get_strand().post(boost::bind(&actor::resume, this, actor_normal));
+  thr_->post(thr_, boost::bind(&actor::resume, this, actor_normal));
   yield();
 
   stat_ = off;
@@ -289,11 +330,9 @@ void actor::start_recv_timer(duration_t dur)
 {
   tmr_.expires_from_now(dur);
   tmr_.async_wait(
-    user_->get_strand().wrap(
-      boost::bind(
-        &actor::handle_recv_timeout, this,
-        boost::asio::placeholders::error, ++tmr_sid_
-        )
+    boost::bind(
+      &actor::handle_recv_timeout, this,
+      boost::asio::placeholders::error, ++tmr_sid_
       )
     );
 }
@@ -303,83 +342,6 @@ void actor::handle_recv_timeout(errcode_t const& ec, std::size_t tmr_sid)
   if (!ec && tmr_sid == tmr_sid_)
   {
     resume(actor_timeout);
-  }
-}
-///----------------------------------------------------------------------------
-void actor::handle_recv(detail::pack& pk)
-{
-  if (check(pk.recver_, get_aid().ctxid_, user_->get_context().get_timestamp()))
-  {
-    bool is_response = false;
-
-    if (aid_t* aid = boost::get<aid_t>(&pk.tag_))
-    {
-      mb_.push(*aid, pk.msg_);
-    }
-    else if (detail::request_t* req = boost::get<detail::request_t>(&pk.tag_))
-    {
-      mb_.push(*req, pk.msg_);
-    }
-    else if (detail::link_t* link = boost::get<detail::link_t>(&pk.tag_))
-    {
-      add_link(link->get_aid(), pk.skt_);
-      return;
-    }
-    else if (detail::exit_t* ex = boost::get<detail::exit_t>(&pk.tag_))
-    {
-      mb_.push(*ex, pk.msg_);
-      base_type::remove_link(ex->get_aid());
-    }
-    else if (response_t* res = boost::get<response_t>(&pk.tag_))
-    {
-      is_response = true;
-      mb_.push(*res, pk.msg_);
-    }
-
-    if (
-      (recving_ && !is_response) ||
-      (responsing_ && is_response)
-      )
-    {
-      if (recving_ && !is_response)
-      {
-        bool ret = mb_.pop(recving_rcv_, recving_msg_, curr_match_.match_list_);
-        if (!ret)
-        {
-          return;
-        }
-        curr_match_.clear();
-      }
-
-      if (responsing_ && is_response)
-      {
-        BOOST_ASSERT(recving_res_.valid());
-        bool ret = mb_.pop(recving_res_, recving_msg_);
-        if (!ret)
-        {
-          return;
-        }
-      }
-
-      ++tmr_sid_;
-      errcode_t ec;
-      tmr_.cancel(ec);
-      resume(actor_normal);
-    }
-  }
-  else if (!pk.is_err_ret_)
-  {
-    if (detail::link_t* link = boost::get<detail::link_t>(&pk.tag_))
-    {
-      /// send actor exit msg
-      base_type::send_already_exited(link->get_aid(), pk.recver_);
-    }
-    else if (detail::request_t* req = boost::get<detail::request_t>(&pk.tag_))
-    {
-      /// reply actor exit msg
-      response_t res(req->get_id(), pk.recver_);
-      base_type::send_already_exited(req->get_aid(), res);
-    }
   }
 }
 ///----------------------------------------------------------------------------

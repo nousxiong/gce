@@ -21,15 +21,17 @@
 namespace gce
 {
 ///----------------------------------------------------------------------------
-mixin::mixin(context& ctx, attributes const& attrs)
-  : base_type(attrs.max_cache_match_size_, ctx.get_timestamp())
-  , ctx_(&ctx)
+mixin::mixin(thread* thr, attributes const& attrs)
+  : base_type(thr)
+  , pack_pool_(
+      0,
+      attrs.pack_pool_cache_size_,
+      attrs.pack_pool_reserve_size_
+      )
   , recv_p_(0)
-  , tmr_(ctx_->get_io_service())
+  , tmr_(thr->get_io_service())
   , tmr_sid_(0)
 {
-  user_ = ctx_->select_cache_pool();
-  owner_ = get_cache_pool();
   base_type::update_aid();
 }
 ///----------------------------------------------------------------------------
@@ -39,36 +41,40 @@ mixin::~mixin()
 ///----------------------------------------------------------------------------
 void mixin::send(aid_t recver, message const& m)
 {
-  user_->get_strand().post(
+  thr_->post(
+    get_pack(), 
     boost::bind(
-      &base_type::pri_send, this, recver, m, base_type::sync
+      &base_type::pri_send, this, recver, m
       )
     );
 }
 ///----------------------------------------------------------------------------
 void mixin::send(svcid_t recver, message const& m)
 {
-  user_->get_strand().post(
+  thr_->post(
+    get_pack(), 
     boost::bind(
-      &base_type::pri_send_svc, this, recver, m, base_type::sync
+      &base_type::pri_send_svc, this, recver, m
       )
     );
 }
 ///----------------------------------------------------------------------------
 void mixin::relay(aid_t des, message& m)
 {
-  user_->get_strand().post(
+  thr_->post(
+    get_pack(), 
     boost::bind(
-      &base_type::pri_relay, this, des, m, base_type::sync
+      &base_type::pri_relay, this, des, m
       )
     );
 }
 ///----------------------------------------------------------------------------
 void mixin::relay(svcid_t des, message& m)
 {
-  user_->get_strand().post(
+  thr_->post(
+    get_pack(), 
     boost::bind(
-      &base_type::pri_relay_svc, this, des, m, base_type::sync
+      &base_type::pri_relay_svc, this, des, m
       )
     );
 }
@@ -76,10 +82,11 @@ void mixin::relay(svcid_t des, message& m)
 response_t mixin::request(aid_t recver, message const& m)
 {
   response_t res(base_type::new_request(), get_aid());
-  user_->get_strand().post(
+  thr_->post(
+    get_pack(), 
     boost::bind(
       &base_type::pri_request, this,
-      res, recver, m, base_type::sync
+      res, recver, m
       )
     );
   return res;
@@ -88,10 +95,11 @@ response_t mixin::request(aid_t recver, message const& m)
 response_t mixin::request(svcid_t recver, message const& m)
 {
   response_t res(base_type::new_request(), get_aid());
-  user_->get_strand().post(
+  thr_->post(
+    get_pack(), 
     boost::bind(
       &base_type::pri_request_svc, this,
-      res, recver, m, base_type::sync
+      res, recver, m
       )
     );
   return res;
@@ -99,27 +107,30 @@ response_t mixin::request(svcid_t recver, message const& m)
 ///----------------------------------------------------------------------------
 void mixin::reply(aid_t recver, message const& m)
 {
-  user_->get_strand().post(
+  thr_->post(
+    get_pack(), 
     boost::bind(
-      &base_type::pri_reply, this, recver, m, base_type::sync
+      &base_type::pri_reply, this, recver, m
       )
     );
 }
 ///----------------------------------------------------------------------------
 void mixin::link(aid_t target)
 {
-  user_->get_strand().post(
+  thr_->post(
+    get_pack(), 
     boost::bind(
-      &base_type::pri_link, this, target, base_type::sync
+      &base_type::pri_link, this, target
       )
     );
 }
 ///----------------------------------------------------------------------------
 void mixin::monitor(aid_t target)
 {
-  user_->get_strand().post(
+  thr_->post(
+    get_pack(), 
     boost::bind(
-      &base_type::pri_monitor, this, target, base_type::sync
+      &base_type::pri_monitor, this, target
       )
     );
 }
@@ -129,7 +140,8 @@ aid_t mixin::recv(message& msg, match const& mach)
   recv_promise_t p;
   recv_future_t f = p.get_future();
 
-  user_->get_strand().post(
+  thr_->post(
+    get_pack(), 
     boost::bind(
       &mixin::try_recv, this,
       boost::ref(p), boost::cref(mach)
@@ -156,6 +168,8 @@ aid_t mixin::recv(message& msg, match const& mach)
     }
     msg = rcv.second;
   }
+
+  free_pack();
   return sender;
 }
 ///----------------------------------------------------------------------------
@@ -164,7 +178,8 @@ aid_t mixin::recv(response_t res, message& msg, duration_t tmo)
   res_promise_t p;
   res_future_t f = p.get_future();
 
-  user_->get_strand().post(
+  thr_->post(
+    get_pack(), 
     boost::bind(
       &mixin::try_response, this,
       boost::ref(p), res, tmo
@@ -180,49 +195,131 @@ aid_t mixin::recv(response_t res, message& msg, duration_t tmo)
     sender = res.get_aid();
     msg = res_pr.second;
   }
+
+  free_pack();
   return sender;
 }
 ///----------------------------------------------------------------------------
 void mixin::wait(duration_t dur)
 {
   boost::this_thread::sleep_for(dur);
-}
-///------------------------------------------------------------------------------
-detail::cache_pool* mixin::get_cache_pool()
-{
-  return user_;
+  free_pack();
 }
 ///----------------------------------------------------------------------------
-void mixin::on_recv(detail::pack& pk, base_type::send_hint hint)
+void mixin::on_recv(detail::pack* pk)
 {
-  if (hint == base_type::async)
+  if (check(pk->recver_, ctxid_, timestamp_))
   {
-    user_->get_strand().post(
-      boost::bind(
-        &mixin::handle_recv, this, pk
-        )
-      );
+    bool is_response = false;
+
+    if (aid_t* aid = boost::get<aid_t>(&pk->tag_))
+    {
+      mb_.push(*aid, pk->msg_);
+    }
+    else if (detail::request_t* req = boost::get<detail::request_t>(&pk->tag_))
+    {
+      mb_.push(*req, pk->msg_);
+    }
+    else if (detail::link_t* link = boost::get<detail::link_t>(&pk->tag_))
+    {
+      add_link(link->get_aid(), pk->skt_);
+      return;
+    }
+    else if (detail::exit_t* ex = boost::get<detail::exit_t>(&pk->tag_))
+    {
+      mb_.push(*ex, pk->msg_);
+      base_type::remove_link(ex->get_aid());
+    }
+    else if (response_t* res = boost::get<response_t>(&pk->tag_))
+    {
+      is_response = true;
+      mb_.push(*res, pk->msg_);
+    }
+
+    detail::recv_t rcv;
+    message msg;
+
+    if (
+      (recv_p_ && !is_response) ||
+      (res_p_ && is_response)
+      )
+    {
+      if (recv_p_ && !is_response)
+      {
+        bool ret = mb_.pop(rcv, msg, curr_match_.match_list_);
+        if (!ret)
+        {
+          return;
+        }
+        recv_p_->set_value(std::make_pair(rcv, msg));
+        recv_p_ = 0;
+        curr_match_.clear();
+      }
+
+      if (res_p_ && is_response)
+      {
+        BOOST_ASSERT(recving_res_.valid());
+        bool ret = mb_.pop(recving_res_, msg);
+        if (!ret)
+        {
+          return;
+        }
+        res_p_->set_value(std::make_pair(recving_res_, msg));
+        res_p_ = 0;
+        recving_res_ = response_t();
+      }
+
+      ++tmr_sid_;
+      errcode_t ec;
+      tmr_.cancel(ec);
+    }
   }
-  else
+  else if (!pk->is_err_ret_)
   {
-    user_->get_strand().dispatch(
-      boost::bind(
-        &mixin::handle_recv, this, pk
-        )
-      );
+    if (detail::link_t* link = boost::get<detail::link_t>(&pk->tag_))
+    {
+      /// send actor exit msg
+      base_type::send_already_exited(link->get_aid(), pk->recver_);
+    }
+    else if (detail::request_t* req = boost::get<detail::request_t>(&pk->tag_))
+    {
+      /// reply actor exit msg
+      response_t res(req->get_id(), pk->recver_);
+      base_type::send_already_exited(req->get_aid(), res);
+    }
   }
 }
 ///----------------------------------------------------------------------------
 sid_t mixin::spawn(match_t func, match_t ctxid, std::size_t stack_size)
 {
   sid_t sid = base_type::new_request();
-  user_->get_strand().post(
+  thr_->post(
+    get_pack(), 
     boost::bind(
       &base_type::pri_spawn, this,
-      sid, func, ctxid, stack_size, base_type::sync
+      sid, func, ctxid, stack_size
       )
     );
   return sid;
+}
+///----------------------------------------------------------------------------
+detail::pack* mixin::get_pack()
+{
+  detail::pack* pk = pack_pool_.get();
+  pk->que_ = &pack_free_queue_;
+  return pk;
+}
+///----------------------------------------------------------------------------
+void mixin::free_pack()
+{
+  detail::pack* pk = pack_free_queue_.pop_all_reverse();
+  while (pk)
+  {
+    detail::pack* next = detail::node_access::get_next(pk);
+    detail::node_access::set_next(pk, (detail::pack*)0);
+    pack_pool_.free(pk);
+    pk = next;
+  }
 }
 ///----------------------------------------------------------------------------
 void mixin::try_recv(recv_promise_t& p, match const& mach)
@@ -271,11 +368,9 @@ void mixin::start_recv_timer(duration_t dur, recv_promise_t& p)
 {
   tmr_.expires_from_now(dur);
   tmr_.async_wait(
-    user_->get_strand().wrap(
-      boost::bind(
-        &mixin::handle_recv_timeout, this,
-        boost::asio::placeholders::error, boost::ref(p), ++tmr_sid_
-        )
+    boost::bind(
+      &mixin::handle_recv_timeout, this,
+      boost::asio::placeholders::error, boost::ref(p), ++tmr_sid_
       )
     );
 }
@@ -284,11 +379,9 @@ void mixin::start_recv_timer(duration_t dur, res_promise_t& p)
 {
   tmr_.expires_from_now(dur);
   tmr_.async_wait(
-    user_->get_strand().wrap(
-      boost::bind(
-        &mixin::handle_res_timeout, this,
-        boost::asio::placeholders::error, boost::ref(p), ++tmr_sid_
-        )
+    boost::bind(
+      &mixin::handle_res_timeout, this,
+      boost::asio::placeholders::error, boost::ref(p), ++tmr_sid_
       )
     );
 }
@@ -320,90 +413,6 @@ void mixin::handle_res_timeout(
     recving_res_ = response_t();
     std::pair<response_t, message> res_pr;
     p.set_value(res_pr);
-  }
-}
-///----------------------------------------------------------------------------
-void mixin::handle_recv(detail::pack& pk)
-{
-  if (check(pk.recver_, get_aid().ctxid_, user_->get_context().get_timestamp()))
-  {
-    bool is_response = false;
-
-    if (aid_t* aid = boost::get<aid_t>(&pk.tag_))
-    {
-      mb_.push(*aid, pk.msg_);
-    }
-    else if (detail::request_t* req = boost::get<detail::request_t>(&pk.tag_))
-    {
-      mb_.push(*req, pk.msg_);
-    }
-    else if (detail::link_t* link = boost::get<detail::link_t>(&pk.tag_))
-    {
-      add_link(link->get_aid(), pk.skt_);
-      return;
-    }
-    else if (detail::exit_t* ex = boost::get<detail::exit_t>(&pk.tag_))
-    {
-      mb_.push(*ex, pk.msg_);
-      base_type::remove_link(ex->get_aid());
-    }
-    else if (response_t* res = boost::get<response_t>(&pk.tag_))
-    {
-      is_response = true;
-      mb_.push(*res, pk.msg_);
-    }
-
-    detail::recv_t rcv;
-    message msg;
-
-    if (
-      (recv_p_ && !is_response) ||
-      (res_p_ && is_response)
-      )
-    {
-      if (recv_p_ && !is_response)
-      {
-        bool ret = mb_.pop(rcv, msg, curr_match_.match_list_);
-        if (!ret)
-        {
-          return;
-        }
-        recv_p_->set_value(std::make_pair(rcv, msg));
-        recv_p_ = 0;
-        curr_match_.clear();
-      }
-
-      if (res_p_ && is_response)
-      {
-        BOOST_ASSERT(recving_res_.valid());
-        bool ret = mb_.pop(recving_res_, msg);
-        if (!ret)
-        {
-          return;
-        }
-        res_p_->set_value(std::make_pair(recving_res_, msg));
-        res_p_ = 0;
-        recving_res_ = response_t();
-      }
-
-      ++tmr_sid_;
-      errcode_t ec;
-      tmr_.cancel(ec);
-    }
-  }
-  else if (!pk.is_err_ret_)
-  {
-    if (detail::link_t* link = boost::get<detail::link_t>(&pk.tag_))
-    {
-      /// send actor exit msg
-      base_type::send_already_exited(link->get_aid(), pk.recver_);
-    }
-    else if (detail::request_t* req = boost::get<detail::request_t>(&pk.tag_))
-    {
-      /// reply actor exit msg
-      response_t res(req->get_id(), pk.recver_);
-      base_type::send_already_exited(req->get_aid(), res);
-    }
   }
 }
 ///----------------------------------------------------------------------------

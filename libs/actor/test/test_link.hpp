@@ -26,7 +26,7 @@ public:
 
   static void my_actor(self_t self, aid_t base_id)
   {
-    detail::cache_pool* cac_pool = self.get_cache_pool();
+    thread* thr = self.get_thread();
     std::size_t size = 1;
     std::vector<response_t> res_list(size);
     for (std::size_t i=0; i<size; ++i)
@@ -42,8 +42,8 @@ public:
 
       basic_actor* a =
         aid.get_actor_ptr(
-          cac_pool->get_ctxid(),
-          cac_pool->get_context().get_timestamp()
+          thr->get_ctxid(),
+          thr->get_timestamp()
           );
       sid_t sid = aid.sid_;
       sid += 100000;

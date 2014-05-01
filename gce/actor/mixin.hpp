@@ -24,11 +24,8 @@ namespace gce
 {
 class mixin;
 class context;
+class thread;
 struct attributes;
-namespace detail
-{
-class cache_pool;
-}
 
 class mixin
   : public detail::mpsc_queue<mixin>::node
@@ -37,12 +34,10 @@ class mixin
   typedef basic_actor base_type;
 
 public:
-  mixin(context& ctx, attributes const& attrs);
+  mixin(thread*, attributes const& attrs);
   ~mixin();
 
 public:
-  inline context& get_context() { return *ctx_; }
-
   void send(aid_t, message const&);
   void send(svcid_t, message const&);
   void relay(aid_t, message&);
@@ -64,10 +59,11 @@ public:
 
 public:
   /// internal use
-  detail::cache_pool* get_cache_pool();
-  void on_recv(detail::pack&, base_type::send_hint);
+  void on_recv(detail::pack*);
 
   sid_t spawn(match_t func, match_t ctxid, std::size_t stack_size);
+  detail::pack* get_pack();
+  void free_pack();
 
 private:
   typedef boost::optional<std::pair<detail::recv_t, message> > recv_optional_t;
@@ -83,13 +79,12 @@ private:
   void handle_recv_timeout(errcode_t const&, recv_promise_t&, std::size_t);
   void handle_res_timeout(errcode_t const&, res_promise_t&, std::size_t);
 
-  void handle_recv(detail::pack&);
-
 private:
   /// Ensure start from a new cache line.
   byte_t pad0_[GCE_CACHE_LINE_SIZE];
 
-  GCE_CACHE_ALIGNED_VAR(context*, ctx_)
+  GCE_CACHE_ALIGNED_VAR(detail::pack_pool_t, pack_pool_)
+  GCE_CACHE_ALIGNED_VAR(detail::pack_queue_t, pack_free_queue_)
 
   /// local
   recv_promise_t* recv_p_;

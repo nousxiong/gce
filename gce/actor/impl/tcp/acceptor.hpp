@@ -26,7 +26,7 @@ class acceptor
   : public gce::detail::basic_acceptor
 {
 public:
-  acceptor(strand_t&, std::string const&, boost::uint16_t);
+  acceptor(io_service_t&, std::string const&, boost::uint16_t);
   ~acceptor();
 
 public:
@@ -35,7 +35,7 @@ public:
   void close();
 
 private:
-  strand_t& snd_;
+  io_service_t& ios_;
   boost::asio::ip::tcp::acceptor acpr_;
   std::string const host_;
   boost::uint16_t const port_;

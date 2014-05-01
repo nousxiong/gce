@@ -17,8 +17,7 @@ namespace detail
 {
 ///----------------------------------------------------------------------------
 heartbeat::heartbeat(io_service_t& ios)
-  : cac_pool_(0)
-  , tmr_(ios)
+  : tmr_(ios)
   , sync_(ios)
   , max_count_(0)
   , curr_count_(0)
@@ -68,7 +67,6 @@ void heartbeat::wait_end(yield_t yield)
 ///----------------------------------------------------------------------------
 void heartbeat::clear()
 {
-  cac_pool_ = 0;
   timeout_.clear();
   tick_.clear();
 }
@@ -76,14 +74,11 @@ void heartbeat::clear()
 void heartbeat::start_timer()
 {
   ++waiting_;
-  strand_t& snd = cac_pool_->get_strand();
   tmr_.expires_from_now(period_);
   tmr_.async_wait(
-    snd.wrap(
-      boost::bind(
-        &heartbeat::handle_timeout, this,
-        boost::asio::placeholders::error
-        )
+    boost::bind(
+      &heartbeat::handle_timeout, this,
+      boost::asio::placeholders::error
       )
     );
 }

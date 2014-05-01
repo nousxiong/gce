@@ -19,44 +19,30 @@ namespace gce
 namespace detail
 {
 ///------------------------------------------------------------------------------
-cache_pool::cache_pool(
-  context& ctx, std::size_t id,
-  attributes const& attrs, bool mixed
-  )
-  : ctx_(&ctx)
-  , id_(id)
-  , cache_num_(attrs.thread_num_*attrs.per_thread_cache_)
-  , cache_match_size_(attrs.max_cache_match_size_)
-  , mixed_(mixed)
-  , snd_(ctx.get_io_service())
-  , gc_tmr_(ctx.get_io_service())
+cache_pool::cache_pool(thread& thr, attributes const& attrs)
+  : thr_(&thr)
   , actor_pool_(
-      this, &ctx,
+      this, thr_,
       size_nil,
       attrs.actor_pool_reserve_size_
       )
   , socket_pool_(
-      this, &ctx,
+      this, thr_,
       size_nil,
       attrs.socket_pool_reserve_size_
       )
   , acceptor_pool_(
-      this, &ctx,
+      this, thr_,
       size_nil,
       attrs.acceptor_pool_reserve_size_
       )
-  , actor_cache_list_(cache_num_)
-  , socket_cache_list_(cache_num_)
-  , acceptor_cache_list_(cache_num_)
-  , curr_router_list_(router_list_.end())
-  , curr_socket_list_(conn_list_.end())
-  , curr_joint_list_(joint_list_.end())
+  , pack_pool_(
+      this,
+      attrs.pack_pool_cache_size_,
+      attrs.pack_pool_reserve_size_
+      )
   , stopped_(false)
-  , ctxid_(attrs.id_)
 {
-  actor_cache_dirty_list_.reserve(cache_num_);
-  socket_cache_dirty_list_.reserve(cache_num_);
-  acceptor_cache_dirty_list_.reserve(cache_num_);
 }
 ///------------------------------------------------------------------------------
 cache_pool::~cache_pool()
@@ -66,132 +52,49 @@ cache_pool::~cache_pool()
 ///------------------------------------------------------------------------------
 actor* cache_pool::get_actor()
 {
-  if (!mixed_ && !snd_.running_in_this_thread())
-  {
-    throw std::runtime_error("get_actor strand thread error");
-  }
-
   return actor_pool_.get();
 }
 ///------------------------------------------------------------------------------
 socket* cache_pool::get_socket()
 {
-  if (!mixed_ && !snd_.running_in_this_thread())
-  {
-    throw std::runtime_error("get_socket strand thread error");
-  }
-
   return socket_pool_.get();
 }
 ///------------------------------------------------------------------------------
 acceptor* cache_pool::get_acceptor()
 {
-  if (!mixed_ && !snd_.running_in_this_thread())
-  {
-    throw std::runtime_error("get_acceptor strand thread error");
-  }
-
   return acceptor_pool_.get();
 }
 ///------------------------------------------------------------------------------
-void cache_pool::free_actor(cache_pool* owner, actor* a)
+pack* cache_pool::get_pack()
 {
-  free_object(
-    owner, a, actor_cache_list_, actor_pool_,
-    owner->actor_free_queue_, actor_cache_dirty_list_
-    );
+  pack* pk = pack_pool_.get();
+  pk->thr_ = thr_;
+  return pk;
 }
 ///------------------------------------------------------------------------------
-void cache_pool::free_socket(cache_pool* owner, socket* skt)
+void cache_pool::free_actor(actor* a)
 {
-  free_object(
-    owner, skt, socket_cache_list_, socket_pool_,
-    owner->socket_free_queue_, socket_cache_dirty_list_
-    );
+  actor_pool_.free(a);
 }
 ///------------------------------------------------------------------------------
-void cache_pool::free_acceptor(cache_pool* owner, acceptor* acpr)
+void cache_pool::free_socket(socket* skt)
 {
-  free_object(
-    owner, acpr, acceptor_cache_list_, acceptor_pool_,
-    owner->acceptor_free_queue_, acceptor_cache_dirty_list_
-    );
+  socket_pool_.free(skt);
 }
 ///------------------------------------------------------------------------------
-template <typename T, typename Pool, typename FreeQueue, typename DirtyList>
-void cache_pool::free_object(
-  cache_pool* owner, T* o, std::vector<cache<T, FreeQueue> >& cache_list,
-  Pool& pool, FreeQueue& free_que, DirtyList& dirty_list
-  )
+void cache_pool::free_acceptor(acceptor* acpr)
 {
-  if (owner != this)
-  {
-    std::size_t id = owner->get_id();
-    cache<T, FreeQueue>& cac = cache_list[id];
-    cac.push(o, &free_que);
-    if (cac.size_ >= GCE_FREE_CACHE_SIZE)
-    {
-      cac.free();
-    }
-    else if (cac.size_ == 1)
-    {
-      dirty_list.push_back(&cac);
-    }
-  }
-  else
-  {
-    pool.free(o);
-  }
+  acceptor_pool_.free(acpr);
 }
 ///------------------------------------------------------------------------------
-template <typename T, typename Pool, typename FreeQueue>
-void cache_pool::free_object(Pool& pool, FreeQueue& free_que)
+void cache_pool::free_pack(pack* pk)
 {
-  T* o = free_que.pop_all_reverse();
-  while (o)
-  {
-    T* next = node_access::get_next(o);
-    node_access::set_next(o, (T*)0);
-    pool.free(o);
-    o = next;
-  }
+  pack_free_queue_.push(pk);
 }
 ///------------------------------------------------------------------------------
 void cache_pool::free_object()
 {
-  free_object<actor>(actor_pool_, actor_free_queue_);
-  free_object<socket>(socket_pool_, socket_free_queue_);
-  free_object<acceptor>(acceptor_pool_, acceptor_free_queue_);
-}
-///------------------------------------------------------------------------------
-void cache_pool::free_cache()
-{
-  if (!actor_cache_dirty_list_.empty())
-  {
-    BOOST_FOREACH(actor_cache_t* cac, actor_cache_dirty_list_)
-    {
-      cac->free();
-    }
-    actor_cache_dirty_list_.clear();
-  }
-
-  if (!socket_cache_dirty_list_.empty())
-  {
-    BOOST_FOREACH(socket_cache_t* cac, socket_cache_dirty_list_)
-    {
-      cac->free();
-    }
-    socket_cache_dirty_list_.clear();
-  }
-
-  if (!acceptor_cache_dirty_list_.empty())
-  {
-    BOOST_FOREACH(acceptor_cache_t* cac, acceptor_cache_dirty_list_)
-    {
-      cac->free();
-    }
-    acceptor_cache_dirty_list_.clear();
-  }
+  free_object<pack>(pack_pool_, pack_free_queue_);
 }
 ///------------------------------------------------------------------------------
 void cache_pool::register_service(match_t name, aid_t svc)
@@ -485,8 +388,6 @@ void cache_pool::remove_acceptor(acceptor* a)
 void cache_pool::stop()
 {
   stopped_ = true;
-  errcode_t ignored_ec;
-  gc_tmr_.cancel(ignored_ec);
 
   BOOST_FOREACH(socket* s, socket_list_)
   {
@@ -499,6 +400,19 @@ void cache_pool::stop()
     a->stop();
   }
   acceptor_list_.clear();
+}
+///------------------------------------------------------------------------------
+template <typename T, typename Pool, typename FreeQueue>
+void cache_pool::free_object(Pool& pool, FreeQueue& free_que)
+{
+  T* o = free_que.pop_all_reverse();
+  while (o)
+  {
+    T* next = node_access::get_next(o);
+    node_access::set_next(o, (T*)0);
+    pool.free(o);
+    o = next;
+  }
 }
 ///------------------------------------------------------------------------------
 }

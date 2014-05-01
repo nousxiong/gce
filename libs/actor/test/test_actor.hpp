@@ -23,13 +23,12 @@ private:
   static void my_child(self_t self)
   {
     aid_t aid = recv(self);
-    //wait(self, seconds_t(3));
     reply(self, aid);
   }
 
-  static void my_actor(self_t self, aid_t base_id)
+  static void my_actor(self_t self, aid_t base_id, mixin_t base)
   {
-    std::size_t size = 50;
+    std::size_t size = 10;
     std::vector<response_t> res_list(size);
     for (std::size_t i=0; i<size; ++i)
     {
@@ -41,7 +40,7 @@ private:
       res_list[i] = request(self, aid);
     }
 
-    timer_t tmr(self.get_cache_pool()->get_context().get_io_service());
+    timer_t tmr(self.get_thread()->get_io_service());
     yield_t yield = self.get_yield();
     tmr.expires_from_now(boost::chrono::milliseconds(1));
     tmr.async_wait(yield);
@@ -66,9 +65,9 @@ private:
   static void my_thr(context& ctx, aid_t base_id)
   {
     mixin_t mix = spawn(ctx);
-    for (std::size_t i=0; i<2; ++i)
+    for (std::size_t i=0; i<5; ++i)
     {
-      spawn(mix, boost::bind(&actor_ut::my_actor, _1, base_id));
+      spawn(mix, boost::bind(&actor_ut::my_actor, _1, base_id, boost::ref(mix)));
     }
   }
 
@@ -76,9 +75,9 @@ private:
   {
     try
     {
-      std::size_t free_actor_num = 20;
-      std::size_t user_thr_num = 0;
-      std::size_t my_actor_size = free_actor_num + user_thr_num * 2;
+      std::size_t free_actor_num = 10;
+      std::size_t user_thr_num = 5;
+      std::size_t my_actor_size = free_actor_num + user_thr_num * 5;
       attributes attrs;
       context ctx(attrs);
 
@@ -90,7 +89,7 @@ private:
           base,
           boost::bind(
             &actor_ut::my_actor, _1,
-            base_id
+            base_id, boost::ref(base)
             )
           );
       }

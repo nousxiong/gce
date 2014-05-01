@@ -27,13 +27,10 @@ namespace gce
 namespace detail
 {
 ///----------------------------------------------------------------------------
-acceptor::acceptor(context* ctx)
-  : basic_actor(
-      ctx->get_attributes().max_cache_match_size_,
-      ctx->get_timestamp()
-      )
+acceptor::acceptor(thread* thr)
+  : basic_actor(thr)
   , stat_(ready)
-  , ctx_(*ctx)
+  , ctx_(*thr->get_context())
   , is_router_(false)
 {
 }
@@ -42,11 +39,9 @@ acceptor::~acceptor()
 {
 }
 ///----------------------------------------------------------------------------
-void acceptor::init(cache_pool* user, cache_pool* owner, net_option opt)
+void acceptor::init(net_option opt)
 {
   BOOST_ASSERT_MSG(stat_ == ready, "socket status error");
-  user_ = user;
-  owner_ = owner;
   opt_ = opt;
 
   base_type::update_aid();
@@ -64,7 +59,7 @@ void acceptor::bind(
   is_router_ = is_router;
 
   boost::asio::spawn(
-    user_->get_strand(),
+    thr_->get_io_service(),
     boost::bind(
       &acceptor::run, this, ep, _1
       ),
@@ -86,13 +81,29 @@ void acceptor::on_free()
   is_router_ = false;
 }
 ///----------------------------------------------------------------------------
-void acceptor::on_recv(pack& pk, base_type::send_hint)
+void acceptor::on_recv(pack* pk)
 {
-  user_->get_strand().dispatch(
-    boost::bind(
-      &acceptor::handle_recv, this, pk
-      )
-    );
+  if (check(pk->recver_, ctxid_, timestamp_))
+  {
+    if (exit_t* ex = boost::get<exit_t>(&pk->tag_))
+    {
+      base_type::remove_link(ex->get_aid());
+    }
+  }
+  else if (!pk->is_err_ret_)
+  {
+    if (detail::link_t* link = boost::get<detail::link_t>(&pk->tag_))
+    {
+      /// send actor exit msg
+      base_type::send_already_exited(link->get_aid(), pk->recver_);
+    }
+    else if (detail::request_t* req = boost::get<detail::request_t>(&pk->tag_))
+    {
+      /// reply actor exit msg
+      response_t res(req->get_id(), pk->recver_);
+      base_type::send_already_exited(req->get_aid(), res);
+    }
+  }
 }
 ///----------------------------------------------------------------------------
 void acceptor::run(std::string const& ep, yield_t yield)
@@ -100,9 +111,10 @@ void acceptor::run(std::string const& ep, yield_t yield)
   exit_code_t exc = exit_normal;
   std::string exit_msg("exit normal");
 
-  if (!user_->stopped())
+  if (!thr_->stopped())
   {
-    user_->add_acceptor(this);
+    cache_pool& cac_pool = thr_->get_cache_pool();
+    cac_pool.add_acceptor(this);
 
     try
     {
@@ -120,9 +132,8 @@ void acceptor::run(std::string const& ep, yield_t yield)
           break;
         }
 
-        socket* s = user_->get_socket();
-        s->init(ctx_.select_cache_pool(), user_, opt_);
-        s->start(remote_func_list_, prot, is_router_);
+        thread& thr = ctx_.select_thread();
+        thr.post(thr_, boost::bind(&acceptor::spawn_socket, this, &thr, prot));
       }
     }
     catch (std::exception& ex)
@@ -139,6 +150,13 @@ void acceptor::run(std::string const& ep, yield_t yield)
     }
   }
   free_self(exc, exit_msg, yield);
+}
+///----------------------------------------------------------------------------
+void acceptor::spawn_socket(thread* thr, socket_ptr prot)
+{
+  socket* s = thr->get_cache_pool().get_socket();
+  s->init(opt_);
+  s->start(remote_func_list_, prot, is_router_);
 }
 ///----------------------------------------------------------------------------
 basic_acceptor* acceptor::make_acceptor(std::string const& ep)
@@ -171,35 +189,10 @@ basic_acceptor* acceptor::make_acceptor(std::string const& ep)
       boost::lexical_cast<boost::uint16_t>(
         ep.substr(begin, pos - begin)
         );
-    return new tcp::acceptor(user_->get_strand(), address, port);
+    return new tcp::acceptor(thr_->get_io_service(), address, port);
   }
 
   throw std::runtime_error("unsupported protocol");
-}
-///----------------------------------------------------------------------------
-void acceptor::handle_recv(pack& pk)
-{
-  if (check(pk.recver_, get_aid().ctxid_, user_->get_context().get_timestamp()))
-  {
-    if (exit_t* ex = boost::get<exit_t>(&pk.tag_))
-    {
-      base_type::remove_link(ex->get_aid());
-    }
-  }
-  else if (!pk.is_err_ret_)
-  {
-    if (detail::link_t* link = boost::get<detail::link_t>(&pk.tag_))
-    {
-      /// send actor exit msg
-      base_type::send_already_exited(link->get_aid(), pk.recver_);
-    }
-    else if (detail::request_t* req = boost::get<detail::request_t>(&pk.tag_))
-    {
-      /// reply actor exit msg
-      response_t res(req->get_id(), pk.recver_);
-      base_type::send_already_exited(req->get_aid(), res);
-    }
-  }
 }
 ///----------------------------------------------------------------------------
 void acceptor::close()
@@ -215,11 +208,11 @@ void acceptor::free_self(exit_code_t exc, std::string const& exit_msg, yield_t y
 {
   acpr_.reset();
 
-  user_->remove_acceptor(this);
+  thr_->get_cache_pool().remove_acceptor(this);
   aid_t self_aid = get_aid();
   base_type::update_aid();
   base_type::send_exit(self_aid, exc, exit_msg);
-  user_->free_acceptor(owner_, this);
+  thr_->get_cache_pool().free_acceptor(this);
 }
 ///----------------------------------------------------------------------------
 }

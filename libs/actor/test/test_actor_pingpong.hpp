@@ -11,7 +11,7 @@ namespace gce
 {
 class actor_pingpong_ut
 {
-static std::size_t const msg_size = 100000;
+static std::size_t const msg_size = 10000000;
 public:
   static void run()
   {
@@ -23,7 +23,6 @@ public:
 private:
   static void my_child(self_t self, aid_t sire, aid_t base_id)
   {
-    self.chain(true);
     message msg;
     while (true)
     {
@@ -42,7 +41,6 @@ private:
 
   static void my_actor(self_t self, aid_t base_id)
   {
-    self.chain(true);
     aid_t aid =
       spawn(
         self,
@@ -65,7 +63,11 @@ private:
   {
     try
     {
-      context ctx;
+      attributes attrs;
+      attrs.thread_num_ = 2;
+      //attrs.pack_pool_reserve_size_ = 1000000;
+      //attrs.pack_pool_cache_size_ = size_nil;
+      context ctx(attrs);
 
       mixin_t base = spawn(ctx);
       aid_t base_id = base.get_aid();

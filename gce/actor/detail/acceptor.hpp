@@ -15,6 +15,7 @@
 #include <gce/actor/message.hpp>
 #include <gce/actor/basic_actor.hpp>
 #include <gce/actor/net_option.hpp>
+#include <gce/actor/detail/basic_socket.hpp>
 #include <gce/actor/detail/object_pool.hpp>
 #include <gce/detail/mpsc_queue.hpp>
 #include <gce/actor/detail/pack.hpp>
@@ -26,13 +27,13 @@ namespace gce
 {
 class mixin;
 class context;
+class thread;
 namespace detail
 {
-class cache_pool;
 class basic_acceptor;
 
 class acceptor
-  : public object_pool<acceptor, context*>::object
+  : public object_pool<acceptor, thread*>::object
   , public mpsc_queue<acceptor>::node
   , public basic_actor
 {
@@ -46,25 +47,25 @@ class acceptor
   };
 
 public:
-  explicit acceptor(context*);
+  explicit acceptor(thread*);
   ~acceptor();
 
 public:
-  void init(cache_pool* user, cache_pool* owner, net_option);
+  void init(net_option);
   void bind(remote_func_list_t const&, std::string const&, bool is_router);
 
 public:
   void stop();
   void on_free();
-  void on_recv(pack&, base_type::send_hint);
+  void on_recv(pack*);
 
   void link(aid_t) {}
   void monitor(aid_t) {}
 
 private:
   void run(std::string const&, yield_t);
+  void spawn_socket(thread*, socket_ptr);
   basic_acceptor* make_acceptor(std::string const&);
-  void handle_recv(pack&);
 
 private:
   void close();

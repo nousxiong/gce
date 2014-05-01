@@ -8,8 +8,8 @@
 ///
 
 #include <gce/actor/context.hpp>
-#include <gce/actor/detail/cache_pool.hpp>
 #include <gce/actor/mixin.hpp>
+#include <gce/actor/spawn.hpp>
 #include <boost/asio/placeholders.hpp>
 #include <boost/foreach.hpp>
 #include <boost/ref.hpp>
@@ -24,8 +24,8 @@ namespace gce
 context::context(attributes attrs)
   : attrs_(attrs)
   , timestamp_((timestamp_t)boost::chrono::system_clock::now().time_since_epoch().count())
-  , curr_cache_pool_(size_nil)
-  , cache_pool_size_(attrs_.thread_num_ * attrs_.per_thread_cache_)
+  , curr_thread_(size_nil)
+  , thread_size_(attrs_.thread_num_ == 0 ? 1 : attrs_.thread_num_)
 {
   if (attrs_.ios_)
   {
@@ -33,27 +33,22 @@ context::context(attributes attrs)
   }
   else
   {
-    ios_.reset(new io_service_t(attrs_.thread_num_));
+    ios_.reset(new io_service_t);
   }
-  work_ = boost::in_place(boost::ref(*ios_));
-  cache_pool_list_.reserve(cache_pool_size_);
 
   try
   {
-    std::size_t index = 0;
-    for (std::size_t i=0; i<cache_pool_size_; ++i, ++index)
+    for (std::size_t i=0; i<thread_size_; ++i)
     {
-      cache_pool_list_.push_back((detail::cache_pool*)0);
-      detail::cache_pool*& cac_pool = cache_pool_list_.back();
-      cac_pool = new detail::cache_pool(*this, index, attrs_, false);
-      start_gc_timer(cac_pool);
+      thread_list_.emplace_back(*this, i);
     }
 
-    for (std::size_t i=0; i<attrs_.thread_num_; ++i)
+    for (std::size_t i=0; i<thread_size_; ++i)
     {
+      thread& thr = thread_list_[i];
       thread_group_.create_thread(
         boost::bind(
-          &context::run, this, i,
+          &thread::run, &thr,
           attrs_.thread_begin_cb_list_,
           attrs_.thread_end_cb_list_
           )
@@ -74,140 +69,87 @@ context::~context()
 ///------------------------------------------------------------------------------
 mixin& context::make_mixin()
 {
-  mixin* mix = new mixin(*this, attrs_);
+  mixin* mix = new mixin(&select_thread(), attrs_);
   mixin_list_.push(mix);
   return *mix;
 }
 ///------------------------------------------------------------------------------
-detail::cache_pool* context::select_cache_pool()
+thread& context::select_thread()
 {
-  std::size_t curr_cache_pool = curr_cache_pool_;
-  ++curr_cache_pool;
-  if (curr_cache_pool >= cache_pool_size_)
+  std::size_t curr_thread = curr_thread_;
+  ++curr_thread;
+  if (curr_thread >= thread_size_)
   {
-    curr_cache_pool = 0;
+    curr_thread = 0;
   }
-  curr_cache_pool_ = curr_cache_pool;
-  return cache_pool_list_[curr_cache_pool];
+  curr_thread_ = curr_thread;
+  return thread_list_[curr_thread];
 }
 ///------------------------------------------------------------------------------
 void context::register_service(match_t name, aid_t svc)
 {
-  BOOST_FOREACH(detail::cache_pool* cac_pool, cache_pool_list_)
+  BOOST_FOREACH(thread& thr, thread_list_)
   {
-    if (cac_pool)
-    {
-      cac_pool->get_strand().dispatch(
-        boost::bind(
-          &detail::cache_pool::register_service,
-          cac_pool, name, svc
-          )
-        );
-    }
+    thr.get_io_service().dispatch(
+      boost::bind(
+        &detail::cache_pool::register_service,
+        &thr.get_cache_pool(), name, svc
+        )
+      );
   }
 }
 ///------------------------------------------------------------------------------
 void context::deregister_service(match_t name, aid_t svc)
 {
-  BOOST_FOREACH(detail::cache_pool* cac_pool, cache_pool_list_)
+  BOOST_FOREACH(thread& thr, thread_list_)
   {
-    if (cac_pool)
-    {
-      cac_pool->get_strand().dispatch(
-        boost::bind(
-          &detail::cache_pool::deregister_service,
-          cac_pool, name, svc
-          )
-        );
-    }
+    thr.get_io_service().dispatch(
+      boost::bind(
+        &detail::cache_pool::deregister_service,
+        &thr.get_cache_pool(), name, svc
+        )
+      );
   }
 }
 ///------------------------------------------------------------------------------
 void context::register_socket(ctxid_pair_t ctxid_pr, aid_t skt)
 {
-  BOOST_FOREACH(detail::cache_pool* cac_pool, cache_pool_list_)
+  BOOST_FOREACH(thread& thr, thread_list_)
   {
-    if (cac_pool)
-    {
-      cac_pool->get_strand().dispatch(
-        boost::bind(
-          &detail::cache_pool::register_socket,
-          cac_pool, ctxid_pr, skt
-          )
-        );
-    }
+    thr.get_io_service().dispatch(
+      boost::bind(
+        &detail::cache_pool::register_socket,
+        &thr.get_cache_pool(), ctxid_pr, skt
+        )
+      );
   }
 }
 ///------------------------------------------------------------------------------
 void context::deregister_socket(ctxid_pair_t ctxid_pr, aid_t skt)
 {
-  BOOST_FOREACH(detail::cache_pool* cac_pool, cache_pool_list_)
+  BOOST_FOREACH(thread& thr, thread_list_)
   {
-    if (cac_pool)
-    {
-      cac_pool->get_strand().dispatch(
-        boost::bind(
-          &detail::cache_pool::deregister_socket,
-          cac_pool, ctxid_pr, skt
-          )
-        );
-    }
-  }
-}
-///------------------------------------------------------------------------------
-void context::run(
-  thrid_t id,
-  std::vector<thread_callback_t> const& begin_cb_list,
-  std::vector<thread_callback_t> const& end_cb_list
-  )
-{
-  BOOST_FOREACH(thread_callback_t const& cb, begin_cb_list)
-  {
-    cb(id);
-  }
-
-  while (true)
-  {
-    try
-    {
-      ios_->run();
-      break;
-    }
-    catch (...)
-    {
-      std::cerr << "Unexpected exception: " <<
-        boost::current_exception_diagnostic_information();
-    }
-  }
-
-  BOOST_FOREACH(thread_callback_t const& cb, end_cb_list)
-  {
-    cb(id);
+    thr.get_io_service().dispatch(
+      boost::bind(
+        &detail::cache_pool::deregister_socket,
+        &thr.get_cache_pool(), ctxid_pr, skt
+        )
+      );
   }
 }
 ///------------------------------------------------------------------------------
 void context::stop()
 {
-  work_ = boost::none;
-  BOOST_FOREACH(detail::cache_pool* cac_pool, cache_pool_list_)
+  BOOST_FOREACH(thread& thr, thread_list_)
   {
-    if (cac_pool)
-    {
-      cac_pool->get_strand().dispatch(
-        boost::bind(&detail::cache_pool::stop, cac_pool)
-        );
-    }
+    thr.get_io_service().dispatch(
+      boost::bind(
+        &thread::stop, &thr
+        )
+      );
   }
 
   thread_group_.join_all();
-
-  BOOST_FOREACH(detail::cache_pool* cac_pool, cache_pool_list_)
-  {
-    if (cac_pool)
-    {
-      cac_pool->free_cache();
-    }
-  }
 
   mixin* mix = mixin_list_.pop_all_reverse();
   while (mix)
@@ -218,39 +160,7 @@ void context::stop()
     mix = next;
   }
 
-  BOOST_FOREACH(detail::cache_pool* cac_pool, cache_pool_list_)
-  {
-    delete cac_pool;
-  }
-}
-///------------------------------------------------------------------------------
-void context::start_gc_timer(detail::cache_pool* cac_pool)
-{
-  timer_t& gc_tmr = cac_pool->get_gc_timer();
-  strand_t& snd = cac_pool->get_strand();
-  gc_tmr.expires_from_now(attrs_.gc_period_);
-  gc_tmr.async_wait(
-    snd.wrap(
-      boost::bind(
-        &context::gc, this,
-        cac_pool, boost::asio::placeholders::error
-        )
-      )
-    );
-}
-///------------------------------------------------------------------------------
-void context::gc(detail::cache_pool* cac_pool, errcode_t const& errc)
-{
-  if (errc != boost::asio::error::operation_aborted)
-  {
-    start_gc_timer(cac_pool);
-  }
-
-  /// free all cache
-  cac_pool->free_cache();
-
-  /// do gc
-  cac_pool->free_object();
+  thread_list_.clear();
 }
 ///------------------------------------------------------------------------------
 }

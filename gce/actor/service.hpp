@@ -11,7 +11,7 @@
 #define GCE_ACTOR_SERVICE_HPP
 
 #include <gce/actor/config.hpp>
-#include <gce/actor/detail/cache_pool.hpp>
+#include <gce/actor/context.hpp>
 #include <gce/actor/service_id.hpp>
 
 namespace gce
@@ -19,20 +19,18 @@ namespace gce
 template <typename Self>
 inline void register_service(Self& self, match_t name)
 {
-  detail::cache_pool* owner = self.get_cache_pool();
-  context& ctx = owner->get_context();
-  owner->register_service(name, self.get_aid());
-  ctx.register_service(name, self.get_aid());
+  context* ctx = self.get_context();
+  self.get_thread()->get_cache_pool().register_service(name, self.get_aid());
+  ctx->register_service(name, self.get_aid());
 }
 
 
 template <typename Self>
 inline void deregister_service(Self& self, match_t name)
 {
-  detail::cache_pool* owner = self.get_cache_pool();
-  context& ctx = owner->get_context();
-  owner->deregister_service(name, self.get_aid());
-  ctx.deregister_service(name, self.get_aid());
+  context* ctx = self.get_context();
+  self.get_thread()->get_cache_pool().deregister_service(name, self.get_aid());
+  ctx->deregister_service(name, self.get_aid());
 }
 }
 

@@ -25,8 +25,7 @@ namespace gce
 namespace detail
 {
 inline void connect(
-  cache_pool* user,
-  cache_pool* owner,
+  thread* thr,
   ctxid_t target,
   std::string const& ep,
   bool target_is_router,
@@ -34,53 +33,40 @@ inline void connect(
   net_option opt
   )
 {
-  context& ctx = owner->get_context();
-  if (!user)
-  {
-    user = ctx.select_cache_pool();
-  }
-
   if (target == ctxid_nil)
   {
     throw std::runtime_error("target invalid");
   }
 
-  if (user->get_ctxid() == ctxid_nil)
+  if (thr->get_ctxid() == ctxid_nil)
   {
     throw std::runtime_error(
       "ctxid haven't set, please set it before connect"
       );
   }
 
-  socket* s = owner->get_socket();
-  s->init(user, owner, opt);
+  socket* s = thr->get_cache_pool().get_socket();
+  s->init(opt);
   s->connect(remote_func_list, target, ep, target_is_router);
 }
 
 inline void bind(
-  cache_pool* user,
-  cache_pool* owner,
+  thread* thr,
   std::string const& ep,
   bool is_router,
   remote_func_list_t const& remote_func_list,
   net_option opt
   )
 {
-  context& ctx = owner->get_context();
-  if (!user)
-  {
-    user = ctx.select_cache_pool();
-  }
-
-  if (user->get_ctxid() == ctxid_nil)
+  if (thr->get_ctxid() == ctxid_nil)
   {
     throw std::runtime_error(
       "ctxid haven't set, please set it before bind"
       );
   }
 
-  acceptor* a = owner->get_acceptor();
-  a->init(user, owner, opt);
+  acceptor* a = thr->get_cache_pool().get_acceptor();
+  a->init(opt);
   a->bind(remote_func_list, ep, is_router);
 }
 }
@@ -95,12 +81,13 @@ inline void connect(
   remote_func_list_t const& remote_func_list = remote_func_list_t()
   )
 {
-  detail::cache_pool* user = 0;
-  detail::cache_pool* owner = sire.get_cache_pool();
-  owner->get_strand().post(
+  context* ctx = sire.get_context();
+  thread& thr = ctx->select_thread();
+  thr.post(
+    sire.get_pack(),
     boost::bind(
       &detail::connect, 
-      user, owner, target, ep, 
+      &thr, target, ep, 
       target_is_router, remote_func_list, opt
       )
     );
@@ -115,9 +102,16 @@ inline void connect(
   remote_func_list_t const& remote_func_list = remote_func_list_t()
   )
 {
-  detail::cache_pool* user = 0;
-  detail::cache_pool* owner = sire.get_cache_pool();
-  detail::connect(user, owner, target, ep, target_is_router, remote_func_list, opt);
+  context* ctx = sire.get_context();
+  thread& thr = ctx->select_thread();
+  thr.post(
+    sire.get_thread(),
+    boost::bind(
+      &detail::connect, 
+      &thr, target, ep, 
+      target_is_router, remote_func_list, opt
+      )
+    );
 }
 
 /// bind
@@ -129,12 +123,13 @@ inline void bind(
   net_option opt = net_option()
   )
 {
-  detail::cache_pool* user = 0;
-  detail::cache_pool* owner = sire.get_cache_pool();
-  owner->get_strand().post(
+  context* ctx = sire.get_context();
+  thread& thr = ctx->select_thread();
+  thr.post(
+    sire.get_pack(),
     boost::bind(
       &detail::bind, 
-      user, owner, ep, is_router, 
+      &thr, ep, is_router, 
       remote_func_list, opt
       )
     );
@@ -148,9 +143,16 @@ inline void bind(
   net_option opt = net_option()
   )
 {
-  detail::cache_pool* user = 0;
-  detail::cache_pool* owner = sire.get_cache_pool();
-  detail::bind(user, owner, ep, is_router, remote_func_list, opt);
+  context* ctx = sire.get_context();
+  thread& thr = ctx->select_thread();
+  thr.post(
+    sire.get_thread(),
+    boost::bind(
+      &detail::bind, 
+      &thr, ep, is_router, 
+      remote_func_list, opt
+      )
+    );
 }
 }
 

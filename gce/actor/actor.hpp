@@ -27,10 +27,11 @@ class mailbox;
 }
 class mixin;
 class context;
+class thread;
 class response_t;
 
 class actor
-  : public detail::object_pool<actor, context*>::object
+  : public detail::object_pool<actor, thread*>::object
   , public detail::mpsc_queue<actor>::node
   , public basic_actor
 {
@@ -102,7 +103,7 @@ public:
   typedef boost::function<void (self_ref_t)> func_t;
 
 public:
-  explicit actor(context*);
+  explicit actor(thread*);
   ~actor();
 
 public:
@@ -113,19 +114,14 @@ public:
     );
   void wait(duration_t);
 
-  detail::cache_pool* get_cache_pool();
   yield_t get_yield();
 
 public:
   /// internal use
   void start(std::size_t);
-  void init(
-    detail::cache_pool* user, detail::cache_pool* owner,
-    func_t const& f,
-    aid_t link_tgt
-    );
+  void init(func_t const& f);
   void on_free();
-  void on_recv(detail::pack&, base_type::send_hint);
+  void on_recv(detail::pack*);
 
   inline sid_t spawn(match_t func, match_t ctxid, std::size_t stack_size)
   {
@@ -142,7 +138,6 @@ private:
   void stop(exit_code_t, std::string const&);
   void start_recv_timer(duration_t);
   void handle_recv_timeout(errcode_t const&, std::size_t);
-  void handle_recv(detail::pack&);
 
 private:
   /// Ensure start from a new cache line.

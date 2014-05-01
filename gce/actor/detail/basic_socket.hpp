@@ -17,7 +17,6 @@ namespace gce
 {
 namespace detail
 {
-class cache_pool;
 class basic_socket
 {
 public:
@@ -25,7 +24,7 @@ public:
   virtual ~basic_socket() {}
 
 public:
-  virtual void init(cache_pool*) = 0;
+  virtual void init() = 0;
   virtual void send(byte_t const*, std::size_t, byte_t const*, std::size_t) = 0;
   virtual std::size_t recv(byte_t*, std::size_t, yield_t) = 0;
   virtual void connect(yield_t) = 0;

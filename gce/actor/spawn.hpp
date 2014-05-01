@@ -12,8 +12,10 @@
 
 #include <gce/actor/config.hpp>
 #include <gce/actor/recv.hpp>
+#include <gce/actor/send.hpp>
 #include <gce/actor/actor.hpp>
 #include <gce/actor/mixin.hpp>
+#include <gce/actor/strand.hpp>
 #include <gce/actor/context.hpp>
 #include <gce/actor/detail/cache_pool.hpp>
 
@@ -21,94 +23,102 @@ namespace gce
 {
 namespace detail
 {
-typedef boost::promise<aid_t> actor_promise_t;
-typedef boost::unique_future<aid_t> actor_future_t;
+inline aid_t make_actor(
+  thread* thr, aid_t sire, 
+  actor_func_t const& f, std::size_t stack_size
+  )
+{
+  actor* a = thr->get_cache_pool().get_actor();
+  a->init(f);
+  a->start(stack_size);
+  if (sire)
+  {
+    a->send(sire, message(detail::msg_new_actor));
+  }
+  return a->get_aid();
+}
 
 template <typename Sire, typename F>
-inline aid_t make_actor(
-  Sire& sire, cache_pool* user, cache_pool* owner,
-  F f, link_type type, std::size_t stack_size
-  )
-{
-  aid_t link_tgt;
-  if (type != no_link)
-  {
-    link_tgt = sire.get_aid();
-  }
-
-  context& ctx = owner->get_context();
-  if (!user)
-  {
-    user = ctx.select_cache_pool();
-  }
-
-  actor* a = owner->get_actor();
-  a->init(user, owner, f, link_tgt);
-  aid_t aid = a->get_aid();
-  if (type != no_link)
-  {
-    sire.add_link(detail::link_t(type, aid));
-  }
-  a->start(stack_size);
-  return aid;
-}
-
-inline void make_actor_from_mixin(
-  actor_promise_t& p, mixin_t sire, actor_func_t const& func,
-  link_type type, std::size_t stack_size
-  )
-{
-  detail::cache_pool* user = 0;
-  detail::cache_pool* owner = sire.get_cache_pool();
-  aid_t aid = make_actor(sire, user, owner, func, type, stack_size);
-  p.set_value(aid);
-}
-}
-
-/// Spawn a actor using given mixin
-template <typename F>
 inline aid_t spawn(
-  mixin_t sire, F func,
+  Sire& sire, thread* thr, pack* pk, F f,
   link_type type = no_link,
   std::size_t stack_size = default_stacksize()
   )
 {
-  detail::actor_promise_t p;
-  detail::actor_future_t f = p.get_future();
-
-  detail::cache_pool* owner = sire.get_cache_pool();
-  owner->get_strand().post(
+  thr->post(
+    pk,
     boost::bind(
-      &detail::make_actor_from_mixin,
-      boost::ref(p), boost::ref(sire),
-      actor_func_t(func), type, stack_size
+      &make_actor,
+      thr, sire.get_aid(), actor_func_t(f), stack_size
       )
     );
-  return f.get();
-}
 
-/// Spawn a actor using given actor
-template <typename F>
-inline aid_t spawn(
-  self_t sire, F f,
-  link_type type = no_link,
-  bool sync_sire = false,
-  std::size_t stack_size = default_stacksize()
-  )
-{
-  detail::cache_pool* user = 0;
-  detail::cache_pool* owner = sire.get_cache_pool();
-  if (sync_sire)
+  aid_t aid = recv(sire, detail::msg_new_actor);
+  if (!aid)
   {
-    user = owner;
+    throw std::runtime_error("make actor failed!");
   }
-  return make_actor(sire, user, owner, f, type, stack_size);
+
+  if (type == linked)
+  {
+    sire.link(aid);
+  }
+  else if (type == monitored)
+  {
+    sire.monitor(aid);
+  }
+  return aid;
+}
 }
 
 /// Spawn a mixin
 inline mixin_t spawn(context& ctx)
 {
   return ctx.make_mixin();
+}
+
+/// Spawn a actor using given mixin
+template <typename F>
+inline aid_t spawn(
+  strand<mixin> snd, F f,
+  link_type type = no_link,
+  std::size_t stack_size = default_stacksize()
+  )
+{
+  mixin_t sire = snd.get_sire();
+  thread& thr = snd.get_thread();
+  aid_t aid = detail::spawn(sire, &thr, sire.get_pack(), f, type, stack_size);
+  sire.free_pack();
+  return aid;
+}
+
+/// Spawn a actor using given actor
+template <typename F>
+inline aid_t spawn(
+  strand<actor> snd, F f,
+  link_type type = no_link,
+  bool sync_sire = false,
+  std::size_t stack_size = default_stacksize()
+  )
+{
+  self_t sire = snd.get_sire();
+
+  aid_t aid;
+  if (sync_sire)
+  {
+    aid = make_actor(sire.get_thread(), aid_t(), f, stack_size);
+    if (!aid)
+    {
+      throw std::runtime_error("make actor failed!");
+    }
+  }
+  else
+  {
+    thread& thr = snd.get_thread();
+    aid = detail::spawn(sire, &thr, thr.get_cache_pool().get_pack(), f, type, stack_size);
+  }
+
+  return aid;
 }
 
 /// Spawn a actor on remote context
