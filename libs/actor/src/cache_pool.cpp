@@ -19,35 +19,34 @@ namespace gce
 namespace detail
 {
 ///------------------------------------------------------------------------------
-cache_pool::cache_pool(thread& thr, attributes const& attrs)
-  : thr_(&thr)
+cache_pool::cache_pool(context& ctx, std::size_t index, bool is_slice)
+  : ctx_(&ctx)
+  , index_(index)
+  , snd_(ctx.get_io_service())
   , actor_pool_(
-      this, thr_,
+      this, this,
       size_nil,
-      attrs.actor_pool_reserve_size_
+      is_slice ? 0 : ctx.get_attributes().actor_pool_reserve_size_
       )
   , socket_pool_(
-      this, thr_,
+      this, this,
       size_nil,
-      attrs.socket_pool_reserve_size_
+      is_slice ? 0 : ctx.get_attributes().socket_pool_reserve_size_
       )
   , acceptor_pool_(
-      this, thr_,
+      this, this,
       size_nil,
-      attrs.acceptor_pool_reserve_size_
+      is_slice ? 0 : ctx.get_attributes().acceptor_pool_reserve_size_
       )
-  , pack_pool_(
-      this,
-      attrs.pack_pool_cache_size_,
-      attrs.pack_pool_reserve_size_
-      )
+  , curr_router_list_(router_list_.end())
+  , curr_socket_list_(conn_list_.end())
+  , curr_joint_list_(joint_list_.end())
   , stopped_(false)
 {
 }
 ///------------------------------------------------------------------------------
 cache_pool::~cache_pool()
 {
-  free_object();
 }
 ///------------------------------------------------------------------------------
 actor* cache_pool::get_actor()
@@ -65,13 +64,6 @@ acceptor* cache_pool::get_acceptor()
   return acceptor_pool_.get();
 }
 ///------------------------------------------------------------------------------
-pack* cache_pool::get_pack()
-{
-  pack* pk = pack_pool_.get();
-  pk->thr_ = thr_;
-  return pk;
-}
-///------------------------------------------------------------------------------
 void cache_pool::free_actor(actor* a)
 {
   actor_pool_.free(a);
@@ -85,16 +77,6 @@ void cache_pool::free_socket(socket* skt)
 void cache_pool::free_acceptor(acceptor* acpr)
 {
   acceptor_pool_.free(acpr);
-}
-///------------------------------------------------------------------------------
-void cache_pool::free_pack(pack* pk)
-{
-  pack_free_queue_.push(pk);
-}
-///------------------------------------------------------------------------------
-void cache_pool::free_object()
-{
-  free_object<pack>(pack_pool_, pack_free_queue_);
 }
 ///------------------------------------------------------------------------------
 void cache_pool::register_service(match_t name, aid_t svc)
@@ -388,7 +370,6 @@ void cache_pool::remove_acceptor(acceptor* a)
 void cache_pool::stop()
 {
   stopped_ = true;
-
   BOOST_FOREACH(socket* s, socket_list_)
   {
     s->stop();
@@ -400,19 +381,6 @@ void cache_pool::stop()
     a->stop();
   }
   acceptor_list_.clear();
-}
-///------------------------------------------------------------------------------
-template <typename T, typename Pool, typename FreeQueue>
-void cache_pool::free_object(Pool& pool, FreeQueue& free_que)
-{
-  T* o = free_que.pop_all_reverse();
-  while (o)
-  {
-    T* next = node_access::get_next(o);
-    node_access::set_next(o, (T*)0);
-    pool.free(o);
-    o = next;
-  }
 }
 ///------------------------------------------------------------------------------
 }

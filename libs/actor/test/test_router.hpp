@@ -49,12 +49,11 @@ public:
           monitored
           );
 
-      wait(base1, boost::chrono::milliseconds(100));
       net_option opt;
       opt.reconn_period_ = seconds_t(1);
       connect(base1, atom("router"), "tcp://127.0.0.1:14923", true, opt);
       connect(base2, atom("router"), "tcp://127.0.0.1:14923", true, opt);
-      wait(base2, boost::chrono::milliseconds(100));
+      //wait(base2, boost::chrono::milliseconds(100));
 
       for (std::size_t i=0; i<echo_num; ++i)
       {

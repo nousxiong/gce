@@ -9,75 +9,62 @@
 
 namespace gce
 {
-class actor_pingpong_ut
+class slice_pingpong_ut
 {
 static std::size_t const msg_size = 100000;
 public:
   static void run()
   {
-    std::cout << "actor_pingpong_ut begin." << std::endl;
+    std::cout << "slice_pingpong_ut begin." << std::endl;
     test();
-    std::cout << "actor_pingpong_ut end." << std::endl;
+    std::cout << "slice_pingpong_ut end." << std::endl;
   }
 
 private:
-  static void my_child(self_t self, aid_t sire, aid_t base_id)
+  static void pong_actor(self_t self)
   {
     message msg;
     while (true)
     {
-      self.recv(msg);
+      aid_t sender = self.recv(msg);
       if (msg.get_type() == 2)
       {
         break;
       }
       else
       {
-        self.send(sire, msg);
+        self.send(sender, msg);
       }
     }
-    self.send(base_id, msg);
-  }
-
-  static void my_actor(self_t self, aid_t base_id)
-  {
-    aid_t aid =
-      spawn(
-        self,
-        boost::bind(
-          &actor_pingpong_ut::my_child,
-          _1, self.get_aid(), base_id
-          )
-        );
-
-    message m(1);
-    for (std::size_t i=0; i<msg_size; ++i)
-    {
-      self.send(aid, m);
-      self.recv(m);
-    }
-    send(self, aid, 2);
   }
 
   static void test()
   {
     try
     {
-      context ctx;
+      attributes attrs;
+      attrs.thread_num_ = 2;
+      context ctx(attrs);
 
       mixin_t base = spawn(ctx);
-      aid_t base_id = base.get_aid();
-      aid_t aid =
+      slice_t ping = spawn(base);
+      
+      aid_t pong_id = 
         spawn(
           base,
           boost::bind(
-            &actor_pingpong_ut::my_actor, _1,
-            base_id
+            &slice_pingpong_ut::pong_actor, _1
             )
           );
 
       boost::timer::auto_cpu_timer t;
-      recv(base);
+      message m(1);
+      for (std::size_t i=0; i<msg_size; ++i)
+      {
+        ping.send(pong_id, m);
+        ping.recv(m);
+      }
+      send(ping, pong_id, 2);
     }
     catch (std::exception& ex)
     {

@@ -24,7 +24,7 @@ private:
   {
     std::size_t loop_num = 10;
     yield_t yield = self.get_yield();
-    timer_t tmr(self.get_thread()->get_io_service());
+    timer_t tmr(self.get_cache_pool()->get_context().get_io_service());
 
     for (std::size_t i=0; i<loop_num; ++i)
     {
@@ -40,7 +40,7 @@ private:
   {
     try
     {
-      std::size_t actor_num = 20;
+      std::size_t actor_num = 100;
       context ctx;
       mixin_t base = spawn(ctx);
 

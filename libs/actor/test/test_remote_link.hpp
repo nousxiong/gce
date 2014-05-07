@@ -37,7 +37,6 @@ public:
 
       gce::bind(base2, "tcp://127.0.0.1:14923");
 
-      wait(base1, boost::chrono::milliseconds(100));
       net_option opt;
       opt.reconn_period_ = seconds_t(1);
       connect(base1, atom("two"), "tcp://127.0.0.1:14923", false, opt);

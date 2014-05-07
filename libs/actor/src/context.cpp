@@ -9,7 +9,8 @@
 
 #include <gce/actor/context.hpp>
 #include <gce/actor/mixin.hpp>
-#include <gce/actor/spawn.hpp>
+#include <gce/actor/slice.hpp>
+#include <gce/actor/detail/cache_pool.hpp>
 #include <boost/asio/placeholders.hpp>
 #include <boost/foreach.hpp>
 #include <boost/ref.hpp>
@@ -24,8 +25,15 @@ namespace gce
 context::context(attributes attrs)
   : attrs_(attrs)
   , timestamp_((timestamp_t)boost::chrono::system_clock::now().time_since_epoch().count())
-  , curr_thread_(size_nil)
-  , thread_size_(attrs_.thread_num_ == 0 ? 1 : attrs_.thread_num_)
+  , curr_cache_pool_(size_nil)
+  , cache_pool_size_(
+      attrs_.thread_num_ == 0 ? 
+        attrs_.per_thread_cache_ : 
+        attrs_.thread_num_ * attrs_.per_thread_cache_
+      )
+  , cache_queue_size_(cache_pool_size_ + attrs_.slice_num_)
+  , curr_slice_(0)
+  , mixin_list_(cache_pool_size_)
 {
   if (attrs_.ios_)
   {
@@ -33,22 +41,30 @@ context::context(attributes attrs)
   }
   else
   {
-    ios_.reset(new io_service_t);
+    ios_.reset(new io_service_t(attrs_.thread_num_));
   }
+  work_ = boost::in_place(boost::ref(*ios_));
+  cache_pool_list_.resize(cache_pool_size_, 0);
+  slice_list_.resize(attrs_.slice_num_, 0);
 
   try
   {
-    for (std::size_t i=0; i<thread_size_; ++i)
+    std::size_t index = 0;
+    for (std::size_t i=0; i<cache_pool_size_; ++i, ++index)
     {
-      thread_list_.emplace_back(*this, i);
+      cache_pool_list_[i] = new detail::cache_pool(*this, index);
     }
 
-    for (std::size_t i=0; i<thread_size_; ++i)
+    for (std::size_t i=0; i<attrs_.slice_num_; ++i, ++index)
     {
-      thread& thr = thread_list_[i];
+      slice_list_[i] = new slice(*this, index);
+    }
+
+    for (std::size_t i=0; i<attrs_.thread_num_; ++i)
+    {
       thread_group_.create_thread(
         boost::bind(
-          &thread::run, &thr,
+          &context::run, this, i,
           attrs_.thread_begin_cb_list_,
           attrs_.thread_end_cb_list_
           )
@@ -69,98 +85,163 @@ context::~context()
 ///------------------------------------------------------------------------------
 mixin& context::make_mixin()
 {
-  mixin* mix = new mixin(&select_thread(), attrs_);
+  mixin* mix = new mixin(select_cache_pool());
   mixin_list_.push(mix);
   return *mix;
 }
 ///------------------------------------------------------------------------------
-thread& context::select_thread()
+detail::cache_pool* context::select_cache_pool()
 {
-  std::size_t curr_thread = curr_thread_;
-  ++curr_thread;
-  if (curr_thread >= thread_size_)
+  std::size_t curr_cache_pool = curr_cache_pool_;
+  ++curr_cache_pool;
+  if (curr_cache_pool >= cache_pool_size_)
   {
-    curr_thread = 0;
+    curr_cache_pool = 0;
   }
-  curr_thread_ = curr_thread;
-  return thread_list_[curr_thread];
+  curr_cache_pool_ = curr_cache_pool;
+  return cache_pool_list_[curr_cache_pool];
 }
 ///------------------------------------------------------------------------------
-void context::register_service(match_t name, aid_t svc)
+slice_t context::make_slice()
 {
-  BOOST_FOREACH(thread& thr, thread_list_)
+  std::size_t i = curr_slice_.fetch_add(1, boost::memory_order_relaxed);
+  if (i >= slice_list_.size())
   {
-    thr.get_io_service().dispatch(
+    throw std::runtime_error("out of slice fix size");
+  }
+  return *(slice_list_[i]);
+}
+///------------------------------------------------------------------------------
+void context::register_service(match_t name, aid_t svc, std::size_t cache_queue_index)
+{
+  BOOST_FOREACH(detail::cache_pool* cac_pool, cache_pool_list_)
+  {
+    cac_pool->get_strand().dispatch(
       boost::bind(
         &detail::cache_pool::register_service,
-        &thr.get_cache_pool(), name, svc
+        cac_pool, name, svc
         )
       );
   }
+
+  BOOST_FOREACH(slice* s, slice_list_)
+  {
+    s->register_service(name, svc, cache_queue_index);
+  }
 }
 ///------------------------------------------------------------------------------
-void context::deregister_service(match_t name, aid_t svc)
+void context::deregister_service(match_t name, aid_t svc, std::size_t cache_queue_index)
 {
-  BOOST_FOREACH(thread& thr, thread_list_)
+  BOOST_FOREACH(detail::cache_pool* cac_pool, cache_pool_list_)
   {
-    thr.get_io_service().dispatch(
+    cac_pool->get_strand().dispatch(
       boost::bind(
         &detail::cache_pool::deregister_service,
-        &thr.get_cache_pool(), name, svc
+        cac_pool, name, svc
         )
       );
   }
+
+  BOOST_FOREACH(slice* s, slice_list_)
+  {
+    s->deregister_service(name, svc, cache_queue_index);
+  }
 }
 ///------------------------------------------------------------------------------
-void context::register_socket(ctxid_pair_t ctxid_pr, aid_t skt)
+void context::register_socket(ctxid_pair_t ctxid_pr, aid_t skt, std::size_t cache_queue_index)
 {
-  BOOST_FOREACH(thread& thr, thread_list_)
+  BOOST_FOREACH(detail::cache_pool* cac_pool, cache_pool_list_)
   {
-    thr.get_io_service().dispatch(
+    cac_pool->get_strand().dispatch(
       boost::bind(
         &detail::cache_pool::register_socket,
-        &thr.get_cache_pool(), ctxid_pr, skt
+        cac_pool, ctxid_pr, skt
         )
       );
   }
+
+  BOOST_FOREACH(slice* s, slice_list_)
+  {
+    s->register_socket(ctxid_pr, skt, cache_queue_index);
+  }
 }
 ///------------------------------------------------------------------------------
-void context::deregister_socket(ctxid_pair_t ctxid_pr, aid_t skt)
+void context::deregister_socket(ctxid_pair_t ctxid_pr, aid_t skt, std::size_t cache_queue_index)
 {
-  BOOST_FOREACH(thread& thr, thread_list_)
+  BOOST_FOREACH(detail::cache_pool* cac_pool, cache_pool_list_)
   {
-    thr.get_io_service().dispatch(
+    cac_pool->get_strand().dispatch(
       boost::bind(
         &detail::cache_pool::deregister_socket,
-        &thr.get_cache_pool(), ctxid_pr, skt
+        cac_pool, ctxid_pr, skt
         )
       );
+  }
+
+  BOOST_FOREACH(slice* s, slice_list_)
+  {
+    s->deregister_socket(ctxid_pr, skt, cache_queue_index);
+  }
+}
+///------------------------------------------------------------------------------
+void context::run(
+  thrid_t id,
+  std::vector<thread_callback_t> const& begin_cb_list,
+  std::vector<thread_callback_t> const& end_cb_list
+  )
+{
+  BOOST_FOREACH(thread_callback_t const& cb, begin_cb_list)
+  {
+    cb(id);
+  }
+
+  while (true)
+  {
+    try
+    {
+      ios_->run();
+      break;
+    }
+    catch (...)
+    {
+      std::cerr << "Unexpected exception: " <<
+        boost::current_exception_diagnostic_information();
+    }
+  }
+
+  BOOST_FOREACH(thread_callback_t const& cb, end_cb_list)
+  {
+    cb(id);
   }
 }
 ///------------------------------------------------------------------------------
 void context::stop()
 {
-  BOOST_FOREACH(thread& thr, thread_list_)
+  work_ = boost::none;
+  BOOST_FOREACH(detail::cache_pool* cac_pool, cache_pool_list_)
   {
-    thr.get_io_service().dispatch(
-      boost::bind(
-        &thread::stop, &thr
-        )
+    cac_pool->get_strand().dispatch(
+      boost::bind(&detail::cache_pool::stop, cac_pool)
       );
   }
 
   thread_group_.join_all();
 
-  mixin* mix = mixin_list_.pop_all_reverse();
-  while (mix)
+  mixin* mix = 0;
+  while (mixin_list_.pop(mix))
   {
-    mixin* next = detail::node_access::get_next(mix);
-    detail::node_access::set_next(mix, (mixin*)0);
     delete mix;
-    mix = next;
   }
 
-  thread_list_.clear();
+  BOOST_FOREACH(slice* s, slice_list_)
+  {
+    delete s;
+  }
+
+  BOOST_FOREACH(detail::cache_pool* cac_pool, cache_pool_list_)
+  {
+    delete cac_pool;
+  }
 }
 ///------------------------------------------------------------------------------
 }

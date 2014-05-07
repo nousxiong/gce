@@ -40,12 +40,10 @@ public:
       mixin_t base1 = spawn(ctx1);
       mixin_t base2 = spawn(ctx2);
 
-      wait(base1, boost::chrono::milliseconds(100));
       net_option opt;
       opt.reconn_period_ = seconds_t(1);
       connect(base1, atom("router"), "tcp://127.0.0.1:14923", true, opt);
       connect(base2, atom("router"), "tcp://127.0.0.1:14923", true, opt);
-      wait(base2, boost::chrono::milliseconds(100));
 
       std::vector<aid_t> quiter_list(quiter_num);
       for (std::size_t i=0; i<quiter_num; ++i)

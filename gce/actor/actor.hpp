@@ -15,7 +15,6 @@
 #include <gce/actor/actor_fwd.hpp>
 #include <gce/actor/match.hpp>
 #include <gce/actor/detail/object_pool.hpp>
-#include <gce/detail/mpsc_queue.hpp>
 #include <gce/actor/detail/mailbox_fwd.hpp>
 
 namespace gce
@@ -27,12 +26,10 @@ class mailbox;
 }
 class mixin;
 class context;
-class thread;
 class response_t;
 
 class actor
-  : public detail::object_pool<actor, thread*>::object
-  , public detail::mpsc_queue<actor>::node
+  : public detail::object_pool<actor, detail::cache_pool*>::object
   , public basic_actor
 {
   typedef basic_actor base_type;
@@ -103,7 +100,7 @@ public:
   typedef boost::function<void (self_ref_t)> func_t;
 
 public:
-  explicit actor(thread*);
+  explicit actor(detail::cache_pool*);
   ~actor();
 
 public:
@@ -121,7 +118,7 @@ public:
   void start(std::size_t);
   void init(func_t const& f);
   void on_free();
-  void on_recv(detail::pack*);
+  void on_recv(detail::pack&, base_type::send_hint);
 
   inline sid_t spawn(match_t func, match_t ctxid, std::size_t stack_size)
   {
@@ -138,6 +135,7 @@ private:
   void stop(exit_code_t, std::string const&);
   void start_recv_timer(duration_t);
   void handle_recv_timeout(errcode_t const&, std::size_t);
+  void handle_recv(detail::pack&);
 
 private:
   /// Ensure start from a new cache line.

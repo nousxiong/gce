@@ -17,7 +17,6 @@
 #include <gce/actor/net_option.hpp>
 #include <gce/actor/detail/basic_socket.hpp>
 #include <gce/actor/detail/object_pool.hpp>
-#include <gce/detail/mpsc_queue.hpp>
 #include <gce/actor/detail/pack.hpp>
 #include <gce/actor/match.hpp>
 #include <boost/scoped_ptr.hpp>
@@ -27,14 +26,13 @@ namespace gce
 {
 class mixin;
 class context;
-class thread;
 namespace detail
 {
+class cache_pool;
 class basic_acceptor;
 
 class acceptor
-  : public object_pool<acceptor, thread*>::object
-  , public mpsc_queue<acceptor>::node
+  : public object_pool<acceptor, cache_pool*>::object
   , public basic_actor
 {
   typedef basic_actor base_type;
@@ -47,25 +45,33 @@ class acceptor
   };
 
 public:
-  explicit acceptor(thread*);
+  explicit acceptor(cache_pool*);
   ~acceptor();
 
 public:
   void init(net_option);
-  void bind(remote_func_list_t const&, std::string const&, bool is_router);
+  void bind(
+    aid_t sire, remote_func_list_t const&, 
+    std::string const&, bool is_router
+    );
 
 public:
   void stop();
   void on_free();
-  void on_recv(pack*);
+  void on_recv(pack&, base_type::send_hint);
+  inline void send(aid_t recver, message const& m)
+  {
+    base_type::pri_send(recver, m);
+  }
 
   void link(aid_t) {}
   void monitor(aid_t) {}
 
 private:
-  void run(std::string const&, yield_t);
-  void spawn_socket(thread*, socket_ptr);
+  void run(aid_t sire, std::string const&, yield_t);
+  void spawn_socket(cache_pool*, socket_ptr);
   basic_acceptor* make_acceptor(std::string const&);
+  void handle_recv(pack&);
 
 private:
   void close();
@@ -79,7 +85,6 @@ private:
   GCE_CACHE_ALIGNED_VAR(net_option, opt_)
 
   /// thread local vals
-  context& ctx_;
   boost::scoped_ptr<basic_acceptor> acpr_;
   std::map<match_t, actor_func_t> remote_func_list_;
   bool is_router_;

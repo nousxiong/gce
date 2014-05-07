@@ -24,11 +24,11 @@ public:
   public:
     my_3d_engine(context& ctx, int count_down, fps_rep_t fps = 60)
       : frame_(1000/fps)
+      , base_(spawn(ctx))
+      , cln_(spawn(base_))
       , stopped_(false)
     {
-      mixin_t base = spawn(ctx);
-      cln_ = spawn(base);
-      aid_t counter = spawn(base, boost::bind(&slice_ut::cd, _1));
+      aid_t counter = spawn(base_, boost::bind(&slice_ut::cd, _1));
       send(cln_, counter, atom("cd"), count_down);
     }
 
@@ -76,6 +76,7 @@ public:
 
   private:
     milliseconds_t const frame_;
+    mixin_t base_;
     slice_t cln_;
     bool stopped_;
   };
@@ -116,7 +117,7 @@ public:
     try
     {
       context ctx;
-      my_3d_engine engine(ctx, 10);
+      my_3d_engine engine(ctx, 20);
       engine.run();
     }
     catch (std::exception& ex)

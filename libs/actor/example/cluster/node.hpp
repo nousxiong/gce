@@ -10,7 +10,7 @@
 #ifndef GCE_ACTOR_EXAMPLE_CLUSTER_NODE_HPP
 #define GCE_ACTOR_EXAMPLE_CLUSTER_NODE_HPP
 
-#include "basic_app.hpp"
+#include "master.hpp"
 #include <gce/actor/all.hpp>
 #include <boost/asio.hpp>
 #include <boost/shared_ptr.hpp>
@@ -20,25 +20,28 @@
 class node
 {
 public:
-  explicit node(gce::attributes);
+  node(
+    gce::attributes attrs, 
+    std::string master_ep, 
+    bool is_master, 
+    gce::ctxid_t master_node_id, 
+    std::vector<app_init_t> const& gate_list,
+    std::vector<app_init_t> const& game_list,
+    std::vector<router_init_t> const& router_list
+    );
   ~node();
 
   void wait_end();
 
-public:
-  void add_app(basic_app_ptr);
-  void start(gce::actor_func_t);
-
 private:
-  void run(gce::self_t, gce::actor_func_t);
+  void run(gce::self_t, gce::svcid_t master);
   void handle_signal(gce::self_t);
 
 private:
   gce::context ctx_;
   gce::mixin_t base_;
   boost::asio::signal_set sig_;
-
-  std::vector<basic_app_ptr> app_list_;
+  boost::scoped_ptr<master> master_;
 };
 
 #endif /// GCE_ACTOR_EXAMPLE_CLUSTER_NODE_HPP

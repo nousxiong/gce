@@ -28,7 +28,7 @@ public:
   ~socket();
 
 public:
-  void init();
+  void init(gce::detail::cache_pool* user);
   void send(byte_t const*, std::size_t, byte_t const*, std::size_t);
   std::size_t recv(byte_t*, std::size_t, yield_t);
   void connect(yield_t);
@@ -44,6 +44,7 @@ private:
   void end_send(errcode_t const&);
 
 private:
+  gce::detail::cache_pool* user_;
   boost::asio::ip::tcp::resolver reso_;
   boost::asio::ip::tcp::socket sock_;
   std::string const host_;

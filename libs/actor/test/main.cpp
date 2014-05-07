@@ -8,9 +8,7 @@
 ///
 
 #include <gce/actor/all.hpp>
-#include <gce/detail/mpsc_queue.hpp>
 #include <boost/asio.hpp>
-#include <boost/timer/timer.hpp>
 #include <boost/shared_ptr.hpp>
 #include <boost/make_shared.hpp>
 #include <boost/lexical_cast.hpp>
@@ -24,12 +22,15 @@
 #include <string>
 #include <vector>
 
+#include <boost/timer/timer.hpp>
 #include "test_object_pool.hpp"
 #include "test_coro.hpp"
 #include "test_actor.hpp"
 #include "test_mixin.hpp"
+#include "test_slice.hpp"
 #include "test_actor_pingpong.hpp"
 #include "test_mixin_pingpong.hpp"
+#include "test_slice_pingpong.hpp"
 #include "test_match.hpp"
 #include "test_link.hpp"
 #include "test_message.hpp"
@@ -45,33 +46,32 @@
 #include "test_send_recv.hpp"
 #include "test_service.hpp"
 
-#include "test_mpsc_pingpong.hpp"
-
 int main()
 {
   try
   {
-    //gce::object_pool_ut::run();
-    //gce::coro_ut::run();
-    //gce::send_recv_ut::run();
-    //gce::actor_ut::run();
-    //gce::mixin_ut::run();
+    gce::object_pool_ut::run();
+    gce::coro_ut::run();
+    gce::send_recv_ut::run();
+    gce::actor_ut::run();
+    gce::mixin_ut::run();
+    gce::slice_ut::run();
     gce::actor_pingpong_ut::run();
-    //gce::mixin_pingpong_ut::run();
-    //gce::match_ut::run();
-    //gce::link_ut::run();
-    //gce::relay_ut::run();
-    //gce::message_ut::run();
-    //gce::socket_ut::run();
-    //gce::socket_broken_ut::run();
-    //gce::remote_ut::run();
-    //gce::remote_link_ut::run();
-    //gce::router_ut::run();
-    //gce::router_link_ut::run();
-    //gce::router_broken_ut::run();
-    //gce::remote_relay_ut::run();
-    //gce::service_ut::run();
-    //gce::mpsc_pingpong_ut::run();
+    gce::mixin_pingpong_ut::run();
+    gce::slice_pingpong_ut::run();
+    gce::match_ut::run();
+    gce::link_ut::run();
+    gce::relay_ut::run();
+    gce::message_ut::run();
+    gce::socket_ut::run();
+    gce::socket_broken_ut::run();
+    gce::remote_ut::run();
+    gce::remote_link_ut::run();
+    gce::router_ut::run();
+    gce::router_link_ut::run();
+    gce::router_broken_ut::run();
+    gce::remote_relay_ut::run();
+    gce::service_ut::run();
   }
   catch (std::exception& ex)
   {

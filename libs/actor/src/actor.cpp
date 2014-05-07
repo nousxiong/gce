@@ -23,12 +23,12 @@
 namespace gce
 {
 ///----------------------------------------------------------------------------
-actor::actor(thread* thr)
-  : base_type(thr)
+actor::actor(detail::cache_pool* user)
+  : base_type(&user->get_context(), user, user->get_index())
   , stat_(ready)
   , recving_(false)
   , responsing_(false)
-  , tmr_(thr->get_io_service())
+  , tmr_(ctx_->get_io_service())
   , tmr_sid_(0)
   , yld_(0)
 {
@@ -150,7 +150,7 @@ void actor::start(std::size_t stack_size)
   }
 
   boost::asio::spawn(
-    thr_->get_io_service(),
+    snd_,
     boost::bind(
       &actor::run, this, _1
       ),
@@ -182,80 +182,23 @@ void actor::on_free()
   exit_msg_.clear();
 }
 ///----------------------------------------------------------------------------
-void actor::on_recv(detail::pack* pk)
+void actor::on_recv(detail::pack& pk, base_type::send_hint hint)
 {
-  if (check(pk->recver_, ctxid_, timestamp_))
+  if (hint == base_type::sync)
   {
-    bool is_response = false;
-
-    if (aid_t* aid = boost::get<aid_t>(&pk->tag_))
-    {
-      mb_.push(*aid, pk->msg_);
-    }
-    else if (detail::request_t* req = boost::get<detail::request_t>(&pk->tag_))
-    {
-      mb_.push(*req, pk->msg_);
-    }
-    else if (detail::link_t* link = boost::get<detail::link_t>(&pk->tag_))
-    {
-      add_link(link->get_aid(), pk->skt_);
-      return;
-    }
-    else if (detail::exit_t* ex = boost::get<detail::exit_t>(&pk->tag_))
-    {
-      mb_.push(*ex, pk->msg_);
-      base_type::remove_link(ex->get_aid());
-    }
-    else if (response_t* res = boost::get<response_t>(&pk->tag_))
-    {
-      is_response = true;
-      mb_.push(*res, pk->msg_);
-    }
-
-    if (
-      (recving_ && !is_response) ||
-      (responsing_ && is_response)
-      )
-    {
-      if (recving_ && !is_response)
-      {
-        bool ret = mb_.pop(recving_rcv_, recving_msg_, curr_match_.match_list_);
-        if (!ret)
-        {
-          return;
-        }
-        curr_match_.clear();
-      }
-
-      if (responsing_ && is_response)
-      {
-        BOOST_ASSERT(recving_res_.valid());
-        bool ret = mb_.pop(recving_res_, recving_msg_);
-        if (!ret)
-        {
-          return;
-        }
-      }
-
-      ++tmr_sid_;
-      errcode_t ec;
-      tmr_.cancel(ec);
-      resume(actor_normal);
-    }
+    snd_.dispatch(
+      boost::bind(
+        &actor::handle_recv, this, pk
+        )
+      );
   }
-  else if (!pk->is_err_ret_)
+  else
   {
-    if (detail::link_t* link = boost::get<detail::link_t>(&pk->tag_))
-    {
-      /// send actor exit msg
-      base_type::send_already_exited(link->get_aid(), pk->recver_);
-    }
-    else if (detail::request_t* req = boost::get<detail::request_t>(&pk->tag_))
-    {
-      /// reply actor exit msg
-      response_t res(req->get_id(), pk->recver_);
-      base_type::send_already_exited(req->get_aid(), res);
-    }
+    snd_.post(
+      boost::bind(
+        &actor::handle_recv, this, pk
+        )
+      );
   }
 }
 ///----------------------------------------------------------------------------
@@ -312,13 +255,13 @@ void actor::free_self()
   aid_t self_aid = get_aid();
   base_type::update_aid();
   base_type::send_exit(self_aid, ec_, exit_msg_);
-  thr_->get_cache_pool().free_actor(this);
+  user_->free_actor(this);
 }
 ///----------------------------------------------------------------------------
 void actor::stop(exit_code_t ec, std::string const& exit_msg)
 {
   /// Trigger a context switch, ensure we stop coro using actor::resume.
-  thr_->post(thr_, boost::bind(&actor::resume, this, actor_normal));
+  snd_.post(boost::bind(&actor::resume, this, actor_normal));
   yield();
 
   stat_ = off;
@@ -330,9 +273,11 @@ void actor::start_recv_timer(duration_t dur)
 {
   tmr_.expires_from_now(dur);
   tmr_.async_wait(
-    boost::bind(
-      &actor::handle_recv_timeout, this,
-      boost::asio::placeholders::error, ++tmr_sid_
+    snd_.wrap(
+      boost::bind(
+        &actor::handle_recv_timeout, this,
+        boost::asio::placeholders::error, ++tmr_sid_
+        )
       )
     );
 }
@@ -342,6 +287,83 @@ void actor::handle_recv_timeout(errcode_t const& ec, std::size_t tmr_sid)
   if (!ec && tmr_sid == tmr_sid_)
   {
     resume(actor_timeout);
+  }
+}
+///----------------------------------------------------------------------------
+void actor::handle_recv(detail::pack& pk)
+{
+  if (check(pk.recver_, get_aid().ctxid_, user_->get_context().get_timestamp()))
+  {
+    bool is_response = false;
+
+    if (aid_t* aid = boost::get<aid_t>(&pk.tag_))
+    {
+      mb_.push(*aid, pk.msg_);
+    }
+    else if (detail::request_t* req = boost::get<detail::request_t>(&pk.tag_))
+    {
+      mb_.push(*req, pk.msg_);
+    }
+    else if (detail::link_t* link = boost::get<detail::link_t>(&pk.tag_))
+    {
+      add_link(link->get_aid(), pk.skt_);
+      return;
+    }
+    else if (detail::exit_t* ex = boost::get<detail::exit_t>(&pk.tag_))
+    {
+      mb_.push(*ex, pk.msg_);
+      base_type::remove_link(ex->get_aid());
+    }
+    else if (response_t* res = boost::get<response_t>(&pk.tag_))
+    {
+      is_response = true;
+      mb_.push(*res, pk.msg_);
+    }
+
+    if (
+      (recving_ && !is_response) ||
+      (responsing_ && is_response)
+      )
+    {
+      if (recving_ && !is_response)
+      {
+        bool ret = mb_.pop(recving_rcv_, recving_msg_, curr_match_.match_list_);
+        if (!ret)
+        {
+          return;
+        }
+        curr_match_.clear();
+      }
+
+      if (responsing_ && is_response)
+      {
+        BOOST_ASSERT(recving_res_.valid());
+        bool ret = mb_.pop(recving_res_, recving_msg_);
+        if (!ret)
+        {
+          return;
+        }
+      }
+
+      ++tmr_sid_;
+      errcode_t ec;
+      tmr_.cancel(ec);
+      resume(actor_normal);
+    }
+  }
+  else if (!pk.is_err_ret_)
+  {
+    if (detail::link_t* link = boost::get<detail::link_t>(&pk.tag_))
+    {
+      /// send actor exit msg
+      base_type::send_already_exited(link->get_aid(), pk.recver_);
+    }
+    else if (detail::request_t* req = boost::get<detail::request_t>(&pk.tag_))
+    {
+      /// reply actor exit msg
+      response_t res(req->get_id(), pk.recver_);
+      base_type::send_already_exited(req->get_aid(), res);
+    }
   }
 }
 ///----------------------------------------------------------------------------

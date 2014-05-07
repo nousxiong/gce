@@ -25,62 +25,68 @@ namespace gce
 {
 class message;
 class mixin;
-class thread;
 class context;
 namespace detail
 {
+class cache_pool;
 struct pack;
 }
 
 class basic_actor
 {
 public:
-  explicit basic_actor(thread*);
+  basic_actor(context* ctx, detail::cache_pool*, std::size_t cache_queue_index);
   virtual ~basic_actor();
 
 public:
-  inline aid_t get_aid() const { return aid_; }
   inline context* get_context() { return ctx_; }
+  inline strand_t& get_strand() { return snd_; }
+  inline aid_t get_aid() const { return aid_; }
+  inline void chain(bool flag) { chain_ = flag; }
 
 protected:
   friend class mixin;
+  enum send_hint
+  {
+    async,
+    sync
+  };
 
-  void pri_send(aid_t, message const&);
-  void pri_send_svc(svcid_t, message const&);
-  void pri_relay(aid_t, message&);
-  void pri_relay_svc(svcid_t, message&);
+  void pri_send(aid_t, message const&, send_hint hint = sync);
+  void pri_send_svc(svcid_t, message const&, send_hint hint = sync);
+  void pri_relay(aid_t, message&, send_hint hint = sync);
+  void pri_relay_svc(svcid_t, message&, send_hint hint = sync);
 
-  void pri_request(response_t, aid_t, message const&);
-  void pri_request_svc(response_t, svcid_t, message const&);
-  void pri_reply(aid_t, message const&);
+  void pri_request(response_t, aid_t, message const&, send_hint hint = sync);
+  void pri_request_svc(response_t, svcid_t, message const&, send_hint hint = sync);
+  void pri_reply(aid_t, message const&, send_hint hint = sync);
 
-  void pri_link(aid_t);
-  void pri_monitor(aid_t);
+  void pri_link(aid_t, send_hint hint = sync);
+  void pri_monitor(aid_t, send_hint hint = sync);
 
-  void pri_spawn(sid_t, match_t func, match_t ctxid, std::size_t stack_size);
+  void pri_spawn(
+    sid_t, match_t func, match_t ctxid,
+    std::size_t stack_size, send_hint hint = sync
+    );
+
+  virtual void on_recv(detail::pack&, send_hint hint) = 0;
 
 public:
   /// internal use
-  virtual void on_recv(detail::pack*) = 0;
+  inline detail::cache_pool* get_cache_pool() { return user_; }
   void on_free();
-
-  inline thread* get_thread() { return thr_; }
-  inline void add_link(detail::link_t l)
-  {
-    link(l);
-  }
 
 protected:
   void update_aid();
   sid_t new_request();
 
   void add_link(aid_t, sktaid_t skt = aid_t());
-  void link(detail::link_t, thread* thr = 0);
+  void link(detail::link_t, send_hint hint = sync, detail::cache_pool* user = 0);
   void send_exit(aid_t self_aid, exit_code_t, std::string const&);
   void remove_link(aid_t);
   void send_already_exited(aid_t recver, aid_t sender);
   void send_already_exited(aid_t recver, response_t res);
-  void send(aid_t const& recver, detail::pack*);
+  void send(aid_t const& recver, detail::pack&, send_hint);
 
 private:
   aid_t filter_aid(aid_t const& src);
@@ -90,22 +96,21 @@ private:
   /// Ensure start from a new cache line.
   byte_t pad0_[GCE_CACHE_LINE_SIZE];
 
-  GCE_CACHE_ALIGNED_VAR(context*, ctx_)
-
 protected:
-  GCE_CACHE_ALIGNED_VAR(thread*, thr_)
+  GCE_CACHE_ALIGNED_VAR(context*, ctx_)
+  GCE_CACHE_ALIGNED_VAR(detail::cache_pool*, user_)
+  GCE_CACHE_ALIGNED_VAR(strand_t&, snd_)
   GCE_CACHE_ALIGNED_VAR(detail::mailbox, mb_)
+  GCE_CACHE_ALIGNED_VAR(ctxid_t const, ctxid_)
+  GCE_CACHE_ALIGNED_VAR(timestamp_t const, timestamp_)
+  GCE_CACHE_ALIGNED_VAR(std::size_t const, cache_queue_index_)
 
 private:
   GCE_CACHE_ALIGNED_VAR(aid_t, aid_)
-  GCE_CACHE_ALIGNED_VAR(sid_t, req_id_)
+  GCE_CACHE_ALIGNED_VAR(bool, chain_)
 
   /// local vals
-protected:
-  ctxid_t const ctxid_;
-  timestamp_t const timestamp_;
-
-private:
+  sid_t req_id_;
   typedef std::map<aid_t, sktaid_t> link_list_t;
   typedef std::set<aid_t> monitor_list_t;
   link_list_t link_list_;

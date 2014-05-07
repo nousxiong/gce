@@ -105,7 +105,7 @@ void conn::timeout(gce::self_t self)
 {
   try
   {
-    boost::chrono::seconds curr_tmo(30);
+    boost::chrono::seconds curr_tmo(60);
     std::size_t max_count = 1;
     std::size_t curr_count = 1;
 
@@ -127,7 +127,7 @@ void conn::timeout(gce::self_t self)
         }
         else if (type == gce::atom("online"))
         {
-          curr_tmo = boost::chrono::seconds(10);
+          curr_tmo = boost::chrono::seconds(30);
           curr_count = 3;
         }
         else
@@ -190,7 +190,7 @@ void conn::recv(
           msg << conn_aid;
           gce::response_t res = self.request(game_svcid, msg);
           std::string errmsg;
-          usr_aid = gce::recv(self, res, errmsg, gce::seconds_t(60));
+          usr_aid = gce::recv(self, res, errmsg, gce::seconds_t(5));
           if (!errmsg.empty())
           {
             throw std::runtime_error(errmsg);

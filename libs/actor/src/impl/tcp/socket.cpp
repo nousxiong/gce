@@ -20,7 +20,8 @@ namespace tcp
 {
 ///----------------------------------------------------------------------------
 socket::socket(io_service_t& ios)
-  : reso_(ios)
+  : user_(0)
+  , reso_(ios)
   , sock_(ios)
   , closed_(false)
   , reconn_(false)
@@ -33,7 +34,8 @@ socket::socket(io_service_t& ios)
 }
 ///----------------------------------------------------------------------------
 socket::socket(io_service_t& ios, std::string const& host, std::string const& port)
-  : reso_(ios)
+  : user_(0)
+  , reso_(ios)
   , sock_(ios)
   , host_(host)
   , port_(port)
@@ -51,8 +53,9 @@ socket::~socket()
 {
 }
 ///----------------------------------------------------------------------------
-void socket::init()
+void socket::init(gce::detail::cache_pool* user)
 {
+  user_ = user;
 }
 ///----------------------------------------------------------------------------
 void socket::send(
@@ -128,15 +131,18 @@ void socket::close_socket()
 void socket::begin_send()
 {
   sending_ = true;
+  strand_t& snd = user_->get_strand();
   std::swap(sending_buffer_, standby_buffer_);
   gce::detail::bytes_t const& bytes = send_buffer_[sending_buffer_];
 
   boost::asio::async_write(
     sock_,
     boost::asio::buffer(bytes.data(), bytes.size()),
-    boost::bind(
-      &socket::end_send, this,
-      boost::asio::placeholders::error
+    snd.wrap(
+      boost::bind(
+        &socket::end_send, this,
+        boost::asio::placeholders::error
+        )
       )
     );
 }

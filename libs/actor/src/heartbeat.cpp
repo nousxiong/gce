@@ -16,9 +16,10 @@ namespace gce
 namespace detail
 {
 ///----------------------------------------------------------------------------
-heartbeat::heartbeat(io_service_t& ios)
-  : tmr_(ios)
-  , sync_(ios)
+heartbeat::heartbeat(strand_t& snd)
+  : snd_(snd)
+  , tmr_(snd_.get_io_service())
+  , sync_(snd_.get_io_service())
   , max_count_(0)
   , curr_count_(0)
   , stopped_(false)
@@ -76,9 +77,11 @@ void heartbeat::start_timer()
   ++waiting_;
   tmr_.expires_from_now(period_);
   tmr_.async_wait(
-    boost::bind(
-      &heartbeat::handle_timeout, this,
-      boost::asio::placeholders::error
+    snd_.wrap(
+      boost::bind(
+        &heartbeat::handle_timeout, this,
+        boost::asio::placeholders::error
+        )
       )
     );
 }

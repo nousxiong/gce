@@ -11,6 +11,7 @@
 #define GCE_ACTOR_DETAIL_HEARTBEAT_HPP
 
 #include <gce/actor/config.hpp>
+#include <gce/actor/detail/cache_pool.hpp>
 #include <boost/function.hpp>
 
 namespace gce
@@ -23,7 +24,7 @@ class heartbeat
   typedef boost::function<void ()> timeout_func_t;
 
 public:
-  explicit heartbeat(io_service_t&);
+  explicit heartbeat(strand_t&);
   ~heartbeat();
 
 public:
@@ -56,6 +57,7 @@ private:
   void handle_timeout(errcode_t const&);
 
 private:
+  strand_t& snd_;
   timer_t tmr_;
   timer_t sync_;
   seconds_t period_;

@@ -11,34 +11,40 @@
 #define GCE_ACTOR_EXAMPLE_CLUSTER_GATE_HPP
 
 #include "conn.hpp"
-#include "basic_app.hpp"
 #include <gce/actor/all.hpp>
 #include <boost/asio.hpp>
 #include <boost/scoped_ptr.hpp>
 #include <string>
 
 class gate
-  : public basic_app
 {
   typedef boost::asio::ip::tcp::acceptor acceptor_t;
 
 public:
-  gate(std::string cln_ep, app_ctxid_list_t game_list);
-  ~gate();
-
-public:
-  gce::aid_t start(gce::self_t sire);
-
-private:
-  void run(gce::self_t);
-  void accept(gce::self_t, std::vector<gce::aid_t> conn_group_list);
-  static void conn_group(gce::self_t, gce::aid_t ga_id);
+  static gce::aid_t start(
+    gce::self_t sire, 
+    gce::match_t svc_name,
+    std::string cln_ep, 
+    app_ctxid_list_t game_list
+    );
 
 private:
-  std::string const cln_ep_;
-  app_ctxid_list_t const game_list_;
-
-  boost::scoped_ptr<acceptor_t> acpr_;
+  static void run(
+    gce::self_t self,
+    gce::match_t svc_name,
+    std::string cln_ep, 
+    app_ctxid_list_t game_list
+    );
+  static void accept(
+    gce::self_t self, 
+    acceptor_t& acpr, 
+    app_ctxid_list_t game_list,
+    std::vector<gce::aid_t> conn_group_list
+    );
+  static void conn_group(
+    gce::self_t self, 
+    gce::aid_t ga_id
+    );
 };
 
 #endif /// GCE_ACTOR_EXAMPLE_CLUSTER_GATE_HPP

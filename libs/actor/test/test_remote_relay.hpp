@@ -50,7 +50,6 @@ private:
 
       mixin_t base = spawn(ctx);
       gce::bind(base, "tcp://127.0.0.1:14924", true);
-      wait(base, boost::chrono::milliseconds(100));
 
       boost::thread_group thrs;
       for (std::size_t i=0; i<root_num; ++i)

@@ -54,7 +54,6 @@ public:
           )
         );
       gce::bind(base_cln, "tcp://127.0.0.1:14923", false, func_list);
-      wait(base_svr, boost::chrono::milliseconds(100));
       net_option opt;
       opt.reconn_period_ = seconds_t(1);
       connect(base_svr, atom("client"), "tcp://127.0.0.1:14923", false, opt);

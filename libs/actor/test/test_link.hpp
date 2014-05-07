@@ -24,10 +24,10 @@ public:
     aid_t aid = recv(self, 3);
   }
 
-  static void my_actor(self_t self, aid_t base_id)
+  static void my_actor(self_t self)
   {
-    thread* thr = self.get_thread();
-    std::size_t size = 1;
+    detail::cache_pool* cac_pool = self.get_cache_pool();
+    std::size_t size = 10;
     std::vector<response_t> res_list(size);
     for (std::size_t i=0; i<size; ++i)
     {
@@ -42,8 +42,8 @@ public:
 
       basic_actor* a =
         aid.get_actor_ptr(
-          thr->get_ctxid(),
-          thr->get_timestamp()
+          cac_pool->get_context().get_attributes().id_,
+          cac_pool->get_context().get_timestamp()
           );
       sid_t sid = aid.sid_;
       sid += 100000;
@@ -65,21 +65,38 @@ public:
     recv(self, exit);
   }
 
-  static void my_thr(context& ctx, aid_t base_id)
+  static void my_thr(context& ctx)
   {
     mixin_t mix = spawn(ctx);
-    for (std::size_t i=0; i<2; ++i)
+    for (std::size_t i=0; i<100; ++i)
     {
       spawn(
         mix,
-        boost::bind(&link_ut::my_actor, _1, base_id),
+        boost::bind(&link_ut::my_actor, _1),
         monitored
         );
     }
 
-    for (std::size_t i=0; i<2; ++i)
+    for (std::size_t i=0; i<100; ++i)
     {
-      recv(mix, exit);
+      recv(mix);
+    }
+  }
+
+  static void my_root(self_t self)
+  {
+    for (std::size_t i=0; i<100; ++i)
+    {
+      spawn(
+        self,
+        boost::bind(&link_ut::my_actor, _1),
+        monitored
+        );
+    }
+
+    for (std::size_t i=0; i<100; ++i)
+    {
+      recv(self);
     }
   }
 
@@ -93,7 +110,6 @@ public:
       context ctx(attrs);
 
       mixin& base = spawn(ctx);
-      aid_t base_id = base.get_aid();
 
       boost::thread_group thrs;
       for (std::size_t i=0; i<user_thr_num; ++i)
@@ -101,10 +117,20 @@ public:
         thrs.create_thread(
           boost::bind(
             &link_ut::my_thr,
-            boost::ref(ctx), base_id
+            boost::ref(ctx)
             )
           );
+        /*spawn(
+          base,
+          boost::bind(&link_ut::my_root, _1),
+          monitored
+          );*/
       }
+
+      /*for (std::size_t i=0; i<user_thr_num; ++i)
+      {
+        recv(base);
+      }*/
 
       thrs.join_all();
     }

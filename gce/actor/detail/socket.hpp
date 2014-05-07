@@ -18,7 +18,6 @@
 #include <gce/actor/detail/basic_socket.hpp>
 #include <gce/actor/net_option.hpp>
 #include <gce/actor/detail/object_pool.hpp>
-#include <gce/detail/mpsc_queue.hpp>
 #include <gce/actor/detail/pack.hpp>
 #include <gce/actor/match.hpp>
 #include <gce/actor/detail/buffer_ref.hpp>
@@ -28,14 +27,12 @@
 namespace gce
 {
 class mixin;
-class thread;
 namespace detail
 {
 class cache_pool;
 
 class socket
-  : public object_pool<socket, thread*>::object
-  , public mpsc_queue<socket>::node
+  : public object_pool<socket, cache_pool*>::object
   , public basic_actor
 {
   typedef basic_actor base_type;
@@ -48,38 +45,44 @@ class socket
   };
 
 public:
-  explicit socket(thread*);
+  explicit socket(cache_pool*);
   ~socket();
 
 public:
   void init(net_option);
   void connect(
-    remote_func_list_t const&, ctxid_t target,
+    aid_t sire, remote_func_list_t const&, ctxid_t target,
     std::string const&, bool target_is_router
     );
+
+  inline void send(aid_t recver, message const& msg)
+  {
+    base_type::pri_send(recver, msg);
+  }
 
 public:
   void start(std::map<match_t, actor_func_t> const&, socket_ptr, bool is_router);
   void stop();
   void on_free();
-  void on_recv(pack*);
+  void on_recv(pack&, base_type::send_hint);
 
   void link(aid_t) {}
   void monitor(aid_t) {}
 
 private:
   void handle_net_msg(message&);
-  void spawn_remote_actor(thread*, actor_func_t, spawn_t);
-  void spawn_remote_actor_ret(spawn_t, aid_t);
-  void send_spawn_ret(spawn_t*, pack*, spawn_error, aid_t aid, bool is_err_ret);
-  void send2net(message const&);
+  void spawn_remote_actor(cache_pool*, spawn_t, actor_func_t);
+  void end_spawn_remote_actor(spawn_t, aid_t aid);
+  void send_spawn_ret(spawn_t*, pack&, spawn_error, aid_t aid, bool is_err_ret);
+  void send(message const&);
   void send_msg(message const&);
   void send_msg_hb();
 
-  void run_conn(ctxid_pair_t, std::string const&, yield_t);
+  void run_conn(aid_t sire, ctxid_pair_t, std::string const&, yield_t);
   void run(socket_ptr, yield_t);
 
   socket_ptr make_socket(std::string const&);
+  void handle_recv(pack&);
   void add_straight_link(aid_t src, aid_t des);
   void remove_straight_link(aid_t src, aid_t des);
   void add_router_link(aid_t src, aid_t des, sktaid_t skt);

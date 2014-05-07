@@ -15,7 +15,7 @@
 #include <gce/actor/send.hpp>
 #include <gce/actor/actor.hpp>
 #include <gce/actor/mixin.hpp>
-#include <gce/actor/strand.hpp>
+#include <gce/actor/slice.hpp>
 #include <gce/actor/context.hpp>
 #include <gce/actor/detail/cache_pool.hpp>
 
@@ -23,40 +23,46 @@ namespace gce
 {
 namespace detail
 {
+typedef boost::promise<aid_t> actor_promise_t;
+typedef boost::unique_future<aid_t> actor_future_t;
+
 inline aid_t make_actor(
-  thread* thr, aid_t sire, 
+  aid_t sire, cache_pool* user, 
   actor_func_t const& f, std::size_t stack_size
   )
 {
-  actor* a = thr->get_cache_pool().get_actor();
+  context& ctx = user->get_context();
+  actor* a = user->get_actor();
   a->init(f);
-  a->start(stack_size);
   if (sire)
   {
-    a->send(sire, message(detail::msg_new_actor));
+    send(*a, sire, msg_new_actor);
   }
+  a->start(stack_size);
   return a->get_aid();
 }
 
 template <typename Sire, typename F>
 inline aid_t spawn(
-  Sire& sire, thread* thr, pack* pk, F f,
-  link_type type = no_link,
-  std::size_t stack_size = default_stacksize()
+  Sire& sire, cache_pool* user, F& func, 
+  link_type type, std::size_t stack_size
   )
 {
-  thr->post(
-    pk,
+  user->get_strand().post(
     boost::bind(
-      &make_actor,
-      thr, sire.get_aid(), actor_func_t(f), stack_size
+      &detail::make_actor,
+      sire.get_aid(), user,
+      actor_func_t(func), stack_size
       )
     );
 
-  aid_t aid = recv(sire, detail::msg_new_actor);
+  match mach;
+  mach.match_list_.push_back(detail::msg_new_actor);
+  message msg;
+  aid_t aid = sire.recv(msg, mach);
   if (!aid)
   {
-    throw std::runtime_error("make actor failed!");
+    throw std::runtime_error("spawn actor failed!");
   }
 
   if (type == linked)
@@ -71,54 +77,52 @@ inline aid_t spawn(
 }
 }
 
+/// Spawn a actor using given mixin
+template <typename F>
+inline aid_t spawn(
+  mixin_t sire, F f,
+  link_type type = no_link,
+  std::size_t stack_size = default_stacksize()
+  )
+{
+  detail::cache_pool* user = sire.get_context()->select_cache_pool();
+  return detail::spawn(sire, user, f, type, stack_size);
+}
+
+/// Spawn a actor using given actor
+template <typename F>
+inline aid_t spawn(
+  self_t sire, F f,
+  link_type type = no_link,
+  bool sync_sire = false,
+  std::size_t stack_size = default_stacksize()
+  )
+{
+  detail::cache_pool* user = 0;
+  if (sync_sire)
+  {
+    user = sire.get_cache_pool();
+  }
+  else
+  {
+    user = sire.get_context()->select_cache_pool();
+  }
+
+  return detail::spawn(sire, user, f, type, stack_size);
+}
+
 /// Spawn a mixin
 inline mixin_t spawn(context& ctx)
 {
   return ctx.make_mixin();
 }
 
-/// Spawn a actor using given mixin
-template <typename F>
-inline aid_t spawn(
-  strand<mixin> snd, F f,
-  link_type type = no_link,
-  std::size_t stack_size = default_stacksize()
-  )
+/// Spawn a slice
+inline slice_t spawn(mixin_t mix)
 {
-  mixin_t sire = snd.get_sire();
-  thread& thr = snd.get_thread();
-  aid_t aid = detail::spawn(sire, &thr, sire.get_pack(), f, type, stack_size);
-  sire.free_pack();
-  return aid;
-}
-
-/// Spawn a actor using given actor
-template <typename F>
-inline aid_t spawn(
-  strand<actor> snd, F f,
-  link_type type = no_link,
-  bool sync_sire = false,
-  std::size_t stack_size = default_stacksize()
-  )
-{
-  self_t sire = snd.get_sire();
-
-  aid_t aid;
-  if (sync_sire)
-  {
-    aid = make_actor(sire.get_thread(), aid_t(), f, stack_size);
-    if (!aid)
-    {
-      throw std::runtime_error("make actor failed!");
-    }
-  }
-  else
-  {
-    thread& thr = snd.get_thread();
-    aid = detail::spawn(sire, &thr, thr.get_cache_pool().get_pack(), f, type, stack_size);
-  }
-
-  return aid;
+  slice_t s = mix.get_context()->make_slice();
+  mix.add_slice(s);
+  return s;
 }
 
 /// Spawn a actor on remote context

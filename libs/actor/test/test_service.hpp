@@ -78,13 +78,6 @@ private:
     try
     {
       register_service(self, atom("echo_svc"));
-      detail::scope scp(
-        boost::bind(
-          &deregister_service<actor>,
-          boost::ref(self),
-          atom("echo_svc")
-          )
-        );
 
       while (true)
       {
@@ -100,6 +93,7 @@ private:
           break;
         }
       }
+      deregister_service(self, atom("echo_svc"));
     }
     catch (std::exception& ex)
     {

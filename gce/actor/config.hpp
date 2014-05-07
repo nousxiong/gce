@@ -92,8 +92,9 @@ static match_t const msg_reply = atom("gce_reply");
 static match_t const msg_stop = atom("gce_stop");
 static match_t const msg_spawn = atom("gce_spawn");
 static match_t const msg_spawn_ret = atom("gce_spawn_ret");
-
 static match_t const msg_new_actor = atom("gce_new_actor");
+static match_t const msg_new_conn = atom("gce_new_conn");
+static match_t const msg_new_bind = atom("gce_new_bind");
 
 enum socket_type
 {

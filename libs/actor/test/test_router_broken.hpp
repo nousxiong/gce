@@ -62,7 +62,6 @@ public:
             );
         base1.link(quiter_list[i]);
       }
-      wait(base1, boost::chrono::milliseconds(100));
       send(base1, mix_id);
 
       thr.join();
@@ -94,7 +93,6 @@ public:
 
       mixin_t base = spawn(ctx);
       gce::bind(base, "tcp://127.0.0.1:14923", true);
-      wait(base, boost::chrono::milliseconds(100));
       send(mix, base_id);
       recv(mix);
     }
