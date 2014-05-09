@@ -28,8 +28,8 @@ context::context(attributes attrs)
   , curr_cache_pool_(size_nil)
   , cache_pool_size_(
       attrs_.thread_num_ == 0 ? 
-        attrs_.per_thread_cache_ : 
-        attrs_.thread_num_ * attrs_.per_thread_cache_
+        attrs_.per_thread_cache_pool_num_ : 
+        attrs_.thread_num_ * attrs_.per_thread_cache_pool_num_
       )
   , cache_queue_size_(cache_pool_size_ + attrs_.slice_num_)
   , curr_slice_(0)
@@ -83,7 +83,7 @@ context::~context()
   stop();
 }
 ///------------------------------------------------------------------------------
-mixin& context::make_mixin()
+mixin_t context::make_mixin()
 {
   mixin* mix = new mixin(select_cache_pool());
   mixin_list_.push(mix);

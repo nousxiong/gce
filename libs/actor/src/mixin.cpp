@@ -24,6 +24,7 @@ namespace gce
 mixin::mixin(detail::cache_pool* user)
   : base_type(&user->get_context(), user, user->get_index())
   , recv_p_(0)
+  , res_p_(0)
   , tmr_(ctx_->get_io_service())
   , tmr_sid_(0)
 {

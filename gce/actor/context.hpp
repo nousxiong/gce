@@ -30,7 +30,7 @@ struct attributes
     : ios_(0)
     , id_(ctxid_nil)
     , thread_num_(boost::thread::hardware_concurrency())
-    , per_thread_cache_(1)
+    , per_thread_cache_pool_num_(1)
     , slice_num_(1)
     , actor_pool_reserve_size_(8)
     , socket_pool_reserve_size_(8)
@@ -42,7 +42,7 @@ struct attributes
   io_service_t* ios_;
   ctxid_t id_;
   std::size_t thread_num_;
-  std::size_t per_thread_cache_;
+  std::size_t per_thread_cache_pool_num_;
   std::size_t slice_num_;
   std::size_t actor_pool_reserve_size_;
   std::size_t socket_pool_reserve_size_;
