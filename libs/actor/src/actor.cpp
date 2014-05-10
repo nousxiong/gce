@@ -125,10 +125,7 @@ aid_t actor::recv(response_t res, message& msg, duration_t tmo)
 ///----------------------------------------------------------------------------
 void actor::wait(duration_t dur)
 {
-  if (dur < infin)
-  {
-    start_recv_timer(dur);
-  }
+  start_recv_timer(dur);
   yield();
 }
 ///----------------------------------------------------------------------------
