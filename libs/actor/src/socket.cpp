@@ -166,12 +166,20 @@ void socket::handle_net_msg(message& msg)
     }
     else
     {
-      pk.skt_ = get_aid();
-      if (link->get_type() == linked)
+      if (check(pk.recver_, ctxid_, timestamp_))
       {
-        add_straight_link(pk.recver_, link->get_aid());
+        pk.skt_ = get_aid();
+        if (link->get_type() == linked)
+        {
+          add_straight_link(pk.recver_, link->get_aid());
+        }
+        base_type::send(pk.recver_, pk, sync);
       }
-      base_type::send(pk.recver_, pk, sync);
+      else
+      {
+        /// aid already expires, send exit msg
+        base_type::send_already_exited(link->get_aid(), pk.recver_);
+      }
     }
   }
   else if (exit_t* ex = boost::get<exit_t>(&pk.tag_))
@@ -182,12 +190,15 @@ void socket::handle_net_msg(message& msg)
       BOOST_ASSERT(skt);
       pk.tag_ = fwd_exit_t(ex->get_code(), ex->get_aid(), get_aid());
       pk.skt_ = skt;
-      base_type::send(skt, pk, sync);
+      base_type::send(pk.skt_, pk, sync);
     }
     else
     {
-      remove_straight_link(pk.recver_, ex->get_aid());
-      base_type::send(pk.recver_, pk, sync);
+      if (check(pk.recver_, ctxid_, timestamp_))
+      {
+        remove_straight_link(pk.recver_, ex->get_aid());
+        base_type::send(pk.recver_, pk, sync);
+      }
     }
   }
   else if (spawn_t* spw = boost::get<spawn_t>(&pk.tag_))
@@ -241,19 +252,22 @@ void socket::handle_net_msg(message& msg)
     }
     else
     {
-      /// fwd to spawner
-      message m(msg_spawn_ret);
-      m << (boost::uint16_t)spr->get_error() << spr->get_id();
-      aid_t aid = spr->get_aid();
-      if (!aid)
+      if (check(pk.recver_, ctxid_, timestamp_))
       {
-        /// we should make sure no timeout miss.
-        aid = get_aid();
-      }
-      pk.tag_ = aid;
-      pk.msg_ = m;
+        /// fwd to spawner
+        message m(msg_spawn_ret);
+        m << (boost::uint16_t)spr->get_error() << spr->get_id();
+        aid_t aid = spr->get_aid();
+        if (!aid)
+        {
+          /// we should make sure no timeout miss.
+          aid = get_aid();
+        }
+        pk.tag_ = aid;
+        pk.msg_ = m;
 
-      base_type::send(pk.recver_, pk, sync);
+        base_type::send(pk.recver_, pk, sync);
+      }
     }
   }
   else
@@ -286,7 +300,7 @@ void socket::handle_net_msg(message& msg)
         pk.recver_ = user_->find_service(pk.svc_.name_);
       }
 
-      if (pk.recver_)
+      if (check(pk.recver_, ctxid_, timestamp_))
       {
         base_type::send(pk.recver_, pk, sync);
       }

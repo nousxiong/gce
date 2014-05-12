@@ -15,6 +15,7 @@
 #include <gce/actor/actor_id.hpp>
 #include <gce/actor/detail/object_pool.hpp>
 #include <gce/detail/unique_ptr.hpp>
+#include <boost/optional.hpp>
 #include <boost/noncopyable.hpp>
 #include <vector>
 #include <set>
@@ -83,9 +84,9 @@ private:
   GCE_CACHE_ALIGNED_VAR(strand_t, snd_)
 
   /// pools
-  GCE_CACHE_ALIGNED_VAR(actor_pool_t, actor_pool_)
-  GCE_CACHE_ALIGNED_VAR(socket_pool_t, socket_pool_)
-  GCE_CACHE_ALIGNED_VAR(acceptor_pool_t, acceptor_pool_)
+  GCE_CACHE_ALIGNED_VAR(boost::optional<actor_pool_t>, actor_pool_)
+  GCE_CACHE_ALIGNED_VAR(boost::optional<socket_pool_t>, socket_pool_)
+  GCE_CACHE_ALIGNED_VAR(boost::optional<acceptor_pool_t>, acceptor_pool_)
 
   /// thread local vals
   typedef std::set<aid_t> skt_list_t;

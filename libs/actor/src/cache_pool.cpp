@@ -23,26 +23,29 @@ cache_pool::cache_pool(context& ctx, std::size_t index, bool is_slice)
   : ctx_(&ctx)
   , index_(index)
   , snd_(ctx.get_io_service())
-  , actor_pool_(
-      this, this,
-      size_nil,
-      is_slice ? 0 : ctx.get_attributes().actor_pool_reserve_size_
-      )
-  , socket_pool_(
-      this, this,
-      size_nil,
-      is_slice ? 0 : ctx.get_attributes().socket_pool_reserve_size_
-      )
-  , acceptor_pool_(
-      this, this,
-      size_nil,
-      is_slice ? 0 : ctx.get_attributes().acceptor_pool_reserve_size_
-      )
   , curr_router_list_(router_list_.end())
   , curr_socket_list_(conn_list_.end())
   , curr_joint_list_(joint_list_.end())
   , stopped_(false)
 {
+  actor_pool_ = 
+    boost::in_place(
+      this, this,
+      size_nil,
+      is_slice ? 0 : ctx.get_attributes().actor_pool_reserve_size_
+      );
+  socket_pool_ = 
+    boost::in_place(
+      this, this,
+      size_nil,
+      is_slice ? 0 : ctx.get_attributes().socket_pool_reserve_size_
+      );
+  acceptor_pool_ = 
+    boost::in_place(
+      this, this,
+      size_nil,
+      is_slice ? 0 : ctx.get_attributes().acceptor_pool_reserve_size_
+      );
 }
 ///------------------------------------------------------------------------------
 cache_pool::~cache_pool()
@@ -51,32 +54,32 @@ cache_pool::~cache_pool()
 ///------------------------------------------------------------------------------
 actor* cache_pool::get_actor()
 {
-  return actor_pool_.get();
+  return actor_pool_->get();
 }
 ///------------------------------------------------------------------------------
 socket* cache_pool::get_socket()
 {
-  return socket_pool_.get();
+  return socket_pool_->get();
 }
 ///------------------------------------------------------------------------------
 acceptor* cache_pool::get_acceptor()
 {
-  return acceptor_pool_.get();
+  return acceptor_pool_->get();
 }
 ///------------------------------------------------------------------------------
 void cache_pool::free_actor(actor* a)
 {
-  actor_pool_.free(a);
+  actor_pool_->free(a);
 }
 ///------------------------------------------------------------------------------
 void cache_pool::free_socket(socket* skt)
 {
-  socket_pool_.free(skt);
+  socket_pool_->free(skt);
 }
 ///------------------------------------------------------------------------------
 void cache_pool::free_acceptor(acceptor* acpr)
 {
-  acceptor_pool_.free(acpr);
+  acceptor_pool_->free(acpr);
 }
 ///------------------------------------------------------------------------------
 void cache_pool::register_service(match_t name, aid_t svc)

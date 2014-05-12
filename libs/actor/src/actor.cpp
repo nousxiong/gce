@@ -289,7 +289,7 @@ void actor::handle_recv_timeout(errcode_t const& ec, std::size_t tmr_sid)
 ///----------------------------------------------------------------------------
 void actor::handle_recv(detail::pack& pk)
 {
-  if (check(pk.recver_, get_aid().ctxid_, user_->get_context().get_timestamp()))
+  if (check(pk.recver_, ctxid_, timestamp_))
   {
     bool is_response = false;
 
