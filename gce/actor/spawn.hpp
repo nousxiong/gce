@@ -14,7 +14,7 @@
 #include <gce/actor/recv.hpp>
 #include <gce/actor/send.hpp>
 #include <gce/actor/actor.hpp>
-#include <gce/actor/mixin.hpp>
+#include <gce/actor/thread_based_actor.hpp>
 #include <gce/actor/slice.hpp>
 #include <gce/actor/context.hpp>
 #include <gce/actor/detail/cache_pool.hpp>
@@ -77,7 +77,7 @@ inline aid_t spawn(
 }
 }
 
-/// Spawn a actor using given mixin
+/// Spawn a actor using given thread_based_actor
 template <typename Sire, typename F>
 inline aid_t spawn(
   Sire& sire, F f,
@@ -111,7 +111,7 @@ inline aid_t spawn(
   return detail::spawn(sire, user, f, type, stack_size);
 }
 
-/// Spawn a mixin
+/// Spawn a thread_based_actor
 inline actor_t spawn(context& ctx)
 {
   return ctx.make_mixin();

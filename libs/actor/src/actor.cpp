@@ -10,7 +10,7 @@
 #include <gce/actor/actor.hpp>
 #include <gce/actor/detail/cache_pool.hpp>
 #include <gce/actor/context.hpp>
-#include <gce/actor/mixin.hpp>
+#include <gce/actor/thread_based_actor.hpp>
 #include <gce/actor/detail/mailbox.hpp>
 #include <gce/actor/detail/scoped_bool.hpp>
 #include <gce/actor/detail/pack.hpp>

@@ -10,7 +10,7 @@
 #include <gce/actor/detail/socket.hpp>
 #include <gce/actor/detail/cache_pool.hpp>
 #include <gce/actor/spawn.hpp>
-#include <gce/actor/mixin.hpp>
+#include <gce/actor/thread_based_actor.hpp>
 #include <gce/actor/context.hpp>
 #include <gce/actor/impl/tcp/socket.hpp>
 #include <gce/actor/detail/mailbox.hpp>

@@ -26,7 +26,7 @@
 
 namespace gce
 {
-class mixin;
+class thread_based_actor;
 namespace detail
 {
 class cache_pool;

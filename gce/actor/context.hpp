@@ -11,7 +11,7 @@
 #define GCE_ACTOR_CONTEXT_HPP
 
 #include <gce/actor/config.hpp>
-#include <gce/actor/mixin.hpp>
+#include <gce/actor/thread_based_actor.hpp>
 #include <gce/actor/actor_id.hpp>
 #include <gce/detail/unique_ptr.hpp>
 #include <boost/thread/thread.hpp>
@@ -74,57 +74,57 @@ public:
   
   inline aid_t get_aid() const
   {
-    return mix_->get_aid();
+    return base_->get_aid();
   }
 
   inline void send(aid_t recver, message const& m)
   {
-    mix_->send(recver, m);
+    base_->send(recver, m);
   }
 
   inline void send(svcid_t recver, message const& m)
   {
-    mix_->send(recver, m);
+    base_->send(recver, m);
   }
 
   inline void relay(aid_t des, message& m)
   {
-    mix_->relay(des, m);
+    base_->relay(des, m);
   }
 
   inline void relay(svcid_t des, message& m)
   {
-    mix_->relay(des, m);
+    base_->relay(des, m);
   }
 
   inline response_t request(aid_t recver, message const& m)
   {
-    return mix_->request(recver, m);
+    return base_->request(recver, m);
   }
 
   inline response_t request(svcid_t recver, message const& m)
   {
-    return mix_->request(recver, m);
+    return base_->request(recver, m);
   }
 
   inline void reply(aid_t recver, message const& m)
   {
-    mix_->reply(recver, m);
+    base_->reply(recver, m);
   }
 
   inline void link(aid_t target)
   {
-    mix_->link(target);
+    base_->link(target);
   }
 
   inline void monitor(aid_t target)
   {
-    mix_->monitor(target);
+    base_->monitor(target);
   }
 
   inline aid_t recv(message& msg, match const& mach = match())
   {
-    return mix_->recv(msg, mach);
+    return base_->recv(msg, mach);
   }
 
   inline aid_t recv(
@@ -132,12 +132,12 @@ public:
     duration_t tmo = seconds_t(GCE_DEFAULT_REQUEST_TIMEOUT_SEC)
     )
   {
-    return mix_->recv(res, msg, tmo);
+    return base_->recv(res, msg, tmo);
   }
 
   inline void wait(duration_t dur)
   {
-    mix_->wait(dur);
+    base_->wait(dur);
   }
 
 public:
@@ -158,22 +158,22 @@ public:
 
   inline detail::cache_pool* get_cache_pool()
   {
-    return mix_->get_cache_pool();
+    return base_->get_cache_pool();
   }
 
   inline sid_t spawn(match_t func, match_t ctxid, std::size_t stack_size)
   {
-    return mix_->spawn(func, ctxid, stack_size);
+    return base_->spawn(func, ctxid, stack_size);
   }
 
   inline void add_slice(slice& s)
   {
-    mix_->add_slice(s);
+    base_->add_slice(s);
   }
 
   inline std::vector<slice*>& get_slice_list()
   {
-    return mix_->get_slice_list(); 
+    return base_->get_slice_list(); 
   }
 
   inline context* get_context()
@@ -210,8 +210,8 @@ private:
   GCE_CACHE_ALIGNED_VAR(std::vector<slice*>, slice_list_)
   GCE_CACHE_ALIGNED_VAR(boost::atomic_size_t, curr_slice_)
 
-  GCE_CACHE_ALIGNED_VAR(boost::lockfree::queue<mixin*>, mixin_list_)
-  GCE_CACHE_ALIGNED_VAR(boost::optional<mixin>, mix_)
+  GCE_CACHE_ALIGNED_VAR(boost::lockfree::queue<thread_based_actor*>, mixin_list_)
+  GCE_CACHE_ALIGNED_VAR(boost::optional<thread_based_actor>, base_)
 };
 }
 

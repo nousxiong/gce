@@ -7,7 +7,7 @@
 /// See https://github.com/nousxiong/gce for latest version.
 ///
 
-#include <gce/actor/mixin.hpp>
+#include <gce/actor/thread_based_actor.hpp>
 #include <gce/actor/detail/cache_pool.hpp>
 #include <gce/actor/context.hpp>
 #include <gce/actor/detail/mailbox.hpp>
@@ -21,7 +21,7 @@
 namespace gce
 {
 ///----------------------------------------------------------------------------
-mixin::mixin(detail::cache_pool* user)
+thread_based_actor::thread_based_actor(detail::cache_pool* user)
   : base_type(&user->get_context(), user, user->get_index())
   , recv_p_(0)
   , res_p_(0)
@@ -31,11 +31,11 @@ mixin::mixin(detail::cache_pool* user)
   base_type::update_aid();
 }
 ///----------------------------------------------------------------------------
-mixin::~mixin()
+thread_based_actor::~thread_based_actor()
 {
 }
 ///----------------------------------------------------------------------------
-void mixin::send(aid_t recver, message const& m)
+void thread_based_actor::send(aid_t recver, message const& m)
 {
   snd_.post(
     boost::bind(
@@ -44,7 +44,7 @@ void mixin::send(aid_t recver, message const& m)
     );
 }
 ///----------------------------------------------------------------------------
-void mixin::send(svcid_t recver, message const& m)
+void thread_based_actor::send(svcid_t recver, message const& m)
 {
   snd_.post(
     boost::bind(
@@ -53,7 +53,7 @@ void mixin::send(svcid_t recver, message const& m)
     );
 }
 ///----------------------------------------------------------------------------
-void mixin::relay(aid_t des, message& m)
+void thread_based_actor::relay(aid_t des, message& m)
 {
   snd_.post(
     boost::bind(
@@ -62,7 +62,7 @@ void mixin::relay(aid_t des, message& m)
     );
 }
 ///----------------------------------------------------------------------------
-void mixin::relay(svcid_t des, message& m)
+void thread_based_actor::relay(svcid_t des, message& m)
 {
   snd_.post(
     boost::bind(
@@ -71,7 +71,7 @@ void mixin::relay(svcid_t des, message& m)
     );
 }
 ///----------------------------------------------------------------------------
-response_t mixin::request(aid_t recver, message const& m)
+response_t thread_based_actor::request(aid_t recver, message const& m)
 {
   response_t res(base_type::new_request(), get_aid());
   snd_.post(
@@ -83,7 +83,7 @@ response_t mixin::request(aid_t recver, message const& m)
   return res;
 }
 ///----------------------------------------------------------------------------
-response_t mixin::request(svcid_t recver, message const& m)
+response_t thread_based_actor::request(svcid_t recver, message const& m)
 {
   response_t res(base_type::new_request(), get_aid());
   snd_.post(
@@ -95,7 +95,7 @@ response_t mixin::request(svcid_t recver, message const& m)
   return res;
 }
 ///----------------------------------------------------------------------------
-void mixin::reply(aid_t recver, message const& m)
+void thread_based_actor::reply(aid_t recver, message const& m)
 {
   snd_.post(
     boost::bind(
@@ -104,7 +104,7 @@ void mixin::reply(aid_t recver, message const& m)
     );
 }
 ///----------------------------------------------------------------------------
-void mixin::link(aid_t target)
+void thread_based_actor::link(aid_t target)
 {
   snd_.post(
     boost::bind(
@@ -113,7 +113,7 @@ void mixin::link(aid_t target)
     );
 }
 ///----------------------------------------------------------------------------
-void mixin::monitor(aid_t target)
+void thread_based_actor::monitor(aid_t target)
 {
   snd_.post(
     boost::bind(
@@ -122,14 +122,14 @@ void mixin::monitor(aid_t target)
     );
 }
 ///----------------------------------------------------------------------------
-aid_t mixin::recv(message& msg, match const& mach)
+aid_t thread_based_actor::recv(message& msg, match const& mach)
 {
   recv_promise_t p;
   recv_future_t f = p.get_future();
 
   snd_.post(
     boost::bind(
-      &mixin::try_recv, this,
+      &thread_based_actor::try_recv, this,
       boost::ref(p), boost::cref(mach)
       )
     );
@@ -157,14 +157,14 @@ aid_t mixin::recv(message& msg, match const& mach)
   return sender;
 }
 ///----------------------------------------------------------------------------
-aid_t mixin::recv(response_t res, message& msg, duration_t tmo)
+aid_t thread_based_actor::recv(response_t res, message& msg, duration_t tmo)
 {
   res_promise_t p;
   res_future_t f = p.get_future();
 
   snd_.post(
     boost::bind(
-      &mixin::try_response, this,
+      &thread_based_actor::try_response, this,
       boost::ref(p), res, tmo
       )
     );
@@ -181,18 +181,18 @@ aid_t mixin::recv(response_t res, message& msg, duration_t tmo)
   return sender;
 }
 ///----------------------------------------------------------------------------
-void mixin::wait(duration_t dur)
+void thread_based_actor::wait(duration_t dur)
 {
   boost::this_thread::sleep_for(dur);
 }
 ///----------------------------------------------------------------------------
-void mixin::on_recv(detail::pack& pk, base_type::send_hint hint)
+void thread_based_actor::on_recv(detail::pack& pk, base_type::send_hint hint)
 {
   if (hint == base_type::sync)
   {
     snd_.dispatch(
       boost::bind(
-        &mixin::handle_recv, this, pk
+        &thread_based_actor::handle_recv, this, pk
         )
       );
   }
@@ -200,13 +200,13 @@ void mixin::on_recv(detail::pack& pk, base_type::send_hint hint)
   {
     snd_.post(
       boost::bind(
-        &mixin::handle_recv, this, pk
+        &thread_based_actor::handle_recv, this, pk
         )
       );
   }
 }
 ///----------------------------------------------------------------------------
-sid_t mixin::spawn(match_t func, match_t ctxid, std::size_t stack_size)
+sid_t thread_based_actor::spawn(match_t func, match_t ctxid, std::size_t stack_size)
 {
   sid_t sid = base_type::new_request();
   snd_.post(
@@ -218,7 +218,7 @@ sid_t mixin::spawn(match_t func, match_t ctxid, std::size_t stack_size)
   return sid;
 }
 ///----------------------------------------------------------------------------
-void mixin::try_recv(recv_promise_t& p, match const& mach)
+void thread_based_actor::try_recv(recv_promise_t& p, match const& mach)
 {
   std::pair<detail::recv_t, message> rcv;
   if (!mb_.pop(rcv.first, rcv.second, mach.match_list_))
@@ -239,7 +239,7 @@ void mixin::try_recv(recv_promise_t& p, match const& mach)
   p.set_value(rcv);
 }
 ///----------------------------------------------------------------------------
-void mixin::try_response(res_promise_t& p, response_t res, duration_t tmo)
+void thread_based_actor::try_response(res_promise_t& p, response_t res, duration_t tmo)
 {
   std::pair<response_t, message> res_pr;
   res_pr.first = res;
@@ -260,33 +260,33 @@ void mixin::try_response(res_promise_t& p, response_t res, duration_t tmo)
   p.set_value(res_pr);
 }
 ///----------------------------------------------------------------------------
-void mixin::start_recv_timer(duration_t dur, recv_promise_t& p)
+void thread_based_actor::start_recv_timer(duration_t dur, recv_promise_t& p)
 {
   tmr_.expires_from_now(dur);
   tmr_.async_wait(
     snd_.wrap(
       boost::bind(
-        &mixin::handle_recv_timeout, this,
+        &thread_based_actor::handle_recv_timeout, this,
         boost::asio::placeholders::error, boost::ref(p), ++tmr_sid_
         )
       )
     );
 }
 ///----------------------------------------------------------------------------
-void mixin::start_recv_timer(duration_t dur, res_promise_t& p)
+void thread_based_actor::start_recv_timer(duration_t dur, res_promise_t& p)
 {
   tmr_.expires_from_now(dur);
   tmr_.async_wait(
     snd_.wrap(
       boost::bind(
-        &mixin::handle_res_timeout, this,
+        &thread_based_actor::handle_res_timeout, this,
         boost::asio::placeholders::error, boost::ref(p), ++tmr_sid_
         )
       )
     );
 }
 ///----------------------------------------------------------------------------
-void mixin::handle_recv_timeout(
+void thread_based_actor::handle_recv_timeout(
   errcode_t const& ec, recv_promise_t& p, std::size_t tmr_sid
   )
 {
@@ -301,7 +301,7 @@ void mixin::handle_recv_timeout(
   }
 }
 ///----------------------------------------------------------------------------
-void mixin::handle_res_timeout(
+void thread_based_actor::handle_res_timeout(
   errcode_t const& ec, res_promise_t& p, std::size_t tmr_sid
   )
 {
@@ -316,7 +316,7 @@ void mixin::handle_res_timeout(
   }
 }
 ///----------------------------------------------------------------------------
-void mixin::handle_recv(detail::pack& pk)
+void thread_based_actor::handle_recv(detail::pack& pk)
 {
   if (check(pk.recver_, ctxid_, timestamp_))
   {

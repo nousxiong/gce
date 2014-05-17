@@ -24,7 +24,7 @@ namespace detail
 class cache_pool;
 class mailbox;
 }
-class mixin;
+class thread_based_actor;
 class context;
 class response_t;
 

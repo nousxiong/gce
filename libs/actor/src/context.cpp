@@ -59,7 +59,7 @@ context::context(attributes attrs)
       slice_list_[i] = new slice(*this, index);
     }
     
-    mix_ = boost::in_place(select_cache_pool());
+    base_ = boost::in_place(select_cache_pool());
 
     for (std::size_t i=0; i<attrs_.thread_num_; ++i)
     {
@@ -86,9 +86,9 @@ context::~context()
 ///------------------------------------------------------------------------------
 actor_t context::make_mixin()
 {
-  mixin* mix = new mixin(select_cache_pool());
-  mixin_list_.push(mix);
-  return *mix;
+  thread_based_actor* a = new thread_based_actor(select_cache_pool());
+  mixin_list_.push(a);
+  return *a;
 }
 ///------------------------------------------------------------------------------
 detail::cache_pool* context::select_cache_pool()
@@ -228,9 +228,9 @@ void context::stop()
 
   thread_group_.join_all();
 
-  mix_.reset();
+  base_.reset();
 
-  mixin* mix = 0;
+  thread_based_actor* mix = 0;
   while (mixin_list_.pop(mix))
   {
     delete mix;

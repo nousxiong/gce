@@ -31,7 +31,7 @@ namespace gce
 {
 class basic_actor;
 class actor;
-class mixin;
+class thread_based_actor;
 class slice;
 namespace detail
 {
@@ -561,7 +561,7 @@ private:
 
   friend class basic_actor;
   friend class actor;
-  friend class mixin;
+  friend class thread_based_actor;
   friend class slice;
   friend class detail::socket;
   detail::request_t req_;

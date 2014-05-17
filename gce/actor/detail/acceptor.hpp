@@ -24,7 +24,7 @@
 
 namespace gce
 {
-class mixin;
+class thread_based_actor;
 class context;
 namespace detail
 {

@@ -21,7 +21,7 @@
 
 namespace gce
 {
-class mixin;
+class thread_based_actor;
 class slice;
 class context;
 struct attributes;
@@ -30,14 +30,14 @@ namespace detail
 class cache_pool;
 }
 
-class mixin
+class thread_based_actor
   : public basic_actor
 {
   typedef basic_actor base_type;
 
 public:
-  explicit mixin(detail::cache_pool*);
-  ~mixin();
+  explicit thread_based_actor(detail::cache_pool*);
+  ~thread_based_actor();
 
 public:
   void send(aid_t, message const&);
@@ -100,7 +100,7 @@ private:
   std::size_t tmr_sid_;
 };
 
-typedef mixin& actor_t;
+typedef thread_based_actor& actor_t;
 }
 
 #endif /// GCE_ACTOR_MIXIN_HPP
