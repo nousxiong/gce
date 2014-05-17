@@ -34,7 +34,6 @@ private:
 private:
   boost::array<std::string, 2> gate_ep_;
   gce::context ctx_;
-  gce::mixin_t base_;
 
   std::string username_;
 };

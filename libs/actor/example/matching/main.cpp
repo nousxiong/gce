@@ -30,18 +30,16 @@ int main()
 {
   gce::context ctx;
 
-  gce::mixin_t base = gce::spawn(ctx);
-
-  gce::aid_t echo_actor = gce::spawn(base, boost::bind(&echo, _1));
+  gce::aid_t echo_actor = gce::spawn(ctx, boost::bind(&echo, _1));
 
   /// send "hi" message to echo
-  gce::send(base, echo_actor, gce::atom("hi"));
+  gce::send(ctx, echo_actor, gce::atom("hi"));
 
   /// send "start" message to echo, after "hi" message
-  gce::send(base, echo_actor, gce::atom("start"));
+  gce::send(ctx, echo_actor, gce::atom("start"));
 
   /// ... and wait for a response
-  gce::recv(base);
+  gce::recv(ctx);
 
   return 0;
 }

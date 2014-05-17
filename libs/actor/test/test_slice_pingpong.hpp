@@ -46,12 +46,11 @@ private:
       attrs.thread_num_ = 2;
       context ctx(attrs);
 
-      mixin_t base = spawn(ctx);
-      slice_t ping = spawn(base);
+      slice_t ping = spawn_slice(ctx);
       
       aid_t pong_id = 
         spawn(
-          base,
+          ctx,
           boost::bind(
             &slice_pingpong_ut::pong_actor, _1
             )

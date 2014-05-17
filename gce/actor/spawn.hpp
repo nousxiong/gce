@@ -78,9 +78,9 @@ inline aid_t spawn(
 }
 
 /// Spawn a actor using given mixin
-template <typename F>
+template <typename Sire, typename F>
 inline aid_t spawn(
-  mixin_t sire, F f,
+  Sire& sire, F f,
   link_type type = no_link,
   std::size_t stack_size = default_stacksize()
   )
@@ -112,16 +112,23 @@ inline aid_t spawn(
 }
 
 /// Spawn a mixin
-inline mixin_t spawn(context& ctx)
+inline actor_t spawn(context& ctx)
 {
   return ctx.make_mixin();
 }
 
 /// Spawn a slice
-inline slice_t spawn(mixin_t mix)
+inline slice_t spawn(actor_t a)
 {
-  slice_t s = mix.get_context()->make_slice();
-  mix.add_slice(s);
+  slice_t s = a.get_context()->make_slice();
+  a.add_slice(s);
+  return s;
+}
+
+inline slice_t spawn_slice(context& ctx)
+{
+  slice_t s = ctx.make_slice();
+  ctx.add_slice(s);
   return s;
 }
 

@@ -46,15 +46,14 @@ int main(int argc, char* argv[])
       (argc > 1 && std::atoi(argv[1]) > 0) ? std::atoi(argv[1]) : 10000;
 
     gce::context ctx;
-    gce::mixin_t host = gce::spawn(ctx);
-    gce::aid_t ping = gce::spawn(host, boost::bind(&pingpong, _1));
-    gce::aid_t pong = gce::spawn(host, boost::bind(&pingpong, _1));
+    gce::aid_t ping = gce::spawn(ctx, boost::bind(&pingpong, _1));
+    gce::aid_t pong = gce::spawn(ctx, boost::bind(&pingpong, _1));
 
-    gce::send(host, ping, gce::atom("prepare"), pong);
-    gce::send(host, pong, gce::atom("prepare"), ping);
+    gce::send(ctx, ping, gce::atom("prepare"), pong);
+    gce::send(ctx, pong, gce::atom("prepare"), ping);
 
-    gce::send(host, ping, gce::atom("pingpong"), count_down);
-    gce::recv(host, gce::atom("bye"));
+    gce::send(ctx, ping, gce::atom("pingpong"), count_down);
+    gce::recv(ctx, gce::atom("bye"));
   }
   catch (std::exception& ex)
   {

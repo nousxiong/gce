@@ -28,17 +28,17 @@ private:
 
   static void my_thr(context& ctx)
   {
-    mixin_t mix = spawn(ctx);
+    actor_t a = spawn(ctx);
     std::size_t size = 10;
     std::vector<response_t> res_list(size);
     for (std::size_t i=0; i<size; ++i)
     {
       aid_t aid =
         spawn(
-          mix,
+          a,
           boost::bind(&mixin_ut::my_child, _1)
           );
-      res_list[i] = request(mix, aid);
+      res_list[i] = request(a, aid);
     }
 
     for (std::size_t i=0; i<size; ++i)
@@ -46,7 +46,7 @@ private:
       aid_t aid;
       do
       {
-        aid = recv(mix, res_list[i], seconds_t(1));
+        aid = recv(a, res_list[i], seconds_t(1));
       }
       while (!aid);
     }

@@ -42,15 +42,14 @@ private:
     {
       std::size_t actor_num = 100;
       context ctx;
-      mixin_t base = spawn(ctx);
 
       for (std::size_t a=0; a<5; ++a)
       {
         for (std::size_t i=0; i<actor_num; ++i)
         {
           aid_t aid = spawn(
-            base,
-            boost::bind(&coro_ut::my_actor, _1, base.get_aid()),
+            ctx,
+            boost::bind(&coro_ut::my_actor, _1, ctx.get_aid()),
             monitored
             );
         }
@@ -59,11 +58,11 @@ private:
         while (i < actor_num)
         {
           message msg;
-          aid_t sender = base.recv(msg);
+          aid_t sender = ctx.recv(msg);
           match_t type = msg.get_type();
           if (type == atom("echo"))
           {
-            base.send(sender, msg);
+            ctx.send(sender, msg);
           }
           else
           {

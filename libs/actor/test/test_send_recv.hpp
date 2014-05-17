@@ -53,15 +53,14 @@ public:
       context ctx;
 
       int const count_down = 10000;
-      mixin_t host = spawn(ctx);
-      aid_t ping = spawn(host, boost::bind(&send_recv_ut::ping_pong, _1));
-      aid_t pong = spawn(host, boost::bind(&send_recv_ut::ping_pong, _1));
+      aid_t ping = spawn(ctx, boost::bind(&send_recv_ut::ping_pong, _1));
+      aid_t pong = spawn(ctx, boost::bind(&send_recv_ut::ping_pong, _1));
 
-      send(host, ping, atom("prepare"), pong);
-      send(host, pong, atom("prepare"), ping);
+      send(ctx, ping, atom("prepare"), pong);
+      send(ctx, pong, atom("prepare"), ping);
 
-      send(host, ping, atom("ping_pong"), count_down);
-      recv(host);
+      send(ctx, ping, atom("ping_pong"), count_down);
+      recv(ctx);
     }
     catch (std::exception& ex)
     {

@@ -36,14 +36,10 @@ private:
       attrs.id_ = atom("two");
       context ctx2(attrs);
 
-      mixin_t router = spawn(ctx);
-      gce::bind(router, "tcp://127.0.0.1:14923", true);
-
-      mixin_t base1 = spawn(ctx1);
-      mixin_t base2 = spawn(ctx2);
+      gce::bind(ctx, "tcp://127.0.0.1:14923", true);
 
       spawn(
-        base2,
+        ctx2,
         boost::bind(
           &service_ut::echo_service, _1
           ),
@@ -51,21 +47,21 @@ private:
         );
       svcid_t echo_svc(atom("two"), atom("echo_svc"));
 
-      wait(base1, boost::chrono::milliseconds(100));
+      wait(ctx1, boost::chrono::milliseconds(100));
       net_option opt;
       opt.reconn_period_ = seconds_t(1);
-      connect(base1, atom("router"), "tcp://127.0.0.1:14923", true, opt);
-      connect(base2, atom("router"), "tcp://127.0.0.1:14923", true, opt);
-      wait(base2, boost::chrono::milliseconds(100));
+      connect(ctx1, atom("router"), "tcp://127.0.0.1:14923", true, opt);
+      connect(ctx2, atom("router"), "tcp://127.0.0.1:14923", true, opt);
+      wait(ctx2, boost::chrono::milliseconds(100));
 
       for (std::size_t i=0; i<echo_num; ++i)
       {
-        send(base1, echo_svc, atom("echo"));
-        recv(base1, atom("echo"));
+        send(ctx1, echo_svc, atom("echo"));
+        recv(ctx1, atom("echo"));
       }
-      send(base1, echo_svc, atom("end"));
+      send(ctx1, echo_svc, atom("end"));
 
-      recv(base2);
+      recv(ctx2);
     }
     catch (std::exception& ex)
     {

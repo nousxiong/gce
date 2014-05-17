@@ -30,30 +30,29 @@ public:
       attrs.id_ = atom("one");
       context ctx(attrs);
 
-      mixin_t base = spawn(ctx);
-      mixin_t mix = spawn(ctx);
-      gce::bind(base, "tcp://127.0.0.1:14923");
+      actor_t a = spawn(ctx);
+      gce::bind(ctx, "tcp://127.0.0.1:14923");
 
       std::vector<aid_t> quiter_list(quiter_num);
       boost::thread thr(
         boost::bind(
           &socket_broken_ut::two,
           boost::ref(quiter_list),
-          base.get_aid(), boost::ref(mix)
+          ctx.get_aid(), boost::ref(a)
           )
         );
 
-      recv(base);
+      recv(ctx);
       BOOST_FOREACH(aid_t const& aid, quiter_list)
       {
-        base.link(aid);
+        ctx.link(aid);
       }
 
       thr.join();
 
       for (std::size_t i=0; i<quiter_num; ++i)
       {
-        recv(base);
+        recv(ctx);
       }
     }
     catch (std::exception& ex)
@@ -64,7 +63,7 @@ public:
 
   static void two(
     std::vector<aid_t>& quiter_list,
-    aid_t base_id, mixin_t mix
+    aid_t base_id, actor_t a
     )
   {
     try
@@ -73,18 +72,16 @@ public:
       attrs.id_ = atom("two");
       context ctx(attrs);
 
-      mixin_t base = spawn(ctx);
-
-      wait(base, boost::chrono::milliseconds(100));
+      wait(ctx, boost::chrono::milliseconds(100));
       net_option opt;
       opt.reconn_period_ = seconds_t(1);
-      connect(base, atom("one"), "tcp://127.0.0.1:14923", false, opt);
+      connect(ctx, atom("one"), "tcp://127.0.0.1:14923", false, opt);
 
       BOOST_FOREACH(aid_t& aid, quiter_list)
       {
         aid =
           spawn(
-            base,
+            ctx,
             boost::bind(
               &socket_broken_ut::quiter, _1
               ),
@@ -92,15 +89,15 @@ public:
             );
       }
 
-      send(mix, base_id, atom("notify"));
+      send(a, base_id, atom("notify"));
       BOOST_FOREACH(aid_t const& aid, quiter_list)
       {
-        send(base, aid, atom("quit"));
+        send(ctx, aid, atom("quit"));
       }
 
       for (std::size_t i=0; i<quiter_list.size(); ++i)
       {
-        recv(base);
+        recv(ctx);
       }
     }
     catch (std::exception& ex)

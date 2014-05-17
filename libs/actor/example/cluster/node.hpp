@@ -39,7 +39,6 @@ private:
 
 private:
   gce::context ctx_;
-  gce::mixin_t base_;
   boost::asio::signal_set sig_;
   boost::scoped_ptr<master> master_;
 };

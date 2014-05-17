@@ -97,8 +97,9 @@ inline void connect(
 }
 
 /// connect
+template <typename Sire>
 inline void connect(
-  mixin_t sire,
+  Sire& sire,
   ctxid_t target, /// connect target
   std::string const& ep, /// endpoint
   bool target_is_router = false, /// if target is router, set it true

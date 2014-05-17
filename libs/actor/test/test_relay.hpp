@@ -71,12 +71,11 @@ private:
     {
       std::size_t root_num = 100;
       context ctx;
-      mixin_t base = spawn(ctx);
 
       for (std::size_t i=0; i<root_num; ++i)
       {
         spawn(
-          base,
+          ctx,
           boost::bind(
             &relay_ut::root, _1
             ),
@@ -86,7 +85,7 @@ private:
 
       for (std::size_t i=0; i<root_num; ++i)
       {
-        recv(base);
+        recv(ctx);
       }
     }
     catch (std::exception& ex)

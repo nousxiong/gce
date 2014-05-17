@@ -8,7 +8,6 @@
 ///
 
 #include <gce/actor/context.hpp>
-#include <gce/actor/mixin.hpp>
 #include <gce/actor/slice.hpp>
 #include <gce/actor/detail/cache_pool.hpp>
 #include <boost/asio/placeholders.hpp>
@@ -59,6 +58,8 @@ context::context(attributes attrs)
     {
       slice_list_[i] = new slice(*this, index);
     }
+    
+    mix_ = boost::in_place(select_cache_pool());
 
     for (std::size_t i=0; i<attrs_.thread_num_; ++i)
     {
@@ -83,7 +84,7 @@ context::~context()
   stop();
 }
 ///------------------------------------------------------------------------------
-mixin_t context::make_mixin()
+actor_t context::make_mixin()
 {
   mixin* mix = new mixin(select_cache_pool());
   mixin_list_.push(mix);
@@ -226,6 +227,8 @@ void context::stop()
   }
 
   thread_group_.join_all();
+
+  mix_.reset();
 
   mixin* mix = 0;
   while (mixin_list_.pop(mix))

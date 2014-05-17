@@ -32,14 +32,11 @@ public:
       attrs.id_ = atom("two");
       context ctx2(attrs);
 
-      mixin_t base1 = spawn(ctx1);
-      mixin_t base2 = spawn(ctx2);
-
-      gce::bind(base2, "tcp://127.0.0.1:14923");
+      gce::bind(ctx2, "tcp://127.0.0.1:14923");
 
       aid_t echo_aid =
         spawn(
-          base2,
+          ctx2,
           boost::bind(
             &socket_ut::echo, _1
             ),
@@ -48,16 +45,16 @@ public:
 
       net_option opt;
       opt.reconn_period_ = seconds_t(1);
-      connect(base1, atom("two"), "tcp://127.0.0.1:14923", false, opt);
+      connect(ctx1, atom("two"), "tcp://127.0.0.1:14923", false, opt);
 
       for (std::size_t i=0; i<echo_num; ++i)
       {
-        send(base1, echo_aid, atom("echo"));
-        recv(base1, atom("echo"));
+        send(ctx1, echo_aid, atom("echo"));
+        recv(ctx1, atom("echo"));
       }
-      send(base1, echo_aid, atom("end"));
+      send(ctx1, echo_aid, atom("end"));
 
-      recv(base2);
+      recv(ctx2);
     }
     catch (std::exception& ex)
     {

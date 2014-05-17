@@ -65,10 +65,10 @@ private:
 
   static void my_thr(context& ctx, aid_t base_id)
   {
-    mixin_t mix = spawn(ctx);
+    actor_t a = spawn(ctx);
     for (std::size_t i=0; i<2; ++i)
     {
-      spawn(mix, boost::bind(&actor_ut::my_actor, _1, base_id));
+      spawn(a, boost::bind(&actor_ut::my_actor, _1, base_id));
     }
   }
 
@@ -82,12 +82,11 @@ private:
       attributes attrs;
       context ctx(attrs);
 
-      mixin_t base = spawn(ctx);
-      aid_t base_id = base.get_aid();
+      aid_t base_id = ctx.get_aid();
       for (std::size_t i=0; i<free_actor_num; ++i)
       {
         spawn(
-          base,
+          ctx,
           boost::bind(
             &actor_ut::my_actor, _1,
             base_id
@@ -110,7 +109,7 @@ private:
 
       for (std::size_t i=0; i<my_actor_size; ++i)
       {
-        recv(base);
+        recv(ctx);
       }
     }
     catch (std::exception& ex)

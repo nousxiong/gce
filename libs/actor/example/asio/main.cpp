@@ -23,16 +23,15 @@ public:
     std::size_t cln_num = 10,
     std::size_t echo_num = 3
     )
-    : base_(gce::spawn(ctx_))
-    , cln_num_(cln_num)
+    : cln_num_(cln_num)
     , echo_num_(echo_num)
     , host_(host)
     , port_(port)
   {
-    gce::aid_t base_id = base_.get_aid();
+    gce::aid_t base_id = ctx_.get_aid();
     for (std::size_t i=0; i<cln_num_; ++i)
     {
-      gce::spawn(base_, boost::bind(&client::run, this, _1, base_id));
+      gce::spawn(ctx_, boost::bind(&client::run, this, _1, base_id));
     }
   }
 
@@ -40,7 +39,7 @@ public:
   {
     for (std::size_t i=0; i<cln_num_; ++i)
     {
-      gce::recv(base_);
+      gce::recv(ctx_);
     }
   }
 
@@ -81,7 +80,6 @@ private:
 
 private:
   gce::context ctx_;
-  gce::mixin_t base_;
   std::size_t cln_num_;
   std::size_t echo_num_;
   std::string host_;
@@ -102,8 +100,7 @@ public:
     , port_(port)
     , echo_num_(echo_num)
   {
-    gce::mixin_t base = gce::spawn(ctx_);
-    gce::spawn(base, boost::bind(&server::run, this, _1));
+    gce::spawn(ctx_, boost::bind(&server::run, this, _1));
   }
 
   ~server()

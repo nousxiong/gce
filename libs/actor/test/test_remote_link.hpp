@@ -32,38 +32,35 @@ public:
       attrs.id_ = atom("two");
       context ctx2(attrs);
 
-      mixin_t base1 = spawn(ctx1);
-      mixin_t base2 = spawn(ctx2);
-
-      gce::bind(base2, "tcp://127.0.0.1:14923");
+      gce::bind(ctx2, "tcp://127.0.0.1:14923");
 
       net_option opt;
       opt.reconn_period_ = seconds_t(1);
-      connect(base1, atom("two"), "tcp://127.0.0.1:14923", false, opt);
+      connect(ctx1, atom("two"), "tcp://127.0.0.1:14923", false, opt);
 
       std::vector<aid_t> quiter_list(quiter_num);
       for (std::size_t i=0; i<quiter_num; ++i)
       {
         quiter_list[i] =
           spawn(
-            base2,
+            ctx2,
             boost::bind(
               &remote_link_ut::quiter, _1
               ),
             monitored
             );
-        base1.link(quiter_list[i]);
+        ctx1.link(quiter_list[i]);
       }
 
       for (std::size_t i=0; i<quiter_num; ++i)
       {
-        send(base1, quiter_list[i]);
+        send(ctx1, quiter_list[i]);
       }
 
       for (std::size_t i=0; i<quiter_num; ++i)
       {
-        recv(base1);
-        recv(base2);
+        recv(ctx1);
+        recv(ctx2);
       }
     }
     catch (std::exception& ex)

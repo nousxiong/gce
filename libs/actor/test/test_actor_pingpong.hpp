@@ -65,11 +65,10 @@ private:
     {
       context ctx;
 
-      mixin_t base = spawn(ctx);
-      aid_t base_id = base.get_aid();
+      aid_t base_id = ctx.get_aid();
       aid_t aid =
         spawn(
-          base,
+          ctx,
           boost::bind(
             &actor_pingpong_ut::my_actor, _1,
             base_id
@@ -77,7 +76,7 @@ private:
           );
 
       boost::timer::auto_cpu_timer t;
-      recv(base);
+      recv(ctx);
     }
     catch (std::exception& ex)
     {

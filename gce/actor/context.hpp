@@ -11,6 +11,7 @@
 #define GCE_ACTOR_CONTEXT_HPP
 
 #include <gce/actor/config.hpp>
+#include <gce/actor/mixin.hpp>
 #include <gce/actor/actor_id.hpp>
 #include <gce/detail/unique_ptr.hpp>
 #include <boost/thread/thread.hpp>
@@ -57,7 +58,6 @@ namespace detail
 class cache_pool;
 }
 
-class mixin;
 class slice;
 class context
 {
@@ -71,6 +71,74 @@ public:
     BOOST_ASSERT(ios_);
     return *ios_;
   }
+  
+  inline aid_t get_aid() const
+  {
+    return mix_->get_aid();
+  }
+
+  inline void send(aid_t recver, message const& m)
+  {
+    mix_->send(recver, m);
+  }
+
+  inline void send(svcid_t recver, message const& m)
+  {
+    mix_->send(recver, m);
+  }
+
+  inline void relay(aid_t des, message& m)
+  {
+    mix_->relay(des, m);
+  }
+
+  inline void relay(svcid_t des, message& m)
+  {
+    mix_->relay(des, m);
+  }
+
+  inline response_t request(aid_t recver, message const& m)
+  {
+    return mix_->request(recver, m);
+  }
+
+  inline response_t request(svcid_t recver, message const& m)
+  {
+    return mix_->request(recver, m);
+  }
+
+  inline void reply(aid_t recver, message const& m)
+  {
+    mix_->reply(recver, m);
+  }
+
+  inline void link(aid_t target)
+  {
+    mix_->link(target);
+  }
+
+  inline void monitor(aid_t target)
+  {
+    mix_->monitor(target);
+  }
+
+  inline aid_t recv(message& msg, match const& mach = match())
+  {
+    return mix_->recv(msg, mach);
+  }
+
+  inline aid_t recv(
+    response_t res, message& msg, 
+    duration_t tmo = seconds_t(GCE_DEFAULT_REQUEST_TIMEOUT_SEC)
+    )
+  {
+    return mix_->recv(res, msg, tmo);
+  }
+
+  inline void wait(duration_t dur)
+  {
+    mix_->wait(dur);
+  }
 
 public:
   /// internal use
@@ -78,7 +146,7 @@ public:
   inline timestamp_t get_timestamp() const { return timestamp_; }
   inline std::size_t get_cache_queue_size() const { return cache_queue_size_; }
 
-  mixin& make_mixin();
+  actor_t make_mixin();
   detail::cache_pool* select_cache_pool();
   slice& make_slice();
 
@@ -87,6 +155,31 @@ public:
 
   void register_socket(ctxid_pair_t, aid_t skt, std::size_t cache_queue_index);
   void deregister_socket(ctxid_pair_t ctxid_pr, aid_t skt, std::size_t cache_queue_index);
+
+  inline detail::cache_pool* get_cache_pool()
+  {
+    return mix_->get_cache_pool();
+  }
+
+  inline sid_t spawn(match_t func, match_t ctxid, std::size_t stack_size)
+  {
+    return mix_->spawn(func, ctxid, stack_size);
+  }
+
+  inline void add_slice(slice& s)
+  {
+    mix_->add_slice(s);
+  }
+
+  inline std::vector<slice*>& get_slice_list()
+  {
+    return mix_->get_slice_list(); 
+  }
+
+  inline context* get_context()
+  {
+    return this;
+  }
 
 private:
   void run(
@@ -118,6 +211,7 @@ private:
   GCE_CACHE_ALIGNED_VAR(boost::atomic_size_t, curr_slice_)
 
   GCE_CACHE_ALIGNED_VAR(boost::lockfree::queue<mixin*>, mixin_list_)
+  GCE_CACHE_ALIGNED_VAR(boost::optional<mixin>, mix_)
 };
 }
 

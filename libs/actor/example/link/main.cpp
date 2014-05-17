@@ -32,13 +32,11 @@ int main()
 {
   gce::context ctx;
 
-  gce::mixin_t base = gce::spawn(ctx);
-
   /// create a link actor and monitor it.
-  gce::spawn(base, boost::bind(&link, _1), gce::monitored);
+  gce::spawn(ctx, boost::bind(&link, _1), gce::monitored);
 
   /// wait for gce::exit message
-  gce::recv(base);
+  gce::recv(ctx);
 
   std::cout << "end" << std::endl;
 

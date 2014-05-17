@@ -67,11 +67,11 @@ public:
 
   static void my_thr(context& ctx)
   {
-    mixin_t mix = spawn(ctx);
+    actor_t a = spawn(ctx);
     for (std::size_t i=0; i<100; ++i)
     {
       spawn(
-        mix,
+        a,
         boost::bind(&link_ut::my_actor, _1),
         monitored
         );
@@ -79,7 +79,7 @@ public:
 
     for (std::size_t i=0; i<100; ++i)
     {
-      recv(mix);
+      recv(a);
     }
   }
 
@@ -108,8 +108,6 @@ public:
       //std::size_t my_actor_size = 21;
       attributes attrs;
       context ctx(attrs);
-
-      mixin& base = spawn(ctx);
 
       boost::thread_group thrs;
       for (std::size_t i=0; i<user_thr_num; ++i)

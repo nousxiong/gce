@@ -100,7 +100,7 @@ private:
   std::size_t tmr_sid_;
 };
 
-typedef mixin& mixin_t;
+typedef mixin& actor_t;
 }
 
 #endif /// GCE_ACTOR_MIXIN_HPP
