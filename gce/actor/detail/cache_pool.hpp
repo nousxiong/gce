@@ -24,7 +24,7 @@
 namespace gce
 {
 class context;
-class actor;
+class coroutine_stackfull_actor
 struct attributes;
 
 namespace detail
@@ -32,7 +32,7 @@ namespace detail
 class socket;
 class acceptor;
 class cache_pool;
-typedef object_pool<actor, cache_pool*> actor_pool_t;
+typedef object_pool<coroutine_stackfull_actor, cache_pool*> actor_pool_t;
 typedef object_pool<socket, cache_pool*> socket_pool_t;
 typedef object_pool<acceptor, cache_pool*> acceptor_pool_t;
 
@@ -48,7 +48,7 @@ public:
   inline std::size_t get_index() { return index_; }
   inline strand_t& get_strand() { return snd_; }
 
-  actor* get_actor();
+  actor* get_coroutine_stackfull_actor();
   socket* get_socket();
   acceptor* get_acceptor();
 

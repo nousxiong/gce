@@ -9,7 +9,7 @@
 
 #include <gce/actor/detail/cache_pool.hpp>
 #include <gce/actor/context.hpp>
-#include <gce/actor/actor.hpp>
+#include <gce/actor/coroutine_stackfull_actor.hpp>
 #include <gce/actor/detail/socket.hpp>
 #include <gce/actor/detail/acceptor.hpp>
 #include <boost/foreach.hpp>
@@ -52,7 +52,7 @@ cache_pool::~cache_pool()
 {
 }
 ///------------------------------------------------------------------------------
-actor* cache_pool::get_actor()
+actor* cache_pool::get_coroutine_stackfull_actor()
 {
   return actor_pool_->get();
 }

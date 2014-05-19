@@ -11,7 +11,7 @@
 #define GCE_ACTOR_SERVICE_HPP
 
 #include <gce/actor/config.hpp>
-#include <gce/actor/actor.hpp>
+#include <gce/actor/coroutine_stackfull_actor.hpp>
 #include <gce/actor/detail/cache_pool.hpp>
 #include <gce/actor/service_id.hpp>
 

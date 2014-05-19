@@ -13,7 +13,7 @@
 #include <gce/actor/detail/cache_pool.hpp>
 #include <gce/actor/send.hpp>
 #include <gce/actor/context.hpp>
-#include <gce/actor/thread_based_actor.hpp>
+#include <gce/actor/thread_mapped_actor.hpp>
 #include <gce/actor/detail/mailbox.hpp>
 #include <gce/actor/message.hpp>
 #include <gce/detail/scope.hpp>

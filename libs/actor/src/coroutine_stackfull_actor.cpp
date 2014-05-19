@@ -7,10 +7,10 @@
 /// See https://github.com/nousxiong/gce for latest version.
 ///
 
-#include <gce/actor/actor.hpp>
+#include <gce/actor/coroutine_stackfull_actor.hpp>
 #include <gce/actor/detail/cache_pool.hpp>
 #include <gce/actor/context.hpp>
-#include <gce/actor/thread_based_actor.hpp>
+#include <gce/actor/thread_mapped_actor.hpp>
 #include <gce/actor/detail/mailbox.hpp>
 #include <gce/actor/detail/scoped_bool.hpp>
 #include <gce/actor/detail/pack.hpp>

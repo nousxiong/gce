@@ -21,7 +21,7 @@
 
 namespace gce
 {
-class thread_based_actor;
+class thread_mapped_actor;
 class slice;
 class context;
 struct attributes;
@@ -30,14 +30,14 @@ namespace detail
 class cache_pool;
 }
 
-class thread_based_actor
+class thread_mapped_actor
   : public basic_actor
 {
   typedef basic_actor base_type;
 
 public:
-  explicit thread_based_actor(detail::cache_pool*);
-  ~thread_based_actor();
+  explicit thread_mapped_actor(detail::cache_pool*);
+  ~thread_mapped_actor();
 
 public:
   void send(aid_t, message const&);
@@ -100,7 +100,7 @@ private:
   std::size_t tmr_sid_;
 };
 
-typedef thread_based_actor& actor_t;
+typedef thread_mapped_actor& actor_t;
 }
 
 #endif /// GCE_ACTOR_MIXIN_HPP

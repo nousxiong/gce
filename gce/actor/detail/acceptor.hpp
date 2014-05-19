@@ -11,7 +11,7 @@
 #define GCE_ACTOR_DETAIL_ACCEPTOR_HPP
 
 #include <gce/actor/config.hpp>
-#include <gce/actor/actor.hpp>
+#include <gce/actor/coroutine_stackfull_actor.hpp>
 #include <gce/actor/message.hpp>
 #include <gce/actor/basic_actor.hpp>
 #include <gce/actor/net_option.hpp>
@@ -24,7 +24,7 @@
 
 namespace gce
 {
-class thread_based_actor;
+class thread_mapped_actor;
 class context;
 namespace detail
 {

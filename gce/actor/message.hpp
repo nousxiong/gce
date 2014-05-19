@@ -30,8 +30,8 @@
 namespace gce
 {
 class basic_actor;
-class actor;
-class thread_based_actor;
+class coroutine_stackfull_actor
+class thread_mapped_actor;
 class slice;
 namespace detail
 {
@@ -560,8 +560,8 @@ private:
   detail::buffer_ref buf_;
 
   friend class basic_actor;
-  friend class actor;
-  friend class thread_based_actor;
+  friend class coroutine_stackfull_actor
+  friend class thread_mapped_actor;
   friend class slice;
   friend class detail::socket;
   detail::request_t req_;

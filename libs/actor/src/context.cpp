@@ -86,7 +86,7 @@ context::~context()
 ///------------------------------------------------------------------------------
 actor_t context::make_mixin()
 {
-  thread_based_actor* a = new thread_based_actor(select_cache_pool());
+  thread_mapped_actor* a = new thread_mapped_actor(select_cache_pool());
   mixin_list_.push(a);
   return *a;
 }
@@ -230,7 +230,7 @@ void context::stop()
 
   base_.reset();
 
-  thread_based_actor* mix = 0;
+  thread_mapped_actor* mix = 0;
   while (mixin_list_.pop(mix))
   {
     delete mix;

@@ -11,7 +11,7 @@
 #define GCE_ACTOR_CONTEXT_HPP
 
 #include <gce/actor/config.hpp>
-#include <gce/actor/thread_based_actor.hpp>
+#include <gce/actor/thread_mapped_actor.hpp>
 #include <gce/actor/actor_id.hpp>
 #include <gce/detail/unique_ptr.hpp>
 #include <boost/thread/thread.hpp>
@@ -210,8 +210,8 @@ private:
   GCE_CACHE_ALIGNED_VAR(std::vector<slice*>, slice_list_)
   GCE_CACHE_ALIGNED_VAR(boost::atomic_size_t, curr_slice_)
 
-  GCE_CACHE_ALIGNED_VAR(boost::lockfree::queue<thread_based_actor*>, mixin_list_)
-  GCE_CACHE_ALIGNED_VAR(boost::optional<thread_based_actor>, base_)
+  GCE_CACHE_ALIGNED_VAR(boost::lockfree::queue<thread_mapped_actor*>, mixin_list_)
+  GCE_CACHE_ALIGNED_VAR(boost::optional<thread_mapped_actor>, base_)
 };
 }
 

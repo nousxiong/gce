@@ -24,7 +24,7 @@
 namespace gce
 {
 class message;
-class thread_based_actor;
+class thread_mapped_actor;
 class context;
 namespace detail
 {
@@ -45,7 +45,7 @@ public:
   inline void chain(bool flag) { chain_ = flag; }
 
 protected:
-  friend class thread_based_actor;
+  friend class thread_mapped_actor;
   enum send_hint
   {
     async,

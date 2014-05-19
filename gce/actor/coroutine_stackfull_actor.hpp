@@ -24,12 +24,12 @@ namespace detail
 class cache_pool;
 class mailbox;
 }
-class thread_based_actor;
+class thread_mapped_actor;
 class context;
 class response_t;
 
-class actor
-  : public detail::object_pool<actor, detail::cache_pool*>::object
+class coroutine_stackfull_actor
+  : public detail::object_pool<coroutine_stackfull_actor, detail::cache_pool*>::object
   , public basic_actor
 {
   typedef basic_actor base_type;
@@ -96,12 +96,12 @@ public:
     base_type::pri_monitor(target);
   }
 
-  typedef actor& self_ref_t;
+  typedef coroutine_stackfull_actor& self_ref_t;
   typedef boost::function<void (self_ref_t)> func_t;
 
 public:
-  explicit actor(detail::cache_pool*);
-  ~actor();
+  explicit coroutine_stackfull_actor(detail::cache_pool*);
+  ~coroutine_stackfull_actor();
 
 public:
   aid_t recv(message&, match const& mach = match());
@@ -161,7 +161,7 @@ private:
   std::string exit_msg_;
 };
 
-typedef actor& self_t;
+typedef coroutine_stackfull_actor& self_t;
 typedef boost::function<void (self_t)> actor_func_t;
 typedef std::pair<match_t, actor_func_t> remote_func_t;
 typedef std::vector<remote_func_t> remote_func_list_t;
