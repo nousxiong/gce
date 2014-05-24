@@ -13,9 +13,7 @@
 #include <gce/actor/config.hpp>
 #include <gce/actor/detail/socket.hpp>
 #include <gce/actor/detail/acceptor.hpp>
-#include <gce/actor/coroutine_stackfull_actor.hpp>
-#include <gce/actor/thread_mapped_actor.hpp>
-#include <gce/actor/slice.hpp>
+#include <gce/actor/actor.hpp>
 #include <gce/actor/send.hpp>
 #include <gce/actor/recv.hpp>
 #include <gce/actor/net_option.hpp>
@@ -94,9 +92,59 @@ inline void connect(
       )
     );
 }
+
+typedef boost::function<void (actor<evented>&, bool)> conn_handler_t;
+inline void handle_connect(
+  actor<evented>& self, aid_t skt, 
+  message msg, detail::cache_pool* sire, 
+  conn_handler_t const& hdr
+  )
+{
+  bool ret = false;
+  if (skt)
+  {
+    ctxid_pair_t ctxid_pr;
+    msg >> ctxid_pr;
+    sire->register_socket(ctxid_pr, skt);
+    ret = true;
+  }
+
+  try
+  {
+    hdr(self, ret);
+  }
+  catch (std::exception& ex)
+  {
+    self.quit(exit_except, ex.what());
+  }
 }
 
-/// connect
+typedef boost::function<void (actor<evented>&, bool)> bind_handler_t;
+inline void handle_bind(
+  actor<evented>& self, aid_t acpr, 
+  message msg, bind_handler_t const& hdr
+  )
+{
+  bool ret = false;
+  if (acpr)
+  {
+    ret = true;
+  }
+
+  try
+  {
+    hdr(self, ret);
+  }
+  catch (std::exception& ex)
+  {
+    self.quit(exit_except, ex.what());
+  }
+}
+}
+
+///------------------------------------------------------------------------------
+/// Connect using given NONE event_based_actor
+///------------------------------------------------------------------------------
 template <typename Sire>
 inline void connect(
   Sire& sire,
@@ -111,16 +159,15 @@ inline void connect(
   detail::connect(sire, user, target, ep, target_is_router, opt, remote_func_list);
   ctxid_pair_t ctxid_pr;
   aid_t skt = recv(sire, detail::msg_new_conn, ctxid_pr);
-  std::vector<slice*>& slice_list = sire.get_slice_list();
-  BOOST_FOREACH(slice* s, slice_list)
+  std::vector<nonblocking_actor*>& slice_list = sire.get_nonblocking_actor_list();
+  BOOST_FOREACH(nonblocking_actor* s, slice_list)
   {
     s->get_cache_pool()->register_socket(ctxid_pr, skt);
   }
 }
 
-/// connect
 inline void connect(
-  self_t sire,
+  actor<stacked>& sire,
   ctxid_t target, /// connect target
   std::string const& ep, /// endpoint
   bool target_is_router = false, /// if target is router, set it true
@@ -135,7 +182,37 @@ inline void connect(
   sire.get_cache_pool()->register_socket(ctxid_pr, skt);
 }
 
-/// bind
+///------------------------------------------------------------------------------
+/// Connect using given event_based_actor
+///------------------------------------------------------------------------------
+template <typename ConnHandler>
+inline void connect(
+  actor<evented>& sire,
+  ctxid_t target, /// connect target
+  std::string const& ep, /// endpoint
+  ConnHandler h,
+  bool target_is_router = false, /// if target is router, set it true
+  net_option opt = net_option(),
+  remote_func_list_t const& remote_func_list = remote_func_list_t()
+  )
+{
+  detail::cache_pool* user = sire.get_context()->select_cache_pool();
+  detail::connect(sire, user, target, ep, target_is_router, opt, remote_func_list);
+
+  match mach;
+  mach.match_list_.push_back(detail::msg_new_conn);
+  sire.recv(
+    boost::bind(
+      &detail::handle_connect, _1, _2, _3, 
+      sire.get_cache_pool(), detail::conn_handler_t(h)
+      ), 
+    mach
+    );
+}
+
+///------------------------------------------------------------------------------
+/// Bind using given NONE event_based_actor
+///------------------------------------------------------------------------------
 template <typename Sire>
 inline void bind(
   Sire& sire,
@@ -154,6 +231,39 @@ inline void bind(
       )
     );
   recv(sire, detail::msg_new_bind);
+}
+
+///------------------------------------------------------------------------------
+/// Bind using given event_based_actor
+///------------------------------------------------------------------------------
+template <typename BindHandler>
+inline void bind(
+  actor<evented>& sire,
+  std::string const& ep, /// endpoint
+  BindHandler h,
+  bool is_router = false, /// if this bind is router, set it true
+  remote_func_list_t const& remote_func_list = remote_func_list_t(),
+  net_option opt = net_option()
+  )
+{
+  detail::cache_pool* user = sire.get_context()->select_cache_pool();
+  user->get_strand().post(
+    boost::bind(
+      &detail::bind_impl,
+      sire.get_aid(), user, ep, is_router,
+      remote_func_list, opt
+      )
+    );
+
+  match mach;
+  mach.match_list_.push_back(detail::msg_new_bind);
+  sire.recv(
+    boost::bind(
+      &detail::handle_bind, _1, _2, _3, 
+      detail::bind_handler_t(h)
+      ), 
+    mach
+    );
 }
 }
 

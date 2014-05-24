@@ -32,7 +32,7 @@ public:
       attrs.id_ = atom("two");
       context ctx2(attrs);
 
-      actor_t a = spawn(ctx1);
+      actor<threaded> a = spawn(ctx1);
 
       boost::thread thr(
         boost::bind(
@@ -81,7 +81,7 @@ public:
     }
   }
 
-  static void router(aid_t base_id, actor_t mix)
+  static void router(aid_t base_id, actor<threaded> mix)
   {
     try
     {
@@ -99,7 +99,7 @@ public:
     }
   }
 
-  static void quiter(self_t self)
+  static void quiter(actor<stacked>& self)
   {
     try
     {

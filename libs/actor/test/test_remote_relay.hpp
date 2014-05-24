@@ -20,7 +20,7 @@ public:
   }
 
 private:
-  static void my_actor(self_t self)
+  static void my_actor(actor<stacked>& self)
   {
     message msg;
     aid_t last_id;
@@ -56,7 +56,7 @@ private:
         thrs.create_thread(
           boost::bind(
             &remote_relay_ut::root, i, root_num,
-            ctx.get_aid(), boost::ref(spawn(ctx))
+            ctx.get_aid(), spawn(ctx)
             )
           );
       }
@@ -81,7 +81,7 @@ private:
 
   static void root(
     std::size_t id, std::size_t root_num,
-    aid_t base_aid, actor_t mix
+    aid_t base_aid, actor<threaded> mix
     )
   {
     try
@@ -97,7 +97,7 @@ private:
       func_list.push_back(
         std::make_pair(
           atom("my_actor"),
-          boost::bind(&remote_relay_ut::my_actor, _1)
+          actor_func_t(boost::bind(&remote_relay_ut::my_actor, _1))
           )
         );
       connect(ctx, atom("router"), "tcp://127.0.0.1:14924", true, opt, func_list);

@@ -69,7 +69,7 @@ public:
     }
   }
 
-  static void quiter(self_t self)
+  static void quiter(actor<stacked>& self)
   {
     try
     {

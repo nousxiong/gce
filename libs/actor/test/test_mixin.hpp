@@ -20,7 +20,7 @@ public:
   }
 
 private:
-  static void my_child(self_t self)
+  static void my_child(actor<stacked>& self)
   {
     aid_t aid = recv(self);
     reply(self, aid);
@@ -28,7 +28,7 @@ private:
 
   static void my_thr(context& ctx)
   {
-    actor_t a = spawn(ctx);
+    actor<threaded> a = spawn(ctx);
     std::size_t size = 10;
     std::vector<response_t> res_list(size);
     for (std::size_t i=0; i<size; ++i)

@@ -11,7 +11,7 @@
 #define GCE_ACTOR_DETAIL_ACCEPTOR_HPP
 
 #include <gce/actor/config.hpp>
-#include <gce/actor/coroutine_stackfull_actor.hpp>
+#include <gce/actor/actor.hpp>
 #include <gce/actor/message.hpp>
 #include <gce/actor/basic_actor.hpp>
 #include <gce/actor/net_option.hpp>
@@ -86,7 +86,7 @@ private:
 
   /// thread local vals
   boost::scoped_ptr<basic_acceptor> acpr_;
-  std::map<match_t, actor_func_t> remote_func_list_;
+  std::map<match_t, remote_func> remote_func_list_;
   bool is_router_;
 };
 }

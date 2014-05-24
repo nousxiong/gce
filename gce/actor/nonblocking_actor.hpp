@@ -7,8 +7,8 @@
 /// See https://github.com/nousxiong/gce for latest version.
 ///
 
-#ifndef GCE_ACTOR_SLICE_HPP
-#define GCE_ACTOR_SLICE_HPP
+#ifndef GCE_ACTOR_NONBLOCKING_ACTOR_HPP
+#define GCE_ACTOR_NONBLOCKING_ACTOR_HPP
 
 #include <gce/actor/config.hpp>
 #include <gce/actor/basic_actor.hpp>
@@ -24,14 +24,14 @@ namespace gce
 class context;
 struct attributes;
 
-class slice
+class nonblocking_actor
   : public basic_actor
 {
   typedef basic_actor base_type;
 
 public:
-  slice(context& ctx, std::size_t index);
-  ~slice();
+  nonblocking_actor(context& ctx, std::size_t index);
+  ~nonblocking_actor();
 
 public:
   inline void send(aid_t recver, message const& m)
@@ -155,8 +155,6 @@ private:
   detail::cache_pool cac_pool_;
   std::vector<detail::pack*> gc_;
 };
-
-typedef slice& slice_t;
 }
 
-#endif /// GCE_ACTOR_SLICE_HPP
+#endif /// GCE_ACTOR_NONBLOCKING_ACTOR_HPP

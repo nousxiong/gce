@@ -86,7 +86,7 @@ void socket::connect(
 }
 ///----------------------------------------------------------------------------
 void socket::start(
-  std::map<match_t, actor_func_t> const& remote_list,
+  std::map<match_t, remote_func> const& remote_list,
   socket_ptr skt, bool is_router
   )
 {
@@ -219,9 +219,7 @@ void socket::handle_net_msg(message& msg)
     else
     {
       /// spawn actor
-      std::map<match_t, actor_func_t>::iterator itr(
-        remote_list_.find(spw->get_func())
-        );
+      remote_list_t::iterator itr(remote_list_.find(spw->get_func()));
       if (itr == remote_list_.end())
       {
         send_spawn_ret(spw, pk, spawn_func_not_found, aid_t(), true);
@@ -308,9 +306,18 @@ void socket::handle_net_msg(message& msg)
   }
 }
 ///----------------------------------------------------------------------------
-void socket::spawn_remote_actor(cache_pool* user, spawn_t spw, actor_func_t f)
+void socket::spawn_remote_actor(cache_pool* user, spawn_t spw, remote_func f)
 {
-  aid_t aid = make_actor(aid_t(), user, f, spw.get_stack_size());
+  aid_t aid;
+  spawn_type type = spw.get_type();
+  if (type == spw_stacked)
+  {
+    aid = make_context_switching_actor(aid_t(), user, f.af_, spw.get_stack_size());
+  }
+  else
+  {
+    aid = make_event_based_actor(aid_t(), user, f.ef_, spw.get_stack_size());
+  }
   user_->get_strand().post(
     boost::bind(
       &socket::end_spawn_remote_actor, this, spw, aid

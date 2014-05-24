@@ -11,26 +11,51 @@
 #define GCE_ACTOR_SERVICE_HPP
 
 #include <gce/actor/config.hpp>
-#include <gce/actor/coroutine_stackfull_actor.hpp>
+#include <gce/actor/actor.hpp>
 #include <gce/actor/detail/cache_pool.hpp>
 #include <gce/actor/service_id.hpp>
 
 namespace gce
 {
-inline void register_service(self_t self, match_t name)
+namespace detail
 {
-  detail::cache_pool* user = self.get_cache_pool();
+template <typename Actor>
+inline void register_service(Actor& a, match_t name)
+{
+  cache_pool* user = a.get_cache_pool();
   context& ctx = user->get_context();
-  user->register_service(name, self.get_aid());
-  ctx.register_service(name, self.get_aid(), user->get_index());
+  user->register_service(name, a.get_aid());
+  ctx.register_service(name, a.get_aid(), user->get_index());
 }
 
-inline void deregister_service(self_t self, match_t name)
+template <typename Actor>
+inline void deregister_service(Actor& a, match_t name)
 {
-  detail::cache_pool* user = self.get_cache_pool();
+  cache_pool* user = a.get_cache_pool();
   context& ctx = user->get_context();
-  user->deregister_service(name, self.get_aid());
-  ctx.deregister_service(name, self.get_aid(), user->get_index());
+  user->deregister_service(name, a.get_aid());
+  ctx.deregister_service(name, a.get_aid(), user->get_index());
+}
+}
+
+inline void register_service(actor<stacked>& self, match_t name)
+{
+  detail::register_service(self, name);
+}
+
+inline void deregister_service(actor<stacked>& self, match_t name)
+{
+  detail::deregister_service(self, name);
+}
+
+inline void register_service(actor<evented>& self, match_t name)
+{
+  detail::register_service(self, name);
+}
+
+inline void deregister_service(actor<evented>& self, match_t name)
+{
+  detail::deregister_service(self, name);
 }
 }
 

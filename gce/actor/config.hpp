@@ -65,6 +65,12 @@ enum link_type
   monitored
 };
 
+/// actor type tags
+struct stacked {};
+struct evented {};
+struct threaded {};
+struct nonblocked {};
+
 typedef match_t exit_code_t;
 static exit_code_t const exit = atom("gce_actor_exit");
 static exit_code_t const exit_normal = atom("gce_ex_normal");
@@ -101,6 +107,13 @@ enum socket_type
   socket_comm = 0,
   socket_router,
   socket_joint
+};
+
+enum spawn_type
+{
+  spw_nil = 0,
+  spw_stacked,
+  spw_evented
 };
 } /// namespce detail
 

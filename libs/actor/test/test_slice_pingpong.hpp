@@ -21,7 +21,7 @@ public:
   }
 
 private:
-  static void pong_actor(self_t self)
+  static void pong_actor(actor<stacked>& self)
   {
     message msg;
     while (true)
@@ -46,7 +46,7 @@ private:
       attrs.thread_num_ = 2;
       context ctx(attrs);
 
-      slice_t ping = spawn_slice(ctx);
+      actor<nonblocked> ping = spawn<nonblocked>(ctx);
       
       aid_t pong_id = 
         spawn(

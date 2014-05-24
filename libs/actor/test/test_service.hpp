@@ -69,7 +69,7 @@ private:
     }
   }
 
-  static void echo_service(self_t self)
+  static void echo_service(actor<stacked>& self)
   {
     try
     {

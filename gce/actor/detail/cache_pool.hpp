@@ -24,7 +24,8 @@
 namespace gce
 {
 class context;
-class coroutine_stackfull_actor
+class context_switching_actor;
+class event_based_actor;
 struct attributes;
 
 namespace detail
@@ -32,7 +33,8 @@ namespace detail
 class socket;
 class acceptor;
 class cache_pool;
-typedef object_pool<coroutine_stackfull_actor, cache_pool*> actor_pool_t;
+typedef object_pool<context_switching_actor, cache_pool*> context_switching_actor_pool_t;
+typedef object_pool<event_based_actor, cache_pool*> event_based_actor_pool_t;
 typedef object_pool<socket, cache_pool*> socket_pool_t;
 typedef object_pool<acceptor, cache_pool*> acceptor_pool_t;
 
@@ -48,11 +50,13 @@ public:
   inline std::size_t get_index() { return index_; }
   inline strand_t& get_strand() { return snd_; }
 
-  actor* get_coroutine_stackfull_actor();
+  context_switching_actor* get_context_switching_actor();
+  event_based_actor* get_event_based_actor();
   socket* get_socket();
   acceptor* get_acceptor();
 
-  void free_actor(actor*);
+  void free_actor(context_switching_actor*);
+  void free_actor(event_based_actor*);
   void free_socket(socket*);
   void free_acceptor(acceptor*);
 
@@ -84,7 +88,8 @@ private:
   GCE_CACHE_ALIGNED_VAR(strand_t, snd_)
 
   /// pools
-  GCE_CACHE_ALIGNED_VAR(boost::optional<actor_pool_t>, actor_pool_)
+  GCE_CACHE_ALIGNED_VAR(boost::optional<context_switching_actor_pool_t>, context_switching_actor_pool_)
+  GCE_CACHE_ALIGNED_VAR(boost::optional<event_based_actor_pool_t>, event_based_actor_pool_)
   GCE_CACHE_ALIGNED_VAR(boost::optional<socket_pool_t>, socket_pool_)
   GCE_CACHE_ALIGNED_VAR(boost::optional<acceptor_pool_t>, acceptor_pool_)
 

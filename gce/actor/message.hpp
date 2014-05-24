@@ -30,9 +30,10 @@
 namespace gce
 {
 class basic_actor;
-class coroutine_stackfull_actor
+class context_switching_actor;
 class thread_mapped_actor;
-class slice;
+class event_based_actor;
+class nonblocking_actor;
 namespace detail
 {
 class socket;
@@ -411,8 +412,8 @@ private:
     }
     else if (detail::spawn_t* spw = boost::get<detail::spawn_t>(&tag))
     {
-      *this << detail::tag_spawn_t << spw->get_func() <<
-        spw->get_ctxid() << spw->get_stack_size() <<
+      *this << detail::tag_spawn_t << (boost::uint16_t)spw->get_type() << 
+        spw->get_func() << spw->get_ctxid() << spw->get_stack_size() <<
         spw->get_id() << spw->get_aid();
     }
     else if (detail::spawn_ret_t* spr = boost::get<detail::spawn_ret_t>(&tag))
@@ -476,13 +477,16 @@ private:
       }
       else if (tag_type == detail::tag_spawn_t)
       {
+        boost::uint16_t type;
         match_t func;
         match_t ctxid;
         std::size_t stack_size;
         sid_t sid;
         aid_t aid;
-        *this >> func >> ctxid >> stack_size >> sid >> aid;
-        tag = detail::spawn_t(func, ctxid, stack_size, sid, aid);
+        *this >> type >> func >> ctxid >> stack_size >> sid >> aid;
+        tag = detail::spawn_t(
+          (detail::spawn_type)type, func, ctxid, stack_size, sid, aid
+          );
       }
       else if (tag_type == detail::tag_spawn_ret_t)
       {
@@ -560,9 +564,10 @@ private:
   detail::buffer_ref buf_;
 
   friend class basic_actor;
-  friend class coroutine_stackfull_actor
+  friend class context_switching_actor;
   friend class thread_mapped_actor;
-  friend class slice;
+  friend class event_based_actor;
+  friend class nonblocking_actor;
   friend class detail::socket;
   detail::request_t req_;
 };

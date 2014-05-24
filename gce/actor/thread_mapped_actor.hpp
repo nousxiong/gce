@@ -22,7 +22,7 @@
 namespace gce
 {
 class thread_mapped_actor;
-class slice;
+class nonblocking_actor;
 class context;
 struct attributes;
 namespace detail
@@ -61,14 +61,14 @@ public:
 
 public:
   /// internal use
-  inline void add_slice(slice& s)
+  inline void add_nonblocking_actor(nonblocking_actor& a)
   {
-    slice_list_.push_back(&s);
+    nonblocking_actor_list_.push_back(&a);
   }
-  inline std::vector<slice*>& get_slice_list() { return slice_list_; }
+  inline std::vector<nonblocking_actor*>& get_nonblocking_actor_list() { return nonblocking_actor_list_; }
   void on_recv(detail::pack&, base_type::send_hint);
 
-  sid_t spawn(match_t func, match_t ctxid, std::size_t stack_size);
+  sid_t spawn(detail::spawn_type, match_t func, match_t ctxid, std::size_t stack_size);
 
 private:
   typedef boost::optional<std::pair<detail::recv_t, message> > recv_optional_t;
@@ -91,7 +91,7 @@ private:
   byte_t pad0_[GCE_CACHE_LINE_SIZE];
 
   /// local
-  std::vector<slice*> slice_list_;
+  std::vector<nonblocking_actor*> nonblocking_actor_list_;
   recv_promise_t* recv_p_;
   res_promise_t* res_p_;
   response_t recving_res_;
@@ -99,8 +99,6 @@ private:
   timer_t tmr_;
   std::size_t tmr_sid_;
 };
-
-typedef thread_mapped_actor& actor_t;
 }
 
 #endif /// GCE_ACTOR_MIXIN_HPP

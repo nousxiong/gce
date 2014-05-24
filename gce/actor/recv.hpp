@@ -11,7 +11,7 @@
 #define GCE_ACTOR_RECV_HPP
 
 #include <gce/actor/config.hpp>
-#include <gce/actor/slice.hpp>
+#include <gce/actor/actor.hpp>
 #include <gce/actor/response.hpp>
 #include <gce/actor/actor_id.hpp>
 #include <gce/actor/message.hpp>
@@ -71,7 +71,7 @@ inline aid_t recv(Recver& recver, message& msg, match& mach)
   return sender;
 }
 
-inline aid_t recv(slice_t recver, message& msg, match& mach)
+inline aid_t recv(actor<nonblocked>& recver, message& msg, match& mach)
 {
   bool has_exit = check_exit(mach.match_list_);
   if (!has_exit)
@@ -109,7 +109,7 @@ inline aid_t recv(Recver& recver, response_t res, message& msg, duration_t tmo)
   return sender;
 }
 
-inline aid_t recv(slice_t recver, response_t res, message& msg, duration_t)
+inline aid_t recv(actor<nonblocked>& recver, response_t res, message& msg, duration_t)
 {
   aid_t sender = recver.recv(res, msg);
   if (msg.get_type() == exit)
@@ -222,6 +222,14 @@ inline aid_t recv(
   return sender;
 }
 ///----------------------------------------------------------------------------
+template <typename RecvHandler>
+inline void recv(actor<evented>& recver, RecvHandler h, match_t type, duration_t tmo = infin)
+{
+  match mach(tmo);
+  mach.match_list_.push_back(type);
+  recver.recv(h, mach);
+}
+///----------------------------------------------------------------------------
 /// Receive response
 ///----------------------------------------------------------------------------
 template <typename Recver>
@@ -297,6 +305,15 @@ inline aid_t recv(
     msg >> a1 >> a2 >> a3 >> a4 >> a5;
   }
   return sender;
+}
+///----------------------------------------------------------------------------
+template <typename RecvHandler>
+inline void recv(
+  actor<evented>& recver, RecvHandler h, 
+  response_t res, duration_t tmo = infin
+  )
+{
+  recver.recv(h, res, tmo);
 }
 ///----------------------------------------------------------------------------
 }

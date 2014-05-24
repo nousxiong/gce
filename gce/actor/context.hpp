@@ -58,7 +58,7 @@ namespace detail
 class cache_pool;
 }
 
-class slice;
+class nonblocking_actor;
 class context
 {
 public:
@@ -146,9 +146,9 @@ public:
   inline timestamp_t get_timestamp() const { return timestamp_; }
   inline std::size_t get_cache_queue_size() const { return cache_queue_size_; }
 
-  actor_t make_mixin();
+  thread_mapped_actor& make_thread_mapped_actor();
   detail::cache_pool* select_cache_pool();
-  slice& make_slice();
+  nonblocking_actor& make_nonblocking_actor();
 
   void register_service(match_t name, aid_t svc, std::size_t cache_queue_index);
   void deregister_service(match_t name, aid_t svc, std::size_t cache_queue_index);
@@ -161,19 +161,19 @@ public:
     return base_->get_cache_pool();
   }
 
-  inline sid_t spawn(match_t func, match_t ctxid, std::size_t stack_size)
+  inline sid_t spawn(detail::spawn_type type, match_t func, match_t ctxid, std::size_t stack_size)
   {
-    return base_->spawn(func, ctxid, stack_size);
+    return base_->spawn(type, func, ctxid, stack_size);
   }
 
-  inline void add_slice(slice& s)
+  inline void add_nonblocking_actor(nonblocking_actor& a)
   {
-    base_->add_slice(s);
+    base_->add_nonblocking_actor(a);
   }
 
-  inline std::vector<slice*>& get_slice_list()
+  inline std::vector<nonblocking_actor*>& get_nonblocking_actor_list()
   {
-    return base_->get_slice_list(); 
+    return base_->get_nonblocking_actor_list(); 
   }
 
   inline context* get_context()
@@ -207,10 +207,10 @@ private:
   GCE_CACHE_ALIGNED_VAR(boost::thread_group, thread_group_)
   GCE_CACHE_ALIGNED_VAR(std::vector<detail::cache_pool*>, cache_pool_list_)
   
-  GCE_CACHE_ALIGNED_VAR(std::vector<slice*>, slice_list_)
-  GCE_CACHE_ALIGNED_VAR(boost::atomic_size_t, curr_slice_)
+  GCE_CACHE_ALIGNED_VAR(std::vector<nonblocking_actor*>, nonblocking_actor_list_)
+  GCE_CACHE_ALIGNED_VAR(boost::atomic_size_t, curr_nonblocking_actor_)
 
-  GCE_CACHE_ALIGNED_VAR(boost::lockfree::queue<thread_mapped_actor*>, mixin_list_)
+  GCE_CACHE_ALIGNED_VAR(boost::lockfree::queue<thread_mapped_actor*>, thread_mapped_actor_list_)
   GCE_CACHE_ALIGNED_VAR(boost::optional<thread_mapped_actor>, base_)
 };
 }

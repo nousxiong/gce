@@ -14,9 +14,7 @@
 #include <gce/actor/send.hpp>
 #include <gce/actor/recv.hpp>
 #include <gce/actor/wait.hpp>
-#include <gce/actor/coroutine_stackfull_actor.hpp>
-#include <gce/actor/thread_mapped_actor.hpp>
-#include <gce/actor/slice.hpp>
+#include <gce/actor/actor.hpp>
 #include <gce/actor/message.hpp>
 #include <gce/actor/remote.hpp>
 #include <gce/actor/spawn.hpp>

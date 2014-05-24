@@ -237,7 +237,7 @@ void basic_actor::pri_monitor(aid_t target, send_hint hint)
 }
 ///----------------------------------------------------------------------------
 void basic_actor::pri_spawn(
-  sid_t sid, match_t func, match_t ctxid,
+  sid_t sid, detail::spawn_type type, match_t func, match_t ctxid,
   std::size_t stack_size, send_hint hint
   )
 {
@@ -254,7 +254,7 @@ void basic_actor::pri_spawn(
   }
 
   detail::pack pk;
-  pk.tag_ = detail::spawn_t(func, ctxid, stack_size, sid, get_aid());
+  pk.tag_ = detail::spawn_t(type, func, ctxid, stack_size, sid, get_aid());
   pk.skt_ = skt;
   pk.msg_ = message(detail::msg_spawn);
 

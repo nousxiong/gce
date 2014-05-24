@@ -11,7 +11,7 @@
 #define GCE_ACTOR_DETAIL_SOCKET_HPP
 
 #include <gce/actor/config.hpp>
-#include <gce/actor/coroutine_stackfull_actor.hpp>
+#include <gce/actor/actor.hpp>
 #include <gce/actor/message.hpp>
 #include <gce/actor/detail/heartbeat.hpp>
 #include <gce/actor/basic_actor.hpp>
@@ -61,7 +61,7 @@ public:
   }
 
 public:
-  void start(std::map<match_t, actor_func_t> const&, socket_ptr, bool is_router);
+  void start(std::map<match_t, remote_func> const&, socket_ptr, bool is_router);
   void stop();
   void on_free();
   void on_recv(pack&, base_type::send_hint);
@@ -71,7 +71,7 @@ public:
 
 private:
   void handle_net_msg(message&);
-  void spawn_remote_actor(cache_pool*, spawn_t, actor_func_t);
+  void spawn_remote_actor(cache_pool*, spawn_t, remote_func);
   void end_spawn_remote_actor(spawn_t, aid_t aid);
   void send_spawn_ret(spawn_t*, pack&, spawn_error, aid_t aid, bool is_err_ret);
   void send(message const&);
@@ -134,7 +134,8 @@ private:
   std::map<aid_t, sktaid_t> router_dummy_;
 
   /// remote spawn's funcs
-  std::map<match_t, actor_func_t> remote_list_;
+  typedef std::map<match_t, remote_func> remote_list_t;
+  remote_list_t remote_list_;
 
   bool is_router_;
 };

@@ -19,13 +19,13 @@ public:
     std::cout << "match_ut end." << std::endl;
   }
 
-  static void my_actor_child(self_t self)
+  static void my_actor_child(actor<stacked>& self)
   {
     aid_t aid = recv(self, 3);
     reply(self, aid);
   }
 
-  static void my_actor(self_t self, aid_t base_id)
+  static void my_actor(actor<stacked>& self, aid_t base_id)
   {
     std::size_t size = 1;
     std::vector<response_t> res_list(size);
@@ -44,7 +44,7 @@ public:
 
   static void my_thr(context& ctx, aid_t base_id)
   {
-    actor_t a = spawn(ctx);
+    actor<threaded> a = spawn(ctx);
     for (std::size_t i=0; i<2; ++i)
     {
       spawn(a, boost::bind(&match_ut::my_actor, _1, base_id));

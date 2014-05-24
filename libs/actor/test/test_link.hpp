@@ -19,12 +19,12 @@ public:
     std::cout << "link_ut end." << std::endl;
   }
 
-  static void my_actor_child(self_t self)
+  static void my_actor_child(actor<stacked>& self)
   {
     aid_t aid = recv(self, 3);
   }
 
-  static void my_actor(self_t self)
+  static void my_actor(actor<stacked>& self)
   {
     detail::cache_pool* cac_pool = self.get_cache_pool();
     std::size_t size = 10;
@@ -67,7 +67,7 @@ public:
 
   static void my_thr(context& ctx)
   {
-    actor_t a = spawn(ctx);
+    actor<threaded> a = spawn(ctx);
     for (std::size_t i=0; i<100; ++i)
     {
       spawn(
@@ -83,7 +83,7 @@ public:
     }
   }
 
-  static void my_root(self_t self)
+  static void my_root(actor<stacked>& self)
   {
     for (std::size_t i=0; i<100; ++i)
     {

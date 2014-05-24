@@ -9,7 +9,7 @@
 
 #include <gce/actor/detail/cache_pool.hpp>
 #include <gce/actor/context.hpp>
-#include <gce/actor/coroutine_stackfull_actor.hpp>
+#include <gce/actor/context_switching_actor.hpp>
 #include <gce/actor/detail/socket.hpp>
 #include <gce/actor/detail/acceptor.hpp>
 #include <boost/foreach.hpp>
@@ -28,7 +28,13 @@ cache_pool::cache_pool(context& ctx, std::size_t index, bool is_slice)
   , curr_joint_list_(joint_list_.end())
   , stopped_(false)
 {
-  actor_pool_ = 
+  context_switching_actor_pool_ = 
+    boost::in_place(
+      this, this,
+      size_nil,
+      is_slice ? 0 : ctx.get_attributes().actor_pool_reserve_size_
+      );
+  event_based_actor_pool_ = 
     boost::in_place(
       this, this,
       size_nil,
@@ -52,9 +58,14 @@ cache_pool::~cache_pool()
 {
 }
 ///------------------------------------------------------------------------------
-actor* cache_pool::get_coroutine_stackfull_actor()
+context_switching_actor* cache_pool::get_context_switching_actor()
 {
-  return actor_pool_->get();
+  return context_switching_actor_pool_->get();
+}
+///------------------------------------------------------------------------------
+event_based_actor* cache_pool::get_event_based_actor()
+{
+  return event_based_actor_pool_->get();
 }
 ///------------------------------------------------------------------------------
 socket* cache_pool::get_socket()
@@ -67,9 +78,14 @@ acceptor* cache_pool::get_acceptor()
   return acceptor_pool_->get();
 }
 ///------------------------------------------------------------------------------
-void cache_pool::free_actor(actor* a)
+void cache_pool::free_actor(context_switching_actor* a)
 {
-  actor_pool_->free(a);
+  context_switching_actor_pool_->free(a);
+}
+///------------------------------------------------------------------------------
+void cache_pool::free_actor(event_based_actor* a)
+{
+  event_based_actor_pool_->free(a);
 }
 ///------------------------------------------------------------------------------
 void cache_pool::free_socket(socket* skt)

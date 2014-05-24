@@ -206,13 +206,16 @@ void thread_mapped_actor::on_recv(detail::pack& pk, base_type::send_hint hint)
   }
 }
 ///----------------------------------------------------------------------------
-sid_t thread_mapped_actor::spawn(match_t func, match_t ctxid, std::size_t stack_size)
+sid_t thread_mapped_actor::spawn(
+  detail::spawn_type type, match_t func, 
+  match_t ctxid, std::size_t stack_size
+  )
 {
   sid_t sid = base_type::new_request();
   snd_.post(
     boost::bind(
       &base_type::pri_spawn, this,
-      sid, func, ctxid, stack_size, base_type::sync
+      sid, type, func, ctxid, stack_size, base_type::sync
       )
     );
   return sid;

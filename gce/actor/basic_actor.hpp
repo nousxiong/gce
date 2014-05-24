@@ -44,8 +44,8 @@ public:
   inline aid_t get_aid() const { return aid_; }
   inline void chain(bool flag) { chain_ = flag; }
 
-protected:
-  friend class thread_mapped_actor;
+public:
+  /// internal use
   enum send_hint
   {
     async,
@@ -65,14 +65,14 @@ protected:
   void pri_monitor(aid_t, send_hint hint = sync);
 
   void pri_spawn(
-    sid_t, match_t func, match_t ctxid,
+    sid_t, detail::spawn_type, match_t func, match_t ctxid,
     std::size_t stack_size, send_hint hint = sync
     );
 
+protected:
   virtual void on_recv(detail::pack&, send_hint hint) = 0;
 
 public:
-  /// internal use
   inline detail::cache_pool* get_cache_pool() { return user_; }
   void on_free();
 

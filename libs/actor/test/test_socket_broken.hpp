@@ -30,7 +30,7 @@ public:
       attrs.id_ = atom("one");
       context ctx(attrs);
 
-      actor_t a = spawn(ctx);
+      actor<threaded> a = spawn(ctx);
       gce::bind(ctx, "tcp://127.0.0.1:14923");
 
       std::vector<aid_t> quiter_list(quiter_num);
@@ -63,7 +63,7 @@ public:
 
   static void two(
     std::vector<aid_t>& quiter_list,
-    aid_t base_id, actor_t a
+    aid_t base_id, actor<threaded> a
     )
   {
     try
@@ -106,7 +106,7 @@ public:
     }
   }
 
-  static void quiter(self_t self)
+  static void quiter(actor<stacked>& self)
   {
     try
     {

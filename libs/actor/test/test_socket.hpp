@@ -62,7 +62,7 @@ public:
     }
   }
 
-  static void echo(self_t self)
+  static void echo(actor<stacked>& self)
   {
     try
     {

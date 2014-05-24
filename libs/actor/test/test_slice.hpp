@@ -24,7 +24,7 @@ public:
   public:
     my_3d_engine(context& ctx, int count_down, fps_rep_t fps = 60)
       : frame_(1000/fps)
-      , cln_(spawn_slice(ctx))
+      , cln_(spawn<nonblocked>(ctx))
       , stopped_(false)
     {
       aid_t counter = spawn(ctx, boost::bind(&slice_ut::cd, _1));
@@ -75,11 +75,11 @@ public:
 
   private:
     milliseconds_t const frame_;
-    slice_t cln_;
+    actor<nonblocked> cln_;
     bool stopped_;
   };
 
-  static void cd(self_t self)
+  static void cd(actor<stacked>& self)
   {
     try
     {

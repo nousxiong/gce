@@ -8,7 +8,7 @@
 ///
 
 #include <gce/actor/context.hpp>
-#include <gce/actor/slice.hpp>
+#include <gce/actor/nonblocking_actor.hpp>
 #include <gce/actor/detail/cache_pool.hpp>
 #include <boost/asio/placeholders.hpp>
 #include <boost/foreach.hpp>
@@ -31,8 +31,8 @@ context::context(attributes attrs)
         attrs_.thread_num_ * attrs_.per_thread_cache_pool_num_
       )
   , cache_queue_size_(cache_pool_size_ + attrs_.slice_num_)
-  , curr_slice_(0)
-  , mixin_list_(cache_pool_size_)
+  , curr_nonblocking_actor_(0)
+  , thread_mapped_actor_list_(cache_pool_size_)
 {
   if (attrs_.ios_)
   {
@@ -44,7 +44,7 @@ context::context(attributes attrs)
   }
   work_ = boost::in_place(boost::ref(*ios_));
   cache_pool_list_.resize(cache_pool_size_, 0);
-  slice_list_.resize(attrs_.slice_num_, 0);
+  nonblocking_actor_list_.resize(attrs_.slice_num_, 0);
 
   try
   {
@@ -56,7 +56,7 @@ context::context(attributes attrs)
 
     for (std::size_t i=0; i<attrs_.slice_num_; ++i, ++index)
     {
-      slice_list_[i] = new slice(*this, index);
+      nonblocking_actor_list_[i] = new nonblocking_actor(*this, index);
     }
     
     base_ = boost::in_place(select_cache_pool());
@@ -84,10 +84,10 @@ context::~context()
   stop();
 }
 ///------------------------------------------------------------------------------
-actor_t context::make_mixin()
+thread_mapped_actor& context::make_thread_mapped_actor()
 {
   thread_mapped_actor* a = new thread_mapped_actor(select_cache_pool());
-  mixin_list_.push(a);
+  thread_mapped_actor_list_.push(a);
   return *a;
 }
 ///------------------------------------------------------------------------------
@@ -103,14 +103,14 @@ detail::cache_pool* context::select_cache_pool()
   return cache_pool_list_[curr_cache_pool];
 }
 ///------------------------------------------------------------------------------
-slice_t context::make_slice()
+nonblocking_actor& context::make_nonblocking_actor()
 {
-  std::size_t i = curr_slice_.fetch_add(1, boost::memory_order_relaxed);
-  if (i >= slice_list_.size())
+  std::size_t i = curr_nonblocking_actor_.fetch_add(1, boost::memory_order_relaxed);
+  if (i >= nonblocking_actor_list_.size())
   {
-    throw std::runtime_error("out of slice fix size");
+    throw std::runtime_error("out of nonblocking_actor fix size");
   }
-  return *(slice_list_[i]);
+  return *(nonblocking_actor_list_[i]);
 }
 ///------------------------------------------------------------------------------
 void context::register_service(match_t name, aid_t svc, std::size_t cache_queue_index)
@@ -125,7 +125,7 @@ void context::register_service(match_t name, aid_t svc, std::size_t cache_queue_
       );
   }
 
-  BOOST_FOREACH(slice* s, slice_list_)
+  BOOST_FOREACH(nonblocking_actor* s, nonblocking_actor_list_)
   {
     s->register_service(name, svc, cache_queue_index);
   }
@@ -143,7 +143,7 @@ void context::deregister_service(match_t name, aid_t svc, std::size_t cache_queu
       );
   }
 
-  BOOST_FOREACH(slice* s, slice_list_)
+  BOOST_FOREACH(nonblocking_actor* s, nonblocking_actor_list_)
   {
     s->deregister_service(name, svc, cache_queue_index);
   }
@@ -161,7 +161,7 @@ void context::register_socket(ctxid_pair_t ctxid_pr, aid_t skt, std::size_t cach
       );
   }
 
-  BOOST_FOREACH(slice* s, slice_list_)
+  BOOST_FOREACH(nonblocking_actor* s, nonblocking_actor_list_)
   {
     s->register_socket(ctxid_pr, skt, cache_queue_index);
   }
@@ -179,7 +179,7 @@ void context::deregister_socket(ctxid_pair_t ctxid_pr, aid_t skt, std::size_t ca
       );
   }
 
-  BOOST_FOREACH(slice* s, slice_list_)
+  BOOST_FOREACH(nonblocking_actor* s, nonblocking_actor_list_)
   {
     s->deregister_socket(ctxid_pr, skt, cache_queue_index);
   }
@@ -231,12 +231,12 @@ void context::stop()
   base_.reset();
 
   thread_mapped_actor* mix = 0;
-  while (mixin_list_.pop(mix))
+  while (thread_mapped_actor_list_.pop(mix))
   {
     delete mix;
   }
 
-  BOOST_FOREACH(slice* s, slice_list_)
+  BOOST_FOREACH(nonblocking_actor* s, nonblocking_actor_list_)
   {
     delete s;
   }

@@ -7,7 +7,7 @@
 /// See https://github.com/nousxiong/gce for latest version.
 ///
 
-#include <gce/actor/slice.hpp>
+#include <gce/actor/nonblocking_actor.hpp>
 #include <gce/actor/detail/cache_pool.hpp>
 #include <gce/actor/context.hpp>
 #include <gce/actor/detail/mailbox.hpp>
@@ -21,7 +21,7 @@
 namespace gce
 {
 ///----------------------------------------------------------------------------
-slice::slice(context& ctx, std::size_t index)
+nonblocking_actor::nonblocking_actor(context& ctx, std::size_t index)
   : base_type(&ctx, ctx.select_cache_pool(), index)
   , cache_queue_list_(ctx_->get_cache_queue_size())
   , pack_queue_(1024)
@@ -31,11 +31,11 @@ slice::slice(context& ctx, std::size_t index)
   user_ = &cac_pool_;
 }
 ///----------------------------------------------------------------------------
-slice::~slice()
+nonblocking_actor::~nonblocking_actor()
 {
 }
 ///----------------------------------------------------------------------------
-aid_t slice::recv(message& msg, match_list_t const& match_list)
+aid_t nonblocking_actor::recv(message& msg, match_list_t const& match_list)
 {
   aid_t sender;
   detail::recv_t rcv;
@@ -63,7 +63,7 @@ aid_t slice::recv(message& msg, match_list_t const& match_list)
   return sender;
 }
 ///----------------------------------------------------------------------------
-aid_t slice::recv(response_t res, message& msg)
+aid_t nonblocking_actor::recv(response_t res, message& msg)
 {
   aid_t sender;
 
@@ -77,7 +77,7 @@ aid_t slice::recv(response_t res, message& msg)
   return sender;
 }
 ///----------------------------------------------------------------------------
-void slice::on_recv(detail::pack& pk, base_type::send_hint)
+void nonblocking_actor::on_recv(detail::pack& pk, base_type::send_hint)
 {
   BOOST_ASSERT(pk.cache_queue_index_ != size_nil);
 
@@ -109,7 +109,7 @@ void slice::on_recv(detail::pack& pk, base_type::send_hint)
   pack_queue_.push(&cac_que.que_.back());
 }
 ///------------------------------------------------------------------------------
-void slice::register_service(match_t name, aid_t svc, std::size_t cache_queue_index)
+void nonblocking_actor::register_service(match_t name, aid_t svc, std::size_t cache_queue_index)
 {
   detail::pack pk;
   pk.cache_queue_index_ = cache_queue_index;
@@ -123,7 +123,7 @@ void slice::register_service(match_t name, aid_t svc, std::size_t cache_queue_in
   on_recv(pk, base_type::sync);
 }
 ///------------------------------------------------------------------------------
-void slice::deregister_service(match_t name, aid_t svc, std::size_t cache_queue_index)
+void nonblocking_actor::deregister_service(match_t name, aid_t svc, std::size_t cache_queue_index)
 {
   detail::pack pk;
   pk.cache_queue_index_ = cache_queue_index;
@@ -137,7 +137,7 @@ void slice::deregister_service(match_t name, aid_t svc, std::size_t cache_queue_
   on_recv(pk, base_type::sync);
 }
 ///------------------------------------------------------------------------------
-void slice::register_socket(ctxid_pair_t ctxid_pr, aid_t skt, std::size_t cache_queue_index)
+void nonblocking_actor::register_socket(ctxid_pair_t ctxid_pr, aid_t skt, std::size_t cache_queue_index)
 {
   detail::pack pk;
   pk.cache_queue_index_ = cache_queue_index;
@@ -151,7 +151,7 @@ void slice::register_socket(ctxid_pair_t ctxid_pr, aid_t skt, std::size_t cache_
   on_recv(pk, base_type::sync);
 }
 ///------------------------------------------------------------------------------
-void slice::deregister_socket(ctxid_pair_t ctxid_pr, aid_t skt, std::size_t cache_queue_index)
+void nonblocking_actor::deregister_socket(ctxid_pair_t ctxid_pr, aid_t skt, std::size_t cache_queue_index)
 {
   detail::pack pk;
   pk.cache_queue_index_ = cache_queue_index;
@@ -165,7 +165,7 @@ void slice::deregister_socket(ctxid_pair_t ctxid_pr, aid_t skt, std::size_t cach
   on_recv(pk, base_type::sync);
 }
 ///----------------------------------------------------------------------------
-void slice::release_pack()
+void nonblocking_actor::release_pack()
 {
   for (std::size_t i=0, size=gc_.size(); i<size; ++i)
   {
@@ -177,11 +177,11 @@ void slice::release_pack()
   }
 }
 ///----------------------------------------------------------------------------
-void slice::move_pack()
+void nonblocking_actor::move_pack()
 {
   gc_.clear();
   gc_.resize(ctx_->get_cache_queue_size(), 0);
-  detail::scope scp(boost::bind(&slice::release_pack, this));
+  detail::scope scp(boost::bind(&nonblocking_actor::release_pack, this));
   detail::pack* pk = 0;
   while (pack_queue_.pop(pk))
   {
@@ -190,7 +190,7 @@ void slice::move_pack()
   }
 }
 ///----------------------------------------------------------------------------
-void slice::handle_recv(detail::pack& pk)
+void nonblocking_actor::handle_recv(detail::pack& pk)
 {
   if (check(pk.recver_, ctxid_, timestamp_))
   {

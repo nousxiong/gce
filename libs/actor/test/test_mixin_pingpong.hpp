@@ -21,7 +21,7 @@ public:
   }
 
 private:
-  static void pong_actor(actor_t pong)
+  static void pong_actor(actor<threaded> pong)
   {
     message msg;
     while (true)
@@ -46,12 +46,12 @@ private:
       attrs.thread_num_ = 2;
       context ctx(attrs);
 
-      actor_t ping = spawn(ctx);
-      actor_t pong = spawn(ctx);
+      actor<threaded> ping = spawn(ctx);
+      actor<threaded> pong = spawn(ctx);
       aid_t pong_id = pong.get_aid();
       boost::thread thr(
         boost::bind(
-          &mixin_pingpong_ut::pong_actor, boost::ref(pong)
+          &mixin_pingpong_ut::pong_actor, pong
           )
         );
 
