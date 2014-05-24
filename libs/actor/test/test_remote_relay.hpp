@@ -97,7 +97,9 @@ private:
       func_list.push_back(
         std::make_pair(
           atom("my_actor"),
-          actor_func_t(boost::bind(&remote_relay_ut::my_actor, _1))
+          make_actor_func<stacked>(
+            boost::bind(&remote_relay_ut::my_actor, _1)
+            )
           )
         );
       connect(ctx, atom("router"), "tcp://127.0.0.1:14924", true, opt, func_list);

@@ -47,7 +47,9 @@ public:
       func_list.push_back(
         std::make_pair(
           atom("echo_client"),
-          actor_func_t(boost::bind(&remote_ut::echo_client, _1))
+          make_actor_func<stacked>(
+            boost::bind(&remote_ut::echo_client, _1)
+            )
           )
         );
       gce::bind(ctx_cln, "tcp://127.0.0.1:14923", false, func_list);

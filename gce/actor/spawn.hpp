@@ -14,9 +14,6 @@
 #include <gce/actor/recv.hpp>
 #include <gce/actor/send.hpp>
 #include <gce/actor/actor.hpp>
-#include <gce/actor/event_based_actor.hpp>
-#include <gce/actor/thread_mapped_actor.hpp>
-#include <gce/actor/nonblocking_actor.hpp>
 #include <gce/actor/context.hpp>
 #include <gce/actor/detail/cache_pool.hpp>
 
@@ -26,12 +23,12 @@ namespace detail
 {
 inline aid_t make_context_switching_actor(
   aid_t sire, cache_pool* user,
-  actor_func_t const& f, std::size_t stack_size
+  actor_func<stacked> const& f, std::size_t stack_size
   )
 {
   context& ctx = user->get_context();
   context_switching_actor* a = user->get_context_switching_actor();
-  a->init(f);
+  a->init(f.f_);
   if (sire)
   {
     send(*a, sire, msg_new_actor);
@@ -42,7 +39,7 @@ inline aid_t make_context_switching_actor(
 
 inline aid_t make_event_based_actor(
   aid_t sire, cache_pool* user,
-  event_func_t const& f, std::size_t stack_size
+  actor_func<evented> const& f, std::size_t stack_size
   )
 {
   context& ctx = user->get_context();
@@ -52,7 +49,7 @@ inline aid_t make_event_based_actor(
   {
     send(*a, sire, msg_new_actor);
   }
-  a->start(f);
+  a->start(f.f_);
   return a->get_aid();
 }
 
@@ -134,7 +131,7 @@ inline aid_t spawn(
     boost::bind(
       &detail::make_context_switching_actor,
       sire.get_aid(), user,
-      actor_func_t(f), stack_size
+      actor_func<stacked>(f), stack_size
       )
     );
   return end_spawn(sire, type);
@@ -152,7 +149,7 @@ inline aid_t spawn(
     boost::bind(
       &detail::make_event_based_actor,
       sire.get_aid(), user,
-      event_func_t(f), stack_size
+      actor_func<evented>(f), stack_size
       )
     );
   return end_spawn(sire, type);
@@ -170,7 +167,7 @@ inline void spawn(
     boost::bind(
       &detail::make_context_switching_actor,
       sire.get_aid(), user,
-      actor_func_t(f), stack_size
+      actor_func<stacked>(f), stack_size
       )
     );
 
@@ -197,7 +194,7 @@ inline void spawn(
     boost::bind(
       &detail::make_event_based_actor,
       sire.get_aid(), user,
-      event_func_t(f), stack_size
+      actor_func<evented>(f), stack_size
       )
     );
 
@@ -395,16 +392,16 @@ inline void spawn(
 
 /// spawn remote context_switching_actor using event_based_actor
 template <typename SpawnHandler>
-inline aid_t spawn(
+inline void spawn(
   stacked,
   actor<evented>& sire, match_t func, SpawnHandler& h,
   match_t ctxid, link_type type, std::size_t stack_size, seconds_t tmo
   )
 {
-  return spawn(spw_stacked, sire, func, h, ctxid, type, stack_size, tmo);
+  spawn(spw_stacked, sire, func, h, ctxid, type, stack_size, tmo);
 }
 
-/// spawn remote event_based_actor using NONE event_based_actor
+/// spawn remote event_based_actor using event_based_actor
 template <typename SpawnHandler>
 inline aid_t spawn(
   evented,
@@ -481,26 +478,26 @@ inline aid_t spawn(
 ///------------------------------------------------------------------------------
 /// spawn a actor using given event_based_actor
 ///------------------------------------------------------------------------------
-template <typename Sire, typename F, typename SpawnHandler>
-inline aid_t spawn(
+template <typename F, typename SpawnHandler>
+inline void spawn(
   actor<evented>& sire, F f, SpawnHandler h,
   link_type type = no_link,
   std::size_t stack_size = default_stacksize()
   )
 {
   detail::cache_pool* user = sire.get_context()->select_cache_pool();
-  return detail::spawn(stacked(), sire, f, h, user, type, stack_size);
+  detail::spawn(stacked(), sire, f, h, user, type, stack_size);
 }
 
 template <typename Tag, typename Sire, typename F, typename SpawnHandler>
-inline aid_t spawn(
+inline void spawn(
   actor<evented>& sire, F f, SpawnHandler h,
   link_type type = no_link,
   std::size_t stack_size = default_stacksize()
   )
 {
   detail::cache_pool* user = sire.get_context()->select_cache_pool();
-  return detail::spawn(Tag(), sire, f, h, user, type, stack_size);
+  detail::spawn(Tag(), sire, f, h, user, type, stack_size);
 }
 ///------------------------------------------------------------------------------
 /// Spawn a thread_mapped_actor

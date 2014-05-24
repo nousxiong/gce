@@ -16,6 +16,10 @@
 #include <gce/actor/thread_mapped_actor.hpp>
 #include <gce/actor/nonblocking_actor.hpp>
 #include <boost/function.hpp>
+#include <boost/mpl/or.hpp>
+#include <boost/mpl/logical.hpp>
+#include <boost/mpl/assert.hpp>
+#include <boost/type_traits/is_same.hpp>
 
 namespace gce
 {
@@ -132,8 +136,6 @@ public:
     return a_.get_cache_pool();
   }
 };
-
-typedef boost::function<void (actor<stacked>&)> actor_func_t;
 
 ///------------------------------------------------------------------------------
 /// threaded actor
@@ -285,12 +287,12 @@ public:
 
   inline response_t request(aid_t recver, message const& m)
   {
-    a_.request(recver, m);
+    return a_.request(recver, m);
   }
 
   inline response_t request(svcid_t recver, message const& m)
   {
-    a_.request(recver, m);
+    return a_.request(recver, m);
   }
 
   inline void reply(aid_t recver, message const& m)
@@ -326,7 +328,7 @@ public:
     a_.wait(hdr, dur);
   }
 
-  inline void quit(exit_code_t exc, std::string const& errmsg)
+  inline void quit(exit_code_t exc = exit_normal, std::string const& errmsg = std::string())
   {
     a_.quit(exc, errmsg);
   }
@@ -357,22 +359,56 @@ public:
   }
 };
 
-typedef boost::function<void (actor<evented>&)> event_func_t;
+template <typename Tag>
+struct actor_func
+{
+  BOOST_MPL_ASSERT((boost::mpl::or_<boost::is_same<Tag, stacked>, boost::is_same<Tag, evented> >));
+
+  actor_func()
+  {
+  }
+
+  template <typename F>
+  actor_func(F f)
+    : f_(f)
+  {
+  }
+
+  template <typename F, typename A>
+  actor_func(F f, A a)
+    : f_(f, a)
+  {
+  }
+
+  boost::function<void (actor<Tag>&)> f_;
+};
+
+template <typename Tag, typename F>
+inline actor_func<Tag> make_actor_func(F f)
+{
+  return actor_func<Tag>(f);
+}
+
+template <typename Tag, typename F, typename A>
+inline actor_func<Tag> make_actor_func(F f, A a)
+{
+  return actor_func<Tag>(f, a);
+}
 
 struct remote_func
 {
-  remote_func(actor_func_t const f)
-    : af_(f)
+  remote_func(actor_func<stacked> const& f)
+    : af_(f.f_)
   {
   }
 
-  remote_func(event_func_t const& f)
-    : ef_(f)
+  remote_func(actor_func<evented> const& f)
+    : ef_(f.f_)
   {
   }
 
-  actor_func_t af_;
-  event_func_t ef_;
+  boost::function<void (actor<stacked>&)> af_;
+  boost::function<void (actor<evented>&)> ef_;
 };
 typedef std::pair<match_t, remote_func> remote_func_t;
 typedef std::vector<remote_func_t> remote_func_list_t;
