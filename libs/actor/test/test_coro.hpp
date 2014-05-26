@@ -20,7 +20,7 @@ public:
   }
 
 private:
-  static void my_actor(actor<stacked>& self, aid_t base)
+  static void my_actor(actor<stackful>& self, aid_t base)
   {
     std::size_t loop_num = 10;
     yield_t yield = self.get_yield();

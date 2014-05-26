@@ -24,8 +24,8 @@
 namespace gce
 {
 class context;
-class context_switching_actor;
-class event_based_actor;
+class coroutine_stackful_actor;
+class coroutine_stackless_actor;
 struct attributes;
 
 namespace detail
@@ -33,8 +33,8 @@ namespace detail
 class socket;
 class acceptor;
 class cache_pool;
-typedef object_pool<context_switching_actor, cache_pool*> context_switching_actor_pool_t;
-typedef object_pool<event_based_actor, cache_pool*> event_based_actor_pool_t;
+typedef object_pool<coroutine_stackful_actor, cache_pool*> context_switching_actor_pool_t;
+typedef object_pool<coroutine_stackless_actor, cache_pool*> event_based_actor_pool_t;
 typedef object_pool<socket, cache_pool*> socket_pool_t;
 typedef object_pool<acceptor, cache_pool*> acceptor_pool_t;
 
@@ -50,13 +50,13 @@ public:
   inline std::size_t get_index() { return index_; }
   inline strand_t& get_strand() { return snd_; }
 
-  context_switching_actor* get_context_switching_actor();
-  event_based_actor* get_event_based_actor();
+  coroutine_stackful_actor* get_context_switching_actor();
+  coroutine_stackless_actor* get_event_based_actor();
   socket* get_socket();
   acceptor* get_acceptor();
 
-  void free_actor(context_switching_actor*);
-  void free_actor(event_based_actor*);
+  void free_actor(coroutine_stackful_actor*);
+  void free_actor(coroutine_stackless_actor*);
   void free_socket(socket*);
   void free_acceptor(acceptor*);
 

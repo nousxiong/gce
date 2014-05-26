@@ -7,7 +7,7 @@
 /// See https://github.com/nousxiong/gce for latest version.
 ///
 
-#include <gce/actor/context_switching_actor.hpp>
+#include <gce/actor/coroutine_stackful_actor.hpp>
 #include <gce/actor/actor.hpp>
 #include <gce/actor/detail/cache_pool.hpp>
 #include <gce/actor/context.hpp>
@@ -24,7 +24,7 @@
 namespace gce
 {
 ///----------------------------------------------------------------------------
-context_switching_actor::context_switching_actor(detail::cache_pool* user)
+coroutine_stackful_actor::coroutine_stackful_actor(detail::cache_pool* user)
   : base_type(&user->get_context(), user, user->get_index())
   , stat_(ready)
   , recving_(false)
@@ -35,11 +35,11 @@ context_switching_actor::context_switching_actor(detail::cache_pool* user)
 {
 }
 ///----------------------------------------------------------------------------
-context_switching_actor::~context_switching_actor()
+coroutine_stackful_actor::~coroutine_stackful_actor()
 {
 }
 ///----------------------------------------------------------------------------
-aid_t context_switching_actor::recv(message& msg, match const& mach)
+aid_t coroutine_stackful_actor::recv(message& msg, match const& mach)
 {
   aid_t sender;
   detail::recv_t rcv;
@@ -89,7 +89,7 @@ aid_t context_switching_actor::recv(message& msg, match const& mach)
   return sender;
 }
 ///----------------------------------------------------------------------------
-aid_t context_switching_actor::recv(response_t res, message& msg, duration_t tmo)
+aid_t coroutine_stackful_actor::recv(response_t res, message& msg, duration_t tmo)
 {
   aid_t sender;
 
@@ -124,19 +124,19 @@ aid_t context_switching_actor::recv(response_t res, message& msg, duration_t tmo
   return sender;
 }
 ///----------------------------------------------------------------------------
-void context_switching_actor::wait(duration_t dur)
+void coroutine_stackful_actor::wait(duration_t dur)
 {
   start_recv_timer(dur);
   yield();
 }
 ///----------------------------------------------------------------------------
-yield_t context_switching_actor::get_yield()
+yield_t coroutine_stackful_actor::get_yield()
 {
   BOOST_ASSERT(yld_);
   return *yld_;
 }
 ///----------------------------------------------------------------------------
-void context_switching_actor::start(std::size_t stack_size)
+void coroutine_stackful_actor::start(std::size_t stack_size)
 {
   if (stack_size < minimum_stacksize())
   {
@@ -150,20 +150,20 @@ void context_switching_actor::start(std::size_t stack_size)
   boost::asio::spawn(
     snd_,
     boost::bind(
-      &context_switching_actor::run, this, _1
+      &coroutine_stackful_actor::run, this, _1
       ),
     boost::coroutines::attributes(stack_size)
     );
 }
 ///----------------------------------------------------------------------------
-void context_switching_actor::init(context_switching_actor::func_t const& f)
+void coroutine_stackful_actor::init(coroutine_stackful_actor::func_t const& f)
 {
-  BOOST_ASSERT_MSG(stat_ == ready, "context_switching_actor status error");
+  BOOST_ASSERT_MSG(stat_ == ready, "coroutine_stackful_actor status error");
   f_ = f;
   base_type::update_aid();
 }
 ///----------------------------------------------------------------------------
-void context_switching_actor::on_free()
+void coroutine_stackful_actor::on_free()
 {
   base_type::on_free();
 
@@ -180,13 +180,13 @@ void context_switching_actor::on_free()
   exit_msg_.clear();
 }
 ///----------------------------------------------------------------------------
-void context_switching_actor::on_recv(detail::pack& pk, base_type::send_hint hint)
+void coroutine_stackful_actor::on_recv(detail::pack& pk, base_type::send_hint hint)
 {
   if (hint == base_type::sync)
   {
     snd_.dispatch(
       boost::bind(
-        &context_switching_actor::handle_recv, this, pk
+        &coroutine_stackful_actor::handle_recv, this, pk
         )
       );
   }
@@ -194,20 +194,20 @@ void context_switching_actor::on_recv(detail::pack& pk, base_type::send_hint hin
   {
     snd_.post(
       boost::bind(
-        &context_switching_actor::handle_recv, this, pk
+        &coroutine_stackful_actor::handle_recv, this, pk
         )
       );
   }
 }
 ///----------------------------------------------------------------------------
-void context_switching_actor::run(yield_t yld)
+void coroutine_stackful_actor::run(yield_t yld)
 {
   yld_ = &yld;
 
   try
   {
     stat_ = on;
-    actor<stacked> aref(*this);
+    actor<stackful> aref(*this);
     f_(aref);
     stop(exit_normal, "exit normal");
   }
@@ -226,9 +226,9 @@ void context_switching_actor::run(yield_t yld)
   }
 }
 ///----------------------------------------------------------------------------
-void context_switching_actor::resume(actor_code ac)
+void coroutine_stackful_actor::resume(actor_code ac)
 {
-  detail::scope scp(boost::bind(&context_switching_actor::free_self, this));
+  detail::scope scp(boost::bind(&coroutine_stackful_actor::free_self, this));
   BOOST_ASSERT(yld_cb_);
   yld_cb_(ac);
 
@@ -238,7 +238,7 @@ void context_switching_actor::resume(actor_code ac)
   }
 }
 ///----------------------------------------------------------------------------
-context_switching_actor::actor_code context_switching_actor::yield()
+coroutine_stackful_actor::actor_code coroutine_stackful_actor::yield()
 {
   BOOST_ASSERT(yld_);
   boost::asio::detail::async_result_init<
@@ -249,7 +249,7 @@ context_switching_actor::actor_code context_switching_actor::yield()
   return init.result.get();
 }
 ///----------------------------------------------------------------------------
-void context_switching_actor::free_self()
+void coroutine_stackful_actor::free_self()
 {
   aid_t self_aid = get_aid();
   base_type::update_aid();
@@ -257,10 +257,10 @@ void context_switching_actor::free_self()
   user_->free_actor(this);
 }
 ///----------------------------------------------------------------------------
-void context_switching_actor::stop(exit_code_t ec, std::string const& exit_msg)
+void coroutine_stackful_actor::stop(exit_code_t ec, std::string const& exit_msg)
 {
-  /// Trigger a context switch, ensure we stop coro using context_switching_actor::resume.
-  snd_.post(boost::bind(&context_switching_actor::resume, this, actor_normal));
+  /// Trigger a context switch, ensure we stop coro using coroutine_stackful_actor::resume.
+  snd_.post(boost::bind(&coroutine_stackful_actor::resume, this, actor_normal));
   yield();
 
   stat_ = off;
@@ -268,20 +268,20 @@ void context_switching_actor::stop(exit_code_t ec, std::string const& exit_msg)
   exit_msg_ = exit_msg;
 }
 ///----------------------------------------------------------------------------
-void context_switching_actor::start_recv_timer(duration_t dur)
+void coroutine_stackful_actor::start_recv_timer(duration_t dur)
 {
   tmr_.expires_from_now(dur);
   tmr_.async_wait(
     snd_.wrap(
       boost::bind(
-        &context_switching_actor::handle_recv_timeout, this,
+        &coroutine_stackful_actor::handle_recv_timeout, this,
         boost::asio::placeholders::error, ++tmr_sid_
         )
       )
     );
 }
 ///----------------------------------------------------------------------------
-void context_switching_actor::handle_recv_timeout(errcode_t const& ec, std::size_t tmr_sid)
+void coroutine_stackful_actor::handle_recv_timeout(errcode_t const& ec, std::size_t tmr_sid)
 {
   if (!ec && tmr_sid == tmr_sid_)
   {
@@ -289,7 +289,7 @@ void context_switching_actor::handle_recv_timeout(errcode_t const& ec, std::size
   }
 }
 ///----------------------------------------------------------------------------
-void context_switching_actor::handle_recv(detail::pack& pk)
+void coroutine_stackful_actor::handle_recv(detail::pack& pk)
 {
   if (check(pk.recver_, ctxid_, timestamp_))
   {

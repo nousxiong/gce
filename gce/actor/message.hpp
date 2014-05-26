@@ -30,9 +30,9 @@
 namespace gce
 {
 class basic_actor;
-class context_switching_actor;
+class coroutine_stackful_actor;
 class thread_mapped_actor;
-class event_based_actor;
+class coroutine_stackless_actor;
 class nonblocking_actor;
 namespace detail
 {
@@ -564,9 +564,9 @@ private:
   detail::buffer_ref buf_;
 
   friend class basic_actor;
-  friend class context_switching_actor;
+  friend class coroutine_stackful_actor;
   friend class thread_mapped_actor;
-  friend class event_based_actor;
+  friend class coroutine_stackless_actor;
   friend class nonblocking_actor;
   friend class detail::socket;
   detail::request_t req_;

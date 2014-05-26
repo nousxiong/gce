@@ -223,7 +223,7 @@ inline aid_t recv(
 }
 ///----------------------------------------------------------------------------
 template <typename RecvHandler>
-inline void recv(actor<evented>& recver, RecvHandler h, match_t type, duration_t tmo = infin)
+inline void recv(actor<stackless>& recver, RecvHandler h, match_t type, duration_t tmo = infin)
 {
   match mach(tmo);
   mach.match_list_.push_back(type);
@@ -309,7 +309,7 @@ inline aid_t recv(
 ///----------------------------------------------------------------------------
 template <typename RecvHandler>
 inline void recv(
-  actor<evented>& recver, RecvHandler h, 
+  actor<stackless>& recver, RecvHandler h, 
   response_t res, duration_t tmo = infin
   )
 {

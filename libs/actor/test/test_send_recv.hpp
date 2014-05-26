@@ -20,7 +20,7 @@ public:
   }
 
 public:
-  static void ping_pong(actor<stacked>& self)
+  static void ping_pong(actor<stackful>& self)
   {
     try
     {

@@ -11,8 +11,8 @@
 #define GCE_ACTOR_ACTOR_HPP
 
 #include <gce/actor/config.hpp>
-#include <gce/actor/context_switching_actor.hpp>
-#include <gce/actor/event_based_actor.hpp>
+#include <gce/actor/coroutine_stackful_actor.hpp>
+#include <gce/actor/coroutine_stackless_actor.hpp>
 #include <gce/actor/thread_mapped_actor.hpp>
 #include <gce/actor/nonblocking_actor.hpp>
 #include <boost/function.hpp>
@@ -30,17 +30,16 @@ class actor {};
 /// staced actor
 ///------------------------------------------------------------------------------
 template <>
-class actor<stacked>
+class actor<stackful>
 {
 public:
-  friend class context_switching_actor;
-  explicit actor(context_switching_actor& a)
+  explicit actor(coroutine_stackful_actor& a)
     : a_(a)
   {
   }
 
 private:
-  context_switching_actor& a_;
+  coroutine_stackful_actor& a_;
 
 public:
   inline void send(aid_t recver, message const& m)
@@ -144,7 +143,6 @@ template <>
 class actor<threaded>
 {
 public:
-  friend class thread_mapped_actor;
   explicit actor(thread_mapped_actor& a)
     : a_(a)
   {
@@ -249,20 +247,19 @@ public:
 };
 
 ///------------------------------------------------------------------------------
-/// evented actor
+/// stackless actor
 ///------------------------------------------------------------------------------
 template <>
-class actor<evented>
+class actor<stackless>
 {
 public:
-  friend class event_based_actor;
-  explicit actor(event_based_actor& a)
+  explicit actor(coroutine_stackless_actor& a)
     : a_(a)
   {
   }
 
 private:
-  event_based_actor& a_;
+  coroutine_stackless_actor& a_;
 
 public:
   inline void send(aid_t recver, message const& m)
@@ -371,7 +368,7 @@ public:
     return a_.spawn(type, func, ctxid, stack_size);
   }
 
-  inline event_based_actor& get_actor()
+  inline coroutine_stackless_actor& get_actor()
   {
     return a_;
   }
@@ -393,7 +390,7 @@ public:
 template <typename Tag>
 struct actor_func
 {
-  BOOST_MPL_ASSERT((boost::mpl::or_<boost::is_same<Tag, stacked>, boost::is_same<Tag, evented> >));
+  BOOST_MPL_ASSERT((boost::mpl::or_<boost::is_same<Tag, stackful>, boost::is_same<Tag, stackless> >));
 
   actor_func()
   {
@@ -428,18 +425,18 @@ inline actor_func<Tag> make_actor_func(F f, A a)
 
 struct remote_func
 {
-  remote_func(actor_func<stacked> const& f)
+  remote_func(actor_func<stackful> const& f)
     : af_(f.f_)
   {
   }
 
-  remote_func(actor_func<evented> const& f)
+  remote_func(actor_func<stackless> const& f)
     : ef_(f.f_)
   {
   }
 
-  boost::function<void (actor<stacked>&)> af_;
-  boost::function<void (actor<evented>&)> ef_;
+  boost::function<void (actor<stackful>&)> af_;
+  boost::function<void (actor<stackless>&)> ef_;
 };
 typedef std::pair<match_t, remote_func> remote_func_t;
 typedef std::vector<remote_func_t> remote_func_list_t;
@@ -451,7 +448,6 @@ template <>
 class actor<nonblocked>
 {
 public:
-  friend class nonblocking_actor;
   explicit actor(nonblocking_actor& a)
     : a_(a)
   {

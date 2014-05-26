@@ -66,7 +66,7 @@ public:
     }
   }
 
-  static void echo(actor<stacked>& self)
+  static void echo(actor<stackful>& self)
   {
     try
     {

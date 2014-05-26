@@ -20,14 +20,14 @@ public:
   }
 
 private:
-  static void my_child(actor<stacked>& self)
+  static void my_child(actor<stackful>& self)
   {
     aid_t aid = recv(self);
     //wait(self, seconds_t(3));
     reply(self, aid);
   }
 
-  static void my_actor(actor<stacked>& self, aid_t base_id)
+  static void my_actor(actor<stackful>& self, aid_t base_id)
   {
     std::size_t size = 50;
     std::vector<response_t> res_list(size);

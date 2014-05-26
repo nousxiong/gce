@@ -106,7 +106,7 @@ public:
     }
   }
 
-  static void quiter(actor<stacked>& self)
+  static void quiter(actor<stackful>& self)
   {
     try
     {

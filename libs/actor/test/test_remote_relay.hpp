@@ -20,7 +20,7 @@ public:
   }
 
 private:
-  static void my_actor(actor<stacked>& self)
+  static void my_actor(actor<stackful>& self)
   {
     message msg;
     aid_t last_id;
@@ -97,7 +97,7 @@ private:
       func_list.push_back(
         std::make_pair(
           atom("my_actor"),
-          make_actor_func<stacked>(
+          make_actor_func<stackful>(
             boost::bind(&remote_relay_ut::my_actor, _1)
             )
           )

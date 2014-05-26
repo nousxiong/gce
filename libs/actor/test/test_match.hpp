@@ -19,13 +19,13 @@ public:
     std::cout << "match_ut end." << std::endl;
   }
 
-  static void my_actor_child(actor<stacked>& self)
+  static void my_actor_child(actor<stackful>& self)
   {
     aid_t aid = recv(self, 3);
     reply(self, aid);
   }
 
-  static void my_actor(actor<stacked>& self, aid_t base_id)
+  static void my_actor(actor<stackful>& self, aid_t base_id)
   {
     std::size_t size = 1;
     std::vector<response_t> res_list(size);

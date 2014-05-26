@@ -20,7 +20,7 @@ public:
   }
 
 private:
-  static void my_actor(actor<stacked>& self, aid_t last_id)
+  static void my_actor(actor<stackful>& self, aid_t last_id)
   {
     message msg;
     aid_t sender = self.recv(msg);
@@ -35,7 +35,7 @@ private:
     }
   }
 
-  static void root(actor<stacked>& self)
+  static void root(actor<stackful>& self)
   {
     std::size_t free_actor_num = 20;
 

@@ -23,11 +23,11 @@ namespace detail
 {
 inline aid_t make_context_switching_actor(
   aid_t sire, cache_pool* user,
-  actor_func<stacked> const& f, std::size_t stack_size
+  actor_func<stackful> const& f, std::size_t stack_size
   )
 {
   context& ctx = user->get_context();
-  context_switching_actor* a = user->get_context_switching_actor();
+  coroutine_stackful_actor* a = user->get_context_switching_actor();
   a->init(f.f_);
   if (sire)
   {
@@ -39,11 +39,11 @@ inline aid_t make_context_switching_actor(
 
 inline aid_t make_event_based_actor(
   aid_t sire, cache_pool* user,
-  actor_func<evented> const& f, std::size_t stack_size
+  actor_func<stackless> const& f, std::size_t stack_size
   )
 {
   context& ctx = user->get_context();
-  event_based_actor* a = user->get_event_based_actor();
+  coroutine_stackless_actor* a = user->get_event_based_actor();
   a->init(f.f_);
   if (sire)
   {
@@ -91,9 +91,9 @@ inline aid_t end_spawn(Sire& sire, link_type type)
   return aid;
 }
 
-typedef boost::function<void (actor<evented>&, aid_t)> spawn_handler_t;
+typedef boost::function<void (actor<stackless>&, aid_t)> spawn_handler_t;
 inline void handle_spawn(
-  actor<evented>& self, aid_t aid,
+  actor<stackless>& self, aid_t aid,
   message msg, link_type type, spawn_handler_t const& hdr
   )
 {
@@ -112,10 +112,10 @@ inline void handle_spawn(
   hdr(self, aid);
 }
 
-/// spawn context_switching_actor using NONE event_based_actor
+/// spawn coroutine_stackful_actor using NONE coroutine_stackless_actor
 template <typename Sire, typename F>
 inline aid_t spawn(
-  stacked,
+  stackful,
   Sire& sire, F f, cache_pool* user,
   link_type type, std::size_t stack_size
   )
@@ -124,16 +124,16 @@ inline aid_t spawn(
     boost::bind(
       &detail::make_context_switching_actor,
       sire.get_aid(), user,
-      make_actor_func<stacked>(f), stack_size
+      make_actor_func<stackful>(f), stack_size
       )
     );
   return end_spawn(sire, type);
 }
 
-/// spawn event_based_actor using NONE event_based_actor
+/// spawn coroutine_stackless_actor using NONE coroutine_stackless_actor
 template <typename Sire, typename F>
 inline aid_t spawn(
-  evented,
+  stackless,
   Sire& sire, F f, cache_pool* user,
   link_type type, std::size_t stack_size
   )
@@ -142,17 +142,17 @@ inline aid_t spawn(
     boost::bind(
       &detail::make_event_based_actor,
       sire.get_aid(), user,
-      make_actor_func<evented>(f), stack_size
+      make_actor_func<stackless>(f), stack_size
       )
     );
   return end_spawn(sire, type);
 }
 
-/// spawn context_switching_actor using event_based_actor
+/// spawn coroutine_stackful_actor using coroutine_stackless_actor
 template <typename F, typename SpawnHandler>
 inline void spawn(
-  stacked,
-  actor<evented>& sire, F f, SpawnHandler h,
+  stackful,
+  actor<stackless>& sire, F f, SpawnHandler h,
   cache_pool* user, link_type type, std::size_t stack_size
   )
 {
@@ -160,7 +160,7 @@ inline void spawn(
     boost::bind(
       &detail::make_context_switching_actor,
       sire.get_aid(), user,
-      make_actor_func<stacked>(f), stack_size
+      make_actor_func<stackful>(f), stack_size
       )
     );
 
@@ -175,11 +175,11 @@ inline void spawn(
     );
 }
 
-/// spawn event_based_actor using event_based_actor
+/// spawn coroutine_stackless_actor using coroutine_stackless_actor
 template <typename F, typename SpawnHandler>
 inline void spawn(
-  evented,
-  actor<evented>& sire, F f, SpawnHandler h,
+  stackless,
+  actor<stackless>& sire, F f, SpawnHandler h,
   cache_pool* user, link_type type, std::size_t stack_size
   )
 {
@@ -187,7 +187,7 @@ inline void spawn(
     boost::bind(
       &detail::make_event_based_actor,
       sire.get_aid(), user,
-      make_actor_func<evented>(f), stack_size
+      make_actor_func<stackless>(f), stack_size
       )
     );
 
@@ -203,7 +203,7 @@ inline void spawn(
 }
 
 inline void handle_remote_spawn(
-  actor<evented>& self, aid_t aid,
+  actor<stackless>& self, aid_t aid,
   message msg, link_type type,
   boost::chrono::system_clock::time_point begin_tp,
   sid_t sid, seconds_t tmo, duration_t curr_tmo,
@@ -325,10 +325,10 @@ inline aid_t spawn(
   return aid;
 }
 
-/// spawn remote context_switching_actor using NONE event_based_actor
+/// spawn remote coroutine_stackful_actor using NONE coroutine_stackless_actor
 template <typename Sire>
 inline aid_t spawn(
-  stacked,
+  stackful,
   Sire& sire, match_t func, match_t ctxid,
   link_type type, std::size_t stack_size, seconds_t tmo
   )
@@ -336,10 +336,10 @@ inline aid_t spawn(
   return spawn(spw_stacked, sire, func, ctxid, type, stack_size, tmo);
 }
 
-/// spawn remote event_based_actor using NONE event_based_actor
+/// spawn remote coroutine_stackless_actor using NONE coroutine_stackless_actor
 template <typename Sire>
 inline aid_t spawn(
-  evented,
+  stackless,
   Sire& sire, match_t func, match_t ctxid,
   link_type type, std::size_t stack_size, seconds_t tmo
   )
@@ -350,7 +350,7 @@ inline aid_t spawn(
 template <typename SpawnHandler>
 inline void spawn(
   spawn_type spw,
-  actor<evented>& sire, match_t func, SpawnHandler h,
+  actor<stackless>& sire, match_t func, SpawnHandler h,
   match_t ctxid = ctxid_nil,
   link_type type = no_link,
   std::size_t stack_size = default_stacksize(),
@@ -376,22 +376,22 @@ inline void spawn(
     );
 }
 
-/// spawn remote context_switching_actor using event_based_actor
+/// spawn remote coroutine_stackful_actor using coroutine_stackless_actor
 template <typename SpawnHandler>
 inline void spawn(
-  stacked,
-  actor<evented>& sire, match_t func, SpawnHandler h,
+  stackful,
+  actor<stackless>& sire, match_t func, SpawnHandler h,
   match_t ctxid, link_type type, std::size_t stack_size, seconds_t tmo
   )
 {
   spawn(spw_stacked, sire, func, h, ctxid, type, stack_size, tmo);
 }
 
-/// spawn remote event_based_actor using event_based_actor
+/// spawn remote coroutine_stackless_actor using coroutine_stackless_actor
 template <typename SpawnHandler>
 inline aid_t spawn(
-  evented,
-  actor<evented>& sire, match_t func, SpawnHandler& h,
+  stackless,
+  actor<stackless>& sire, match_t func, SpawnHandler& h,
   match_t ctxid, link_type type, std::size_t stack_size, seconds_t tmo
   )
 {
@@ -422,7 +422,7 @@ inline aid_t spawn(
   )
 {
   detail::cache_pool* user = sire.get_context()->select_cache_pool();
-  return detail::spawn(stacked(), sire, f, user, type, stack_size);
+  return detail::spawn(stackful(), sire, f, user, type, stack_size);
 }
 
 template <typename Tag, typename Sire, typename F>
@@ -436,23 +436,23 @@ inline aid_t spawn(
   return detail::spawn(Tag(), sire, f, user, type, stack_size);
 }
 ///------------------------------------------------------------------------------
-/// Spawn a actor using given context_switching_actor
+/// Spawn a actor using given coroutine_stackful_actor
 ///------------------------------------------------------------------------------
 template <typename F>
 inline aid_t spawn(
-  actor<stacked>& sire, F f,
+  actor<stackful>& sire, F f,
   link_type type = no_link,
   bool sync_sire = false,
   std::size_t stack_size = default_stacksize()
   )
 {
   detail::cache_pool* user = detail::select_cache_pool(sire, sync_sire);
-  return detail::spawn(stacked(), sire, f, user, type, stack_size);
+  return detail::spawn(stackful(), sire, f, user, type, stack_size);
 }
 
 template <typename Tag, typename F>
 inline aid_t spawn(
-  actor<stacked>& sire, F f,
+  actor<stackful>& sire, F f,
   link_type type = no_link,
   bool sync_sire = false,
   std::size_t stack_size = default_stacksize()
@@ -462,22 +462,22 @@ inline aid_t spawn(
   return detail::spawn(Tag(), sire, f, user, type, stack_size);
 }
 ///------------------------------------------------------------------------------
-/// spawn a actor using given event_based_actor
+/// spawn a actor using given coroutine_stackless_actor
 ///------------------------------------------------------------------------------
 template <typename F>
 inline void spawn(
-  actor<evented>& sire, F f, aid_t& aid,
+  actor<stackless>& sire, F f, aid_t& aid,
   link_type type = no_link,
   bool sync_sire = false,
   std::size_t stack_size = default_stacksize()
   )
 {
-  event_based_actor& a = sire.get_actor();
+  coroutine_stackless_actor& a = sire.get_actor();
   detail::cache_pool* user = detail::select_cache_pool(sire, sync_sire);
   detail::spawn(
-    evented(), sire, f, 
+    stackless(), sire, f, 
     boost::bind(
-      &event_based_actor::spawn_handler, &a, 
+      &coroutine_stackless_actor::spawn_handler, &a, 
       _1, _2, boost::ref(aid)
       ), 
     user, type, stack_size
@@ -506,7 +506,7 @@ inline actor<nonblocked> spawn(actor<threaded>& a)
   return actor<nonblocked>(r);
 }
 ///------------------------------------------------------------------------------
-/// Spawn a actor on remote context using NONE event_based_actor
+/// Spawn a actor on remote context using NONE coroutine_stackless_actor
 ///------------------------------------------------------------------------------
 template <typename Sire>
 inline aid_t spawn(
@@ -517,7 +517,7 @@ inline aid_t spawn(
   seconds_t tmo = seconds_t(GCE_DEFAULT_REQUEST_TIMEOUT_SEC)
   )
 {
-  return detail::spawn(stacked(), sire, func, ctxid, type, stack_size, tmo);
+  return detail::spawn(stackful(), sire, func, ctxid, type, stack_size, tmo);
 }
 
 template <typename Tag, typename Sire>
@@ -532,21 +532,21 @@ inline aid_t spawn(
   return detail::spawn(Tag(), sire, func, ctxid, type, stack_size, tmo);
 }
 ///------------------------------------------------------------------------------
-/// Spawn a actor on remote context using event_based_actor
+/// Spawn a actor on remote context using coroutine_stackless_actor
 ///------------------------------------------------------------------------------
 inline void spawn(
-  actor<evented>& sire, match_t func, aid_t& aid,
+  actor<stackless>& sire, match_t func, aid_t& aid,
   match_t ctxid = ctxid_nil,
   link_type type = no_link,
   std::size_t stack_size = default_stacksize(),
   seconds_t tmo = seconds_t(GCE_DEFAULT_REQUEST_TIMEOUT_SEC)
   )
 {
-  event_based_actor& a = sire.get_actor();
+  coroutine_stackless_actor& a = sire.get_actor();
   detail::spawn(
-    stacked(), sire, func, 
+    stackful(), sire, func, 
     boost::bind(
-      &event_based_actor::spawn_handler, &a, 
+      &coroutine_stackless_actor::spawn_handler, &a, 
       _1, _2, boost::ref(aid)
       ), 
     ctxid, type, stack_size, tmo
@@ -555,7 +555,7 @@ inline void spawn(
 
 template <typename Tag, typename SpawnHandler>
 inline void spawn(
-  actor<evented>& sire, match_t func, SpawnHandler h,
+  actor<stackless>& sire, match_t func, SpawnHandler h,
   match_t ctxid = ctxid_nil,
   link_type type = no_link,
   std::size_t stack_size = default_stacksize(),

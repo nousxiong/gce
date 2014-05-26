@@ -22,7 +22,7 @@ inline void wait(Waiter& waiter, duration_t dur)
 }
 
 template <typename WaitHandler>
-inline void wait(actor<evented>& waiter, WaitHandler h, duration_t dur)
+inline void wait(actor<stackless>& waiter, WaitHandler h, duration_t dur)
 {
   return waiter.wait(h, dur);
 }

@@ -93,9 +93,9 @@ inline void connect(
     );
 }
 
-typedef boost::function<void (actor<evented>&, bool)> conn_handler_t;
+typedef boost::function<void (actor<stackless>&, bool)> conn_handler_t;
 inline void handle_connect(
-  actor<evented>& self, aid_t skt, 
+  actor<stackless>& self, aid_t skt, 
   message msg, detail::cache_pool* sire, 
   conn_handler_t const& hdr
   )
@@ -112,9 +112,9 @@ inline void handle_connect(
   hdr(self, ret);
 }
 
-typedef boost::function<void (actor<evented>&, bool)> bind_handler_t;
+typedef boost::function<void (actor<stackless>&, bool)> bind_handler_t;
 inline void handle_bind(
-  actor<evented>& self, aid_t acpr, 
+  actor<stackless>& self, aid_t acpr, 
   message msg, bind_handler_t const& hdr
   )
 {
@@ -129,7 +129,7 @@ inline void handle_bind(
 }
 
 ///------------------------------------------------------------------------------
-/// Connect using given NONE event_based_actor
+/// Connect using given NONE coroutine_stackless_actor
 ///------------------------------------------------------------------------------
 template <typename Sire>
 inline void connect(
@@ -153,7 +153,7 @@ inline void connect(
 }
 
 inline void connect(
-  actor<stacked>& sire,
+  actor<stackful>& sire,
   ctxid_t target, /// connect target
   std::string const& ep, /// endpoint
   bool target_is_router = false, /// if target is router, set it true
@@ -169,11 +169,11 @@ inline void connect(
 }
 
 ///------------------------------------------------------------------------------
-/// Connect using given event_based_actor
+/// Connect using given coroutine_stackless_actor
 ///------------------------------------------------------------------------------
 template <typename ConnHandler>
 inline void connect(
-  actor<evented>& sire,
+  actor<stackless>& sire,
   ctxid_t target, /// connect target
   std::string const& ep, /// endpoint
   ConnHandler h,
@@ -197,7 +197,7 @@ inline void connect(
 }
 
 ///------------------------------------------------------------------------------
-/// Bind using given NONE event_based_actor
+/// Bind using given NONE coroutine_stackless_actor
 ///------------------------------------------------------------------------------
 template <typename Sire>
 inline void bind(
@@ -220,11 +220,11 @@ inline void bind(
 }
 
 ///------------------------------------------------------------------------------
-/// Bind using given event_based_actor
+/// Bind using given coroutine_stackless_actor
 ///------------------------------------------------------------------------------
 template <typename BindHandler>
 inline void bind(
-  actor<evented>& sire,
+  actor<stackless>& sire,
   std::string const& ep, /// endpoint
   BindHandler h,
   bool is_router = false, /// if this bind is router, set it true

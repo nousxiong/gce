@@ -7,8 +7,8 @@
 /// See https://github.com/nousxiong/gce for latest version.
 ///
 
-#ifndef GCE_ACTOR_EVENT_BASED_ACTOR_HPP
-#define GCE_ACTOR_EVENT_BASED_ACTOR_HPP
+#ifndef GCE_ACTOR_COROUTINE_STACKLESS_ACTOR_HPP
+#define GCE_ACTOR_COROUTINE_STACKLESS_ACTOR_HPP
 
 #include <gce/actor/config.hpp>
 #include <gce/actor/basic_actor.hpp>
@@ -31,8 +31,8 @@ class response_t;
 
 template <class> class actor;
 
-class event_based_actor
-  : public detail::object_pool<event_based_actor, detail::cache_pool*>::object
+class coroutine_stackless_actor
+  : public detail::object_pool<coroutine_stackless_actor, detail::cache_pool*>::object
   , public basic_actor
 {
   typedef basic_actor base_type;
@@ -94,14 +94,14 @@ public:
     base_type::pri_monitor(target);
   }
 
-  typedef actor<evented>& self_ref_t;
+  typedef actor<stackless>& self_ref_t;
   typedef boost::function<void (self_ref_t)> func_t;
   typedef boost::function<void (self_ref_t, aid_t, message)> recv_handler_t;
   typedef boost::function<void (self_ref_t)> wait_handler_t;
 
 public:
-  explicit event_based_actor(detail::cache_pool*);
-  ~event_based_actor();
+  explicit coroutine_stackless_actor(detail::cache_pool*);
+  ~coroutine_stackless_actor();
 
 public:
   void recv(aid_t& sender, message& msg, match const& mach = match());
@@ -180,8 +180,8 @@ private:
   std::size_t tmr_sid_;
 };
 
-typedef event_based_actor::recv_handler_t recv_handler_t;
-typedef event_based_actor::wait_handler_t wait_handler_t;
+typedef coroutine_stackless_actor::recv_handler_t recv_handler_t;
+typedef coroutine_stackless_actor::wait_handler_t wait_handler_t;
 }
 
-#endif /// GCE_ACTOR_EVENT_BASED_ACTOR_HPP
+#endif /// GCE_ACTOR_COROUTINE_STACKLESS_ACTOR_HPP

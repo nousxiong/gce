@@ -20,7 +20,7 @@ public:
   }
 
 private:
-  static void my_child(actor<stacked>& self)
+  static void my_child(actor<stackful>& self)
   {
     aid_t aid = recv(self);
     reply(self, aid);

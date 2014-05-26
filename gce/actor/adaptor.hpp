@@ -19,7 +19,7 @@ namespace gce
 class adaptor
 {
 public:
-  adaptor(actor<evented>& a, errcode_t& ec, std::size_t& bytes_transferred)
+  adaptor(actor<stackless>& a, errcode_t& ec, std::size_t& bytes_transferred)
     : a_(a)
     , ec_(ec)
     , bytes_transferred_(&bytes_transferred)
@@ -28,7 +28,7 @@ public:
   {
   }
 
-  adaptor(actor<evented>& a, errcode_t& ec, boost::asio::ip::tcp::resolver::iterator& itr)
+  adaptor(actor<stackless>& a, errcode_t& ec, boost::asio::ip::tcp::resolver::iterator& itr)
     : a_(a)
     , ec_(ec)
     , bytes_transferred_(0)
@@ -37,7 +37,7 @@ public:
   {
   }
 
-  adaptor(actor<evented>& a, errcode_t& ec)
+  adaptor(actor<stackless>& a, errcode_t& ec)
     : a_(a)
     , ec_(ec)
     , bytes_transferred_(0)
@@ -46,7 +46,7 @@ public:
   {
   }
 
-  adaptor(actor<evented>& a, errcode_t& ec, int& signal_number)
+  adaptor(actor<stackless>& a, errcode_t& ec, int& signal_number)
     : a_(a)
     , ec_(ec)
     , bytes_transferred_(0)
@@ -87,7 +87,7 @@ public:
   }
 
 private:
-  actor<evented> a_;
+  actor<stackless> a_;
   errcode_t& ec_;
   std::size_t* bytes_transferred_;
   boost::asio::ip::tcp::resolver::iterator* itr_;

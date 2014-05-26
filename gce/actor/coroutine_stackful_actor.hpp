@@ -7,8 +7,8 @@
 /// See https://github.com/nousxiong/gce for latest version.
 ///
 
-#ifndef GCE_ACTOR_CONTEXT_SWITCHING_ACTOR_HPP
-#define GCE_ACTOR_CONTEXT_SWITCHING_ACTOR_HPP
+#ifndef GCE_ACTOR_COROUTINE_STACKFUL_ACTOR_HPP
+#define GCE_ACTOR_COROUTINE_STACKFUL_ACTOR_HPP
 
 #include <gce/actor/config.hpp>
 #include <gce/actor/basic_actor.hpp>
@@ -30,8 +30,8 @@ class response_t;
 
 template <class> class actor;
 
-class context_switching_actor
-  : public detail::object_pool<context_switching_actor, detail::cache_pool*>::object
+class coroutine_stackful_actor
+  : public detail::object_pool<coroutine_stackful_actor, detail::cache_pool*>::object
   , public basic_actor
 {
   typedef basic_actor base_type;
@@ -98,12 +98,12 @@ public:
     base_type::pri_monitor(target);
   }
 
-  typedef actor<stacked>& self_ref_t;
+  typedef actor<stackful>& self_ref_t;
   typedef boost::function<void (self_ref_t)> func_t;
 
 public:
-  explicit context_switching_actor(detail::cache_pool*);
-  ~context_switching_actor();
+  explicit coroutine_stackful_actor(detail::cache_pool*);
+  ~coroutine_stackful_actor();
 
 public:
   aid_t recv(message&, match const& mach = match());
@@ -164,4 +164,4 @@ private:
 };
 }
 
-#endif /// GCE_ACTOR_CONTEXT_SWITCHING_ACTOR_HPP
+#endif /// GCE_ACTOR_COROUTINE_STACKFUL_ACTOR_HPP

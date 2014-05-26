@@ -7,7 +7,7 @@
 /// See https://github.com/nousxiong/gce for latest version.
 ///
 
-#include <gce/actor/event_based_actor.hpp>
+#include <gce/actor/coroutine_stackless_actor.hpp>
 #include <gce/actor/actor.hpp>
 #include <gce/actor/detail/cache_pool.hpp>
 #include <gce/actor/context.hpp>
@@ -21,7 +21,7 @@
 namespace gce
 {
 ///----------------------------------------------------------------------------
-event_based_actor::event_based_actor(detail::cache_pool* user)
+coroutine_stackless_actor::coroutine_stackless_actor(detail::cache_pool* user)
   : base_type(&user->get_context(), user, user->get_index())
   , stat_(ready)
   , tmr_(ctx_->get_io_service())
@@ -29,22 +29,22 @@ event_based_actor::event_based_actor(detail::cache_pool* user)
 {
 }
 ///----------------------------------------------------------------------------
-event_based_actor::~event_based_actor()
+coroutine_stackless_actor::~coroutine_stackless_actor()
 {
 }
 ///----------------------------------------------------------------------------
-void event_based_actor::recv(aid_t& sender, message& msg, match const& mach)
+void coroutine_stackless_actor::recv(aid_t& sender, message& msg, match const& mach)
 {
   recv(
     boost::bind(
-      &event_based_actor::recv_handler, this, _1, _2, _3, 
+      &coroutine_stackless_actor::recv_handler, this, _1, _2, _3, 
       boost::ref(sender), boost::ref(msg)
       ), 
     mach
     );
 }
 ///----------------------------------------------------------------------------
-aid_t event_based_actor::recv(message& msg, match_list_t const& match_list)
+aid_t coroutine_stackless_actor::recv(message& msg, match_list_t const& match_list)
 {
   aid_t sender;
   detail::recv_t rcv;
@@ -57,11 +57,11 @@ aid_t event_based_actor::recv(message& msg, match_list_t const& match_list)
   return sender;
 }
 ///----------------------------------------------------------------------------
-void event_based_actor::recv(response_t res, aid_t& sender, message& msg, duration_t tmo)
+void coroutine_stackless_actor::recv(response_t res, aid_t& sender, message& msg, duration_t tmo)
 {
   recv(
     boost::bind(
-      &event_based_actor::recv_handler, this, _1, _2, _3, 
+      &coroutine_stackless_actor::recv_handler, this, _1, _2, _3, 
       boost::ref(sender), boost::ref(msg)
       ), 
     res,
@@ -69,7 +69,7 @@ void event_based_actor::recv(response_t res, aid_t& sender, message& msg, durati
     );
 }
 ///----------------------------------------------------------------------------
-aid_t event_based_actor::recv(response_t res, message& msg)
+aid_t coroutine_stackless_actor::recv(response_t res, message& msg)
 {
   aid_t sender;
 
@@ -81,18 +81,18 @@ aid_t event_based_actor::recv(response_t res, message& msg)
   return sender;
 }
 ///----------------------------------------------------------------------------
-void event_based_actor::wait(duration_t dur)
+void coroutine_stackless_actor::wait(duration_t dur)
 {
   wait(
     boost::bind(
-      &event_based_actor::wait_handler, this, _1
+      &coroutine_stackless_actor::wait_handler, this, _1
       ),
     dur
     );
 }
 ///----------------------------------------------------------------------------
-void event_based_actor::recv(
-  event_based_actor::recv_handler_t const& f, match const& mach
+void coroutine_stackless_actor::recv(
+  coroutine_stackless_actor::recv_handler_t const& f, match const& mach
   )
 {
   aid_t sender;
@@ -118,14 +118,14 @@ void event_based_actor::recv(
     sender = end_recv(rcv, msg);
   }
 
-  actor<evented> aref(*this);
+  actor<stackless> aref(*this);
   snd_.post(
     boost::bind<void>(f, aref, sender, msg)
     );
 }
 ///----------------------------------------------------------------------------
-void event_based_actor::recv(
-  event_based_actor::recv_handler_t const& f, response_t res, duration_t tmo
+void coroutine_stackless_actor::recv(
+  coroutine_stackless_actor::recv_handler_t const& f, response_t res, duration_t tmo
   )
 {
   aid_t sender;
@@ -149,39 +149,39 @@ void event_based_actor::recv(
     sender = end_recv(res);
   }
 
-  actor<evented> aref(*this);
+  actor<stackless> aref(*this);
   snd_.post(
     boost::bind<void>(f, aref, sender, msg)
     );
 }
 ///----------------------------------------------------------------------------
-void event_based_actor::wait(wait_handler_t const& f, duration_t dur)
+void coroutine_stackless_actor::wait(wait_handler_t const& f, duration_t dur)
 {
   start_wait_timer(dur, f);
   wait_h_ = f;
 }
 ///----------------------------------------------------------------------------
-void event_based_actor::quit(exit_code_t exc, std::string const& errmsg)
+void coroutine_stackless_actor::quit(exit_code_t exc, std::string const& errmsg)
 {
   aid_t self_aid = get_aid();
   base_type::update_aid();
-  snd_.post(boost::bind(&event_based_actor::stop, this, self_aid, exc, errmsg));
+  snd_.post(boost::bind(&coroutine_stackless_actor::stop, this, self_aid, exc, errmsg));
 }
 ///----------------------------------------------------------------------------
-void event_based_actor::init(event_based_actor::func_t const& f)
+void coroutine_stackless_actor::init(coroutine_stackless_actor::func_t const& f)
 {
-  BOOST_ASSERT_MSG(stat_ == ready, "event_based_actor status error");
+  BOOST_ASSERT_MSG(stat_ == ready, "coroutine_stackless_actor status error");
   base_type::update_aid();
   f_ = f;
 }
 ///----------------------------------------------------------------------------
-void event_based_actor::start()
+void coroutine_stackless_actor::start()
 {
   stat_ = on;
-  snd_.post(boost::bind(&event_based_actor::run, this));
+  snd_.post(boost::bind(&coroutine_stackless_actor::run, this));
 }
 ///----------------------------------------------------------------------------
-void event_based_actor::on_free()
+void coroutine_stackless_actor::on_free()
 {
   base_type::on_free();
 
@@ -196,13 +196,13 @@ void event_based_actor::on_free()
   recving_res_ = response_t();
 }
 ///----------------------------------------------------------------------------
-void event_based_actor::on_recv(detail::pack& pk, base_type::send_hint hint)
+void coroutine_stackless_actor::on_recv(detail::pack& pk, base_type::send_hint hint)
 {
   if (hint == base_type::sync)
   {
     snd_.dispatch(
       boost::bind(
-        &event_based_actor::handle_recv, this, pk
+        &coroutine_stackless_actor::handle_recv, this, pk
         )
       );
   }
@@ -210,23 +210,23 @@ void event_based_actor::on_recv(detail::pack& pk, base_type::send_hint hint)
   {
     snd_.post(
       boost::bind(
-        &event_based_actor::handle_recv, this, pk
+        &coroutine_stackless_actor::handle_recv, this, pk
         )
       );
   }
 }
 ///----------------------------------------------------------------------------
-void event_based_actor::spawn_handler(self_ref_t, aid_t sender, aid_t& osender)
+void coroutine_stackless_actor::spawn_handler(self_ref_t, aid_t sender, aid_t& osender)
 {
   osender = sender;
   run();
 }
 ///----------------------------------------------------------------------------
-void event_based_actor::run()
+void coroutine_stackless_actor::run()
 {
   try
   {
-    actor<evented> aref(*this);
+    actor<stackless> aref(*this);
     f_(aref);
     if (coro_.is_complete())
     {
@@ -239,53 +239,53 @@ void event_based_actor::run()
   }
 }
 ///----------------------------------------------------------------------------
-void event_based_actor::stop(aid_t self_aid, exit_code_t ec, std::string const& exit_msg)
+void coroutine_stackless_actor::stop(aid_t self_aid, exit_code_t ec, std::string const& exit_msg)
 {
   stat_ = off;
   base_type::send_exit(self_aid, ec, exit_msg);
   user_->free_actor(this);
 }
 ///----------------------------------------------------------------------------
-void event_based_actor::start_recv_timer(duration_t dur, recv_handler_t const& hdr)
+void coroutine_stackless_actor::start_recv_timer(duration_t dur, recv_handler_t const& hdr)
 {
   tmr_.expires_from_now(dur);
   tmr_.async_wait(
     snd_.wrap(
       boost::bind(
-        &event_based_actor::handle_recv_timeout, this,
+        &coroutine_stackless_actor::handle_recv_timeout, this,
         boost::asio::placeholders::error, ++tmr_sid_, hdr
         )
       )
     );
 }
 ///----------------------------------------------------------------------------
-void event_based_actor::start_res_timer(duration_t dur, recv_handler_t const& hdr)
+void coroutine_stackless_actor::start_res_timer(duration_t dur, recv_handler_t const& hdr)
 {
   tmr_.expires_from_now(dur);
   tmr_.async_wait(
     snd_.wrap(
       boost::bind(
-        &event_based_actor::handle_res_timeout, this,
+        &coroutine_stackless_actor::handle_res_timeout, this,
         boost::asio::placeholders::error, ++tmr_sid_, hdr
         )
       )
     );
 }
 ///----------------------------------------------------------------------------
-void event_based_actor::start_wait_timer(duration_t dur, wait_handler_t const& hdr)
+void coroutine_stackless_actor::start_wait_timer(duration_t dur, wait_handler_t const& hdr)
 {
   tmr_.expires_from_now(dur);
   tmr_.async_wait(
     snd_.wrap(
       boost::bind(
-        &event_based_actor::handle_wait_timeout, this,
+        &coroutine_stackless_actor::handle_wait_timeout, this,
         boost::asio::placeholders::error, ++tmr_sid_, hdr
         )
       )
     );
 }
 ///----------------------------------------------------------------------------
-void event_based_actor::handle_recv_timeout(
+void coroutine_stackless_actor::handle_recv_timeout(
   errcode_t const& ec, std::size_t tmr_sid, recv_handler_t const& hdr
   )
 {
@@ -296,7 +296,7 @@ void event_based_actor::handle_recv_timeout(
     curr_match_.clear();
     try
     {
-      actor<evented> aref(*this);
+      actor<stackless> aref(*this);
       hdr(aref, aid_t(), message());
     }
     catch (std::exception& ex)
@@ -306,7 +306,7 @@ void event_based_actor::handle_recv_timeout(
   }
 }
 ///----------------------------------------------------------------------------
-void event_based_actor::handle_res_timeout(
+void coroutine_stackless_actor::handle_res_timeout(
   errcode_t const& ec, std::size_t tmr_sid, recv_handler_t const& hdr
   )
 {
@@ -317,7 +317,7 @@ void event_based_actor::handle_res_timeout(
     curr_match_.clear();
     try
     {
-      actor<evented> aref(*this);
+      actor<stackless> aref(*this);
       hdr(aref, aid_t(), message());
     }
     catch (std::exception& ex)
@@ -327,7 +327,7 @@ void event_based_actor::handle_res_timeout(
   }
 }
 ///----------------------------------------------------------------------------
-void event_based_actor::handle_wait_timeout(
+void coroutine_stackless_actor::handle_wait_timeout(
   errcode_t const& ec, std::size_t tmr_sid, wait_handler_t const& hdr
   )
 {
@@ -337,7 +337,7 @@ void event_based_actor::handle_wait_timeout(
     wait_h_.clear();
     try
     {
-      actor<evented> aref(*this);
+      actor<stackless> aref(*this);
       hdr(aref);
     }
     catch (std::exception& ex)
@@ -347,7 +347,7 @@ void event_based_actor::handle_wait_timeout(
   }
 }
 ///----------------------------------------------------------------------------
-void event_based_actor::handle_recv(detail::pack& pk)
+void coroutine_stackless_actor::handle_recv(detail::pack& pk)
 {
   if (check(pk.recver_, get_aid().ctxid_, user_->get_context().get_timestamp()))
   {
@@ -422,7 +422,7 @@ void event_based_actor::handle_recv(detail::pack& pk)
       {
         try
         {
-          actor<evented> aref(*this);
+          actor<stackless> aref(*this);
           hdr(aref, sender, msg);
         }
         catch (std::exception& ex)
@@ -448,7 +448,7 @@ void event_based_actor::handle_recv(detail::pack& pk)
   }
 }
 ///----------------------------------------------------------------------------
-aid_t event_based_actor::end_recv(detail::recv_t& rcv, message& msg)
+aid_t coroutine_stackless_actor::end_recv(detail::recv_t& rcv, message& msg)
 {
   aid_t sender;
   if (aid_t* aid = boost::get<aid_t>(&rcv))
@@ -467,12 +467,12 @@ aid_t event_based_actor::end_recv(detail::recv_t& rcv, message& msg)
   return sender;
 }
 ///----------------------------------------------------------------------------
-aid_t event_based_actor::end_recv(response_t& res)
+aid_t coroutine_stackless_actor::end_recv(response_t& res)
 {
   return res.get_aid();
 }
 ///----------------------------------------------------------------------------
-void event_based_actor::recv_handler(
+void coroutine_stackless_actor::recv_handler(
   self_ref_t, aid_t sender, message msg, aid_t& osender, message& omsg
   )
 {
@@ -481,7 +481,7 @@ void event_based_actor::recv_handler(
   run();
 }
 ///----------------------------------------------------------------------------
-void event_based_actor::wait_handler(self_ref_t)
+void coroutine_stackless_actor::wait_handler(self_ref_t)
 {
   run();
 }

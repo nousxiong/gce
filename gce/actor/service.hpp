@@ -38,22 +38,22 @@ inline void deregister_service(Actor& a, match_t name)
 }
 }
 
-inline void register_service(actor<stacked>& self, match_t name)
+inline void register_service(actor<stackful>& self, match_t name)
 {
   detail::register_service(self, name);
 }
 
-inline void deregister_service(actor<stacked>& self, match_t name)
+inline void deregister_service(actor<stackful>& self, match_t name)
 {
   detail::deregister_service(self, name);
 }
 
-inline void register_service(actor<evented>& self, match_t name)
+inline void register_service(actor<stackless>& self, match_t name)
 {
   detail::register_service(self, name);
 }
 
-inline void deregister_service(actor<evented>& self, match_t name)
+inline void deregister_service(actor<stackless>& self, match_t name)
 {
   detail::deregister_service(self, name);
 }

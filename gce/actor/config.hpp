@@ -67,8 +67,8 @@ enum link_type
 };
 
 /// actor type tags
-struct stacked {};
-struct evented {};
+struct stackful {};
+struct stackless {};
 struct threaded {};
 struct nonblocked {};
 

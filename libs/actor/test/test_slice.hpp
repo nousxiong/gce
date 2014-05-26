@@ -79,7 +79,7 @@ public:
     bool stopped_;
   };
 
-  static void cd(actor<stacked>& self)
+  static void cd(actor<stackful>& self)
   {
     try
     {

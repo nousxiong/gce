@@ -9,7 +9,7 @@
 
 #include <gce/actor/detail/cache_pool.hpp>
 #include <gce/actor/context.hpp>
-#include <gce/actor/context_switching_actor.hpp>
+#include <gce/actor/coroutine_stackful_actor.hpp>
 #include <gce/actor/detail/socket.hpp>
 #include <gce/actor/detail/acceptor.hpp>
 #include <boost/foreach.hpp>
@@ -58,12 +58,12 @@ cache_pool::~cache_pool()
 {
 }
 ///------------------------------------------------------------------------------
-context_switching_actor* cache_pool::get_context_switching_actor()
+coroutine_stackful_actor* cache_pool::get_context_switching_actor()
 {
   return context_switching_actor_pool_->get();
 }
 ///------------------------------------------------------------------------------
-event_based_actor* cache_pool::get_event_based_actor()
+coroutine_stackless_actor* cache_pool::get_event_based_actor()
 {
   return event_based_actor_pool_->get();
 }
@@ -78,12 +78,12 @@ acceptor* cache_pool::get_acceptor()
   return acceptor_pool_->get();
 }
 ///------------------------------------------------------------------------------
-void cache_pool::free_actor(context_switching_actor* a)
+void cache_pool::free_actor(coroutine_stackful_actor* a)
 {
   context_switching_actor_pool_->free(a);
 }
 ///------------------------------------------------------------------------------
-void cache_pool::free_actor(event_based_actor* a)
+void cache_pool::free_actor(coroutine_stackless_actor* a)
 {
   event_based_actor_pool_->free(a);
 }

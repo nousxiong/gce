@@ -21,7 +21,7 @@ public:
   }
 
 private:
-  static void pong_actor(actor<stacked>& self)
+  static void pong_actor(actor<stackful>& self)
   {
     message msg;
     while (true)

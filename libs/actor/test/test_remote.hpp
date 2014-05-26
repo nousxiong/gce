@@ -47,7 +47,7 @@ public:
       func_list.push_back(
         std::make_pair(
           atom("echo_client"),
-          make_actor_func<stacked>(
+          make_actor_func<stackful>(
             boost::bind(&remote_ut::echo_client, _1)
             )
           )
@@ -85,7 +85,7 @@ public:
     }
   }
 
-  static void echo_server(actor<stacked>& self, std::size_t client_num)
+  static void echo_server(actor<stackful>& self, std::size_t client_num)
   {
     try
     {
@@ -113,7 +113,7 @@ public:
     }
   }
 
-  static void echo_client(actor<stacked>& self)
+  static void echo_client(actor<stackful>& self)
   {
     try
     {
