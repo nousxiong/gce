@@ -104,6 +104,18 @@ public:
   ~event_based_actor();
 
 public:
+  void recv(aid_t& sender, message& msg, match const& mach = match());
+  aid_t recv(message& msg, match_list_t const& match_list = match_list_t());
+  void recv(
+    response_t res, aid_t& sender, message& msg, 
+    duration_t tmo = seconds_t(GCE_DEFAULT_REQUEST_TIMEOUT_SEC)
+    );
+  aid_t recv(response_t res, message& msg);
+
+  void wait(duration_t);
+
+public:
+  /// internal use
   void recv(recv_handler_t const&, match const& mach = match());
   void recv(
     recv_handler_t const&, response_t res, 
@@ -114,9 +126,8 @@ public:
   void quit(exit_code_t exc = exit_normal, std::string const& errmsg = std::string());
 
 public:
-  /// internal use
-  void init();
-  void start(func_t const& f);
+  void init(func_t const& f);
+  void start();
   void on_free();
   void on_recv(detail::pack&, base_type::send_hint);
 
@@ -130,8 +141,12 @@ public:
     return sid;
   }
 
+  inline detail::coro_t& coro() { return coro_; }
+
+  void spawn_handler(self_ref_t, aid_t, aid_t&);
+  void run();
+
 private:
-  void run(func_t const& f);
   void stop(aid_t self_aid, exit_code_t, std::string const&);
   void start_recv_timer(duration_t, recv_handler_t const&);
   void start_res_timer(duration_t, recv_handler_t const&);
@@ -144,11 +159,16 @@ private:
   aid_t end_recv(detail::recv_t&, message&);
   aid_t end_recv(response_t&);
 
+  void recv_handler(self_ref_t, aid_t, message, aid_t&, message&);
+  void wait_handler(self_ref_t);
+
 private:
   /// Ensure start from a new cache line.
   byte_t pad0_[GCE_CACHE_LINE_SIZE];
 
   GCE_CACHE_ALIGNED_VAR(status, stat_)
+  GCE_CACHE_ALIGNED_VAR(func_t, f_)
+  GCE_CACHE_ALIGNED_VAR(detail::coro_t, coro_)
 
   /// thread local vals
   recv_handler_t recv_h_;

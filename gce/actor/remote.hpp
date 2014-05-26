@@ -109,14 +109,7 @@ inline void handle_connect(
     ret = true;
   }
 
-  try
-  {
-    hdr(self, ret);
-  }
-  catch (std::exception& ex)
-  {
-    self.quit(exit_except, ex.what());
-  }
+  hdr(self, ret);
 }
 
 typedef boost::function<void (actor<evented>&, bool)> bind_handler_t;
@@ -131,14 +124,7 @@ inline void handle_bind(
     ret = true;
   }
 
-  try
-  {
-    hdr(self, ret);
-  }
-  catch (std::exception& ex)
-  {
-    self.quit(exit_except, ex.what());
-  }
+  hdr(self, ret);
 }
 }
 

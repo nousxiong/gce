@@ -310,27 +310,32 @@ public:
     a_.monitor(target);
   }
 
-  inline void recv(recv_handler_t const& hdr, match const& mach = match())
+  inline void recv(aid_t& sender, message& msg, match const& mach = match())
   {
-    a_.recv(hdr, mach);
+    a_.recv(sender, msg, mach);
+  }
+
+  inline aid_t recv(message& msg, match_list_t const& match_list = match_list_t())
+  {
+    return a_.recv(msg, match_list);
   }
 
   inline void recv(
-    recv_handler_t const& hdr, response_t res, 
+    response_t res, aid_t& sender, message& msg, 
     duration_t tmo = seconds_t(GCE_DEFAULT_REQUEST_TIMEOUT_SEC)
     )
   {
-    a_.recv(hdr, res, tmo);
+    a_.recv(res, sender, msg, tmo);
   }
 
-  inline void wait(wait_handler_t const& hdr, duration_t dur)
+  inline aid_t recv(response_t res, message& msg)
   {
-    a_.wait(hdr, dur);
+    return a_.recv(res, msg);
   }
 
-  inline void quit(exit_code_t exc = exit_normal, std::string const& errmsg = std::string())
+  inline void wait(duration_t dur)
   {
-    a_.quit(exc, errmsg);
+    a_.wait(dur);
   }
 
   inline aid_t get_aid() const
@@ -340,6 +345,24 @@ public:
 
 public:
   /// internal use
+  inline void recv(recv_handler_t const& h, match const& mach = match())
+  {
+    a_.recv(h, mach);
+  }
+
+  inline void recv(
+    recv_handler_t const& h, response_t res, 
+    duration_t tmo = seconds_t(GCE_DEFAULT_REQUEST_TIMEOUT_SEC)
+    )
+  {
+    a_.recv(h, res, tmo);
+  }
+
+  inline void wait(wait_handler_t const& h, duration_t dur)
+  {
+    a_.wait(h, dur);
+  }
+
   inline sid_t spawn(
     detail::spawn_type type, match_t func, 
     match_t ctxid, std::size_t stack_size
@@ -347,6 +370,14 @@ public:
   {
     return a_.spawn(type, func, ctxid, stack_size);
   }
+
+  inline event_based_actor& get_actor()
+  {
+    return a_;
+  }
+
+  inline detail::coro_t& coro() { return a_.coro(); }
+  inline void resume() { a_.run(); }
 
   inline context* get_context()
   {

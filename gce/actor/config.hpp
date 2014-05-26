@@ -24,6 +24,7 @@
 #include <gce/amsg/amsg.hpp>
 #include <boost/system/error_code.hpp>
 #include <boost/chrono.hpp>
+#include <boost/asio/coroutine.hpp>
 #include <boost/asio/system_timer.hpp>
 #include <boost/asio/strand.hpp>
 #include <boost/asio/spawn.hpp>
@@ -115,6 +116,8 @@ enum spawn_type
   spw_stacked,
   spw_evented
 };
+
+typedef boost::asio::coroutine coro_t;
 } /// namespce detail
 
 typedef std::pair<ctxid_t, detail::socket_type> ctxid_pair_t;
@@ -122,6 +125,14 @@ typedef std::pair<ctxid_t, detail::socket_type> ctxid_pair_t;
 
 #ifndef GCE_PACK
 # define GCE_PACK AMSG
+#endif
+
+#ifndef GCE_REENTER
+# define GCE_REENTER(t) BOOST_ASIO_CORO_REENTER(t.coro())
+#endif
+
+#ifndef GCE_YIELD
+# define GCE_YIELD BOOST_ASIO_CORO_YIELD
 #endif
 
 #endif /// GCE_ACTOR_CONFIG_HPP

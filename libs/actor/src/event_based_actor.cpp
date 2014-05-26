@@ -33,7 +33,67 @@ event_based_actor::~event_based_actor()
 {
 }
 ///----------------------------------------------------------------------------
-void event_based_actor::recv(event_based_actor::recv_handler_t const& f, match const& mach)
+void event_based_actor::recv(aid_t& sender, message& msg, match const& mach)
+{
+  recv(
+    boost::bind(
+      &event_based_actor::recv_handler, this, _1, _2, _3, 
+      boost::ref(sender), boost::ref(msg)
+      ), 
+    mach
+    );
+}
+///----------------------------------------------------------------------------
+aid_t event_based_actor::recv(message& msg, match_list_t const& match_list)
+{
+  aid_t sender;
+  detail::recv_t rcv;
+
+  if (mb_.pop(rcv, msg, match_list))
+  {
+    sender = end_recv(rcv, msg);
+  }
+
+  return sender;
+}
+///----------------------------------------------------------------------------
+void event_based_actor::recv(response_t res, aid_t& sender, message& msg, duration_t tmo)
+{
+  recv(
+    boost::bind(
+      &event_based_actor::recv_handler, this, _1, _2, _3, 
+      boost::ref(sender), boost::ref(msg)
+      ), 
+    res,
+    tmo
+    );
+}
+///----------------------------------------------------------------------------
+aid_t event_based_actor::recv(response_t res, message& msg)
+{
+  aid_t sender;
+
+  if (mb_.pop(res, msg))
+  {
+    sender = end_recv(res);
+  }
+
+  return sender;
+}
+///----------------------------------------------------------------------------
+void event_based_actor::wait(duration_t dur)
+{
+  wait(
+    boost::bind(
+      &event_based_actor::wait_handler, this, _1
+      ),
+    dur
+    );
+}
+///----------------------------------------------------------------------------
+void event_based_actor::recv(
+  event_based_actor::recv_handler_t const& f, match const& mach
+  )
 {
   aid_t sender;
   detail::recv_t rcv;
@@ -64,7 +124,9 @@ void event_based_actor::recv(event_based_actor::recv_handler_t const& f, match c
     );
 }
 ///----------------------------------------------------------------------------
-void event_based_actor::recv(event_based_actor::recv_handler_t const& f, response_t res, duration_t tmo)
+void event_based_actor::recv(
+  event_based_actor::recv_handler_t const& f, response_t res, duration_t tmo
+  )
 {
   aid_t sender;
   message msg;
@@ -75,7 +137,7 @@ void event_based_actor::recv(event_based_actor::recv_handler_t const& f, respons
     {
       if (tmo < infin)
       {
-        start_recv_timer(tmo, f);
+        start_res_timer(tmo, f);
       }
       res_h_ = f;
       recving_res_ = res;
@@ -106,15 +168,17 @@ void event_based_actor::quit(exit_code_t exc, std::string const& errmsg)
   snd_.post(boost::bind(&event_based_actor::stop, this, self_aid, exc, errmsg));
 }
 ///----------------------------------------------------------------------------
-void event_based_actor::init()
+void event_based_actor::init(event_based_actor::func_t const& f)
 {
   BOOST_ASSERT_MSG(stat_ == ready, "event_based_actor status error");
   base_type::update_aid();
+  f_ = f;
 }
 ///----------------------------------------------------------------------------
-void event_based_actor::start(event_based_actor::func_t const& f)
+void event_based_actor::start()
 {
-  snd_.post(boost::bind(&event_based_actor::run, this, f));
+  stat_ = on;
+  snd_.post(boost::bind(&event_based_actor::run, this));
 }
 ///----------------------------------------------------------------------------
 void event_based_actor::on_free()
@@ -122,6 +186,8 @@ void event_based_actor::on_free()
   base_type::on_free();
 
   stat_ = ready;
+  f_.clear();
+  coro_ = detail::coro_t();
   curr_match_.clear();
 
   recv_h_.clear();
@@ -150,13 +216,22 @@ void event_based_actor::on_recv(detail::pack& pk, base_type::send_hint hint)
   }
 }
 ///----------------------------------------------------------------------------
-void event_based_actor::run(func_t const& f)
+void event_based_actor::spawn_handler(self_ref_t, aid_t sender, aid_t& osender)
+{
+  osender = sender;
+  run();
+}
+///----------------------------------------------------------------------------
+void event_based_actor::run()
 {
   try
   {
-    stat_ = on;
     actor<evented> aref(*this);
-    f(aref);
+    f_(aref);
+    if (coro_.is_complete())
+    {
+      quit();
+    }
   }
   catch (std::exception& ex)
   {
@@ -395,6 +470,20 @@ aid_t event_based_actor::end_recv(detail::recv_t& rcv, message& msg)
 aid_t event_based_actor::end_recv(response_t& res)
 {
   return res.get_aid();
+}
+///----------------------------------------------------------------------------
+void event_based_actor::recv_handler(
+  self_ref_t, aid_t sender, message msg, aid_t& osender, message& omsg
+  )
+{
+  osender = sender;
+  omsg = msg;
+  run();
+}
+///----------------------------------------------------------------------------
+void event_based_actor::wait_handler(self_ref_t)
+{
+  run();
 }
 ///----------------------------------------------------------------------------
 }

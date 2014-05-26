@@ -44,12 +44,12 @@ inline aid_t make_event_based_actor(
 {
   context& ctx = user->get_context();
   event_based_actor* a = user->get_event_based_actor();
-  a->init();
+  a->init(f.f_);
   if (sire)
   {
     send(*a, sire, msg_new_actor);
   }
-  a->start(f.f_);
+  a->start();
   return a->get_aid();
 }
 
@@ -109,14 +109,7 @@ inline void handle_spawn(
     }
   }
 
-  try
-  {
-    hdr(self, aid);
-  }
-  catch (std::exception& ex)
-  {
-    self.quit(exit_except, ex.what());
-  }
+  hdr(self, aid);
 }
 
 /// spawn context_switching_actor using NONE event_based_actor
@@ -131,7 +124,7 @@ inline aid_t spawn(
     boost::bind(
       &detail::make_context_switching_actor,
       sire.get_aid(), user,
-      actor_func<stacked>(f), stack_size
+      make_actor_func<stacked>(f), stack_size
       )
     );
   return end_spawn(sire, type);
@@ -149,7 +142,7 @@ inline aid_t spawn(
     boost::bind(
       &detail::make_event_based_actor,
       sire.get_aid(), user,
-      actor_func<evented>(f), stack_size
+      make_actor_func<evented>(f), stack_size
       )
     );
   return end_spawn(sire, type);
@@ -159,7 +152,7 @@ inline aid_t spawn(
 template <typename F, typename SpawnHandler>
 inline void spawn(
   stacked,
-  actor<evented>& sire, F f, SpawnHandler& h,
+  actor<evented>& sire, F f, SpawnHandler h,
   cache_pool* user, link_type type, std::size_t stack_size
   )
 {
@@ -167,7 +160,7 @@ inline void spawn(
     boost::bind(
       &detail::make_context_switching_actor,
       sire.get_aid(), user,
-      actor_func<stacked>(f), stack_size
+      make_actor_func<stacked>(f), stack_size
       )
     );
 
@@ -186,7 +179,7 @@ inline void spawn(
 template <typename F, typename SpawnHandler>
 inline void spawn(
   evented,
-  actor<evented>& sire, F f, SpawnHandler& h,
+  actor<evented>& sire, F f, SpawnHandler h,
   cache_pool* user, link_type type, std::size_t stack_size
   )
 {
@@ -194,7 +187,7 @@ inline void spawn(
     boost::bind(
       &detail::make_event_based_actor,
       sire.get_aid(), user,
-      actor_func<evented>(f), stack_size
+      make_actor_func<evented>(f), stack_size
       )
     );
 
@@ -266,14 +259,7 @@ inline void handle_remote_spawn(
     }
   }
 
-  try
-  {
-    hdr(self, aid);
-  }
-  catch (std::exception& ex)
-  {
-    self.quit(exit_except, ex.what());
-  }
+  hdr(self, aid);
 }
 
 template <typename Sire>
@@ -384,7 +370,7 @@ inline void spawn(
   sire.recv(
     boost::bind(
       &handle_remote_spawn, _1, _2, _3,
-      type, begin_tp, sid, tmo, curr_tmo, h
+      type, begin_tp, sid, tmo, curr_tmo, spawn_handler_t(h)
       ),
     mach
     );
@@ -394,7 +380,7 @@ inline void spawn(
 template <typename SpawnHandler>
 inline void spawn(
   stacked,
-  actor<evented>& sire, match_t func, SpawnHandler& h,
+  actor<evented>& sire, match_t func, SpawnHandler h,
   match_t ctxid, link_type type, std::size_t stack_size, seconds_t tmo
   )
 {
@@ -478,26 +464,24 @@ inline aid_t spawn(
 ///------------------------------------------------------------------------------
 /// spawn a actor using given event_based_actor
 ///------------------------------------------------------------------------------
-template <typename F, typename SpawnHandler>
+template <typename F>
 inline void spawn(
-  actor<evented>& sire, F f, SpawnHandler h,
+  actor<evented>& sire, F f, aid_t& aid,
   link_type type = no_link,
+  bool sync_sire = false,
   std::size_t stack_size = default_stacksize()
   )
 {
-  detail::cache_pool* user = sire.get_context()->select_cache_pool();
-  detail::spawn(stacked(), sire, f, h, user, type, stack_size);
-}
-
-template <typename Tag, typename Sire, typename F, typename SpawnHandler>
-inline void spawn(
-  actor<evented>& sire, F f, SpawnHandler h,
-  link_type type = no_link,
-  std::size_t stack_size = default_stacksize()
-  )
-{
-  detail::cache_pool* user = sire.get_context()->select_cache_pool();
-  detail::spawn(Tag(), sire, f, h, user, type, stack_size);
+  event_based_actor& a = sire.get_actor();
+  detail::cache_pool* user = detail::select_cache_pool(sire, sync_sire);
+  detail::spawn(
+    evented(), sire, f, 
+    boost::bind(
+      &event_based_actor::spawn_handler, &a, 
+      _1, _2, boost::ref(aid)
+      ), 
+    user, type, stack_size
+    );
 }
 ///------------------------------------------------------------------------------
 /// Spawn a thread_mapped_actor
@@ -550,16 +534,23 @@ inline aid_t spawn(
 ///------------------------------------------------------------------------------
 /// Spawn a actor on remote context using event_based_actor
 ///------------------------------------------------------------------------------
-template <typename SpawnHandler>
 inline void spawn(
-  actor<evented>& sire, match_t func, SpawnHandler h,
+  actor<evented>& sire, match_t func, aid_t& aid,
   match_t ctxid = ctxid_nil,
   link_type type = no_link,
   std::size_t stack_size = default_stacksize(),
   seconds_t tmo = seconds_t(GCE_DEFAULT_REQUEST_TIMEOUT_SEC)
   )
 {
-  detail::spawn(stacked(), sire, func, h, ctxid, type, stack_size, tmo);
+  event_based_actor& a = sire.get_actor();
+  detail::spawn(
+    stacked(), sire, func, 
+    boost::bind(
+      &event_based_actor::spawn_handler, &a, 
+      _1, _2, boost::ref(aid)
+      ), 
+    ctxid, type, stack_size, tmo
+    );
 }
 
 template <typename Tag, typename SpawnHandler>
