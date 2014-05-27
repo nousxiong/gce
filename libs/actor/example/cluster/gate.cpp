@@ -17,7 +17,7 @@
 
 ///----------------------------------------------------------------------------
 gce::aid_t gate::start(
-  gce::self_t sire, gce::match_t svc_name, 
+  gce::actor<gce::stackful>& sire, gce::match_t svc_name, 
   std::string cln_ep, app_ctxid_list_t game_list
   )
 {
@@ -33,7 +33,7 @@ gce::aid_t gate::start(
 }
 ///----------------------------------------------------------------------------
 void quit_callback(
-  gce::self_t self, std::vector<gce::aid_t>& conn_group_list
+  gce::actor<gce::stackful>& self, std::vector<gce::aid_t>& conn_group_list
   )
 {
   std::vector<gce::response_t> res_list;
@@ -50,7 +50,7 @@ void quit_callback(
   conn_group_list.clear();
 }
 ///----------------------------------------------------------------------------
-void gate::run(gce::self_t self, gce::match_t svc_name, std::string cln_ep, app_ctxid_list_t game_list)
+void gate::run(gce::actor<gce::stackful>& self, gce::match_t svc_name, std::string cln_ep, app_ctxid_list_t game_list)
 {
   try
   {
@@ -190,7 +190,7 @@ void gate::run(gce::self_t self, gce::match_t svc_name, std::string cln_ep, app_
 }
 ///----------------------------------------------------------------------------
 void gate::accept(
-  gce::self_t self, 
+  gce::actor<gce::stackful>& self, 
   acceptor_t& acpr, 
   app_ctxid_list_t game_list,
   std::vector<gce::aid_t> conn_group_list
@@ -239,7 +239,7 @@ void gate::accept(
   }
 }
 ///----------------------------------------------------------------------------
-void gate::conn_group(gce::self_t self, gce::aid_t ga_id)
+void gate::conn_group(gce::actor<gce::stackful>& self, gce::aid_t ga_id)
 {
   typedef std::set<gce::aid_t> conn_list_t;
   try

@@ -10,13 +10,13 @@
 #include <gce/actor/all.hpp>
 #include <iostream>
 
-void quiter(gce::self_t self)
+void quiter(gce::actor<gce::stackful>& self)
 {
   /// wait for gce::exit from link actor
   gce::recv(self);
 }
 
-void link(gce::self_t self)
+void link(gce::actor<gce::stackful>& self)
 {
   /// create 10 actor and link with them
   for (std::size_t i=0; i<10; ++i)

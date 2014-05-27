@@ -149,7 +149,7 @@ void quit_callback(tcp_socket& skt)
   skt.close();
 }
 ///----------------------------------------------------------------------------
-void client::pri_run(gce::self_t self)
+void client::pri_run(gce::actor<gce::stackful>& self)
 {
   try
   {
@@ -209,7 +209,7 @@ void client::pri_run(gce::self_t self)
   }
 }
 ///----------------------------------------------------------------------------
-void client::recv(gce::self_t self, tcp_socket& skt)
+void client::recv(gce::actor<gce::stackful>& self, tcp_socket& skt)
 {
   try
   {

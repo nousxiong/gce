@@ -44,7 +44,7 @@ public:
   }
 
 private:
-  void run(gce::self_t self, gce::aid_t base_id)
+  void run(gce::actor<gce::stackful>& self, gce::aid_t base_id)
   {
     try
     {
@@ -110,7 +110,7 @@ public:
   }
 
 private:
-  void run(gce::self_t self)
+  void run(gce::actor<gce::stackful>& self)
   {
     try
     {
@@ -157,7 +157,7 @@ private:
     }
   }
 
-  void session(gce::self_t self, boost::shared_ptr<socket_t> sock)
+  void session(gce::actor<gce::stackful>& self, boost::shared_ptr<socket_t> sock)
   {
     try
     {

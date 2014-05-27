@@ -26,10 +26,10 @@ public:
   ~master();
 
 public:
-  gce::aid_t start(gce::self_t sire);
+  gce::aid_t start(gce::actor<gce::stackful>& sire);
 
 private:
-  void run(gce::self_t);
+  void run(gce::actor<gce::stackful>&);
 
 private:
   std::vector<app_init_t> const gate_list_;

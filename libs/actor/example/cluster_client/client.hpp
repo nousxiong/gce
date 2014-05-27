@@ -27,8 +27,8 @@ public:
 private:
   void command(std::string cmd, gce::aid_t);
   boost::array<std::string, 2> parse_potocol(std::string);
-  void pri_run(gce::self_t);
-  void recv(gce::self_t, tcp_socket&);
+  void pri_run(gce::actor<gce::stackful>&);
+  void recv(gce::actor<gce::stackful>&, tcp_socket&);
   gce::attributes get_attrs();
 
 private:

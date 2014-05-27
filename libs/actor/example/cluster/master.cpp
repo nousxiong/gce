@@ -27,7 +27,7 @@ master::~master()
 {
 }
 ///----------------------------------------------------------------------------
-gce::aid_t master::start(gce::self_t sire)
+gce::aid_t master::start(gce::actor<gce::stackful>& sire)
 {
   return 
     gce::spawn(
@@ -37,7 +37,7 @@ gce::aid_t master::start(gce::self_t sire)
       );
 }
 ///----------------------------------------------------------------------------
-void master::run(gce::self_t self)
+void master::run(gce::actor<gce::stackful>& self)
 {
   try
   {

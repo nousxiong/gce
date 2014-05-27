@@ -10,7 +10,7 @@
 #include <gce/actor/all.hpp>
 #include <iostream>
 
-void echo(gce::self_t self)
+void echo(gce::actor<gce::stackful>& self)
 {
   /// wait for "start" message. 
   /// if and only if after fetch "start", then others

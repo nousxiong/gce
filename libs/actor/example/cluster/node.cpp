@@ -55,7 +55,7 @@ void node::wait_end()
   gce::recv(ctx_);
 }
 ///----------------------------------------------------------------------------
-void node::run(gce::self_t self, gce::svcid_t master)
+void node::run(gce::actor<gce::stackful>& self, gce::svcid_t master)
 {
   typedef std::map<gce::match_t, gce::aid_t> app_list_t;
   app_list_t gate_list;
@@ -265,7 +265,7 @@ void node::run(gce::self_t self, gce::svcid_t master)
   }
 }
 ///----------------------------------------------------------------------------
-void node::handle_signal(gce::self_t self)
+void node::handle_signal(gce::actor<gce::stackful>& self)
 {
   gce::yield_t yield = self.get_yield();
   gce::errcode_t ec;

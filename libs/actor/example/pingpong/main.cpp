@@ -12,7 +12,7 @@
 #include <string>
 #include <cstdlib>
 
-void pingpong(gce::self_t self)
+void pingpong(gce::actor<gce::stackful>& self)
 {
   try
   {

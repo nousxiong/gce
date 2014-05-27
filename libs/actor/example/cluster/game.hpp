@@ -17,14 +17,14 @@ class game
 {
 public:
   static gce::aid_t start(
-    gce::self_t sire, 
+    gce::actor<gce::stackful>& sire, 
     gce::match_t svc_name, 
     app_ctxid_list_t game_list
     );
 
 private:
   static void run(
-    gce::self_t self, 
+    gce::actor<gce::stackful>& self, 
     gce::match_t svc_name, 
     app_ctxid_list_t game_list
     );

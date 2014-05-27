@@ -22,7 +22,7 @@ class gate
 
 public:
   static gce::aid_t start(
-    gce::self_t sire, 
+    gce::actor<gce::stackful>& sire, 
     gce::match_t svc_name,
     std::string cln_ep, 
     app_ctxid_list_t game_list
@@ -30,19 +30,19 @@ public:
 
 private:
   static void run(
-    gce::self_t self,
+    gce::actor<gce::stackful>& self,
     gce::match_t svc_name,
     std::string cln_ep, 
     app_ctxid_list_t game_list
     );
   static void accept(
-    gce::self_t self, 
+    gce::actor<gce::stackful>& self, 
     acceptor_t& acpr, 
     app_ctxid_list_t game_list,
     std::vector<gce::aid_t> conn_group_list
     );
   static void conn_group(
-    gce::self_t self, 
+    gce::actor<gce::stackful>& self, 
     gce::aid_t ga_id
     );
 };

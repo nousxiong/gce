@@ -11,7 +11,7 @@
 #include <iostream>
 #include <string>
 
-void mirror(gce::self_t self)
+void mirror(gce::actor<gce::stackful>& self)
 {
   /// wait for messages
   gce::message msg;
@@ -33,7 +33,7 @@ int main()
   /// everything begin here
   gce::context ctx;
 
-  /// create a new actor that calls ’mirror(gce::self_t)’, using coroutine-base actor
+  /// create a new actor that calls ’mirror(gce::actor<gce::stackful>&)’, using coroutine-base actor
   gce::aid_t mirror_actor = gce::spawn(ctx, boost::bind(&mirror, _1));
 
   /// send "Hello World!" to mirror

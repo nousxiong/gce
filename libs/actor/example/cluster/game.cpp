@@ -13,7 +13,7 @@
 #include <map>
 
 ///----------------------------------------------------------------------------
-gce::aid_t game::start(gce::self_t sire, gce::match_t svc_name, app_ctxid_list_t game_list)
+gce::aid_t game::start(gce::actor<gce::stackful>& sire, gce::match_t svc_name, app_ctxid_list_t game_list)
 {
   return
     gce::spawn(
@@ -25,7 +25,7 @@ gce::aid_t game::start(gce::self_t sire, gce::match_t svc_name, app_ctxid_list_t
       );
 }
 ///----------------------------------------------------------------------------
-void game::run(gce::self_t self, gce::match_t svc_name, app_ctxid_list_t game_list)
+void game::run(gce::actor<gce::stackful>& self, gce::match_t svc_name, app_ctxid_list_t game_list)
 {
   try
   {

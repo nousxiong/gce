@@ -20,13 +20,13 @@ conn::~conn()
 {
 }
 ///----------------------------------------------------------------------------
-void quit_callback(gce::self_t self, gce::aid_t group_aid)
+void quit_callback(gce::actor<gce::stackful>& self, gce::aid_t group_aid)
 {
   gce::send(self, group_aid, gce::atom("rmv_conn"));
 }
 ///----------------------------------------------------------------------------
 void conn::run(
-  gce::self_t self, socket_ptr skt,
+  gce::actor<gce::stackful>& self, socket_ptr skt,
   gce::aid_t group_aid, app_ctxid_list_t game_list
   )
 {
@@ -101,7 +101,7 @@ void conn::run(
   }
 }
 ///----------------------------------------------------------------------------
-void conn::timeout(gce::self_t self)
+void conn::timeout(gce::actor<gce::stackful>& self)
 {
   try
   {
@@ -154,7 +154,7 @@ void conn::timeout(gce::self_t self)
 }
 ///----------------------------------------------------------------------------
 void conn::recv(
-  gce::self_t self, socket_ptr skt,
+  gce::actor<gce::stackful>& self, socket_ptr skt,
   gce::aid_t tmo_aid, gce::aid_t conn_aid,
   app_ctxid_list_t game_list
   )

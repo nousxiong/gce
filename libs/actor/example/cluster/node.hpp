@@ -34,8 +34,8 @@ public:
   void wait_end();
 
 private:
-  void run(gce::self_t, gce::svcid_t master);
-  void handle_signal(gce::self_t);
+  void run(gce::actor<gce::stackful>&, gce::svcid_t master);
+  void handle_signal(gce::actor<gce::stackful>&);
 
 private:
   gce::context ctx_;

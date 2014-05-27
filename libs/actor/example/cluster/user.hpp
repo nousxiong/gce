@@ -19,7 +19,7 @@ class user
 {
 public:
   static void run(
-    gce::self_t, app_ctxid_list_t game_list,
+    gce::actor<gce::stackful>&, app_ctxid_list_t game_list,
     gce::aid_t old_usr_aid, gce::aid_t master,
     cid_t cid, std::string username, std::string passwd
     );
