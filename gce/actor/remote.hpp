@@ -93,38 +93,24 @@ inline void connect(
     );
 }
 
-typedef boost::function<void (actor<stackless>&, bool)> conn_handler_t;
 inline void handle_connect(
   actor<stackless>& self, aid_t skt, 
-  message msg, detail::cache_pool* sire, 
-  conn_handler_t const& hdr
+  message msg, detail::cache_pool* sire
   )
 {
-  bool ret = false;
   if (skt)
   {
     ctxid_pair_t ctxid_pr;
     msg >> ctxid_pr;
     sire->register_socket(ctxid_pr, skt);
-    ret = true;
   }
 
-  hdr(self, ret);
+  self.resume();
 }
 
-typedef boost::function<void (actor<stackless>&, bool)> bind_handler_t;
-inline void handle_bind(
-  actor<stackless>& self, aid_t acpr, 
-  message msg, bind_handler_t const& hdr
-  )
+inline void handle_bind(actor<stackless>& self, aid_t acpr, message)
 {
-  bool ret = false;
-  if (acpr)
-  {
-    ret = true;
-  }
-
-  hdr(self, ret);
+  self.resume();
 }
 }
 
@@ -171,12 +157,10 @@ inline void connect(
 ///------------------------------------------------------------------------------
 /// Connect using given coroutine_stackless_actor
 ///------------------------------------------------------------------------------
-template <typename ConnHandler>
 inline void connect(
   actor<stackless>& sire,
   ctxid_t target, /// connect target
   std::string const& ep, /// endpoint
-  ConnHandler h,
   bool target_is_router = false, /// if target is router, set it true
   net_option opt = net_option(),
   remote_func_list_t const& remote_func_list = remote_func_list_t()
@@ -190,7 +174,7 @@ inline void connect(
   sire.recv(
     boost::bind(
       &detail::handle_connect, _1, _2, _3, 
-      sire.get_cache_pool(), detail::conn_handler_t(h)
+      sire.get_cache_pool()
       ), 
     mach
     );
@@ -222,11 +206,9 @@ inline void bind(
 ///------------------------------------------------------------------------------
 /// Bind using given coroutine_stackless_actor
 ///------------------------------------------------------------------------------
-template <typename BindHandler>
 inline void bind(
   actor<stackless>& sire,
   std::string const& ep, /// endpoint
-  BindHandler h,
   bool is_router = false, /// if this bind is router, set it true
   remote_func_list_t const& remote_func_list = remote_func_list_t(),
   net_option opt = net_option()
@@ -245,8 +227,7 @@ inline void bind(
   mach.match_list_.push_back(detail::msg_new_bind);
   sire.recv(
     boost::bind(
-      &detail::handle_bind, _1, _2, _3, 
-      detail::bind_handler_t(h)
+      &detail::handle_bind, _1, _2, _3
       ), 
     mach
     );

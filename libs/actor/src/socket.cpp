@@ -230,7 +230,7 @@ void socket::handle_net_msg(message& msg)
         cache_pool* user = ctx.select_cache_pool();
         user->get_strand().post(
           boost::bind(
-            &socket::spawn_remote_actor, this, 
+            &socket::spawn_remote_actor, this,
             user, *spw, itr->second
             )
           );
@@ -738,8 +738,11 @@ ctxid_pair_t socket::sync_ctxid(ctxid_pair_t new_pr, ctxid_pair_t curr_pr)
   if (new_pr != curr_pr)
   {
     context& ctx = user_->get_context();
-    ctx.deregister_socket(curr_pr, get_aid(), user_->get_index());
-    ctx.register_socket(new_pr, get_aid(), user_->get_index());
+    aid_t skt = get_aid();
+    user_->deregister_socket(curr_pr, skt);
+    user_->register_socket(new_pr, skt);
+    ctx.deregister_socket(curr_pr, skt, user_->get_index());
+    ctx.register_socket(new_pr, skt, user_->get_index());
   }
   return new_pr;
 }

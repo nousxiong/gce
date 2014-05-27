@@ -47,7 +47,6 @@ private:
         );
       svcid_t echo_svc(atom("two"), atom("echo_svc"));
 
-      wait(ctx1, boost::chrono::milliseconds(100));
       net_option opt;
       opt.reconn_period_ = seconds_t(1);
       connect(ctx1, atom("router"), "tcp://127.0.0.1:14923", true, opt);
