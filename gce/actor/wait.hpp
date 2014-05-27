@@ -11,7 +11,6 @@
 #define GCE_ACTOR_WAIT_HPP
 
 #include <gce/actor/config.hpp>
-#include <gce/actor/actor.hpp>
 
 namespace gce
 {
@@ -19,12 +18,6 @@ template <typename Waiter>
 inline void wait(Waiter& waiter, duration_t dur)
 {
   return waiter.wait(dur);
-}
-
-template <typename WaitHandler>
-inline void wait(actor<stackless>& waiter, WaitHandler h, duration_t dur)
-{
-  return waiter.wait(h, dur);
 }
 }
 

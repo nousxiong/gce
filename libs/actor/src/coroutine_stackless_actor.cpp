@@ -178,7 +178,7 @@ void coroutine_stackless_actor::init(coroutine_stackless_actor::func_t const& f)
 void coroutine_stackless_actor::start()
 {
   stat_ = on;
-  snd_.post(boost::bind(&coroutine_stackless_actor::run, this));
+  snd_.dispatch(boost::bind(&coroutine_stackless_actor::run, this));
 }
 ///----------------------------------------------------------------------------
 void coroutine_stackless_actor::on_free()

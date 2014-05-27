@@ -30,6 +30,7 @@
 #include "test_mixin.hpp"
 #include "test_slice.hpp"
 #include "test_actor_pingpong.hpp"
+#include "test_stackless_pingpong.hpp"
 #include "test_mixin_pingpong.hpp"
 #include "test_slice_pingpong.hpp"
 #include "test_match.hpp"
@@ -51,29 +52,30 @@ int main()
 {
   try
   {
-    //gce::object_pool_ut::run();
-    //gce::coro_ut::run();
-    //gce::send_recv_ut::run();
-    //gce::actor_ut::run();
+    gce::object_pool_ut::run();
+    gce::coro_ut::run();
+    gce::send_recv_ut::run();
+    gce::actor_ut::run();
     gce::stackless_ut::run();
-    //gce::mixin_ut::run();
-    //gce::slice_ut::run();
-    //gce::actor_pingpong_ut::run();
-    //gce::mixin_pingpong_ut::run();
-    //gce::slice_pingpong_ut::run();
-    //gce::match_ut::run();
-    //gce::link_ut::run();
-    //gce::relay_ut::run();
-    //gce::message_ut::run();
-    //gce::socket_ut::run();
-    //gce::socket_broken_ut::run();
-    //gce::remote_ut::run();
-    //gce::remote_link_ut::run();
-    //gce::router_ut::run();
-    //gce::router_link_ut::run();
-    //gce::router_broken_ut::run();
-    //gce::remote_relay_ut::run();
-    //gce::service_ut::run();
+    gce::mixin_ut::run();
+    gce::slice_ut::run();
+    gce::actor_pingpong_ut::run();
+    gce::stackless_pingpong_ut::run();
+    gce::mixin_pingpong_ut::run();
+    gce::slice_pingpong_ut::run();
+    gce::match_ut::run();
+    gce::link_ut::run();
+    gce::relay_ut::run();
+    gce::message_ut::run();
+    gce::socket_ut::run();
+    gce::socket_broken_ut::run();
+    gce::remote_ut::run();
+    gce::remote_link_ut::run();
+    gce::router_ut::run();
+    gce::router_link_ut::run();
+    gce::router_broken_ut::run();
+    gce::remote_relay_ut::run();
+    gce::service_ut::run();
   }
   catch (std::exception& ex)
   {

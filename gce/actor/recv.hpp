@@ -121,6 +121,119 @@ inline aid_t recv(actor<nonblocked>& recver, response_t res, message& msg, durat
   }
   return sender;
 }
+///------------------------------------------------------------------------------
+/// recv stackless
+///------------------------------------------------------------------------------
+inline bool begin_recv(match& mach)
+{
+  bool add_exit = check_exit(mach.match_list_);
+  if (add_exit)
+  {
+    mach.match_list_.push_back(exit);
+  }
+  return add_exit;
+}
+
+inline bool end_recv(
+  actor<stackless>& recver, aid_t sender, message msg, 
+  aid_t& osender, bool has_exit
+  )
+{
+  osender = sender;
+  bool ret = false;
+  if (msg.get_type() == exit && !has_exit)
+  {
+    exit_code_t exc;
+    std::string errmsg;
+    msg >> exc >> errmsg;
+    recver.get_actor().quit(exc, errmsg);
+  }
+  else if (!sender)
+  {
+    recver.get_actor().quit(exit_except, "recv timeout");
+  }
+  else
+  {
+    ret = true;
+  }
+  return ret;
+}
+
+inline void handle_recv(
+  actor<stackless>& recver, aid_t sender, message msg, 
+  aid_t& osender, bool has_exit
+  )
+{
+  if (end_recv(recver, sender, msg, osender, has_exit))
+  {
+    recver.resume();
+  }
+}
+
+template <typename A1>
+inline void handle_recv(
+  actor<stackless>& recver, aid_t sender, message msg, 
+  aid_t& osender, bool has_exit, A1& a1
+  )
+{
+  if (end_recv(recver, sender, msg, osender, has_exit))
+  {
+    msg >> a1;
+    recver.resume();
+  }
+}
+
+template <typename A1, typename A2>
+inline void handle_recv(
+  actor<stackless>& recver, aid_t sender, message msg, 
+  aid_t& osender, bool has_exit, A1& a1, A2& a2
+  )
+{
+  if (end_recv(recver, sender, msg, osender, has_exit))
+  {
+    msg >> a1 >> a2;
+    recver.resume();
+  }
+}
+
+template <typename A1, typename A2, typename A3>
+inline void handle_recv(
+  actor<stackless>& recver, aid_t sender, message msg, 
+  aid_t& osender, bool has_exit, A1& a1, A2& a2, A3& a3
+  )
+{
+  if (end_recv(recver, sender, msg, osender, has_exit))
+  {
+    msg >> a1 >> a2 >> a3;
+    recver.resume();
+  }
+}
+
+template <typename A1, typename A2, typename A3, typename A4>
+inline void handle_recv(
+  actor<stackless>& recver, aid_t sender, message msg, 
+  aid_t& osender, bool has_exit, A1& a1, A2& a2, A3& a3, A4& a4
+  )
+{
+  if (end_recv(recver, sender, msg, osender, has_exit))
+  {
+    msg >> a1 >> a2 >> a3 >> a4;
+    recver.resume();
+  }
+}
+
+template <typename A1, typename A2, typename A3, typename A4, typename A5>
+inline void handle_recv(
+  actor<stackless>& recver, aid_t sender, message msg, 
+  aid_t& osender, bool has_exit, A1& a1, A2& a2, A3& a3, A4& a4, A5& a5
+  )
+{
+  if (end_recv(recver, sender, msg, osender, has_exit))
+  {
+    msg >> a1 >> a2 >> a3 >> a4 >> a5;
+    recver.resume();
+  }
+}
 }
 ///----------------------------------------------------------------------------
 /// Receive
@@ -222,12 +335,120 @@ inline aid_t recv(
   return sender;
 }
 ///----------------------------------------------------------------------------
-template <typename RecvHandler>
-inline void recv(actor<stackless>& recver, RecvHandler h, match_t type, duration_t tmo = infin)
+inline void recv(actor<stackless>& recver, aid_t& sender, duration_t tmo = infin)
+{
+  match mach(tmo);
+  bool has_exit = detail::begin_recv(mach);
+  recver.recv(
+    boost::bind(
+      &detail::handle_recv, _1, _2, _3, 
+      boost::ref(sender), has_exit
+      ),
+    mach
+    );
+}
+///----------------------------------------------------------------------------
+template <typename A1>
+inline void recv(
+  actor<stackless>& recver, aid_t& sender, match_t type,
+  A1& a1, duration_t tmo = infin
+  )
 {
   match mach(tmo);
   mach.match_list_.push_back(type);
-  recver.recv(h, mach);
+  bool has_exit = detail::begin_recv(mach);
+  recver.recv(
+    boost::bind(
+      &detail::handle_recv<A1>, _1, _2, _3, 
+      boost::ref(sender), has_exit, boost::ref(a1)
+      ),
+    mach
+    );
+}
+///----------------------------------------------------------------------------
+template <
+  typename A1, typename A2
+  >
+inline void recv(
+  actor<stackless>& recver, aid_t& sender, match_t type,
+  A1& a1, A2& a2, duration_t tmo = infin
+  )
+{
+  match mach(tmo);
+  mach.match_list_.push_back(type);
+  bool has_exit = detail::begin_recv(mach);
+  recver.recv(
+    boost::bind(
+      &detail::handle_recv<A1, A2>, _1, _2, _3, 
+      boost::ref(sender), has_exit, boost::ref(a1), boost::ref(a2)
+      ),
+    mach
+    );
+}
+///----------------------------------------------------------------------------
+template <
+  typename A1, typename A2, typename A3
+  >
+inline void recv(
+  actor<stackless>& recver, aid_t& sender, match_t type,
+  A1& a1, A2& a2, A3& a3, duration_t tmo = infin
+  )
+{
+  match mach(tmo);
+  mach.match_list_.push_back(type);
+  bool has_exit = detail::begin_recv(mach);
+  recver.recv(
+    boost::bind(
+      &detail::handle_recv<A1, A2, A3>, _1, _2, _3, 
+      boost::ref(sender), has_exit, boost::ref(a1), boost::ref(a2), 
+      boost::ref(a3)
+      ),
+    mach
+    );
+}
+///----------------------------------------------------------------------------
+template <
+  typename A1, typename A2,
+  typename A3, typename A4
+  >
+inline void recv(
+  actor<stackless>& recver, aid_t& sender, match_t type,
+  A1& a1, A2& a2, A3& a3, A4& a4, duration_t tmo = infin
+  )
+{
+  match mach(tmo);
+  mach.match_list_.push_back(type);
+  bool has_exit = detail::begin_recv(mach);
+  recver.recv(
+    boost::bind(
+      &detail::handle_recv<A1, A2, A3, A4>, _1, _2, _3, 
+      boost::ref(sender), has_exit, boost::ref(a1), boost::ref(a2), 
+      boost::ref(a3), boost::ref(a4)
+      ),
+    mach
+    );
+}
+///----------------------------------------------------------------------------
+template <
+  typename A1, typename A2,
+  typename A3, typename A4, typename A5
+  >
+inline void recv(
+  actor<stackless>& recver, aid_t& sender, match_t type,
+  A1& a1, A2& a2, A3& a3, A4& a4, A5& a5, duration_t tmo = infin
+  )
+{
+  match mach(tmo);
+  mach.match_list_.push_back(type);
+  bool has_exit = detail::begin_recv(mach);
+  recver.recv(
+    boost::bind(
+      &detail::handle_recv<A1, A2, A3, A4, A5>, _1, _2, _3, 
+      boost::ref(sender), has_exit, boost::ref(a1), boost::ref(a2), 
+      boost::ref(a3), boost::ref(a4), boost::ref(a5)
+      ),
+    mach
+    );
 }
 ///----------------------------------------------------------------------------
 /// Receive response
@@ -307,18 +528,106 @@ inline aid_t recv(
   return sender;
 }
 ///----------------------------------------------------------------------------
-template <typename RecvHandler>
+inline void recv(actor<stackless>& recver, response_t res, aid_t& sender, duration_t tmo = infin)
+{
+  match mach(tmo);
+  recver.recv(
+    boost::bind(
+      &detail::handle_recv, _1, _2, _3, 
+      boost::ref(sender), false
+      ),
+    res, tmo
+    );
+}
+///----------------------------------------------------------------------------
+template <typename A1>
 inline void recv(
-  actor<stackless>& recver, RecvHandler h, 
-  response_t res, duration_t tmo = infin
+  actor<stackless>& recver, response_t res, aid_t& sender, 
+  A1& a1, duration_t tmo = infin
   )
 {
-  recver.recv(h, res, tmo);
+  recver.recv(
+    boost::bind(
+      &detail::handle_recv<A1>, _1, _2, _3, 
+      boost::ref(sender), false, boost::ref(a1)
+      ),
+    res, tmo
+    );
+}
+///----------------------------------------------------------------------------
+template <
+  typename A1, typename A2
+  >
+inline void recv(
+  actor<stackless>& recver, response_t res, aid_t& sender, 
+  A1& a1, A2& a2, duration_t tmo = infin
+  )
+{
+  recver.recv(
+    boost::bind(
+      &detail::handle_recv<A1, A2>, _1, _2, _3, 
+      boost::ref(sender), false, boost::ref(a1), boost::ref(a2)
+      ),
+    res, tmo
+    );
+}
+///----------------------------------------------------------------------------
+template <
+  typename A1, typename A2, typename A3
+  >
+inline void recv(
+  actor<stackless>& recver, response_t res, aid_t& sender, 
+  A1& a1, A2& a2, A3& a3, duration_t tmo = infin
+  )
+{
+  recver.recv(
+    boost::bind(
+      &detail::handle_recv<A1, A2, A3>, _1, _2, _3, 
+      boost::ref(sender), false, boost::ref(a1), boost::ref(a2), 
+      boost::ref(a3)
+      ),
+    res, tmo
+    );
+}
+///----------------------------------------------------------------------------
+template <
+  typename A1, typename A2,
+  typename A3, typename A4
+  >
+inline void recv(
+  actor<stackless>& recver, response_t res, aid_t& sender, 
+  A1& a1, A2& a2, A3& a3, A4& a4, duration_t tmo = infin
+  )
+{
+  recver.recv(
+    boost::bind(
+      &detail::handle_recv<A1, A2, A3, A4>, _1, _2, _3, 
+      boost::ref(sender), false, boost::ref(a1), boost::ref(a2), 
+      boost::ref(a3), boost::ref(a4)
+      ),
+    res, tmo
+    );
+}
+///----------------------------------------------------------------------------
+template <
+  typename A1, typename A2,
+  typename A3, typename A4, typename A5
+  >
+inline void recv(
+  actor<stackless>& recver, response_t res, aid_t& sender, 
+  A1& a1, A2& a2, A3& a3, A4& a4, A5& a5, duration_t tmo = infin
+  )
+{
+  recver.recv(
+    boost::bind(
+      &detail::handle_recv<A1, A2, A3, A4, A5>, _1, _2, _3, 
+      boost::ref(sender), false, boost::ref(a1), boost::ref(a2), 
+      boost::ref(a3), boost::ref(a4), boost::ref(a5)
+      ),
+    res, tmo
+    );
 }
 ///----------------------------------------------------------------------------
 }
 
 #endif /// GCE_ACTOR_RECV_HPP
-
-
-

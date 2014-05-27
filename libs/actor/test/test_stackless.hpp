@@ -7,8 +7,6 @@
 /// See https://github.com/nousxiong/gce for latest version.
 ///
 
-#include <boost/make_shared.hpp>
-
 namespace gce
 {
 class stackless_ut
@@ -30,7 +28,7 @@ public:
     {
       GCE_REENTER (self)
       {
-        GCE_YIELD self.recv(aid_, msg_);
+        GCE_YIELD recv(self, aid_);
         reply(self, aid_);
       }
     }
@@ -74,8 +72,7 @@ public:
           res_list_[i_] = request(self, aid_);
         }
 
-        tmr_.expires_from_now(boost::chrono::milliseconds(1));
-        GCE_YIELD tmr_.async_wait(adaptor(self, ec_));
+        GCE_YIELD wait(self, boost::chrono::milliseconds(1));
 
         for (i_=0; i_<size_; ++i_)
         {
