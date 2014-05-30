@@ -131,8 +131,8 @@ inline void connect(
   detail::connect(sire, user, target, ep, target_is_router, opt, remote_func_list);
   ctxid_pair_t ctxid_pr;
   aid_t skt = recv(sire, detail::msg_new_conn, ctxid_pr);
-  std::vector<nonblocking_actor*>& slice_list = sire.get_nonblocking_actor_list();
-  BOOST_FOREACH(nonblocking_actor* s, slice_list)
+  std::vector<nonblocking_actor*>& actor_list = sire.get_nonblocking_actor_list();
+  BOOST_FOREACH(nonblocking_actor* s, actor_list)
   {
     s->get_cache_pool()->register_socket(ctxid_pr, skt);
   }
