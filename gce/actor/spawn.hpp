@@ -21,7 +21,7 @@ namespace gce
 {
 namespace detail
 {
-inline aid_t make_context_switching_actor(
+inline aid_t make_stackful_actor(
   aid_t sire, cache_pool* user,
   actor_func<stackful> const& f, std::size_t stack_size
   )
@@ -37,7 +37,7 @@ inline aid_t make_context_switching_actor(
   return a->get_aid();
 }
 
-inline aid_t make_event_based_actor(
+inline aid_t make_stackless_actor(
   aid_t sire, cache_pool* user,
   actor_func<stackless> const& f, std::size_t stack_size
   )
@@ -122,7 +122,7 @@ inline aid_t spawn(
 {
   user->get_strand().post(
     boost::bind(
-      &detail::make_context_switching_actor,
+      &detail::make_stackful_actor,
       sire.get_aid(), user,
       make_actor_func<stackful>(f), stack_size
       )
@@ -140,7 +140,7 @@ inline aid_t spawn(
 {
   user->get_strand().post(
     boost::bind(
-      &detail::make_event_based_actor,
+      &detail::make_stackless_actor,
       sire.get_aid(), user,
       make_actor_func<stackless>(f), stack_size
       )
@@ -158,7 +158,7 @@ inline void spawn(
 {
   user->get_strand().post(
     boost::bind(
-      &detail::make_context_switching_actor,
+      &detail::make_stackful_actor,
       sire.get_aid(), user,
       make_actor_func<stackful>(f), stack_size
       )
@@ -185,7 +185,7 @@ inline void spawn(
 {
   user->get_strand().post(
     boost::bind(
-      &detail::make_event_based_actor,
+      &detail::make_stackless_actor,
       sire.get_aid(), user,
       make_actor_func<stackless>(f), stack_size
       )

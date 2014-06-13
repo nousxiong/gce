@@ -79,7 +79,6 @@ static exit_code_t const exit_except = atom("gce_ex_except");
 static exit_code_t const exit_remote = atom("gce_ex_remote");
 static exit_code_t const exit_already = atom("gce_ex_already");
 static exit_code_t const exit_neterr = atom("gce_ex_neterr");
-static exit_code_t const exit_unknown = atom("gce_ex_unknown");
 
 namespace detail
 {

@@ -14,9 +14,9 @@
 #include <gce/actor/basic_actor.hpp>
 #include <gce/actor/detail/cache_pool.hpp>
 #include <gce/actor/detail/pack.hpp>
+#include <boost/container/deque.hpp>
 #include <boost/lockfree/queue.hpp>
 #include <vector>
-#include <deque>
 #include <utility>
 
 namespace gce
@@ -56,14 +56,14 @@ public:
 
   inline response_t request(aid_t recver, message const& m)
   {
-    response_t res(base_type::new_request(), get_aid());
+    response_t res(base_type::new_request(), get_aid(), recver);
     base_type::pri_request(res, recver, m);
     return res;
   }
 
   inline response_t request(svcid_t recver, message const& m)
   {
-    response_t res(base_type::new_request(), get_aid());
+    response_t res(base_type::new_request(), get_aid(), recver);
     base_type::pri_request_svc(res, recver, m);
     return res;
   }
@@ -142,7 +142,7 @@ private:
     /// Ensure start from a new cache line.
     byte_t pad0_[GCE_CACHE_LINE_SIZE];
 
-    GCE_CACHE_ALIGNED_VAR(std::deque<detail::pack>, que_)
+    GCE_CACHE_ALIGNED_VAR(boost::container::deque<detail::pack>, que_)
     GCE_CACHE_ALIGNED_VAR(boost::uint64_t, index_base_)
     GCE_CACHE_ALIGNED_VAR(boost::uint64_t, head_)
     GCE_CACHE_ALIGNED_VAR(boost::atomic<boost::uint64_t>, garbage_tail_)

@@ -71,14 +71,14 @@ public:
 
   inline response_t request(aid_t recver, message const& m)
   {
-    response_t res(base_type::new_request(), get_aid());
+    response_t res(base_type::new_request(), get_aid(), recver);
     base_type::pri_request(res, recver, m);
     return res;
   }
 
   inline response_t request(svcid_t recver, message const& m)
   {
-    response_t res(base_type::new_request(), get_aid());
+    response_t res(base_type::new_request(), get_aid(), recver);
     base_type::pri_request_svc(res, recver, m);
     return res;
   }
@@ -134,7 +134,7 @@ private:
   void resume(actor_code ac = actor_normal);
   actor_code yield();
   void free_self();
-  void stop(exit_code_t, std::string const&);
+  void stop(exit_code_t, std::string);
   void start_recv_timer(duration_t);
   void handle_recv_timeout(errcode_t const&, std::size_t);
   void handle_recv(detail::pack&);

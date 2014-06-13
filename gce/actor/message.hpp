@@ -68,6 +68,23 @@ public:
   {
   }
 
+  message(byte_t const* data, std::size_t size)
+    : type_(match_nil)
+    , tag_offset_(u32_nil)
+  {
+    if (size <= GCE_SMALL_MSG_SIZE)
+    {
+      buf_.reset(small_, GCE_SMALL_MSG_SIZE);
+    }
+    else
+    {
+      make_large(size);
+      buf_.reset(large_->data(), size);
+    }
+    std::memcpy(buf_.get_write_data(), data, size);
+    buf_.write(size);
+  }
+
   message(
     match_t type, byte_t const* data,
     std::size_t size, boost::uint32_t tag_offset

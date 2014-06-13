@@ -73,7 +73,7 @@ void thread_mapped_actor::relay(svcid_t des, message& m)
 ///----------------------------------------------------------------------------
 response_t thread_mapped_actor::request(aid_t recver, message const& m)
 {
-  response_t res(base_type::new_request(), get_aid());
+  response_t res(base_type::new_request(), get_aid(), recver);
   snd_.post(
     boost::bind(
       &base_type::pri_request, this,
@@ -85,7 +85,7 @@ response_t thread_mapped_actor::request(aid_t recver, message const& m)
 ///----------------------------------------------------------------------------
 response_t thread_mapped_actor::request(svcid_t recver, message const& m)
 {
-  response_t res(base_type::new_request(), get_aid());
+  response_t res(base_type::new_request(), get_aid(), recver);
   snd_.post(
     boost::bind(
       &base_type::pri_request_svc, this,

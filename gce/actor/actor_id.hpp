@@ -11,6 +11,7 @@
 #define GCE_ACTOR_ACTOR_ID_HPP
 
 #include <gce/actor/config.hpp>
+#include <gce/actor/service_id.hpp>
 #include <iostream>
 
 namespace gce
@@ -120,6 +121,14 @@ public:
   timestamp_t timestamp_;
   boost::uint64_t uintptr_;
   sid_t sid_;
+
+  /// internal use
+  inline void set_svcid(svcid_t svc)
+  {
+    svc_ = svc;
+  }
+
+  svcid_t svc_;
 };
 
 typedef actor_id aid_t;
@@ -132,10 +141,10 @@ std::basic_ostream<CharT, TraitsT>& operator<<(
   )
 {
   strm << "<" << aid.ctxid_ << "." << aid.timestamp_ <<
-    "." << aid.uintptr_ << "." << aid.sid_ << ">";
+    "." << aid.uintptr_ << "." << aid.sid_ << "." << aid.svc_ << ">";
   return strm;
 }
 
-GCE_PACK(gce::aid_t, (ctxid_)(timestamp_)(uintptr_)(sid_));
+GCE_PACK(gce::aid_t, (ctxid_)(timestamp_)(uintptr_)(sid_)(svc_));
 
 #endif /// GCE_ACTOR_ACTOR_ID_HPP

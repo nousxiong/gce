@@ -139,7 +139,7 @@ void acceptor::run(aid_t sire, std::string const& ep, yield_t yield)
     }
     catch (...)
     {
-      exc = exit_unknown;
+      exc = exit_except;
       exit_msg = "unexpected exception";
       close();
     }

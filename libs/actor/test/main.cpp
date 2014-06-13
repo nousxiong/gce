@@ -26,6 +26,7 @@
 #include "test_object_pool.hpp"
 #include "test_coro.hpp"
 #include "test_actor.hpp"
+#include "test_response.hpp"
 #include "test_stackless.hpp"
 #include "test_mixin.hpp"
 #include "test_slice.hpp"
@@ -56,6 +57,7 @@ int main()
     gce::coro_ut::run();
     gce::send_recv_ut::run();
     gce::actor_ut::run();
+    gce::response_ut::run();
     gce::stackless_ut::run();
     gce::mixin_ut::run();
     gce::slice_ut::run();

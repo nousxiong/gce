@@ -67,14 +67,14 @@ public:
 
   inline response_t request(aid_t recver, message const& m)
   {
-    response_t res(new_request(), get_aid());
+    response_t res(new_request(), get_aid(), recver);
     base_type::pri_request(res, recver, m);
     return res;
   }
 
   inline response_t request(svcid_t recver, message const& m)
   {
-    response_t res(new_request(), get_aid());
+    response_t res(new_request(), get_aid(), recver);
     base_type::pri_request_svc(res, recver, m);
     return res;
   }

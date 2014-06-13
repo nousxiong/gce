@@ -28,13 +28,13 @@ public:
   ~conn();
 
 public:
-  static void run(
+  void run(
     gce::actor<gce::stackful>&, socket_ptr,
     gce::aid_t group_aid,
     app_ctxid_list_t game_list
     );
-  static void timeout(gce::actor<gce::stackful>&);
-  static void recv(
+  void timeout(gce::actor<gce::stackful>&);
+  void recv(
     gce::actor<gce::stackful>&, socket_ptr skt,
     gce::aid_t tmo_aid, gce::aid_t conn_aid,
     app_ctxid_list_t game_list

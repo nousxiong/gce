@@ -213,7 +213,7 @@ void coroutine_stackful_actor::run(yield_t yld)
   }
   catch (boost::coroutines::detail::forced_unwind const&)
   {
-    stop(exit_normal, "exit normal");
+    stop(exit_except, "exit normal");
     throw;
   }
   catch (std::exception& ex)
@@ -222,7 +222,7 @@ void coroutine_stackful_actor::run(yield_t yld)
   }
   catch (...)
   {
-    stop(exit_unknown, "unexpected exception");
+    stop(exit_except, "unexpected exception");
   }
 }
 ///----------------------------------------------------------------------------
@@ -257,11 +257,14 @@ void coroutine_stackful_actor::free_self()
   user_->free_actor(this);
 }
 ///----------------------------------------------------------------------------
-void coroutine_stackful_actor::stop(exit_code_t ec, std::string const& exit_msg)
+void coroutine_stackful_actor::stop(exit_code_t ec, std::string exit_msg)
 {
-  /// Trigger a context switch, ensure we stop coro using coroutine_stackful_actor::resume.
-  snd_.post(boost::bind(&coroutine_stackful_actor::resume, this, actor_normal));
-  yield();
+  if (ec == exit_normal)
+  {
+    /// Trigger a context switching, ensure we stop coro using coroutine_stackful_actor::resume.
+    snd_.post(boost::bind(&coroutine_stackful_actor::resume, this, actor_normal));
+    yield();
+  }
 
   stat_ = off;
   ec_ = ec;

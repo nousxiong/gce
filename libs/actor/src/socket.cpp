@@ -312,11 +312,11 @@ void socket::spawn_remote_actor(cache_pool* user, spawn_t spw, remote_func f)
   spawn_type type = spw.get_type();
   if (type == spw_stacked)
   {
-    aid = make_context_switching_actor(aid_t(), user, f.af_, spw.get_stack_size());
+    aid = make_stackful_actor(aid_t(), user, f.af_, spw.get_stack_size());
   }
   else
   {
-    aid = make_event_based_actor(aid_t(), user, f.ef_, spw.get_stack_size());
+    aid = make_stackless_actor(aid_t(), user, f.ef_, spw.get_stack_size());
   }
   user_->get_strand().post(
     boost::bind(
@@ -459,7 +459,7 @@ void socket::run_conn(aid_t sire, ctxid_pair_t target, std::string const& ep, yi
     }
     catch (...)
     {
-      exc = exit_unknown;
+      exc = exit_except;
       exit_msg = "unexpected exception";
       close();
     }
@@ -540,7 +540,7 @@ void socket::run(socket_ptr skt, yield_t yield)
     }
     catch (...)
     {
-      exc = exit_unknown;
+      exc = exit_except;
       exit_msg = "unexpected exception";
       close();
     }
