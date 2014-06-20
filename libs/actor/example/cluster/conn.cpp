@@ -9,10 +9,15 @@
 
 #include "conn.hpp"
 #include <gce/detail/scope.hpp>
+#include <boost/make_shared.hpp>
 #include <boost/foreach.hpp>
 
 ///----------------------------------------------------------------------------
-conn::conn()
+conn::conn(socket_ptr skt, gce::aid_t group_aid, app_ctxid_list_t game_list)
+  : skt_(skt)
+  , group_aid_(group_aid)
+  , game_list_(game_list)
+  , rcv_(skt_, game_list_)
 {
 }
 ///----------------------------------------------------------------------------
@@ -20,129 +25,158 @@ conn::~conn()
 {
 }
 ///----------------------------------------------------------------------------
-void quit_callback(gce::actor<gce::stackful>& self, gce::aid_t group_aid)
+gce::aid_t conn::spawn(
+  gce::actor<gce::stackful>& sire, socket_ptr skt, 
+  gce::aid_t group_aid, app_ctxid_list_t game_list
+  )
+{
+  ptr_t c(boost::make_shared<conn>(skt, group_aid, game_list));
+  return 
+    gce::spawn<gce::stackless>(
+      sire,
+      boost::bind(&conn::run, c, _1)
+      );
+}
+///----------------------------------------------------------------------------
+void quit_callback(gce::actor<gce::stackless>& self, gce::aid_t group_aid)
 {
   gce::send(self, group_aid, gce::atom("rmv_conn"));
 }
 ///----------------------------------------------------------------------------
-void conn::run(
-  gce::actor<gce::stackful>& self, socket_ptr skt,
-  gce::aid_t group_aid, app_ctxid_list_t game_list
-  )
+void conn::run(gce::actor<gce::stackless>& self)
 {
   try
   {
-    gce::yield_t yield = self.get_yield();
-
-    gce::detail::scope scp(boost::bind(&tcp_socket::close, skt));
-    gce::response_t res =
-      gce::request(
-        self, group_aid,
-        gce::atom("add_conn")
-        );
-    gce::message msg;
-    self.recv(res, msg);
-    if (msg.get_type() != gce::atom("ok"))
+    GCE_REENTER (self)
     {
-      throw std::runtime_error("add_conn error");
-    }
-
-    gce::detail::scope quit_scp(
-      boost::bind(
-        &quit_callback, boost::ref(self), group_aid
-        )
-      );
-
-    gce::aid_t tmo_aid =
-      gce::spawn(
-        self,
-        boost::bind(&conn::timeout, _1),
-        gce::linked
-        );
-
-    gce::aid_t recv_aid =
-      gce::spawn(
-        self,
-        boost::bind(
-          &conn::recv, _1, skt,
-          tmo_aid, self.get_aid(), game_list
-          ),
-        gce::linked,
-        true
-        );
-
-    bool running = true;
-    while (running)
-    {
-      gce::message msg;
-      gce::aid_t sender = self.recv(msg);
-      gce::match_t type = msg.get_type();
-      if (type == gce::exit || type == gce::atom("stop"))
+      GCE_YIELD
       {
-        running = false;
+        gce::response_t res =
+          gce::request(
+            self, group_aid_,
+            gce::atom("add_conn")
+            );
+
+        self.recv(res, msg_);
       }
-      else if (type == gce::atom("fwd_msg"))
+
+      if (msg_.get_type() != gce::atom("ok"))
       {
-        gce::message m;
-        msg >> m;
-        skt->send(m, yield);
+        throw std::runtime_error("add_conn error");
       }
-      else
+
+      GCE_YIELD 
       {
-        std::string errmsg("conn::run unexpected message, type: ");
-        errmsg += gce::atom(type);
-        throw std::runtime_error(errmsg);
+        gce::spawn(
+          self,
+          boost::bind(&conn::timeout::run, &tmo_, _1),
+          tmo_aid_,
+          gce::linked
+          );
+      }
+
+      GCE_YIELD
+      {
+        gce::spawn(
+          self,
+          boost::bind(
+            &conn::recv::run, &rcv_, _1, 
+            tmo_aid_, self.get_aid()
+            ),
+          tmp_aid_,
+          gce::linked,
+          true
+          );
+      }
+
+      running_ = true;
+      while (running_)
+      {
+        msg_ = gce::message();
+        sender_ = gce::aid_t();
+        GCE_YIELD self.recv(sender_, msg_);
+        type_ = msg_.get_type();
+        if (type_ == gce::exit || type_ == gce::atom("stop"))
+        {
+          running_ = false;
+        }
+        else if (type_ == gce::atom("fwd_msg"))
+        {
+          GCE_YIELD
+          {
+            gce::message m;
+            msg_ >> m;
+            ec_.clear();
+            skt_->send(m, gce::adaptor(self, ec_));
+          }
+
+          if (ec_)
+          {
+            throw std::runtime_error("socket send error");
+          }
+        }
+        else
+        {
+          std::string errmsg("conn::run unexpected message, type: ");
+          errmsg += gce::atom(type_);
+          throw std::runtime_error(errmsg);
+        }
       }
     }
   }
   catch (std::exception& ex)
   {
     std::printf("conn::run except: %s\n", ex.what());
+    quit_callback(self, group_aid_);
   }
 }
 ///----------------------------------------------------------------------------
-void conn::timeout(gce::actor<gce::stackful>& self)
+void conn::timeout::run(gce::actor<gce::stackless>& self)
 {
   try
   {
-    boost::chrono::seconds curr_tmo(60);
-    std::size_t max_count = 1;
-    std::size_t curr_count = 1;
-
-    bool running = true;
-    while (running)
+    GCE_REENTER (self)
     {
-      gce::message msg;
-      gce::aid_t sender = self.recv(msg, gce::match(curr_tmo));
-      gce::match_t type = msg.get_type();
-      if (sender)
+      curr_tmo_ = boost::chrono::seconds(60);
+      max_count_ = 1;
+      curr_count_ = 1;
+
+      running_ = true;
+      while (running_)
       {
-        if (type == gce::exit)
+        msg_ = gce::message();
+        sender_ = gce::aid_t();
+        GCE_YIELD self.recv(sender_, msg_, gce::match(curr_tmo_));
+        gce::match_t type = msg_.get_type();
+        if (sender_)
         {
-          running = false;
-        }
-        else if (type == gce::atom("reset"))
-        {
-          curr_count = max_count;
-        }
-        else if (type == gce::atom("online"))
-        {
-          curr_tmo = boost::chrono::seconds(30);
-          curr_count = 3;
+          if (type == gce::exit)
+          {
+            running_ = false;
+          }
+          else if (type == gce::atom("reset"))
+          {
+            curr_count_ = max_count_;
+          }
+          else if (type == gce::atom("online"))
+          {
+            curr_tmo_ = boost::chrono::seconds(30);
+            curr_count_ = 3;
+          }
+          else
+          {
+            std::string errmsg("conn::timeout unexpected message, type: ");
+            errmsg += gce::atom(type);
+            throw std::runtime_error(errmsg);
+          }
         }
         else
         {
-          std::string errmsg("conn::timeout unexpected message, type: ");
-          errmsg += gce::atom(type);
-          throw std::runtime_error(errmsg);
-        }
-      }
-      else
-      {
-        --curr_count;
-        if (curr_count == 0)
-        {
-          running = false;
+          --curr_count_;
+          if (curr_count_ == 0)
+          {
+            running_ = false;
+          }
         }
       }
     }
@@ -153,94 +187,114 @@ void conn::timeout(gce::actor<gce::stackful>& self)
   }
 }
 ///----------------------------------------------------------------------------
-void conn::recv(
-  gce::actor<gce::stackful>& self, socket_ptr skt,
-  gce::aid_t tmo_aid, gce::aid_t conn_aid,
-  app_ctxid_list_t game_list
+conn::recv::recv(socket_ptr skt, app_ctxid_list_t game_list)
+  : skt_(skt)
+  , game_list_(game_list)
+{
+}
+///----------------------------------------------------------------------------
+void conn::recv::run(
+  gce::actor<gce::stackless>& self, 
+  gce::aid_t tmo_aid, gce::aid_t conn_aid
   )
 {
   try
   {
-    gce::yield_t yield = self.get_yield();
-    gce::svcid_t game_svcid;
-    gce::aid_t usr_aid;
-    status stat = conned;
-
-    while (true)
+    GCE_REENTER (self)
     {
-      gce::errcode_t ec;
-      gce::message msg;
-      msg = skt->recv(yield[ec]);
+      tmo_aid_ = tmo_aid;
+      conn_aid_ = conn_aid;
+      stat_ = conned;
 
-      if (!ec)
+      while (true)
       {
-        gce::send(self, tmo_aid, gce::atom("reset"));
-        gce::match_t type = msg.get_type();
-        if (type == gce::atom("cln_login"))
+        ec_.clear();
+        msg_ = gce::message();
+        GCE_YIELD skt_->recv(msg_, gce::adaptor(self, ec_));
+
+        if (!ec_)
         {
-          if (stat != conned)
+          gce::send(self, tmo_aid_, gce::atom("reset"));
+          type_ = msg_.get_type();
+          if (type_ == gce::atom("cln_login"))
           {
-            throw std::runtime_error("conn status error, must be conned");
+            if (stat_ != conned)
+            {
+              throw std::runtime_error("conn status error, must be conned");
+            }
+
+            msg_ >> username_;
+            game_svcid_ = select_game_app(game_list_, username_);
+
+            msg_ << conn_aid_;
+            GCE_YIELD
+            {
+              gce::response_t res = self.request(game_svcid_, msg_);
+              msg_ = gce::message();
+              usr_aid_ = gce::aid_t();
+              self.recv(res, usr_aid_, msg_, gce::seconds_t(5));
+            }
+
+            if (!usr_aid_)
+            {
+              throw std::runtime_error("client login failed");
+            }
+            else
+            {
+              std::string errmsg;
+              msg_ >> errmsg;
+              if (!errmsg.empty())
+              {
+                throw std::runtime_error(errmsg);
+              }
+            }
+
+            stat_ = online;
+            gce::message m(gce::atom("cln_login_ret"));
+            m << std::string();
+            gce::send(self, conn_aid_, gce::atom("fwd_msg"), m);
+            gce::send(self, tmo_aid_, gce::atom("online"));
           }
-
-          std::string username;
-          msg >> username;
-          game_svcid = select_game_app(game_list, username);
-
-          msg << conn_aid;
-          gce::response_t res = self.request(game_svcid, msg);
-          std::string errmsg;
-          usr_aid = gce::recv(self, res, errmsg, gce::seconds_t(5));
-          if (!errmsg.empty())
+          else if (type_ == gce::atom("chat"))
           {
-            throw std::runtime_error(errmsg);
+            if (stat_ != online)
+            {
+              throw std::runtime_error("conn status error, must be online");
+            }
+
+            BOOST_FOREACH(gce::svcid_t svc, game_list_)
+            {
+              self.send(svc, msg_);
+            }
           }
-
-          stat = online;
-          gce::message m(gce::atom("cln_login_ret"));
-          m << errmsg;
-          gce::send(self, conn_aid, gce::atom("fwd_msg"), m);
-          gce::send(self, tmo_aid, gce::atom("online"));
-        }
-        else if (type == gce::atom("chat"))
-        {
-          if (stat != online)
+          else
           {
-            throw std::runtime_error("conn status error, must be online");
-          }
+            if (stat_ != online)
+            {
+              throw std::runtime_error("conn status error, must be online");
+            }
 
-          BOOST_FOREACH(gce::svcid_t svc, game_list)
-          {
-            self.send(svc, msg);
+            /// forward to user
+            self.send(usr_aid_, msg_);
           }
         }
         else
         {
-          if (stat != online)
-          {
-            throw std::runtime_error("conn status error, must be online");
-          }
-
-          /// forward to user
-          self.send(usr_aid, msg);
+          std::printf("conn::recv::run, socket err: %s\n", ec_.message().c_str());
+          break;
         }
-      }
-      else
-      {
-        std::printf("conn::recv, socket err: %s\n", ec.message().c_str());
-        break;
       }
     }
   }
   catch (std::exception& ex)
   {
-    std::printf("conn::recv except: %s\n", ex.what());
+    std::printf("conn::recv::run except: %s\n", ex.what());
     std::string errstr = boost::diagnostic_information(ex);
     std::printf("kick, err: %s\n", errstr.c_str());
 
     gce::message m(gce::atom("kick"));
     m << errstr;
-    gce::send(self, conn_aid, gce::atom("fwd_msg"), m);
+    gce::send(self, conn_aid_, gce::atom("fwd_msg"), m);
   }
 }
 ///----------------------------------------------------------------------------

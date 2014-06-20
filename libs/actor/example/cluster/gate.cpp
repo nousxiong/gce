@@ -218,13 +218,7 @@ void gate::accept(
       if (!ec)
       {
         std::printf("new client conn\n");
-        gce::spawn(
-          self,
-          boost::bind(
-            &conn::run, _1, skt,
-            conn_group_list[curr_group], game_list
-            )
-          );
+        conn::spawn(self, skt, conn_group_list[curr_group], game_list);
       }
       else
       {

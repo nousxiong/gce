@@ -115,6 +115,11 @@ public:
     return a_.get_aid();
   }
 
+  inline void chain(bool flag)
+  {
+    a_.chain(flag);
+  }
+
 public:
   /// internal use
   inline sid_t spawn(
@@ -218,6 +223,11 @@ public:
   inline aid_t get_aid() const
   {
     return a_.get_aid();
+  }
+
+  inline void chain(bool flag)
+  {
+    a_.chain(flag);
   }
 
 public:
@@ -338,6 +348,11 @@ public:
   inline aid_t get_aid() const
   {
     return a_.get_aid();
+  }
+
+  inline void chain(bool flag)
+  {
+    a_.chain(flag);
   }
 
 public:
@@ -515,6 +530,11 @@ public:
   inline aid_t get_aid() const
   {
     return a_.get_aid();
+  }
+
+  inline void chain(bool flag)
+  {
+    a_.chain(flag);
   }
 
 public:
