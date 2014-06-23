@@ -26,6 +26,52 @@ struct match
   {
   }
 
+  explicit match(match_list_t match_list, duration_t tmo = infin)
+    : timeout_(tmo)
+    , match_list_(match_list)
+  {
+  }
+
+  explicit match(match_t type1, duration_t tmo = infin)
+    : timeout_(tmo)
+  {
+    match_list_.push_back(type1);
+  }
+
+  match(match_t type1, match_t type2, duration_t tmo = infin)
+    : timeout_(tmo)
+  {
+    match_list_.push_back(type1);
+    match_list_.push_back(type2);
+  }
+
+  match(match_t type1, match_t type2, match_t type3, duration_t tmo = infin)
+    : timeout_(tmo)
+  {
+    match_list_.push_back(type1);
+    match_list_.push_back(type2);
+    match_list_.push_back(type3);
+  }
+
+  match(match_t type1, match_t type2, match_t type3, match_t type4, duration_t tmo = infin)
+    : timeout_(tmo)
+  {
+    match_list_.push_back(type1);
+    match_list_.push_back(type2);
+    match_list_.push_back(type3);
+    match_list_.push_back(type4);
+  }
+
+  match(match_t type1, match_t type2, match_t type3, match_t type4, match_t type5, duration_t tmo = infin)
+    : timeout_(tmo)
+  {
+    match_list_.push_back(type1);
+    match_list_.push_back(type2);
+    match_list_.push_back(type3);
+    match_list_.push_back(type4);
+    match_list_.push_back(type5);
+  }
+
   void clear()
   {
     timeout_ = infin;
