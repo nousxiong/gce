@@ -33,12 +33,16 @@ public:
       context ctx1(attrs);
       attrs.id_ = atom("two");
       context ctx2(attrs);
+      
+      actor<threaded> base = spawn(ctx);
+      actor<threaded> base1 = spawn(ctx1);
+      actor<threaded> base2 = spawn(ctx2);
 
-      gce::bind(ctx, "tcp://127.0.0.1:14923", true);
+      gce::bind(base, "tcp://127.0.0.1:14923", true);
 
       aid_t echo_aid =
         spawn(
-          ctx2,
+          base2,
           boost::bind(
             &socket_ut::echo, _1
             ),
@@ -47,18 +51,18 @@ public:
 
       net_option opt;
       opt.reconn_period_ = seconds_t(1);
-      connect(ctx1, atom("router"), "tcp://127.0.0.1:14923", true, opt);
-      connect(ctx2, atom("router"), "tcp://127.0.0.1:14923", true, opt);
-      wait(ctx2, boost::chrono::milliseconds(100));
+      connect(base1, atom("router"), "tcp://127.0.0.1:14923", true, opt);
+      connect(base2, atom("router"), "tcp://127.0.0.1:14923", true, opt);
+      wait(base2, boost::chrono::milliseconds(100));
 
       for (std::size_t i=0; i<echo_num; ++i)
       {
-        send(ctx1, echo_aid, atom("echo"));
-        recv(ctx1, atom("echo"));
+        send(base1, echo_aid, atom("echo"));
+        recv(base1, atom("echo"));
       }
-      send(ctx1, echo_aid, atom("end"));
+      send(base1, echo_aid, atom("end"));
 
-      recv(ctx2);
+      recv(base2);
     }
     catch (std::exception& ex)
     {

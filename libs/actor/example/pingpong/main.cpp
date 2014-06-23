@@ -46,14 +46,15 @@ int main(int argc, char* argv[])
       (argc > 1 && std::atoi(argv[1]) > 0) ? std::atoi(argv[1]) : 10000;
 
     gce::context ctx;
-    gce::aid_t ping = gce::spawn(ctx, boost::bind(&pingpong, _1));
-    gce::aid_t pong = gce::spawn(ctx, boost::bind(&pingpong, _1));
+    gce::actor<gce::threaded> base = gce::spawn(ctx);
+    gce::aid_t ping = gce::spawn(base, boost::bind(&pingpong, _1));
+    gce::aid_t pong = gce::spawn(base, boost::bind(&pingpong, _1));
 
-    gce::send(ctx, ping, gce::atom("prepare"), pong);
-    gce::send(ctx, pong, gce::atom("prepare"), ping);
+    gce::send(base, ping, gce::atom("prepare"), pong);
+    gce::send(base, pong, gce::atom("prepare"), ping);
 
-    gce::send(ctx, ping, gce::atom("pingpong"), count_down);
-    gce::recv(ctx, gce::atom("bye"));
+    gce::send(base, ping, gce::atom("pingpong"), count_down);
+    gce::recv(base, gce::atom("bye"));
   }
   catch (std::exception& ex)
   {

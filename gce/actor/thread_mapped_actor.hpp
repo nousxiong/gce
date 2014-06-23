@@ -65,7 +65,10 @@ public:
   {
     nonblocking_actor_list_.push_back(&a);
   }
-  inline std::vector<nonblocking_actor*>& get_nonblocking_actor_list() { return nonblocking_actor_list_; }
+  inline std::vector<nonblocking_actor*>& get_nonblocking_actor_list() 
+  { 
+    return nonblocking_actor_list_; 
+  }
   void on_recv(detail::pack&, base_type::send_hint);
 
   sid_t spawn(detail::spawn_type, match_t func, match_t ctxid, std::size_t stack_size);

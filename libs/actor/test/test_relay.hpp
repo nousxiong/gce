@@ -71,11 +71,12 @@ private:
     {
       std::size_t root_num = 100;
       context ctx;
+      actor<threaded> base = spawn(ctx);
 
       for (std::size_t i=0; i<root_num; ++i)
       {
         spawn(
-          ctx,
+          base,
           boost::bind(
             &relay_ut::root, _1
             ),
@@ -85,7 +86,7 @@ private:
 
       for (std::size_t i=0; i<root_num; ++i)
       {
-        recv(ctx);
+        recv(base);
       }
     }
     catch (std::exception& ex)

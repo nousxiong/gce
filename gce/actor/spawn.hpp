@@ -397,18 +397,6 @@ inline aid_t spawn(
 {
   return spawn(spw_evented, sire, func, h, ctxid, type, stack_size, tmo);
 }
-
-inline actor<threaded> spawn(threaded, context& ctx)
-{
-  return actor<threaded>(ctx.make_thread_mapped_actor());
-}
-
-inline actor<nonblocked> spawn(nonblocked, context& ctx)
-{
-  nonblocking_actor& a = ctx.make_nonblocking_actor();
-  ctx.add_nonblocking_actor(a);
-  return actor<nonblocked>(a);
-}
 } /// namespace detail
 
 ///------------------------------------------------------------------------------
@@ -488,13 +476,7 @@ inline void spawn(
 ///------------------------------------------------------------------------------
 inline actor<threaded> spawn(context& ctx)
 {
-  return detail::spawn(threaded(), ctx);
-}
-
-template <typename Tag>
-inline actor<Tag> spawn(context& ctx)
-{
-  return detail::spawn(Tag(), ctx);
+  return actor<threaded>(ctx.make_thread_mapped_actor());
 }
 ///------------------------------------------------------------------------------
 /// Spawn a nonblocking_actor using given thread_mapped_actor

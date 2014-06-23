@@ -47,8 +47,9 @@ private:
       attrs.id_ = atom("router");
       attrs.thread_num_ = 1;
       context ctx(attrs);
+      actor<threaded> base = spawn(ctx);
 
-      gce::bind(ctx, "tcp://127.0.0.1:14924", true);
+      gce::bind(base, "tcp://127.0.0.1:14924", true);
 
       boost::thread_group thrs;
       for (std::size_t i=0; i<root_num; ++i)
@@ -56,7 +57,7 @@ private:
         thrs.create_thread(
           boost::bind(
             &remote_relay_ut::root, i, root_num,
-            ctx.get_aid(), spawn(ctx)
+            base.get_aid(), spawn(ctx)
             )
           );
       }
@@ -64,12 +65,12 @@ private:
       std::vector<aid_t> root_list(root_num);
       for (std::size_t i=0; i<root_num; ++i)
       {
-        root_list[i] = recv(ctx);
+        root_list[i] = recv(base);
       }
 
       BOOST_FOREACH(aid_t aid, root_list)
       {
-        send(ctx, aid);
+        send(base, aid);
       }
       thrs.join_all();
     }
@@ -90,6 +91,7 @@ private:
       attrs.id_ = id;
       attrs.thread_num_ = 1;
       context ctx(attrs);
+      actor<threaded> base = spawn(ctx);
 
       net_option opt;
       opt.reconn_period_ = seconds_t(1);
@@ -102,15 +104,15 @@ private:
             )
           )
         );
-      connect(ctx, atom("router"), "tcp://127.0.0.1:14924", true, opt, func_list);
-      wait(ctx, boost::chrono::milliseconds(1000));
+      connect(base, atom("router"), "tcp://127.0.0.1:14924", true, opt, func_list);
+      wait(base, boost::chrono::milliseconds(1000));
 
       aid_t last_id;
       aid_t first_id;
       for (std::size_t i=0; i<root_num; ++i)
       {
-        aid_t aid = spawn(ctx, atom("my_actor"), i);
-        send(ctx, aid, atom("init"), last_id);
+        aid_t aid = spawn(base, atom("my_actor"), i);
+        send(base, aid, atom("init"), last_id);
         if (i == 0)
         {
           first_id = aid;
@@ -119,9 +121,9 @@ private:
       }
 
       int i = 0;
-      response_t res = request(ctx, last_id, atom("hi"), i);
+      response_t res = request(base, last_id, atom("hi"), i);
       message msg;
-      aid_t sender = ctx.recv(res, msg);
+      aid_t sender = base.recv(res, msg);
       BOOST_ASSERT(sender == first_id);
       BOOST_ASSERT(msg.get_type() == atom("hello"));
 

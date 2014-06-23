@@ -51,16 +51,17 @@ public:
     try
     {
       context ctx;
+      actor<threaded> base = spawn(ctx);
 
       int const count_down = 10000;
-      aid_t ping = spawn(ctx, boost::bind(&send_recv_ut::ping_pong, _1));
-      aid_t pong = spawn(ctx, boost::bind(&send_recv_ut::ping_pong, _1));
+      aid_t ping = spawn(base, boost::bind(&send_recv_ut::ping_pong, _1));
+      aid_t pong = spawn(base, boost::bind(&send_recv_ut::ping_pong, _1));
 
-      send(ctx, ping, atom("prepare"), pong);
-      send(ctx, pong, atom("prepare"), ping);
+      send(base, ping, atom("prepare"), pong);
+      send(base, pong, atom("prepare"), ping);
 
-      send(ctx, ping, atom("ping_pong"), count_down);
-      recv(ctx);
+      send(base, ping, atom("ping_pong"), count_down);
+      recv(base);
     }
     catch (std::exception& ex)
     {

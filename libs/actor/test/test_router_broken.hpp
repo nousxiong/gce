@@ -31,49 +31,52 @@ public:
       context ctx1(attrs);
       attrs.id_ = atom("two");
       context ctx2(attrs);
+      
+      actor<threaded> base1 = spawn(ctx1);
+      actor<threaded> base2 = spawn(ctx2);
 
       actor<threaded> a = spawn(ctx1);
 
       boost::thread thr(
         boost::bind(
           &router_broken_ut::router,
-          ctx1.get_aid(), boost::ref(a)
+          base1.get_aid(), boost::ref(a)
           )
         );
-      aid_t mix_id = recv(ctx1);
+      aid_t mix_id = recv(base1);
 
       net_option opt;
       opt.reconn_period_ = seconds_t(1);
-      connect(ctx1, atom("router"), "tcp://127.0.0.1:14923", true, opt);
-      connect(ctx2, atom("router"), "tcp://127.0.0.1:14923", true, opt);
-      wait(ctx2, boost::chrono::milliseconds(100));
+      connect(base1, atom("router"), "tcp://127.0.0.1:14923", true, opt);
+      connect(base2, atom("router"), "tcp://127.0.0.1:14923", true, opt);
+      wait(base2, boost::chrono::milliseconds(100));
 
       std::vector<aid_t> quiter_list(quiter_num);
       for (std::size_t i=0; i<quiter_num; ++i)
       {
         quiter_list[i] =
           spawn(
-            ctx2,
+            base2,
             boost::bind(
               &router_broken_ut::quiter, _1
               ),
             monitored
             );
-        ctx1.link(quiter_list[i]);
+        base1.link(quiter_list[i]);
       }
-      send(ctx1, mix_id);
+      send(base1, mix_id);
 
       thr.join();
 
       for (std::size_t i=0; i<quiter_num; ++i)
       {
-        send(ctx2, quiter_list[i]);
+        send(base2, quiter_list[i]);
       }
 
       for (std::size_t i=0; i<quiter_num; ++i)
       {
-        recv(ctx1);
-        recv(ctx2);
+        recv(base1);
+        recv(base2);
       }
     }
     catch (std::exception& ex)
@@ -89,8 +92,9 @@ public:
       attributes attrs;
       attrs.id_ = atom("router");
       context ctx(attrs);
+      actor<threaded> base = spawn(ctx);
 
-      gce::bind(ctx, "tcp://127.0.0.1:14923", true);
+      gce::bind(base, "tcp://127.0.0.1:14923", true);
       send(mix, base_id);
       recv(mix);
     }

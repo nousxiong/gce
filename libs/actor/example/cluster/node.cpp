@@ -24,6 +24,7 @@ node::node(
   std::vector<router_init_t> const& router_list
   )
   : ctx_(attrs)
+  , base_(gce::spawn(ctx_))
   , sig_(ctx_.get_io_service())
 {
   sig_.add(SIGINT);
@@ -35,15 +36,15 @@ node::node(
   if (is_master)
   {
     master_.reset(new master(gate_list, game_list, router_list));
-    gce::bind(ctx_, master_ep);
+    gce::bind(base_, master_ep);
   }
   else
   {
-    gce::connect(ctx_, master_node_id, master_ep);
+    gce::connect(base_, master_node_id, master_ep);
   }
 
   gce::svcid_t master(master_node_id, gce::atom("master"));
-  gce::spawn(ctx_, boost::bind(&node::run, this, _1, master), gce::monitored);
+  gce::spawn(base_, boost::bind(&node::run, this, _1, master), gce::monitored);
 }
 ///----------------------------------------------------------------------------
 node::~node()
@@ -52,7 +53,7 @@ node::~node()
 ///----------------------------------------------------------------------------
 void node::wait_end()
 {
-  gce::recv(ctx_);
+  gce::recv(base_);
 }
 ///----------------------------------------------------------------------------
 void node::run(gce::actor<gce::stackful>& self, gce::svcid_t master)

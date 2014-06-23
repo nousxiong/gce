@@ -11,7 +11,6 @@
 #define GCE_ACTOR_CONTEXT_HPP
 
 #include <gce/actor/config.hpp>
-#include <gce/actor/thread_mapped_actor.hpp>
 #include <gce/actor/actor_id.hpp>
 #include <gce/detail/unique_ptr.hpp>
 #include <boost/thread/thread.hpp>
@@ -59,6 +58,7 @@ class cache_pool;
 }
 
 class nonblocking_actor;
+class thread_mapped_actor;
 class context
 {
 public:
@@ -70,74 +70,6 @@ public:
   {
     BOOST_ASSERT(ios_);
     return *ios_;
-  }
-  
-  inline aid_t get_aid() const
-  {
-    return base_->get_aid();
-  }
-
-  inline void send(aid_t recver, message const& m)
-  {
-    base_->send(recver, m);
-  }
-
-  inline void send(svcid_t recver, message const& m)
-  {
-    base_->send(recver, m);
-  }
-
-  inline void relay(aid_t des, message& m)
-  {
-    base_->relay(des, m);
-  }
-
-  inline void relay(svcid_t des, message& m)
-  {
-    base_->relay(des, m);
-  }
-
-  inline response_t request(aid_t recver, message const& m)
-  {
-    return base_->request(recver, m);
-  }
-
-  inline response_t request(svcid_t recver, message const& m)
-  {
-    return base_->request(recver, m);
-  }
-
-  inline void reply(aid_t recver, message const& m)
-  {
-    base_->reply(recver, m);
-  }
-
-  inline void link(aid_t target)
-  {
-    base_->link(target);
-  }
-
-  inline void monitor(aid_t target)
-  {
-    base_->monitor(target);
-  }
-
-  inline aid_t recv(message& msg, match const& mach = match())
-  {
-    return base_->recv(msg, mach);
-  }
-
-  inline aid_t recv(
-    response_t res, message& msg, 
-    duration_t tmo = seconds_t(GCE_DEFAULT_REQUEST_TIMEOUT_SEC)
-    )
-  {
-    return base_->recv(res, msg, tmo);
-  }
-
-  inline void wait(duration_t dur)
-  {
-    base_->wait(dur);
   }
 
 public:
@@ -155,31 +87,6 @@ public:
 
   void register_socket(ctxid_pair_t, aid_t skt, std::size_t cache_queue_index);
   void deregister_socket(ctxid_pair_t ctxid_pr, aid_t skt, std::size_t cache_queue_index);
-
-  inline detail::cache_pool* get_cache_pool()
-  {
-    return base_->get_cache_pool();
-  }
-
-  inline sid_t spawn(detail::spawn_type type, match_t func, match_t ctxid, std::size_t stack_size)
-  {
-    return base_->spawn(type, func, ctxid, stack_size);
-  }
-
-  inline void add_nonblocking_actor(nonblocking_actor& a)
-  {
-    base_->add_nonblocking_actor(a);
-  }
-
-  inline std::vector<nonblocking_actor*>& get_nonblocking_actor_list()
-  {
-    return base_->get_nonblocking_actor_list(); 
-  }
-
-  inline context* get_context()
-  {
-    return this;
-  }
 
 private:
   void run(
@@ -211,7 +118,6 @@ private:
   GCE_CACHE_ALIGNED_VAR(boost::atomic_size_t, curr_nonblocking_actor_)
 
   GCE_CACHE_ALIGNED_VAR(boost::lockfree::queue<thread_mapped_actor*>, thread_mapped_actor_list_)
-  GCE_CACHE_ALIGNED_VAR(boost::optional<thread_mapped_actor>, base_)
 };
 }
 

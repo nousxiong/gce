@@ -250,6 +250,11 @@ public:
     return a_.get_cache_pool();
   }
 
+  inline std::vector<nonblocking_actor*>& get_nonblocking_actor_list() 
+  { 
+    return a_.get_nonblocking_actor_list(); 
+  }
+
   inline void add_nonblocking_actor(nonblocking_actor& a)
   {
     a_.add_nonblocking_actor(a);

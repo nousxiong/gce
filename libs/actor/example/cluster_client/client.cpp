@@ -17,6 +17,7 @@
 client::client(std::string gate_ep)
   : gate_ep_(parse_potocol(gate_ep))
   , ctx_(get_attrs())
+  , base_(gce::spawn(ctx_))
 {
 }
 ///----------------------------------------------------------------------------
@@ -28,7 +29,7 @@ void client::run()
 {
   gce::aid_t cln_aid =
     gce::spawn(
-      ctx_,
+      base_,
       boost::bind(&client::pri_run, this, _1),
       gce::monitored
       );
@@ -59,8 +60,8 @@ void client::run()
     std::printf("client::run except: %s\n", ex.what());
   }
 
-  gce::send(ctx_, cln_aid, gce::atom("stop"));
-  gce::recv(ctx_);
+  gce::send(base_, cln_aid, gce::atom("stop"));
+  gce::recv(base_);
 }
 ///----------------------------------------------------------------------------
 void client::command(std::string cmd, gce::aid_t cln_aid)
@@ -83,7 +84,7 @@ void client::command(std::string cmd, gce::aid_t cln_aid)
         throw std::runtime_error("not enough params; Usage: login <username> <passwd>");
       }
       username_ = tok_list[1];
-      gce::send(ctx_, cln_aid, gce::atom("cln_login"), tok_list[1], tok_list[2]);
+      gce::send(base_, cln_aid, gce::atom("cln_login"), tok_list[1], tok_list[2]);
     }
     else if (tok_list[0] == "chat")
     {
@@ -91,7 +92,7 @@ void client::command(std::string cmd, gce::aid_t cln_aid)
       {
         throw std::runtime_error("not enough params; Usage: chat <content>");
       }
-      gce::send(ctx_, cln_aid, gce::atom("chat"), username_, tok_list[1]);
+      gce::send(base_, cln_aid, gce::atom("chat"), username_, tok_list[1]);
     }
     else if (tok_list[0] == "chat_to")
     {
@@ -99,11 +100,11 @@ void client::command(std::string cmd, gce::aid_t cln_aid)
       {
         throw std::runtime_error("not enough params; Usage: chat_to <username> <content>");
       }
-      gce::send(ctx_, cln_aid, gce::atom("chat_to"), tok_list[1], username_, tok_list[2]);
+      gce::send(base_, cln_aid, gce::atom("chat_to"), tok_list[1], username_, tok_list[2]);
     }
     else if (tok_list[0] == "logout")
     {
-      gce::send(ctx_, cln_aid, gce::atom("cln_logout"), tok_list[1]);
+      gce::send(base_, cln_aid, gce::atom("cln_logout"), tok_list[1]);
     }
   }
 }

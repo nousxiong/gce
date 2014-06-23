@@ -34,6 +34,7 @@ private:
 private:
   boost::array<std::string, 2> gate_ep_;
   gce::context ctx_;
+  gce::actor<gce::threaded> base_;
 
   std::string username_;
 };

@@ -59,8 +59,9 @@ public:
       std::size_t my_actor_size = 10;
       attributes attrs;
       context ctx(attrs);
+      actor<threaded> base = spawn(ctx);
 
-      aid_t base_id = ctx.get_aid();
+      aid_t base_id = base.get_aid();
 
       boost::thread_group thrs;
       for (std::size_t i=0; i<user_thr_num; ++i)
@@ -77,7 +78,7 @@ public:
 
       for (std::size_t i=0; i<my_actor_size; ++i)
       {
-        recv(ctx, 1);
+        recv(base, 1);
       }
     }
     catch (std::exception& ex)

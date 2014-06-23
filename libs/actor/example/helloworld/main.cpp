@@ -8,6 +8,7 @@
 ///
 
 #include <gce/actor/all.hpp>
+#include <boost/assert.hpp>
 #include <iostream>
 #include <string>
 
@@ -15,7 +16,7 @@ void mirror(gce::actor<gce::stackful>& self)
 {
   /// wait for messages
   gce::message msg;
-  gce::aid_t sender = self.recv(msg);
+  gce::aid_t aid = self.recv(msg);
   std::string what;
   msg >> what;
 
@@ -25,7 +26,7 @@ void mirror(gce::actor<gce::stackful>& self)
   /// replies "!dlroW olleH"
   gce::message m;
   m << std::string(what.rbegin(), what.rend());
-  self.reply(sender, m);
+  self.send(aid, m);
 }
 
 int main()
@@ -33,17 +34,21 @@ int main()
   /// everything begin here
   gce::context ctx;
 
+  /// spawn a thread_mapped_actor
+  gce::actor<gce::threaded> hello_world = gce::spawn(ctx);
+
   /// create a new actor that calls ’mirror(gce::actor<gce::stackful>&)’, using coroutine-base actor
-  gce::aid_t mirror_actor = gce::spawn(ctx, boost::bind(&mirror, _1));
+  gce::aid_t mirror_actor = gce::spawn(hello_world, boost::bind(&mirror, _1));
 
   /// send "Hello World!" to mirror
   gce::message m;
   m << std::string("Hello World!");
-  gce::response_t res = ctx.request(mirror_actor, m);
+  hello_world.send(mirror_actor, m);
 
   /// ... and wait for a response
   gce::message msg;
-  ctx.recv(res, msg);
+  gce::aid_t aid = hello_world.recv(msg);
+  BOOST_ASSERT(aid == mirror_actor);
   std::string reply_str;
   msg >> reply_str;
 

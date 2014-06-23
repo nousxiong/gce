@@ -29,30 +29,31 @@ public:
       attributes attrs;
       attrs.id_ = atom("one");
       context ctx(attrs);
+      actor<threaded> base = spawn(ctx);
 
       actor<threaded> a = spawn(ctx);
-      gce::bind(ctx, "tcp://127.0.0.1:14923");
+      gce::bind(base, "tcp://127.0.0.1:14923");
 
       std::vector<aid_t> quiter_list(quiter_num);
       boost::thread thr(
         boost::bind(
           &socket_broken_ut::two,
           boost::ref(quiter_list),
-          ctx.get_aid(), boost::ref(a)
+          base.get_aid(), boost::ref(a)
           )
         );
 
-      recv(ctx);
+      recv(base);
       BOOST_FOREACH(aid_t const& aid, quiter_list)
       {
-        ctx.link(aid);
+        base.link(aid);
       }
 
       thr.join();
 
       for (std::size_t i=0; i<quiter_num; ++i)
       {
-        recv(ctx);
+        recv(base);
       }
     }
     catch (std::exception& ex)
@@ -71,17 +72,18 @@ public:
       attributes attrs;
       attrs.id_ = atom("two");
       context ctx(attrs);
+      actor<threaded> base = spawn(ctx);
 
-      wait(ctx, boost::chrono::milliseconds(100));
+      wait(base, boost::chrono::milliseconds(100));
       net_option opt;
       opt.reconn_period_ = seconds_t(1);
-      connect(ctx, atom("one"), "tcp://127.0.0.1:14923", false, opt);
+      connect(base, atom("one"), "tcp://127.0.0.1:14923", false, opt);
 
       BOOST_FOREACH(aid_t& aid, quiter_list)
       {
         aid =
           spawn(
-            ctx,
+            base,
             boost::bind(
               &socket_broken_ut::quiter, _1
               ),
@@ -92,12 +94,12 @@ public:
       send(a, base_id, atom("notify"));
       BOOST_FOREACH(aid_t const& aid, quiter_list)
       {
-        send(ctx, aid, atom("quit"));
+        send(base, aid, atom("quit"));
       }
 
       for (std::size_t i=0; i<quiter_list.size(); ++i)
       {
-        recv(ctx);
+        recv(base);
       }
     }
     catch (std::exception& ex)

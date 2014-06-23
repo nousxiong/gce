@@ -45,12 +45,13 @@ private:
       attributes attrs;
       attrs.thread_num_ = 2;
       context ctx(attrs);
+      actor<threaded> base = spawn(ctx);
 
-      actor<nonblocked> ping = spawn<nonblocked>(ctx);
+      actor<nonblocked> ping = spawn(base);
       
       aid_t pong_id = 
         spawn(
-          ctx,
+          base,
           boost::bind(
             &slice_pingpong_ut::pong_actor, _1
             )

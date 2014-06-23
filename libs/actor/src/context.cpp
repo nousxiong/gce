@@ -9,6 +9,7 @@
 
 #include <gce/actor/context.hpp>
 #include <gce/actor/nonblocking_actor.hpp>
+#include <gce/actor/thread_mapped_actor.hpp>
 #include <gce/actor/detail/cache_pool.hpp>
 #include <boost/asio/placeholders.hpp>
 #include <boost/foreach.hpp>
@@ -58,8 +59,6 @@ context::context(attributes attrs)
     {
       nonblocking_actor_list_[i] = new nonblocking_actor(*this, index);
     }
-    
-    base_ = boost::in_place(select_cache_pool());
 
     for (std::size_t i=0; i<attrs_.thread_num_; ++i)
     {
@@ -227,8 +226,6 @@ void context::stop()
   }
 
   thread_group_.join_all();
-
-  base_.reset();
 
   thread_mapped_actor* mix = 0;
   while (thread_mapped_actor_list_.pop(mix))

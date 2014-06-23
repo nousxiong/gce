@@ -92,12 +92,13 @@ private:
       std::size_t my_actor_size = free_actor_num + user_thr_num * 2;
       attributes attrs;
       context ctx(attrs);
+      actor<threaded> base = spawn(ctx);
 
-      aid_t base_id = ctx.get_aid();
+      aid_t base_id = base.get_aid();
       for (std::size_t i=0; i<free_actor_num; ++i)
       {
         spawn(
-          ctx,
+          base,
           boost::bind(
             &response_ut::my_actor, _1,
             base_id
@@ -120,7 +121,7 @@ private:
 
       for (std::size_t i=0; i<my_actor_size; ++i)
       {
-        recv(ctx);
+        recv(base);
       }
     }
     catch (std::exception& ex)

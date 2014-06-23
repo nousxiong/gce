@@ -113,11 +113,12 @@ private:
     try
     {
       context ctx;
+      actor<threaded> base = spawn(ctx);
 
-      aid_t base_id = ctx.get_aid();
+      aid_t base_id = base.get_aid();
       aid_t aid =
         spawn<stackless>(
-          ctx,
+          base,
           boost::bind(
             &my_actor::run, 
             boost::make_shared<my_actor>(base_id), 
@@ -126,7 +127,7 @@ private:
           );
 
       boost::timer::auto_cpu_timer t;
-      recv(ctx);
+      recv(base);
     }
     catch (std::exception& ex)
     {

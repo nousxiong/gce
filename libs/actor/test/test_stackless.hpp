@@ -131,13 +131,14 @@ public:
       std::size_t my_actor_size = free_actor_num + user_thr_num * 2;
       attributes attrs;
       context ctx(attrs);
+      actor<threaded> base = spawn(ctx);
 
       io_service_t& ios = ctx.get_io_service();
-      aid_t base_id = ctx.get_aid();
+      aid_t base_id = base.get_aid();
       for (std::size_t i=0; i<free_actor_num; ++i)
       {
         spawn<stackless>(
-          ctx,
+          base,
           boost::bind(
             &my_actor::run, 
             boost::make_shared<my_actor>(
@@ -163,7 +164,7 @@ public:
 
       for (std::size_t i=0; i<my_actor_size; ++i)
       {
-        recv(ctx);
+        recv(base);
       }
     }
     catch (std::exception& ex)

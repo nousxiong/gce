@@ -39,6 +39,7 @@ private:
 
 private:
   gce::context ctx_;
+  gce::actor<gce::threaded> base_;
   boost::asio::signal_set sig_;
   boost::scoped_ptr<master> master_;
 };

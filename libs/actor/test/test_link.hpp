@@ -108,6 +108,7 @@ public:
       //std::size_t my_actor_size = 21;
       attributes attrs;
       context ctx(attrs);
+      actor<threaded> base = spawn(ctx);
 
       boost::thread_group thrs;
       for (std::size_t i=0; i<user_thr_num; ++i)

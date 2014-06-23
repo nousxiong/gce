@@ -32,11 +32,14 @@ int main()
 {
   gce::context ctx;
 
+  /// spawn a thread_mapped_actor
+  gce::actor<gce::threaded> base = gce::spawn(ctx);
+
   /// create a link actor and monitor it.
-  gce::spawn(ctx, boost::bind(&link, _1), gce::monitored);
+  gce::spawn(base, boost::bind(&link, _1), gce::monitored);
 
   /// wait for gce::exit message
-  gce::recv(ctx);
+  gce::recv(base);
 
   std::cout << "end" << std::endl;
 
