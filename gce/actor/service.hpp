@@ -13,6 +13,7 @@
 #include <gce/actor/config.hpp>
 #include <gce/actor/actor.hpp>
 #include <gce/actor/detail/cache_pool.hpp>
+#include <gce/actor/context.hpp>
 #include <gce/actor/service_id.hpp>
 
 namespace gce
@@ -56,6 +57,12 @@ inline void register_service(actor<stackless>& self, match_t name)
 inline void deregister_service(actor<stackless>& self, match_t name)
 {
   detail::deregister_service(self, name);
+}
+
+template <typename Actor>
+inline gce::svcid_t make_svcid(Actor& a, match_t name)
+{
+  return svcid_t(a.get_context()->get_attributes().id_, name);
 }
 }
 
