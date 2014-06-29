@@ -59,6 +59,11 @@ inline void deregister_service(actor<stackless>& self, match_t name)
   detail::deregister_service(self, name);
 }
 
+inline gce::svcid_t make_svcid(ctxid_t ctxid, match_t name)
+{
+  return svcid_t(ctxid, name);
+}
+
 template <typename Actor>
 inline gce::svcid_t make_svcid(Actor& a, match_t name)
 {
