@@ -93,7 +93,7 @@ private:
 
 private:
   bool parse_message(message&);
-  void connect(yield_t);
+  void connect(yield_t, bool init = false);
   errcode_t recv(message&, yield_t);
   void close();
   void reconn();

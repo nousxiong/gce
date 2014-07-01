@@ -414,7 +414,7 @@ void socket::run_conn(aid_t sire, ctxid_pair_t target, std::string const& ep, yi
       {
         scope scp(boost::bind(&send_ret, this, sire, target));
         skt_ = make_socket(ep);
-        connect(yield);
+        connect(yield, true);
       }
 
       while (stat_ == on)
@@ -786,7 +786,7 @@ bool socket::parse_message(message& msg)
   return true;
 }
 ///----------------------------------------------------------------------------
-void socket::connect(yield_t yield)
+void socket::connect(yield_t yield, bool init)
 {
   errcode_t ec;
   if (stat_ == on)
@@ -797,6 +797,10 @@ void socket::connect(yield_t yield)
       {
         retry = 0;
         on_neterr(get_aid());
+        if (init)
+        {
+          break;
+        }
       }
 
       if (i > 0)
