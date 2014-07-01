@@ -417,6 +417,11 @@ void socket::run_conn(aid_t sire, ctxid_pair_t target, std::string const& ep, yi
         connect(yield, true);
       }
 
+      if (!conn_)
+      {
+        connect(yield);
+      }
+
       while (stat_ == on)
       {
         message msg;
@@ -799,7 +804,7 @@ void socket::connect(yield_t yield, bool init)
         on_neterr(get_aid());
         if (init)
         {
-          break;
+          return;
         }
       }
 
