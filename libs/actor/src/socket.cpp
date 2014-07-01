@@ -796,9 +796,11 @@ void socket::connect(yield_t yield, bool init)
   errcode_t ec;
   if (stat_ == on)
   {
+    seconds_t reconn_period = init ? opt_.init_reconn_period_ : opt_.reconn_period_;
+    std::size_t const reconn_try = init ? opt_.init_reconn_try_ : opt_.reconn_try_;
     for (std::size_t i=0, retry=0; i<u32_nil; ++i, ++retry)
     {
-      if (retry > opt_.reconn_try_)
+      if (retry > reconn_try)
       {
         retry = 0;
         on_neterr(get_aid());
@@ -810,7 +812,7 @@ void socket::connect(yield_t yield, bool init)
 
       if (i > 0)
       {
-        sync_.expires_from_now(opt_.reconn_period_);
+        sync_.expires_from_now(reconn_period);
         sync_.async_wait(yield[ec]);
         if (stat_ != on)
         {
