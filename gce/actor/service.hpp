@@ -63,12 +63,6 @@ inline gce::svcid_t make_svcid(ctxid_t ctxid, match_t name)
 {
   return svcid_t(ctxid, name);
 }
-
-template <typename Actor>
-inline gce::svcid_t make_svcid(Actor& a, match_t name)
-{
-  return svcid_t(a.get_context()->get_attributes().id_, name);
-}
 }
 
 #endif /// GCE_ACTOR_SERVICE_HPP
