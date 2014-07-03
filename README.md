@@ -1,4 +1,4 @@
-GCE v1.0
+GCE v1.1
 =======
 
 GCE is an actor model implementation featuring lightweight & fast
@@ -17,6 +17,10 @@ Features Overview
 * Seamless cooperate with Boost.Asio
 * Lightweight cluster support
 
+Manual
+---------------
+manual.pdf
+
 Get the Sources
 ---------------
 
@@ -29,7 +33,7 @@ or
 Dependencies
 ------------
 
-* CMake
+* CMake 2.8 and newer
 * Boost 1.55.0 and newer
 
 Need build sub librares:
@@ -70,7 +74,7 @@ Build (Windows)
 * cd ..
 * mkdir gce_build
 * cd gce_build
-* cmake -G "Visual Studio 9" -DBOOST_ROOT=your_boost_root_dir -DSUB_LIBRARYS="actor amsg" ..\gce
+* cmake -G "Visual Studio 9 2008" -DBOOST_ROOT=your_boost_root_dir -DSUB_LIBRARYS="actor amsg" ..\gce
 * (open generated vc sln, and build ALL_BUILD project)
 * *Optional:* (build INSTALL project)(if set CMAKE_INSTALL_PREFIX when run cmake, for example: -DCMAKE_INSTALL_PREFIX=..\install)
 
@@ -214,3 +218,11 @@ int main()
   return 0;
 }
 ```
+
+Changelog
+---------------
+v1.1 
+* gce::mixin_t change to gce::actor<gce::threaded>
+* gce::self_t change to gce::actor<gce::stackful>
+* gce::slice_t change to gce::actor<gce::nonblocked>
+* add new type actor: gce::actor<gce::stackless>

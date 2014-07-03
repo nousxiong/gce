@@ -20,14 +20,14 @@ public:
   }
 
 private:
-  static void my_child(self_t self)
+  static void my_child(actor<stackful>& self)
   {
     aid_t aid = recv(self);
     //wait(self, seconds_t(3));
     reply(self, aid);
   }
 
-  static void my_actor(self_t self, aid_t base_id)
+  static void my_actor(actor<stackful>& self, aid_t base_id)
   {
     std::size_t size = 50;
     std::vector<response_t> res_list(size);
@@ -65,10 +65,10 @@ private:
 
   static void my_thr(context& ctx, aid_t base_id)
   {
-    mixin_t mix = spawn(ctx);
+    actor<threaded> a = spawn(ctx);
     for (std::size_t i=0; i<2; ++i)
     {
-      spawn(mix, boost::bind(&actor_ut::my_actor, _1, base_id));
+      spawn(a, boost::bind(&actor_ut::my_actor, _1, base_id));
     }
   }
 
@@ -80,10 +80,9 @@ private:
       std::size_t user_thr_num = 0;
       std::size_t my_actor_size = free_actor_num + user_thr_num * 2;
       attributes attrs;
-      attrs.mixin_num_ = user_thr_num + 1;
       context ctx(attrs);
+      actor<threaded> base = spawn(ctx);
 
-      mixin_t base = spawn(ctx);
       aid_t base_id = base.get_aid();
       for (std::size_t i=0; i<free_actor_num; ++i)
       {

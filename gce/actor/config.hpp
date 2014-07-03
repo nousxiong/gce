@@ -24,6 +24,7 @@
 #include <gce/amsg/amsg.hpp>
 #include <boost/system/error_code.hpp>
 #include <boost/chrono.hpp>
+#include <boost/asio/coroutine.hpp>
 #include <boost/asio/system_timer.hpp>
 #include <boost/asio/strand.hpp>
 #include <boost/asio/spawn.hpp>
@@ -65,6 +66,12 @@ enum link_type
   monitored
 };
 
+/// actor type tags
+struct stackful {};
+struct stackless {};
+struct threaded {};
+struct nonblocked {};
+
 typedef match_t exit_code_t;
 static exit_code_t const exit = atom("gce_actor_exit");
 static exit_code_t const exit_normal = atom("gce_ex_normal");
@@ -72,7 +79,6 @@ static exit_code_t const exit_except = atom("gce_ex_except");
 static exit_code_t const exit_remote = atom("gce_ex_remote");
 static exit_code_t const exit_already = atom("gce_ex_already");
 static exit_code_t const exit_neterr = atom("gce_ex_neterr");
-static exit_code_t const exit_unknown = atom("gce_ex_unknown");
 
 namespace detail
 {
@@ -92,6 +98,9 @@ static match_t const msg_reply = atom("gce_reply");
 static match_t const msg_stop = atom("gce_stop");
 static match_t const msg_spawn = atom("gce_spawn");
 static match_t const msg_spawn_ret = atom("gce_spawn_ret");
+static match_t const msg_new_actor = atom("gce_new_actor");
+static match_t const msg_new_conn = atom("gce_new_conn");
+static match_t const msg_new_bind = atom("gce_new_bind");
 
 enum socket_type
 {
@@ -99,6 +108,15 @@ enum socket_type
   socket_router,
   socket_joint
 };
+
+enum spawn_type
+{
+  spw_nil = 0,
+  spw_stacked,
+  spw_evented
+};
+
+typedef boost::asio::coroutine coro_t;
 } /// namespce detail
 
 typedef std::pair<ctxid_t, detail::socket_type> ctxid_pair_t;
@@ -106,6 +124,14 @@ typedef std::pair<ctxid_t, detail::socket_type> ctxid_pair_t;
 
 #ifndef GCE_PACK
 # define GCE_PACK AMSG
+#endif
+
+#ifndef GCE_REENTER
+# define GCE_REENTER(t) BOOST_ASIO_CORO_REENTER(t.coro())
+#endif
+
+#ifndef GCE_YIELD
+# define GCE_YIELD BOOST_ASIO_CORO_YIELD
 #endif
 
 #endif /// GCE_ACTOR_CONFIG_HPP

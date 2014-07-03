@@ -27,12 +27,11 @@ public:
       std::size_t quiter_num = 100;
 
       attributes attrs;
-      attrs.mixin_num_ = 2;
       attrs.id_ = atom("one");
       context ctx(attrs);
+      actor<threaded> base = spawn(ctx);
 
-      mixin_t base = spawn(ctx);
-      mixin_t mix = spawn(ctx);
+      actor<threaded> a = spawn(ctx);
       gce::bind(base, "tcp://127.0.0.1:14923");
 
       std::vector<aid_t> quiter_list(quiter_num);
@@ -40,7 +39,7 @@ public:
         boost::bind(
           &socket_broken_ut::two,
           boost::ref(quiter_list),
-          base.get_aid(), boost::ref(mix)
+          base.get_aid(), boost::ref(a)
           )
         );
 
@@ -65,7 +64,7 @@ public:
 
   static void two(
     std::vector<aid_t>& quiter_list,
-    aid_t base_id, mixin_t mix
+    aid_t base_id, actor<threaded> a
     )
   {
     try
@@ -73,8 +72,7 @@ public:
       attributes attrs;
       attrs.id_ = atom("two");
       context ctx(attrs);
-
-      mixin_t base = spawn(ctx);
+      actor<threaded> base = spawn(ctx);
 
       wait(base, boost::chrono::milliseconds(100));
       net_option opt;
@@ -93,7 +91,7 @@ public:
             );
       }
 
-      send(mix, base_id, atom("notify"));
+      send(a, base_id, atom("notify"));
       BOOST_FOREACH(aid_t const& aid, quiter_list)
       {
         send(base, aid, atom("quit"));
@@ -110,7 +108,7 @@ public:
     }
   }
 
-  static void quiter(self_t self)
+  static void quiter(actor<stackful>& self)
   {
     try
     {

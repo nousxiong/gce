@@ -92,6 +92,15 @@ public:
 typedef service_id svcid_t;
 }
 
+template<typename CharT, typename TraitsT>
+std::basic_ostream<CharT, TraitsT>& operator<<(
+  std::basic_ostream<CharT, TraitsT>& strm, gce::svcid_t const& svc
+  )
+{
+  strm << "<" << svc.ctxid_ << "." << svc.name_ << ">";
+  return strm;
+}
+
 GCE_PACK(gce::svcid_t, (ctxid_)(name_));
 
 #endif /// GCE_ACTOR_SERVICE_ID_HPP

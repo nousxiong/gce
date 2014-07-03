@@ -19,15 +19,15 @@ public:
     std::cout << "link_ut end." << std::endl;
   }
 
-  static void my_actor_child(self_t self)
+  static void my_actor_child(actor<stackful>& self)
   {
     aid_t aid = recv(self, 3);
   }
 
-  static void my_actor(self_t self, aid_t base_id)
+  static void my_actor(actor<stackful>& self)
   {
     detail::cache_pool* cac_pool = self.get_cache_pool();
-    std::size_t size = 1;
+    std::size_t size = 10;
     std::vector<response_t> res_list(size);
     for (std::size_t i=0; i<size; ++i)
     {
@@ -42,7 +42,7 @@ public:
 
       basic_actor* a =
         aid.get_actor_ptr(
-          cac_pool->get_ctxid(),
+          cac_pool->get_context().get_attributes().id_,
           cac_pool->get_context().get_timestamp()
           );
       sid_t sid = aid.sid_;
@@ -65,21 +65,38 @@ public:
     recv(self, exit);
   }
 
-  static void my_thr(context& ctx, aid_t base_id)
+  static void my_thr(context& ctx)
   {
-    mixin_t mix = spawn(ctx);
-    for (std::size_t i=0; i<2; ++i)
+    actor<threaded> a = spawn(ctx);
+    for (std::size_t i=0; i<100; ++i)
     {
       spawn(
-        mix,
-        boost::bind(&link_ut::my_actor, _1, base_id),
+        a,
+        boost::bind(&link_ut::my_actor, _1),
         monitored
         );
     }
 
-    for (std::size_t i=0; i<2; ++i)
+    for (std::size_t i=0; i<100; ++i)
     {
-      recv(mix, exit);
+      recv(a);
+    }
+  }
+
+  static void my_root(actor<stackful>& self)
+  {
+    for (std::size_t i=0; i<100; ++i)
+    {
+      spawn(
+        self,
+        boost::bind(&link_ut::my_actor, _1),
+        monitored
+        );
+    }
+
+    for (std::size_t i=0; i<100; ++i)
+    {
+      recv(self);
     }
   }
 
@@ -90,11 +107,8 @@ public:
       std::size_t user_thr_num = 5;
       //std::size_t my_actor_size = 21;
       attributes attrs;
-      attrs.mixin_num_ = user_thr_num + 1;
       context ctx(attrs);
-
-      mixin& base = spawn(ctx);
-      aid_t base_id = base.get_aid();
+      actor<threaded> base = spawn(ctx);
 
       boost::thread_group thrs;
       for (std::size_t i=0; i<user_thr_num; ++i)
@@ -102,10 +116,20 @@ public:
         thrs.create_thread(
           boost::bind(
             &link_ut::my_thr,
-            boost::ref(ctx), base_id
+            boost::ref(ctx)
             )
           );
+        /*spawn(
+          base,
+          boost::bind(&link_ut::my_root, _1),
+          monitored
+          );*/
       }
+
+      /*for (std::size_t i=0; i<user_thr_num; ++i)
+      {
+        recv(base);
+      }*/
 
       thrs.join_all();
     }

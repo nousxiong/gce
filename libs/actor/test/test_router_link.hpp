@@ -33,14 +33,13 @@ public:
       context ctx1(attrs);
       attrs.id_ = atom("two");
       context ctx2(attrs);
+      
+      actor<threaded> base = spawn(ctx);
+      actor<threaded> base1 = spawn(ctx1);
+      actor<threaded> base2 = spawn(ctx2);
 
-      mixin_t router = spawn(ctx);
-      gce::bind(router, "tcp://127.0.0.1:14923", true);
+      gce::bind(base, "tcp://127.0.0.1:14923", true);
 
-      mixin_t base1 = spawn(ctx1);
-      mixin_t base2 = spawn(ctx2);
-
-      wait(base1, boost::chrono::milliseconds(100));
       net_option opt;
       opt.reconn_period_ = seconds_t(1);
       connect(base1, atom("router"), "tcp://127.0.0.1:14923", true, opt);
@@ -78,7 +77,7 @@ public:
     }
   }
 
-  static void quiter(self_t self)
+  static void quiter(actor<stackful>& self)
   {
     try
     {

@@ -43,18 +43,19 @@ public:
       attrs.id_ = atom("client");
       context ctx_cln(attrs);
 
-      mixin_t base_svr = spawn(ctx_svr);
-      mixin_t base_cln = spawn(ctx_cln);
+      actor<threaded> base_cln = spawn(ctx_cln);
+      actor<threaded> base_svr = spawn(ctx_svr);
 
       remote_func_list_t func_list;
       func_list.push_back(
         std::make_pair(
           atom("echo_client"),
-          boost::bind(&remote_ut::echo_client, _1)
+          make_actor_func<stackful>(
+            boost::bind(&remote_ut::echo_client, _1)
+            )
           )
         );
       gce::bind(base_cln, "tcp://127.0.0.1:14923", false, func_list);
-      wait(base_svr, boost::chrono::milliseconds(100));
       net_option opt;
       opt.reconn_period_ = seconds_t(1);
       connect(base_svr, atom("client"), "tcp://127.0.0.1:14923", false, opt);
@@ -87,7 +88,7 @@ public:
     }
   }
 
-  static void echo_server(self_t self, std::size_t client_num)
+  static void echo_server(actor<stackful>& self, std::size_t client_num)
   {
     try
     {
@@ -115,7 +116,7 @@ public:
     }
   }
 
-  static void echo_client(self_t self)
+  static void echo_client(actor<stackful>& self)
   {
     try
     {

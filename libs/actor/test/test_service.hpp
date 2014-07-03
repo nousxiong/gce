@@ -35,12 +35,12 @@ private:
       context ctx1(attrs);
       attrs.id_ = atom("two");
       context ctx2(attrs);
+      
+      actor<threaded> base = spawn(ctx);
+      actor<threaded> base1 = spawn(ctx1);
+      actor<threaded> base2 = spawn(ctx2);
 
-      mixin_t router = spawn(ctx);
-      gce::bind(router, "tcp://127.0.0.1:14923", true);
-
-      mixin_t base1 = spawn(ctx1);
-      mixin_t base2 = spawn(ctx2);
+      gce::bind(base, "tcp://127.0.0.1:14923", true);
 
       spawn(
         base2,
@@ -51,7 +51,6 @@ private:
         );
       svcid_t echo_svc(atom("two"), atom("echo_svc"));
 
-      wait(base1, boost::chrono::milliseconds(100));
       net_option opt;
       opt.reconn_period_ = seconds_t(1);
       connect(base1, atom("router"), "tcp://127.0.0.1:14923", true, opt);
@@ -73,18 +72,11 @@ private:
     }
   }
 
-  static void echo_service(self_t self)
+  static void echo_service(actor<stackful>& self)
   {
     try
     {
       register_service(self, atom("echo_svc"));
-      detail::scope scp(
-        boost::bind(
-          &deregister_service<actor::self>,
-          boost::ref(self),
-          atom("echo_svc")
-          )
-        );
 
       while (true)
       {
@@ -100,6 +92,7 @@ private:
           break;
         }
       }
+      deregister_service(self, atom("echo_svc"));
     }
     catch (std::exception& ex)
     {

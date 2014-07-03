@@ -21,7 +21,7 @@ public:
   }
 
 private:
-  static void my_child(self_t self, aid_t sire, aid_t base_id)
+  static void my_child(actor<stackful>& self, aid_t sire, aid_t base_id)
   {
     message msg;
     while (true)
@@ -39,7 +39,7 @@ private:
     self.send(base_id, msg);
   }
 
-  static void my_actor(self_t self, aid_t base_id)
+  static void my_actor(actor<stackful>& self, aid_t base_id)
   {
     aid_t aid =
       spawn(
@@ -64,8 +64,8 @@ private:
     try
     {
       context ctx;
+      actor<threaded> base = spawn(ctx);
 
-      mixin_t base = spawn(ctx);
       aid_t base_id = base.get_aid();
       aid_t aid =
         spawn(

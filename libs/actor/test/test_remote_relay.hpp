@@ -20,7 +20,7 @@ public:
   }
 
 private:
-  static void my_actor(self_t self)
+  static void my_actor(actor<stackful>& self)
   {
     message msg;
     aid_t last_id;
@@ -45,13 +45,11 @@ private:
       std::size_t root_num = 10;
       attributes attrs;
       attrs.id_ = atom("router");
-      attrs.mixin_num_ = 1 + root_num;
       attrs.thread_num_ = 1;
       context ctx(attrs);
+      actor<threaded> base = spawn(ctx);
 
-      mixin_t base = spawn(ctx);
       gce::bind(base, "tcp://127.0.0.1:14924", true);
-      wait(base, boost::chrono::milliseconds(100));
 
       boost::thread_group thrs;
       for (std::size_t i=0; i<root_num; ++i)
@@ -59,7 +57,7 @@ private:
         thrs.create_thread(
           boost::bind(
             &remote_relay_ut::root, i, root_num,
-            base.get_aid(), boost::ref(spawn(ctx))
+            base.get_aid(), spawn(ctx)
             )
           );
       }
@@ -84,7 +82,7 @@ private:
 
   static void root(
     std::size_t id, std::size_t root_num,
-    aid_t base_aid, mixin_t mix
+    aid_t base_aid, actor<threaded> mix
     )
   {
     try
@@ -93,19 +91,21 @@ private:
       attrs.id_ = id;
       attrs.thread_num_ = 1;
       context ctx(attrs);
+      actor<threaded> base = spawn(ctx);
 
-      mixin_t base = spawn(ctx);
       net_option opt;
       opt.reconn_period_ = seconds_t(1);
       remote_func_list_t func_list;
       func_list.push_back(
         std::make_pair(
           atom("my_actor"),
-          boost::bind(&remote_relay_ut::my_actor, _1)
+          make_actor_func<stackful>(
+            boost::bind(&remote_relay_ut::my_actor, _1)
+            )
           )
         );
       connect(base, atom("router"), "tcp://127.0.0.1:14924", true, opt, func_list);
-      wait(base, boost::chrono::milliseconds(100));
+      wait(base, boost::chrono::milliseconds(1000));
 
       aid_t last_id;
       aid_t first_id;

@@ -45,7 +45,7 @@ public:
   }
 
 private:
-  void run(gce::self_t self, gce::aid_t base_id)
+  void run(gce::actor<gce::stackful>& self, gce::aid_t base_id)
   {
     try
     {
@@ -81,7 +81,7 @@ private:
 
 private:
   gce::context ctx_;
-  gce::mixin_t base_;
+  gce::actor<gce::threaded> base_;
   std::size_t cln_num_;
   std::size_t echo_num_;
   std::string host_;
@@ -102,7 +102,7 @@ public:
     , port_(port)
     , echo_num_(echo_num)
   {
-    gce::mixin_t base = gce::spawn(ctx_);
+    gce::actor<gce::threaded> base = gce::spawn(ctx_);
     gce::spawn(base, boost::bind(&server::run, this, _1));
   }
 
@@ -113,7 +113,7 @@ public:
   }
 
 private:
-  void run(gce::self_t self)
+  void run(gce::actor<gce::stackful>& self)
   {
     try
     {
@@ -160,7 +160,7 @@ private:
     }
   }
 
-  void session(gce::self_t self, boost::shared_ptr<socket_t> sock)
+  void session(gce::actor<gce::stackful>& self, boost::shared_ptr<socket_t> sock)
   {
     try
     {

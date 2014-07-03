@@ -11,8 +11,9 @@
 #include <gce/actor/detail/socket.hpp>
 #include <gce/actor/impl/tcp/acceptor.hpp>
 #include <gce/actor/detail/cache_pool.hpp>
+#include <gce/actor/send.hpp>
 #include <gce/actor/context.hpp>
-#include <gce/actor/mixin.hpp>
+#include <gce/actor/thread_mapped_actor.hpp>
 #include <gce/actor/detail/mailbox.hpp>
 #include <gce/actor/message.hpp>
 #include <gce/detail/scope.hpp>
@@ -27,13 +28,9 @@ namespace gce
 namespace detail
 {
 ///----------------------------------------------------------------------------
-acceptor::acceptor(context* ctx)
-  : basic_actor(
-      ctx->get_attributes().max_cache_match_size_,
-      ctx->get_timestamp()
-      )
+acceptor::acceptor(cache_pool* user)
+  : basic_actor(&user->get_context(), user, user->get_index())
   , stat_(ready)
-  , ctx_(*ctx)
   , is_router_(false)
 {
 }
@@ -42,18 +39,16 @@ acceptor::~acceptor()
 {
 }
 ///----------------------------------------------------------------------------
-void acceptor::init(cache_pool* user, cache_pool* owner, net_option opt)
+void acceptor::init(net_option opt)
 {
   BOOST_ASSERT_MSG(stat_ == ready, "socket status error");
-  user_ = user;
-  owner_ = owner;
   opt_ = opt;
 
   base_type::update_aid();
 }
 ///----------------------------------------------------------------------------
 void acceptor::bind(
-  remote_func_list_t const& remote_func_list,
+  aid_t sire, remote_func_list_t const& remote_func_list,
   std::string const& ep, bool is_router
   )
 {
@@ -64,9 +59,9 @@ void acceptor::bind(
   is_router_ = is_router;
 
   boost::asio::spawn(
-    user_->get_strand(),
+    snd_,
     boost::bind(
-      &acceptor::run, this, ep, _1
+      &acceptor::run, this, sire, ep, _1
       ),
     boost::coroutines::attributes(default_stacksize())
     );
@@ -86,16 +81,21 @@ void acceptor::on_free()
   is_router_ = false;
 }
 ///----------------------------------------------------------------------------
-void acceptor::on_recv(pack* pk)
+void acceptor::on_recv(pack& pk, base_type::send_hint)
 {
-  user_->get_strand().dispatch(
+  snd_.dispatch(
     boost::bind(
       &acceptor::handle_recv, this, pk
       )
     );
 }
 ///----------------------------------------------------------------------------
-void acceptor::run(std::string const& ep, yield_t yield)
+void send_ret(acceptor* a, aid_t sire)
+{
+  gce::send(*a, sire, msg_new_bind);
+}
+///----------------------------------------------------------------------------
+void acceptor::run(aid_t sire, std::string const& ep, yield_t yield)
 {
   exit_code_t exc = exit_normal;
   std::string exit_msg("exit normal");
@@ -107,8 +107,11 @@ void acceptor::run(std::string const& ep, yield_t yield)
     try
     {
       stat_ = on;
-      acpr_.reset(make_acceptor(ep));
-      acpr_->bind();
+      {
+        scope scp(boost::bind(&send_ret, this, sire));
+        acpr_.reset(make_acceptor(ep));
+        acpr_->bind();
+      }
 
       while (stat_ == on)
       {
@@ -120,9 +123,12 @@ void acceptor::run(std::string const& ep, yield_t yield)
           break;
         }
 
-        socket* s = user_->get_socket();
-        s->init(ctx_.select_cache_pool(), user_, opt_);
-        s->start(remote_func_list_, prot, is_router_);
+        cache_pool* user = ctx_->select_cache_pool();
+        user->get_strand().post(
+          boost::bind(
+            &acceptor::spawn_socket, this, user, prot
+            )
+          );
       }
     }
     catch (std::exception& ex)
@@ -133,12 +139,23 @@ void acceptor::run(std::string const& ep, yield_t yield)
     }
     catch (...)
     {
-      exc = exit_unknown;
+      exc = exit_except;
       exit_msg = "unexpected exception";
       close();
     }
   }
+  else
+  {
+    gce::send(*this, sire, msg_new_bind);
+  }
   free_self(exc, exit_msg, yield);
+}
+///----------------------------------------------------------------------------
+void acceptor::spawn_socket(cache_pool* user, socket_ptr prot)
+{
+  socket* s = user->get_socket();
+  s->init(opt_);
+  s->start(remote_func_list_, prot, is_router_);
 }
 ///----------------------------------------------------------------------------
 basic_acceptor* acceptor::make_acceptor(std::string const& ep)
@@ -171,33 +188,32 @@ basic_acceptor* acceptor::make_acceptor(std::string const& ep)
       boost::lexical_cast<boost::uint16_t>(
         ep.substr(begin, pos - begin)
         );
-    return new tcp::acceptor(user_->get_strand(), address, port);
+    return new tcp::acceptor(snd_, address, port);
   }
 
   throw std::runtime_error("unsupported protocol");
 }
 ///----------------------------------------------------------------------------
-void acceptor::handle_recv(pack* pk)
+void acceptor::handle_recv(pack& pk)
 {
-  scope scp(boost::bind(&basic_actor::dealloc_pack, user_, pk));
-  if (check(pk->recver_, get_aid().ctxid_, user_->get_context().get_timestamp()))
+  if (check(pk.recver_, ctxid_, timestamp_))
   {
-    if (exit_t* ex = boost::get<exit_t>(&pk->tag_))
+    if (exit_t* ex = boost::get<exit_t>(&pk.tag_))
     {
       base_type::remove_link(ex->get_aid());
     }
   }
-  else if (!pk->is_err_ret_)
+  else if (!pk.is_err_ret_)
   {
-    if (detail::link_t* link = boost::get<detail::link_t>(&pk->tag_))
+    if (detail::link_t* link = boost::get<detail::link_t>(&pk.tag_))
     {
       /// send actor exit msg
-      base_type::send_already_exited(link->get_aid(), pk->recver_);
+      base_type::send_already_exited(link->get_aid(), pk.recver_);
     }
-    else if (detail::request_t* req = boost::get<detail::request_t>(&pk->tag_))
+    else if (detail::request_t* req = boost::get<detail::request_t>(&pk.tag_))
     {
       /// reply actor exit msg
-      response_t res(req->get_id(), pk->recver_);
+      response_t res(req->get_id(), pk.recver_);
       base_type::send_already_exited(req->get_aid(), res);
     }
   }
@@ -220,7 +236,7 @@ void acceptor::free_self(exit_code_t exc, std::string const& exit_msg, yield_t y
   aid_t self_aid = get_aid();
   base_type::update_aid();
   base_type::send_exit(self_aid, exc, exit_msg);
-  user_->free_acceptor(owner_, this);
+  user_->free_acceptor(this);
 }
 ///----------------------------------------------------------------------------
 }

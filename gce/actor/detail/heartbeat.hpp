@@ -24,18 +24,17 @@ class heartbeat
   typedef boost::function<void ()> timeout_func_t;
 
 public:
-  explicit heartbeat(io_service_t&);
+  explicit heartbeat(strand_t&);
   ~heartbeat();
 
 public:
   template <typename F>
   void init(
-    cache_pool* cac_pool, seconds_t period,
-    std::size_t max_count, F f, F t = timeout_func_t()
+    seconds_t period, std::size_t max_count, 
+    F f, F t = timeout_func_t()
     )
   {
     clear();
-    cac_pool_ = cac_pool;
     period_ = period;
     max_count_ = max_count;
     if (max_count_ == 0)
@@ -58,7 +57,7 @@ private:
   void handle_timeout(errcode_t const&);
 
 private:
-  cache_pool* cac_pool_;
+  strand_t& snd_;
   timer_t tmr_;
   timer_t sync_;
   seconds_t period_;

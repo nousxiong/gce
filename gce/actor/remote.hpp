@@ -14,9 +14,12 @@
 #include <gce/actor/detail/socket.hpp>
 #include <gce/actor/detail/acceptor.hpp>
 #include <gce/actor/actor.hpp>
-#include <gce/actor/mixin.hpp>
+#include <gce/actor/send.hpp>
+#include <gce/actor/recv.hpp>
 #include <gce/actor/net_option.hpp>
 #include <gce/actor/detail/cache_pool.hpp>
+#include <gce/detail/scope.hpp>
+#include <boost/foreach.hpp>
 #include <vector>
 #include <utility>
 
@@ -24,9 +27,9 @@ namespace gce
 {
 namespace detail
 {
-inline void connect(
+inline void connect_impl(
+  aid_t sire,
   cache_pool* user,
-  cache_pool* owner,
   ctxid_t target,
   std::string const& ep,
   bool target_is_router,
@@ -34,60 +37,46 @@ inline void connect(
   net_option opt
   )
 {
-  context& ctx = owner->get_context();
-  if (!user)
-  {
-    user = ctx.select_cache_pool();
-  }
+  BOOST_ASSERT(target != ctxid_nil);
+  BOOST_ASSERT_MSG(
+    user->get_context().get_attributes().id_ != ctxid_nil, 
+    "ctxid haven't set, please set it before connect"
+    );
 
-  if (target == ctxid_nil)
-  {
-    throw std::runtime_error("target invalid");
-  }
-
-  if (user->get_ctxid() == ctxid_nil)
-  {
-    throw std::runtime_error(
-      "ctxid haven't set, please set it before connect"
-      );
-  }
-
-  socket* s = owner->get_socket();
-  s->init(user, owner, opt);
-  s->connect(remote_func_list, target, ep, target_is_router);
+  socket* s = user->get_socket();
+  s->init(opt);
+  s->connect(
+    sire, remote_func_list, target,
+    ep, target_is_router
+    );
 }
 
-inline void bind(
+inline void bind_impl(
+  aid_t sire,
   cache_pool* user,
-  cache_pool* owner,
   std::string const& ep,
   bool is_router,
   remote_func_list_t const& remote_func_list,
   net_option opt
   )
 {
-  context& ctx = owner->get_context();
-  if (!user)
-  {
-    user = ctx.select_cache_pool();
-  }
-
-  if (user->get_ctxid() == ctxid_nil)
+  if (user->get_context().get_attributes().id_ == ctxid_nil)
   {
     throw std::runtime_error(
       "ctxid haven't set, please set it before bind"
       );
   }
 
-  acceptor* a = owner->get_acceptor();
-  a->init(user, owner, opt);
-  a->bind(remote_func_list, ep, is_router);
-}
+  acceptor* a = user->get_acceptor();
+  a->init(opt);
+  a->bind(sire, remote_func_list, ep, is_router);
 }
 
 /// connect
+template <typename Sire>
 inline void connect(
-  mixin_t sire,
+  Sire& sire,
+  cache_pool* user,
   ctxid_t target, /// connect target
   std::string const& ep, /// endpoint
   bool target_is_router = false, /// if target is router, set it true
@@ -95,21 +84,42 @@ inline void connect(
   remote_func_list_t const& remote_func_list = remote_func_list_t()
   )
 {
-  detail::cache_pool* owner = sire.get_cache_pool();
-  context& ctx = owner->get_context();
-
-  ///   In boost 1.54 & 1.55, boost::asio::spawn will crash
-  /// When spwan multi-coros at main thread
-  /// With multi-threads run io_service::run (vc11)
-  ///   I'don't know this wheather or not a bug.
-  ///   So, if using mixin(means in main or other user thread(s)),
-  /// We spawn actor(s) with only one cache_pool(means only one asio::strand).
-  detail::cache_pool* user = ctx.select_cache_pool(0);
-  detail::connect(user, owner, target, ep, target_is_router, remote_func_list, opt);
+  user->get_strand().post(
+    boost::bind(
+      &connect_impl,
+      sire.get_aid(), user, target, ep,
+      target_is_router, remote_func_list, opt
+      )
+    );
 }
 
+inline void handle_connect(
+  actor<stackless>& self, aid_t skt, 
+  message msg, detail::cache_pool* sire
+  )
+{
+  if (skt)
+  {
+    ctxid_pair_t ctxid_pr;
+    msg >> ctxid_pr;
+    sire->register_socket(ctxid_pr, skt);
+  }
+
+  self.resume();
+}
+
+inline void handle_bind(actor<stackless>& self, aid_t acpr, message)
+{
+  self.resume();
+}
+}
+
+///------------------------------------------------------------------------------
+/// Connect using given NONE coroutine_stackless_actor
+///------------------------------------------------------------------------------
+template <typename Sire>
 inline void connect(
-  self_t sire,
+  Sire& sire,
   ctxid_t target, /// connect target
   std::string const& ep, /// endpoint
   bool target_is_router = false, /// if target is router, set it true
@@ -117,44 +127,110 @@ inline void connect(
   remote_func_list_t const& remote_func_list = remote_func_list_t()
   )
 {
-  detail::cache_pool* user = 0;
-  detail::cache_pool* owner = sire.get_cache_pool();
-  detail::connect(user, owner, target, ep, target_is_router, remote_func_list, opt);
+  detail::cache_pool* user = sire.get_cache_pool();
+  detail::connect(sire, user, target, ep, target_is_router, opt, remote_func_list);
+  ctxid_pair_t ctxid_pr;
+  aid_t skt = recv(sire, detail::msg_new_conn, ctxid_pr);
+  std::vector<nonblocking_actor*>& actor_list = sire.get_nonblocking_actor_list();
+  BOOST_FOREACH(nonblocking_actor* s, actor_list)
+  {
+    s->get_cache_pool()->register_socket(ctxid_pr, skt);
+  }
 }
 
-/// bind
+inline void connect(
+  actor<stackful>& sire,
+  ctxid_t target, /// connect target
+  std::string const& ep, /// endpoint
+  bool target_is_router = false, /// if target is router, set it true
+  net_option opt = net_option(),
+  remote_func_list_t const& remote_func_list = remote_func_list_t()
+  )
+{
+  detail::cache_pool* user = sire.get_context()->select_cache_pool();
+  detail::connect(sire, user, target, ep, target_is_router, opt, remote_func_list);
+  ctxid_pair_t ctxid_pr;
+  aid_t skt = recv(sire, detail::msg_new_conn, ctxid_pr);
+  sire.get_cache_pool()->register_socket(ctxid_pr, skt);
+}
+
+///------------------------------------------------------------------------------
+/// Connect using given coroutine_stackless_actor
+///------------------------------------------------------------------------------
+inline void connect(
+  actor<stackless>& sire,
+  ctxid_t target, /// connect target
+  std::string const& ep, /// endpoint
+  bool target_is_router = false, /// if target is router, set it true
+  net_option opt = net_option(),
+  remote_func_list_t const& remote_func_list = remote_func_list_t()
+  )
+{
+  detail::cache_pool* user = sire.get_context()->select_cache_pool();
+  detail::connect(sire, user, target, ep, target_is_router, opt, remote_func_list);
+
+  match mach;
+  mach.match_list_.push_back(detail::msg_new_conn);
+  sire.recv(
+    boost::bind(
+      &detail::handle_connect, _1, _2, _3, 
+      sire.get_cache_pool()
+      ), 
+    mach
+    );
+}
+
+///------------------------------------------------------------------------------
+/// Bind using given NONE coroutine_stackless_actor
+///------------------------------------------------------------------------------
+template <typename Sire>
 inline void bind(
-  mixin_t sire,
+  Sire& sire,
   std::string const& ep, /// endpoint
   bool is_router = false, /// if this bind is router, set it true
   remote_func_list_t const& remote_func_list = remote_func_list_t(),
   net_option opt = net_option()
   )
 {
-  detail::cache_pool* owner = sire.get_cache_pool();
-  context& ctx = owner->get_context();
-
-  ///   In boost 1.54 & 1.55, boost::asio::spawn will crash
-  /// When spwan multi-coros at main thread
-  /// With multi-threads run io_service::run (vc11)
-  ///   I'don't know this wheather or not a bug.
-  ///   So, if using mixin(means in main or other user thread(s)),
-  /// We spawn actor(s) with only one cache_pool(means only one asio::strand).
-  detail::cache_pool* user = ctx.select_cache_pool(0);
-  detail::bind(user, owner, ep, is_router, remote_func_list, opt);
+  detail::cache_pool* user = sire.get_context()->select_cache_pool();
+  user->get_strand().post(
+    boost::bind(
+      &detail::bind_impl,
+      sire.get_aid(), user, ep, is_router,
+      remote_func_list, opt
+      )
+    );
+  recv(sire, detail::msg_new_bind);
 }
 
+///------------------------------------------------------------------------------
+/// Bind using given coroutine_stackless_actor
+///------------------------------------------------------------------------------
 inline void bind(
-  self_t sire,
+  actor<stackless>& sire,
   std::string const& ep, /// endpoint
   bool is_router = false, /// if this bind is router, set it true
   remote_func_list_t const& remote_func_list = remote_func_list_t(),
   net_option opt = net_option()
   )
 {
-  detail::cache_pool* user = 0;
-  detail::cache_pool* owner = sire.get_cache_pool();
-  detail::bind(user, owner, ep, is_router, remote_func_list, opt);
+  detail::cache_pool* user = sire.get_context()->select_cache_pool();
+  user->get_strand().post(
+    boost::bind(
+      &detail::bind_impl,
+      sire.get_aid(), user, ep, is_router,
+      remote_func_list, opt
+      )
+    );
+
+  match mach;
+  mach.match_list_.push_back(detail::msg_new_bind);
+  sire.recv(
+    boost::bind(
+      &detail::handle_bind, _1, _2, _3
+      ), 
+    mach
+    );
 }
 }
 

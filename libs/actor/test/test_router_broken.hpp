@@ -28,19 +28,19 @@ public:
 
       attributes attrs;
       attrs.id_ = atom("one");
-      attrs.mixin_num_ = 2;
       context ctx1(attrs);
       attrs.id_ = atom("two");
       context ctx2(attrs);
+      
+      actor<threaded> base1 = spawn(ctx1);
+      actor<threaded> base2 = spawn(ctx2);
 
-      mixin_t base1 = spawn(ctx1);
-      mixin_t base2 = spawn(ctx2);
-      mixin_t mix = spawn(ctx1);
+      actor<threaded> a = spawn(ctx1);
 
       boost::thread thr(
         boost::bind(
           &router_broken_ut::router,
-          base1.get_aid(), boost::ref(mix)
+          base1.get_aid(), boost::ref(a)
           )
         );
       aid_t mix_id = recv(base1);
@@ -49,6 +49,7 @@ public:
       opt.reconn_period_ = seconds_t(1);
       connect(base1, atom("router"), "tcp://127.0.0.1:14923", true, opt);
       connect(base2, atom("router"), "tcp://127.0.0.1:14923", true, opt);
+      wait(base2, boost::chrono::milliseconds(100));
 
       std::vector<aid_t> quiter_list(quiter_num);
       for (std::size_t i=0; i<quiter_num; ++i)
@@ -63,7 +64,6 @@ public:
             );
         base1.link(quiter_list[i]);
       }
-      wait(base1, boost::chrono::milliseconds(100));
       send(base1, mix_id);
 
       thr.join();
@@ -85,17 +85,16 @@ public:
     }
   }
 
-  static void router(aid_t base_id, mixin_t mix)
+  static void router(aid_t base_id, actor<threaded> mix)
   {
     try
     {
       attributes attrs;
       attrs.id_ = atom("router");
       context ctx(attrs);
+      actor<threaded> base = spawn(ctx);
 
-      mixin_t base = spawn(ctx);
       gce::bind(base, "tcp://127.0.0.1:14923", true);
-      wait(base, boost::chrono::milliseconds(100));
       send(mix, base_id);
       recv(mix);
     }
@@ -105,7 +104,7 @@ public:
     }
   }
 
-  static void quiter(self_t self)
+  static void quiter(actor<stackful>& self)
   {
     try
     {

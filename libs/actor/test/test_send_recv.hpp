@@ -20,7 +20,7 @@ public:
   }
 
 public:
-  static void ping_pong(self_t self)
+  static void ping_pong(actor<stackful>& self)
   {
     try
     {
@@ -51,17 +51,17 @@ public:
     try
     {
       context ctx;
+      actor<threaded> base = spawn(ctx);
 
       int const count_down = 10000;
-      mixin_t host = spawn(ctx);
-      aid_t ping = spawn(host, boost::bind(&send_recv_ut::ping_pong, _1));
-      aid_t pong = spawn(host, boost::bind(&send_recv_ut::ping_pong, _1));
+      aid_t ping = spawn(base, boost::bind(&send_recv_ut::ping_pong, _1));
+      aid_t pong = spawn(base, boost::bind(&send_recv_ut::ping_pong, _1));
 
-      send(host, ping, atom("prepare"), pong);
-      send(host, pong, atom("prepare"), ping);
+      send(base, ping, atom("prepare"), pong);
+      send(base, pong, atom("prepare"), ping);
 
-      send(host, ping, atom("ping_pong"), count_down);
-      recv(host);
+      send(base, ping, atom("ping_pong"), count_down);
+      recv(base);
     }
     catch (std::exception& ex)
     {

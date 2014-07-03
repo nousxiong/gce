@@ -20,7 +20,7 @@ public:
   }
 
 private:
-  static void my_actor(self_t self, aid_t base)
+  static void my_actor(actor<stackful>& self, aid_t base)
   {
     std::size_t loop_num = 10;
     yield_t yield = self.get_yield();
@@ -42,7 +42,7 @@ private:
     {
       std::size_t actor_num = 100;
       context ctx;
-      mixin_t base = spawn(ctx);
+      actor<threaded> base = spawn(ctx);
 
       for (std::size_t a=0; a<5; ++a)
       {

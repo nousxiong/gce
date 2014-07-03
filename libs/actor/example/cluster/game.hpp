@@ -11,25 +11,23 @@
 #define GCE_ACTOR_EXAMPLE_CLUSTER_GAME_HPP
 
 #include "app.hpp"
-#include "basic_app.hpp"
 #include <gce/actor/all.hpp>
 
 class game
-  : public basic_app
 {
 public:
-  game(gce::match_t svc_name, app_ctxid_list_t game_list);
-  ~game();
-
-public:
-  gce::aid_t start(gce::self_t sire);
-
-private:
-  void run(gce::self_t);
+  static gce::aid_t start(
+    gce::actor<gce::stackful>& sire, 
+    gce::match_t svc_name, 
+    app_ctxid_list_t game_list
+    );
 
 private:
-  gce::match_t const svc_name_;
-  app_ctxid_list_t const game_list_;
+  static void run(
+    gce::actor<gce::stackful>& self, 
+    gce::match_t svc_name, 
+    app_ctxid_list_t game_list
+    );
 };
 
 #endif /// GCE_ACTOR_EXAMPLE_CLUSTER_GAME_HPP

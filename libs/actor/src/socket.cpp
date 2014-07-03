@@ -10,7 +10,7 @@
 #include <gce/actor/detail/socket.hpp>
 #include <gce/actor/detail/cache_pool.hpp>
 #include <gce/actor/spawn.hpp>
-#include <gce/actor/mixin.hpp>
+#include <gce/actor/thread_mapped_actor.hpp>
 #include <gce/actor/context.hpp>
 #include <gce/actor/impl/tcp/socket.hpp>
 #include <gce/actor/detail/mailbox.hpp>
@@ -30,14 +30,11 @@ namespace gce
 namespace detail
 {
 ///----------------------------------------------------------------------------
-socket::socket(context* ctx)
-  : basic_actor(
-      ctx->get_attributes().max_cache_match_size_,
-      ctx->get_timestamp()
-      )
+socket::socket(cache_pool* user)
+  : basic_actor(&user->get_context(), user, user->get_index())
   , stat_(ready)
-  , hb_(ctx->get_io_service())
-  , sync_(ctx->get_io_service())
+  , hb_(snd_)
+  , sync_(ctx_->get_io_service())
   , recv_cache_(recv_buffer_, GCE_SOCKET_RECV_CACHE_SIZE)
   , conn_(false)
   , curr_reconn_(0)
@@ -49,11 +46,9 @@ socket::~socket()
 {
 }
 ///----------------------------------------------------------------------------
-void socket::init(cache_pool* user, cache_pool* owner, net_option opt)
+void socket::init(net_option opt)
 {
   BOOST_ASSERT_MSG(stat_ == ready, "socket status error");
-  user_ = user;
-  owner_ = owner;
   opt_ = opt;
   curr_reconn_ = u32_nil;
 
@@ -61,7 +56,7 @@ void socket::init(cache_pool* user, cache_pool* owner, net_option opt)
 }
 ///----------------------------------------------------------------------------
 void socket::connect(
-  remote_func_list_t const& remote_func_list, ctxid_t target,
+  aid_t sire, remote_func_list_t const& remote_func_list, ctxid_t target,
   std::string const& ep, bool target_is_router
   )
 {
@@ -74,24 +69,24 @@ void socket::connect(
       target,
       target_is_router ? socket_router : socket_comm
       );
-  owner_->register_socket(ctxid_pr, get_aid());
+  user_->register_socket(ctxid_pr, get_aid());
 
   message m(msg_login);
-  m << user_->get_ctxid();
+  m << ctxid_;
   send(m);
 
   boost::asio::spawn(
-    user_->get_strand(),
+    snd_,
     boost::bind(
       &socket::run_conn,
-      this, ctxid_pr, ep, _1
+      this, sire, ctxid_pr, ep, _1
       ),
     boost::coroutines::attributes(default_stacksize())
     );
 }
 ///----------------------------------------------------------------------------
 void socket::start(
-  std::map<match_t, actor_func_t> const& remote_list,
+  std::map<match_t, remote_func> const& remote_list,
   socket_ptr skt, bool is_router
   )
 {
@@ -100,7 +95,7 @@ void socket::start(
   is_router_ = is_router;
 
   boost::asio::spawn(
-    user_->get_strand(),
+    snd_,
     boost::bind(
       &socket::run, this, skt, _1
       ),
@@ -127,9 +122,9 @@ void socket::on_free()
   is_router_ = false;
 }
 ///----------------------------------------------------------------------------
-void socket::on_recv(pack* pk)
+void socket::on_recv(pack& pk, base_type::send_hint)
 {
-  user_->get_strand().dispatch(
+  snd_.dispatch(
     boost::bind(
       &socket::handle_recv, this, pk
       )
@@ -138,68 +133,75 @@ void socket::on_recv(pack* pk)
 ///----------------------------------------------------------------------------
 void socket::handle_net_msg(message& msg)
 {
-  pack* pk = base_type::alloc_pack(user_);
-  scope scp(boost::bind(&basic_actor::dealloc_pack, user_, pk));
+  pack pk;
 
   bool has_tag =
     msg.pop_tag(
-      pk->tag_, pk->recver_, pk->svc_,
-      pk->skt_, pk->is_err_ret_
+      pk.tag_, pk.recver_, pk.svc_,
+      pk.skt_, pk.is_err_ret_
       );
   BOOST_ASSERT(has_tag);
-  pk->msg_ = msg;
+  pk.msg_ = msg;
 
-  if (link_t* link = boost::get<detail::link_t>(&pk->tag_))
+  if (link_t* link = boost::get<detail::link_t>(&pk.tag_))
   {
     if (is_router_)
     {
-      sktaid_t skt = user_->select_joint_socket(pk->recver_.ctxid_);
+      sktaid_t skt = user_->select_joint_socket(pk.recver_.ctxid_);
       if (!skt)
       {
         /// no socket found, send already exit back
-        base_type::send_already_exited(link->get_aid(), pk->recver_);
+        base_type::send_already_exited(link->get_aid(), pk.recver_);
       }
       else
       {
-        pk->tag_ = fwd_link_t(link->get_type(), link->get_aid(), get_aid());
-        pk->skt_ = skt;
+        pk.tag_ = fwd_link_t(link->get_type(), link->get_aid(), get_aid());
+        pk.skt_ = skt;
         if (link->get_type() == linked)
         {
-          add_router_link(pk->recver_, link->get_aid(), skt);
+          add_router_link(pk.recver_, link->get_aid(), skt);
         }
-        scp.reset();
-        base_type::send(pk->skt_, pk, user_);
+        base_type::send(pk.skt_, pk, sync);
       }
     }
     else
     {
-      pk->skt_ = get_aid();
-      if (link->get_type() == linked)
+      if (check(pk.recver_, ctxid_, timestamp_))
       {
-        add_straight_link(pk->recver_, link->get_aid());
+        pk.skt_ = get_aid();
+        if (link->get_type() == linked)
+        {
+          add_straight_link(pk.recver_, link->get_aid());
+        }
+        base_type::send(pk.recver_, pk, sync);
       }
-      scp.reset();
-      base_type::send(pk->recver_, pk, user_);
+      else
+      {
+        /// aid already expires, send exit msg
+        base_type::send_already_exited(link->get_aid(), pk.recver_);
+      }
     }
   }
-  else if (exit_t* ex = boost::get<exit_t>(&pk->tag_))
+  else if (exit_t* ex = boost::get<exit_t>(&pk.tag_))
   {
-    scp.reset();
     if (is_router_)
     {
-      sktaid_t skt = remove_router_link(pk->recver_, ex->get_aid());
+      sktaid_t skt = remove_router_link(pk.recver_, ex->get_aid());
       BOOST_ASSERT(skt);
-      pk->tag_ = fwd_exit_t(ex->get_code(), ex->get_aid(), get_aid());
-      pk->skt_ = skt;
-      base_type::send(skt, pk, user_);
+      pk.tag_ = fwd_exit_t(ex->get_code(), ex->get_aid(), get_aid());
+      pk.skt_ = skt;
+      base_type::send(pk.skt_, pk, sync);
     }
     else
     {
-      remove_straight_link(pk->recver_, ex->get_aid());
-      base_type::send(pk->recver_, pk, user_);
+      if (check(pk.recver_, ctxid_, timestamp_))
+      {
+        remove_straight_link(pk.recver_, ex->get_aid());
+        base_type::send(pk.recver_, pk, sync);
+      }
     }
   }
-  else if (spawn_t* spw = boost::get<spawn_t>(&pk->tag_))
+  else if (spawn_t* spw = boost::get<spawn_t>(&pk.tag_))
   {
     if (is_router_)
     {
@@ -210,17 +212,14 @@ void socket::handle_net_msg(message& msg)
       }
       else
       {
-        pk->skt_ = skt;
-        scp.reset();
-        base_type::send(pk->skt_, pk, user_);
+        pk.skt_ = skt;
+        base_type::send(pk.skt_, pk, sync);
       }
     }
     else
     {
       /// spawn actor
-      std::map<match_t, actor_func_t>::iterator itr(
-        remote_list_.find(spw->get_func())
-        );
+      remote_list_t::iterator itr(remote_list_.find(spw->get_func()));
       if (itr == remote_list_.end())
       {
         send_spawn_ret(spw, pk, spawn_func_not_found, aid_t(), true);
@@ -229,101 +228,124 @@ void socket::handle_net_msg(message& msg)
       {
         context& ctx = user_->get_context();
         cache_pool* user = ctx.select_cache_pool();
-        aid_t aid =
-          make_actor(
-            *this, user, user_,
-            boost::bind<void>(itr->second, _1),
-            no_link, spw->get_stack_size()
-            );
-        send_spawn_ret(spw, pk, spawn_ok, aid, false);
+        user->get_strand().post(
+          boost::bind(
+            &socket::spawn_remote_actor, this,
+            user, *spw, itr->second
+            )
+          );
       }
     }
   }
-  else if (spawn_ret_t* spr = boost::get<spawn_ret_t>(&pk->tag_))
+  else if (spawn_ret_t* spr = boost::get<spawn_ret_t>(&pk.tag_))
   {
     if (is_router_)
     {
-      sktaid_t skt = user_->select_joint_socket(pk->recver_.ctxid_);
+      sktaid_t skt = user_->select_joint_socket(pk.recver_.ctxid_);
       if (skt)
       {
-        pk->skt_ = skt;
-        scp.reset();
-        base_type::send(pk->skt_, pk, user_);
+        pk.skt_ = skt;
+        base_type::send(pk.skt_, pk, sync);
       }
     }
     else
     {
-      /// fwd to spawner
-      message m(msg_spawn_ret);
-      m << (boost::uint16_t)spr->get_error() << spr->get_id();
-      aid_t aid = spr->get_aid();
-      if (!aid)
+      if (check(pk.recver_, ctxid_, timestamp_))
       {
-        /// we should make sure no timeout miss.
-        aid = get_aid();
-      }
-      pk->tag_ = aid;
-      pk->msg_ = m;
+        /// fwd to spawner
+        message m(msg_spawn_ret);
+        m << (boost::uint16_t)spr->get_error() << spr->get_id();
+        aid_t aid = spr->get_aid();
+        if (!aid)
+        {
+          /// we should make sure no timeout miss.
+          aid = get_aid();
+        }
+        pk.tag_ = aid;
+        pk.msg_ = m;
 
-      scp.reset();
-      base_type::send(pk->recver_, pk, user_);
+        base_type::send(pk.recver_, pk, sync);
+      }
     }
   }
   else
   {
-    bool is_svc = pk->svc_;
+    bool is_svc = pk.svc_;
     if (is_router_)
     {
-      ctxid_t ctxid = is_svc ? pk->svc_.ctxid_ : pk->recver_.ctxid_;
+      ctxid_t ctxid = is_svc ? pk.svc_.ctxid_ : pk.recver_.ctxid_;
       sktaid_t skt = user_->select_joint_socket(ctxid);
-      if (detail::request_t* req = boost::get<detail::request_t>(&pk->tag_))
+      if (detail::request_t* req = boost::get<detail::request_t>(&pk.tag_))
       {
         if (!skt && !is_svc)
         {
           /// reply actor exit msg
-          response_t res(req->get_id(), pk->recver_);
+          response_t res(req->get_id(), pk.recver_);
           base_type::send_already_exited(req->get_aid(), res);
         }
       }
 
       if (skt)
       {
-        pk->skt_ = skt;
-        scp.reset();
-        base_type::send(pk->skt_, pk, user_);
+        pk.skt_ = skt;
+        base_type::send(pk.skt_, pk, sync);
       }
     }
     else
     {
       if (is_svc)
       {
-        pk->recver_ = user_->find_service(pk->svc_.name_);
+        pk.recver_ = user_->find_service(pk.svc_.name_);
       }
 
-      if (pk->recver_)
+      if (check(pk.recver_, ctxid_, timestamp_))
       {
-        scp.reset();
-        base_type::send(pk->recver_, pk, user_);
+        base_type::send(pk.recver_, pk, sync);
       }
     }
   }
 }
 ///----------------------------------------------------------------------------
+void socket::spawn_remote_actor(cache_pool* user, spawn_t spw, remote_func f)
+{
+  aid_t aid;
+  spawn_type type = spw.get_type();
+  if (type == spw_stacked)
+  {
+    aid = make_stackful_actor(aid_t(), user, f.af_, spw.get_stack_size());
+  }
+  else
+  {
+    aid = make_stackless_actor(aid_t(), user, f.ef_, spw.get_stack_size());
+  }
+  user_->get_strand().post(
+    boost::bind(
+      &socket::end_spawn_remote_actor, this, spw, aid
+      )
+    );
+}
+///----------------------------------------------------------------------------
+void socket::end_spawn_remote_actor(spawn_t spw, aid_t aid)
+{
+  pack pk;
+  send_spawn_ret(&spw, pk, spawn_ok, aid, false);
+}
+///----------------------------------------------------------------------------
 void socket::send_spawn_ret(
-  spawn_t* spw, pack* pk, spawn_error err,
+  spawn_t* spw, pack& pk, spawn_error err,
   aid_t aid, bool is_err_ret
   )
 {
-  pk->recver_ = spw->get_aid();
-  pk->skt_ = spw->get_aid();
-  pk->tag_ = spawn_ret_t(err, spw->get_id(), aid);
-  pk->is_err_ret_ = is_err_ret;
-  pk->msg_.set_type(msg_spawn_ret);
-  pk->msg_.push_tag(
-    pk->tag_, pk->recver_, pk->svc_,
-    pk->skt_, pk->is_err_ret_
+  pk.recver_ = spw->get_aid();
+  pk.skt_ = spw->get_aid();
+  pk.tag_ = spawn_ret_t(err, spw->get_id(), aid);
+  pk.is_err_ret_ = is_err_ret;
+  pk.msg_.set_type(msg_spawn_ret);
+  pk.msg_.push_tag(
+    pk.tag_, pk.recver_, pk.svc_,
+    pk.skt_, pk.is_err_ret_
     );
-  send(pk->msg_);
+  send(pk.msg_);
 }
 ///----------------------------------------------------------------------------
 void socket::send(message const& m)
@@ -369,7 +391,12 @@ void socket::send_msg_hb()
   send(message(detail::msg_hb));
 }
 ///----------------------------------------------------------------------------
-void socket::run_conn(ctxid_pair_t target, std::string const& ep, yield_t yield)
+void send_ret(socket* s, aid_t sire, ctxid_pair_t ctxid_pr)
+{
+  gce::send(*s, sire, msg_new_conn, ctxid_pr);
+}
+///----------------------------------------------------------------------------
+void socket::run_conn(aid_t sire, ctxid_pair_t target, std::string const& ep, yield_t yield)
 {
   exit_code_t exc = exit_normal;
   std::string exit_msg("exit normal");
@@ -379,13 +406,21 @@ void socket::run_conn(ctxid_pair_t target, std::string const& ep, yield_t yield)
   {
     context& ctx = user_->get_context();
     user_->add_socket(this);
-    ctx.register_socket(target, get_aid(), user_);
+    ctx.register_socket(target, get_aid(), user_->get_index());
 
     try
     {
       stat_ = on;
-      skt_ = make_socket(ep);
-      connect(yield);
+      {
+        scope scp(boost::bind(&send_ret, this, sire, target));
+        skt_ = make_socket(ep);
+        connect(yield, true);
+      }
+
+      if (!conn_)
+      {
+        connect(yield);
+      }
 
       while (stat_ == on)
       {
@@ -429,10 +464,14 @@ void socket::run_conn(ctxid_pair_t target, std::string const& ep, yield_t yield)
     }
     catch (...)
     {
-      exc = exit_unknown;
+      exc = exit_except;
       exit_msg = "unexpected exception";
       close();
     }
+  }
+  else
+  {
+    gce::send(*this, sire, msg_new_conn, target);
   }
   free_self(curr_pr, exc, exit_msg, yield);
 }
@@ -485,7 +524,7 @@ void socket::run(socket_ptr skt, yield_t yield)
             curr_pr = sync_ctxid(ctxid_pr, curr_pr);
             message m(msg_login_ret);
             m << std::make_pair(
-              user_->get_ctxid(),
+              ctxid_,
               is_router_ ? socket_router : socket_comm
               );
             send(m);
@@ -506,7 +545,7 @@ void socket::run(socket_ptr skt, yield_t yield)
     }
     catch (...)
     {
-      exc = exit_unknown;
+      exc = exit_except;
       exit_msg = "unexpected exception";
       close();
     }
@@ -554,48 +593,46 @@ socket_ptr socket::make_socket(std::string const& ep)
   throw std::runtime_error("unsupported protocol");
 }
 ///----------------------------------------------------------------------------
-void socket::handle_recv(pack* pk)
+void socket::handle_recv(pack& pk)
 {
-  ctxid_t ctxid = get_aid().ctxid_;
-  scope scp(boost::bind(&basic_actor::dealloc_pack, user_, pk));
-  if (check(pk->skt_, ctxid, user_->get_context().get_timestamp()))
+  if (check(pk.skt_, ctxid_, timestamp_))
   {
-    BOOST_ASSERT(!check_local(pk->recver_, ctxid));
-    if (link_t* link = boost::get<link_t>(&pk->tag_))
+    BOOST_ASSERT(!check_local(pk.recver_, ctxid_));
+    if (link_t* link = boost::get<link_t>(&pk.tag_))
     {
-      add_straight_link(link->get_aid(), pk->recver_);
+      add_straight_link(link->get_aid(), pk.recver_);
     }
-    else if (exit_t* ex = boost::get<exit_t>(&pk->tag_))
+    else if (exit_t* ex = boost::get<exit_t>(&pk.tag_))
     {
-      remove_straight_link(ex->get_aid(), pk->recver_);
+      remove_straight_link(ex->get_aid(), pk.recver_);
     }
-    else if (fwd_link_t* link = boost::get<fwd_link_t>(&pk->tag_))
+    else if (fwd_link_t* link = boost::get<fwd_link_t>(&pk.tag_))
     {
-      add_router_link(link->get_aid(), pk->recver_, link->get_skt());
-      pk->tag_ = link_t(link->get_type(), link->get_aid());
+      add_router_link(link->get_aid(), pk.recver_, link->get_skt());
+      pk.tag_ = link_t(link->get_type(), link->get_aid());
     }
-    else if (fwd_exit_t* ex = boost::get<fwd_exit_t>(&pk->tag_))
+    else if (fwd_exit_t* ex = boost::get<fwd_exit_t>(&pk.tag_))
     {
-      remove_router_link(ex->get_aid(), pk->recver_);
-      pk->tag_ = exit_t(ex->get_code(), ex->get_aid());
+      remove_router_link(ex->get_aid(), pk.recver_);
+      pk.tag_ = exit_t(ex->get_code(), ex->get_aid());
     }
-    pk->msg_.push_tag(
-      pk->tag_, pk->recver_, pk->svc_,
-      pk->skt_, pk->is_err_ret_
+    pk.msg_.push_tag(
+      pk.tag_, pk.recver_, pk.svc_,
+      pk.skt_, pk.is_err_ret_
       );
-    send(pk->msg_);
+    send(pk.msg_);
   }
-  else if (!pk->is_err_ret_)
+  else if (!pk.is_err_ret_)
   {
-    if (detail::link_t* link = boost::get<detail::link_t>(&pk->tag_))
+    if (detail::link_t* link = boost::get<detail::link_t>(&pk.tag_))
     {
       /// send actor exit msg
-      base_type::send_already_exited(link->get_aid(), pk->recver_);
+      base_type::send_already_exited(link->get_aid(), pk.recver_);
     }
-    else if (detail::request_t* req = boost::get<detail::request_t>(&pk->tag_))
+    else if (detail::request_t* req = boost::get<detail::request_t>(&pk.tag_))
     {
       /// reply actor exit msg
-      response_t res(req->get_id(), pk->recver_);
+      response_t res(req->get_id(), pk.recver_);
       base_type::send_already_exited(req->get_aid(), res);
     }
   }
@@ -674,13 +711,13 @@ void socket::on_neterr(aid_t self_aid, errcode_t ec)
   {
     BOOST_FOREACH(aid_t const& des, pr.second)
     {
-      detail::pack* pk = alloc_pack(user_);
-      pk->tag_ = detail::exit_t(exit_neterr, des);
-      pk->recver_ = pr.first;
-      pk->skt_ = pr.first;
-      pk->msg_ = m;
+      detail::pack pk;
+      pk.tag_ = detail::exit_t(exit_neterr, des);
+      pk.recver_ = pr.first;
+      pk.skt_ = pr.first;
+      pk.msg_ = m;
 
-      base_type::send(pk->recver_, pk, user_);
+      base_type::send(pk.recver_, pk, sync);
     }
   }
   straight_link_list_.clear();
@@ -689,13 +726,13 @@ void socket::on_neterr(aid_t self_aid, errcode_t ec)
   {
     BOOST_FOREACH(router_link_list_t::mapped_type::value_type& des, pr.second)
     {
-      detail::pack* pk = alloc_pack(user_);
-      pk->tag_ = fwd_exit_t(exit_neterr, des.first, self_aid);
-      pk->recver_ = pr.first;
-      pk->skt_ = des.second;
-      pk->msg_ = m;
+      detail::pack pk;
+      pk.tag_ = fwd_exit_t(exit_neterr, des.first, self_aid);
+      pk.recver_ = pr.first;
+      pk.skt_ = des.second;
+      pk.msg_ = m;
 
-      base_type::send(pk->skt_, pk, user_);
+      base_type::send(pk.skt_, pk, sync);
     }
   }
   router_link_list_.clear();
@@ -706,8 +743,11 @@ ctxid_pair_t socket::sync_ctxid(ctxid_pair_t new_pr, ctxid_pair_t curr_pr)
   if (new_pr != curr_pr)
   {
     context& ctx = user_->get_context();
-    ctx.deregister_socket(curr_pr, get_aid(), user_);
-    ctx.register_socket(new_pr, get_aid(), user_);
+    aid_t skt = get_aid();
+    user_->deregister_socket(curr_pr, skt);
+    user_->register_socket(new_pr, skt);
+    ctx.deregister_socket(curr_pr, skt, user_->get_index());
+    ctx.register_socket(new_pr, skt, user_->get_index());
   }
   return new_pr;
 }
@@ -751,22 +791,28 @@ bool socket::parse_message(message& msg)
   return true;
 }
 ///----------------------------------------------------------------------------
-void socket::connect(yield_t yield)
+void socket::connect(yield_t yield, bool init)
 {
   errcode_t ec;
   if (stat_ == on)
   {
+    seconds_t reconn_period = init ? opt_.init_reconn_period_ : opt_.reconn_period_;
+    std::size_t const reconn_try = init ? opt_.init_reconn_try_ : opt_.reconn_try_;
     for (std::size_t i=0, retry=0; i<u32_nil; ++i, ++retry)
     {
-      if (retry > opt_.reconn_try_)
+      if (retry > reconn_try)
       {
         retry = 0;
         on_neterr(get_aid());
+        if (init)
+        {
+          return;
+        }
       }
 
       if (i > 0)
       {
-        sync_.expires_from_now(opt_.reconn_period_);
+        sync_.expires_from_now(reconn_period);
         sync_.async_wait(yield[ec]);
         if (stat_ != on)
         {
@@ -795,7 +841,7 @@ void socket::connect(yield_t yield)
     start_heartbeat(boost::bind(&socket::reconn, this));
 
     message m(msg_login);
-    m << user_->get_ctxid();
+    m << ctxid_;
     send(m);
   }
 }
@@ -853,7 +899,6 @@ template <typename F>
 void socket::start_heartbeat(F f)
 {
   hb_.init(
-    user_,
     opt_.heartbeat_period_, opt_.heartbeat_count_,
     f, boost::bind(&socket::send_msg_hb, this)
     );
@@ -883,7 +928,7 @@ void socket::free_self(
   if (ctxid_pr.first != ctxid_nil)
   {
     user_->deregister_socket(ctxid_pr, get_aid());
-    user_->get_context().deregister_socket(ctxid_pr, get_aid(), user_);
+    ctx_->deregister_socket(ctxid_pr, get_aid(), user_->get_index());
   }
 
   user_->remove_socket(this);
@@ -891,7 +936,7 @@ void socket::free_self(
   base_type::update_aid();
   on_neterr(self_aid);
   base_type::send_exit(self_aid, exc, exit_msg);
-  user_->free_socket(owner_, this);
+  user_->free_socket(this);
 }
 ///----------------------------------------------------------------------------
 }

@@ -15,8 +15,6 @@
 #include <gce/actor/recv.hpp>
 #include <gce/actor/wait.hpp>
 #include <gce/actor/actor.hpp>
-#include <gce/actor/mixin.hpp>
-#include <gce/actor/slice.hpp>
 #include <gce/actor/message.hpp>
 #include <gce/actor/remote.hpp>
 #include <gce/actor/spawn.hpp>
@@ -25,5 +23,6 @@
 #include <gce/actor/response.hpp>
 #include <gce/actor/actor_id.hpp>
 #include <gce/actor/net_option.hpp>
+#include <gce/actor/adaptor.hpp>
 
 #endif /// GCE_ACTOR_ALL_HPP

@@ -16,34 +16,24 @@
 #include <vector>
 
 ///----------------------------------------------------------------------------
-gate::gate(std::string cln_ep, app_ctxid_list_t game_list)
-  : cln_ep_(cln_ep)
-  , game_list_(game_list)
+gce::aid_t gate::start(
+  gce::actor<gce::stackful>& sire, gce::match_t svc_name, 
+  std::string cln_ep, app_ctxid_list_t game_list
+  )
 {
-}
-///----------------------------------------------------------------------------
-gate::~gate()
-{
-}
-///----------------------------------------------------------------------------
-gce::aid_t gate::start(gce::self_t sire)
-{
-  gce::io_service_t& ios =
-    sire.get_cache_pool()->get_context().get_io_service();
-  acpr_.reset(new acceptor_t(ios));
-
   return
     gce::spawn(
       sire,
       boost::bind(
-        &gate::run, this, _1
+        &gate::run, _1, svc_name, 
+        cln_ep, game_list
         ),
       gce::monitored
       );
 }
 ///----------------------------------------------------------------------------
 void quit_callback(
-  gce::self_t self, std::vector<gce::aid_t>& conn_group_list
+  gce::actor<gce::stackful>& self, std::vector<gce::aid_t>& conn_group_list
   )
 {
   std::vector<gce::response_t> res_list;
@@ -60,39 +50,42 @@ void quit_callback(
   conn_group_list.clear();
 }
 ///----------------------------------------------------------------------------
-void gate::run(gce::self_t self)
+void gate::run(gce::actor<gce::stackful>& self, gce::match_t svc_name, std::string cln_ep, app_ctxid_list_t game_list)
 {
   try
   {
+    gce::io_service_t& ios = self.get_context()->get_io_service();
+    acceptor_t acpr(ios);
+
     std::string host;
     boost::uint16_t port;
 
     /// parse protocol
-    std::size_t pos = cln_ep_.find("://");
+    std::size_t pos = cln_ep.find("://");
     if (pos == std::string::npos)
     {
       throw std::runtime_error("protocol error");
     }
 
-    std::string protocol_name = cln_ep_.substr(0, pos);
+    std::string protocol_name = cln_ep.substr(0, pos);
     if (protocol_name == "tcp")
     {
       std::size_t begin = pos + 3;
-      pos = cln_ep_.find(':', begin);
+      pos = cln_ep.find(':', begin);
       if (pos == std::string::npos)
       {
         throw std::runtime_error("tcp address error");
       }
 
-      std::string address = cln_ep_.substr(begin, pos - begin);
+      std::string address = cln_ep.substr(begin, pos - begin);
 
       begin = pos + 1;
-      pos = cln_ep_.size();
+      pos = cln_ep.size();
 
       host = address;
       port =
         boost::lexical_cast<boost::uint16_t>(
-          cln_ep_.substr(begin, pos - begin)
+          cln_ep.substr(begin, pos - begin)
           );
     }
     else
@@ -126,31 +119,39 @@ void gate::run(gce::self_t self)
     boost::asio::ip::address addr;
     addr.from_string(host);
     boost::asio::ip::tcp::endpoint ep(addr, port);
-    acpr_->open(ep.protocol());
+    acpr.open(ep.protocol());
 
-    acpr_->set_option(boost::asio::socket_base::reuse_address(true));
-    acpr_->bind(ep);
+    acpr.set_option(boost::asio::socket_base::reuse_address(true));
+    acpr.bind(ep);
 
-    acpr_->listen(1024);
+    acpr.listen(1024);
 
-    acpr_->set_option(boost::asio::ip::tcp::no_delay(true));
-    acpr_->set_option(boost::asio::socket_base::keep_alive(true));
-    acpr_->set_option(boost::asio::socket_base::enable_connection_aborted(true));
+    acpr.set_option(boost::asio::ip::tcp::no_delay(true));
+    acpr.set_option(boost::asio::socket_base::keep_alive(true));
+    acpr.set_option(boost::asio::socket_base::enable_connection_aborted(true));
 
     gce::errcode_t ignored_ec;
     gce::detail::scope acpr_scp(
       boost::bind(
         &acceptor_t::close,
-        acpr_.get(), boost::ref(ignored_ec)
+        &acpr, boost::ref(ignored_ec)
         )
       );
 
     /// spawn accept
     gce::spawn(
       self,
-      boost::bind(&gate::accept, this, _1, conn_group_list),
+      boost::bind(
+        &gate::accept, _1, 
+        boost::ref(acpr), game_list, conn_group_list
+        ),
       gce::monitored,
       true
+      );
+
+    std::printf(
+      "gate %s setup, listen client conn on: %s\n", 
+      gce::atom(svc_name).c_str(), cln_ep.c_str()
       );
 
     /// loop handle messages
@@ -167,33 +168,41 @@ void gate::run(gce::self_t self)
       else if (type == gce::atom("stop"))
       {
         running = false;
-        acpr_->close(ignored_ec);
+        acpr.close(ignored_ec);
         gce::recv(self, gce::exit);
         quit_callback(self, conn_group_list);
         gce::reply(self, sender, gce::atom("ret"));
       }
       else
       {
-        std::string errmsg("gate::run unexpected message, type: ");
+        std::string errmsg("gate unexpected message, type: ");
         errmsg += gce::atom(type);
-        throw std::runtime_error(errmsg);
+        std::printf("%s\n", errmsg.c_str());
       }
     }
+
+    std::printf("gate %s quit\n", gce::atom(svc_name).c_str());
   }
   catch (std::exception& ex)
   {
-    std::printf("gate::run except: %s\n", ex.what());
+    std::printf("gate except: %s\n", ex.what());
   }
 }
 ///----------------------------------------------------------------------------
-void gate::accept(gce::self_t self, std::vector<gce::aid_t> conn_group_list)
+void gate::accept(
+  gce::actor<gce::stackful>& self, 
+  acceptor_t& acpr, 
+  app_ctxid_list_t game_list,
+  std::vector<gce::aid_t> conn_group_list
+  )
 {
   try
   {
+    gce::ctxid_t ctxid = self.get_context()->get_attributes().id_;
     std::size_t curr_group = 0;
     std::size_t const group_size = conn_group_list.size();
     boost::uint32_t sid_base = 0;
-    gce::io_service_t& ios = acpr_->get_io_service();
+    gce::io_service_t& ios = acpr.get_io_service();
     gce::yield_t yield = self.get_yield();
 
     while (true)
@@ -205,17 +214,11 @@ void gate::accept(gce::self_t self, std::vector<gce::aid_t> conn_group_list)
       }
 
       socket_ptr skt(boost::make_shared<tcp_socket>(boost::ref(ios)));
-      acpr_->async_accept(skt->get_socket(), yield[ec]);
+      acpr.async_accept(skt->get_socket(), yield[ec]);
       if (!ec)
       {
         std::printf("new client conn\n");
-        gce::spawn(
-          self,
-          boost::bind(
-            &conn::run, _1, skt,
-            conn_group_list[curr_group], game_list_
-            )
-          );
+        conn::spawn(self, skt, conn_group_list[curr_group], game_list);
       }
       else
       {
@@ -230,7 +233,7 @@ void gate::accept(gce::self_t self, std::vector<gce::aid_t> conn_group_list)
   }
 }
 ///----------------------------------------------------------------------------
-void gate::conn_group(gce::self_t self, gce::aid_t ga_id)
+void gate::conn_group(gce::actor<gce::stackful>& self, gce::aid_t ga_id)
 {
   typedef std::set<gce::aid_t> conn_list_t;
   try

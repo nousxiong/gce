@@ -20,7 +20,7 @@ public:
   }
 
 private:
-  static void my_actor(self_t self, aid_t last_id)
+  static void my_actor(actor<stackful>& self, aid_t last_id)
   {
     message msg;
     aid_t sender = self.recv(msg);
@@ -35,7 +35,7 @@ private:
     }
   }
 
-  static void root(self_t self)
+  static void root(actor<stackful>& self)
   {
     std::size_t free_actor_num = 20;
 
@@ -71,7 +71,7 @@ private:
     {
       std::size_t root_num = 100;
       context ctx;
-      mixin_t base = spawn(ctx);
+      actor<threaded> base = spawn(ctx);
 
       for (std::size_t i=0; i<root_num; ++i)
       {

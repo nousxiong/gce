@@ -16,10 +16,10 @@ namespace gce
 namespace detail
 {
 ///----------------------------------------------------------------------------
-heartbeat::heartbeat(io_service_t& ios)
-  : cac_pool_(0)
-  , tmr_(ios)
-  , sync_(ios)
+heartbeat::heartbeat(strand_t& snd)
+  : snd_(snd)
+  , tmr_(snd_.get_io_service())
+  , sync_(snd_.get_io_service())
   , max_count_(0)
   , curr_count_(0)
   , stopped_(false)
@@ -68,7 +68,6 @@ void heartbeat::wait_end(yield_t yield)
 ///----------------------------------------------------------------------------
 void heartbeat::clear()
 {
-  cac_pool_ = 0;
   timeout_.clear();
   tick_.clear();
 }
@@ -76,10 +75,9 @@ void heartbeat::clear()
 void heartbeat::start_timer()
 {
   ++waiting_;
-  strand_t& snd = cac_pool_->get_strand();
   tmr_.expires_from_now(period_);
   tmr_.async_wait(
-    snd.wrap(
+    snd_.wrap(
       boost::bind(
         &heartbeat::handle_timeout, this,
         boost::asio::placeholders::error

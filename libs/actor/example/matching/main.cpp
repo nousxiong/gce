@@ -10,7 +10,7 @@
 #include <gce/actor/all.hpp>
 #include <iostream>
 
-void echo(gce::self_t self)
+void echo(gce::actor<gce::stackful>& self)
 {
   /// wait for "start" message. 
   /// if and only if after fetch "start", then others
@@ -30,7 +30,8 @@ int main()
 {
   gce::context ctx;
 
-  gce::mixin_t base = gce::spawn(ctx);
+  /// spawn a thread_mapped_actor
+  gce::actor<gce::threaded> base = gce::spawn(ctx);
 
   gce::aid_t echo_actor = gce::spawn(base, boost::bind(&echo, _1));
 

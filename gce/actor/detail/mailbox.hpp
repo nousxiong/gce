@@ -48,7 +48,7 @@ public:
   bool push(response_t, message const&);
 
 private:
-  void add_match_msg(recv_t const&, message const&);
+  void add_match_msg(recv_t const&, aid_t sender, message const&);
   bool fetch_match_msg(match_t, recv_t&, message&);
 
 private:
@@ -56,7 +56,8 @@ private:
   typedef recv_queue_t::iterator recv_itr;
   recv_queue_t recv_que_;
 
-  typedef std::deque<recv_itr> match_queue_t;
+  typedef std::list<recv_itr> match_queue_t;
+  typedef match_queue_t::iterator match_itr;
   std::vector<match_queue_t> cache_match_list_;
 
   typedef std::map<match_t, match_queue_t> match_queue_list_t;
@@ -67,6 +68,11 @@ private:
   typedef std::deque<request_t> req_queue_t;
   typedef std::map<aid_t, req_queue_t> wait_reply_list_t;
   wait_reply_list_t wait_reply_list_;
+
+  typedef std::map<aid_t, match_itr> exit_list_t;
+  typedef std::map<svcid_t, std::pair<aid_t, match_itr> > svc_exit_list_t;
+  exit_list_t exit_list_;
+  svc_exit_list_t svc_exit_list_;
 
   req_queue_t dummy_;
   match_queue_t dummy2_;

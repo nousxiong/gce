@@ -8,8 +8,9 @@
 ///
 
 #include <gce/actor/context.hpp>
+#include <gce/actor/nonblocking_actor.hpp>
+#include <gce/actor/thread_mapped_actor.hpp>
 #include <gce/actor/detail/cache_pool.hpp>
-#include <gce/actor/mixin.hpp>
 #include <boost/asio/placeholders.hpp>
 #include <boost/foreach.hpp>
 #include <boost/ref.hpp>
@@ -25,8 +26,14 @@ context::context(attributes attrs)
   : attrs_(attrs)
   , timestamp_((timestamp_t)boost::chrono::system_clock::now().time_since_epoch().count())
   , curr_cache_pool_(size_nil)
-  , cache_pool_size_(attrs_.thread_num_ * attrs_.per_thread_cache_)
-  , curr_mixin_(0)
+  , cache_pool_size_(
+      attrs_.thread_num_ == 0 ? 
+        attrs_.per_thread_cache_pool_num_ : 
+        attrs_.thread_num_ * attrs_.per_thread_cache_pool_num_
+      )
+  , cache_queue_size_(cache_pool_size_ + attrs_.slice_num_)
+  , curr_nonblocking_actor_(0)
+  , thread_mapped_actor_list_(cache_pool_size_)
 {
   if (attrs_.ios_)
   {
@@ -37,19 +44,20 @@ context::context(attributes attrs)
     ios_.reset(new io_service_t(attrs_.thread_num_));
   }
   work_ = boost::in_place(boost::ref(*ios_));
-
-  cache_pool_list_.reserve(cache_pool_size_);
-  mixin_list_.reserve(attrs_.mixin_num_);
+  cache_pool_list_.resize(cache_pool_size_, 0);
+  nonblocking_actor_list_.resize(attrs_.slice_num_, 0);
 
   try
   {
     std::size_t index = 0;
     for (std::size_t i=0; i<cache_pool_size_; ++i, ++index)
     {
-      cache_pool_list_.push_back((detail::cache_pool*)0);
-      detail::cache_pool*& cac_pool = cache_pool_list_.back();
-      cac_pool = new detail::cache_pool(*this, index, attrs_, false);
-      start_gc_timer(cac_pool);
+      cache_pool_list_[i] = new detail::cache_pool(*this, index);
+    }
+
+    for (std::size_t i=0; i<attrs_.slice_num_; ++i, ++index)
+    {
+      nonblocking_actor_list_[i] = new nonblocking_actor(*this, index);
     }
 
     for (std::size_t i=0; i<attrs_.thread_num_; ++i)
@@ -61,13 +69,6 @@ context::context(attributes attrs)
           attrs_.thread_end_cb_list_
           )
         );
-    }
-
-    for (std::size_t i=0; i<attrs_.mixin_num_; ++i, ++index)
-    {
-      mixin_list_.push_back((mixin*)0);
-      mixin*& mi = mixin_list_.back();
-      mi = new mixin(*this, index, attrs_);
     }
   }
   catch (...)
@@ -82,129 +83,104 @@ context::~context()
   stop();
 }
 ///------------------------------------------------------------------------------
-mixin& context::make_mixin()
+thread_mapped_actor& context::make_thread_mapped_actor()
 {
-  std::size_t i = curr_mixin_.fetch_add(1, boost::memory_order_relaxed);
-  if (i >= mixin_list_.size())
-  {
-    throw std::runtime_error("out of mixin fix num");
-  }
-  return *(mixin_list_[i]);
+  thread_mapped_actor* a = new thread_mapped_actor(select_cache_pool());
+  thread_mapped_actor_list_.push(a);
+  return *a;
 }
 ///------------------------------------------------------------------------------
-detail::cache_pool* context::select_cache_pool(std::size_t i)
+detail::cache_pool* context::select_cache_pool()
 {
-  if (i == size_nil)
+  std::size_t curr_cache_pool = curr_cache_pool_;
+  ++curr_cache_pool;
+  if (curr_cache_pool >= cache_pool_size_)
   {
-    std::size_t curr_cache_pool = curr_cache_pool_;
-    ++curr_cache_pool;
-    if (curr_cache_pool >= cache_pool_size_)
-    {
-      curr_cache_pool = 0;
-    }
-    curr_cache_pool_ = curr_cache_pool;
-    return cache_pool_list_[curr_cache_pool];
+    curr_cache_pool = 0;
   }
-  else
-  {
-    BOOST_ASSERT(i < cache_pool_list_.size());
-    return cache_pool_list_[i];
-  }
+  curr_cache_pool_ = curr_cache_pool;
+  return cache_pool_list_[curr_cache_pool];
 }
 ///------------------------------------------------------------------------------
-void context::register_service(match_t name, aid_t svc, detail::cache_pool* user)
+nonblocking_actor& context::make_nonblocking_actor()
+{
+  std::size_t i = curr_nonblocking_actor_.fetch_add(1, boost::memory_order_relaxed);
+  if (i >= nonblocking_actor_list_.size())
+  {
+    throw std::runtime_error("out of nonblocking_actor fix size");
+  }
+  return *(nonblocking_actor_list_[i]);
+}
+///------------------------------------------------------------------------------
+void context::register_service(match_t name, aid_t svc, std::size_t cache_queue_index)
 {
   BOOST_FOREACH(detail::cache_pool* cac_pool, cache_pool_list_)
   {
-    if (cac_pool)
-    {
-      cac_pool->get_strand().dispatch(
-        boost::bind(
-          &detail::cache_pool::register_service,
-          cac_pool, name, svc
-          )
-        );
-    }
+    cac_pool->get_strand().dispatch(
+      boost::bind(
+        &detail::cache_pool::register_service,
+        cac_pool, name, svc
+        )
+      );
   }
 
-  BOOST_FOREACH(mixin* mi, mixin_list_)
+  BOOST_FOREACH(nonblocking_actor* s, nonblocking_actor_list_)
   {
-    if (mi)
-    {
-      mi->register_service(name, svc, user);
-    }
+    s->register_service(name, svc, cache_queue_index);
   }
 }
 ///------------------------------------------------------------------------------
-void context::deregister_service(match_t name, aid_t svc, detail::cache_pool* user)
+void context::deregister_service(match_t name, aid_t svc, std::size_t cache_queue_index)
 {
   BOOST_FOREACH(detail::cache_pool* cac_pool, cache_pool_list_)
   {
-    if (cac_pool)
-    {
-      cac_pool->get_strand().dispatch(
-        boost::bind(
-          &detail::cache_pool::deregister_service,
-          cac_pool, name, svc
-          )
-        );
-    }
+    cac_pool->get_strand().dispatch(
+      boost::bind(
+        &detail::cache_pool::deregister_service,
+        cac_pool, name, svc
+        )
+      );
   }
 
-  BOOST_FOREACH(mixin* mi, mixin_list_)
+  BOOST_FOREACH(nonblocking_actor* s, nonblocking_actor_list_)
   {
-    if (mi)
-    {
-      mi->deregister_service(name, svc, user);
-    }
+    s->deregister_service(name, svc, cache_queue_index);
   }
 }
 ///------------------------------------------------------------------------------
-void context::register_socket(ctxid_pair_t ctxid_pr, aid_t skt, detail::cache_pool* user)
+void context::register_socket(ctxid_pair_t ctxid_pr, aid_t skt, std::size_t cache_queue_index)
 {
   BOOST_FOREACH(detail::cache_pool* cac_pool, cache_pool_list_)
   {
-    if (cac_pool)
-    {
-      cac_pool->get_strand().dispatch(
-        boost::bind(
-          &detail::cache_pool::register_socket,
-          cac_pool, ctxid_pr, skt
-          )
-        );
-    }
+    cac_pool->get_strand().dispatch(
+      boost::bind(
+        &detail::cache_pool::register_socket,
+        cac_pool, ctxid_pr, skt
+        )
+      );
   }
 
-  BOOST_FOREACH(mixin* mi, mixin_list_)
+  BOOST_FOREACH(nonblocking_actor* s, nonblocking_actor_list_)
   {
-    if (mi)
-    {
-      mi->register_socket(ctxid_pr, skt, user);
-    }
+    s->register_socket(ctxid_pr, skt, cache_queue_index);
   }
 }
 ///------------------------------------------------------------------------------
-void context::deregister_socket(ctxid_pair_t ctxid_pr, aid_t skt, detail::cache_pool* user)
+void context::deregister_socket(ctxid_pair_t ctxid_pr, aid_t skt, std::size_t cache_queue_index)
 {
   BOOST_FOREACH(detail::cache_pool* cac_pool, cache_pool_list_)
   {
-    if (cac_pool)
-    {
-      cac_pool->get_strand().dispatch(
-        boost::bind(
-          &detail::cache_pool::deregister_socket,
-          cac_pool, ctxid_pr, skt
-          )
-        );
-    }
+    cac_pool->get_strand().dispatch(
+      boost::bind(
+        &detail::cache_pool::deregister_socket,
+        cac_pool, ctxid_pr, skt
+        )
+      );
   }
 
-  BOOST_FOREACH(mixin* mi, mixin_list_)
+  BOOST_FOREACH(nonblocking_actor* s, nonblocking_actor_list_)
   {
-    if (mi)
-    {
-      mi->deregister_socket(ctxid_pr, skt, user);
-    }
+    s->deregister_socket(ctxid_pr, skt, cache_queue_index);
   }
 }
 ///------------------------------------------------------------------------------
@@ -244,92 +220,28 @@ void context::stop()
   work_ = boost::none;
   BOOST_FOREACH(detail::cache_pool* cac_pool, cache_pool_list_)
   {
-    if (cac_pool)
-    {
-      cac_pool->get_strand().dispatch(
-        boost::bind(&context::stop_mixin, this, cac_pool)
-        );
-      break;
-    }
-  }
-
-  BOOST_FOREACH(detail::cache_pool* cac_pool, cache_pool_list_)
-  {
-    if (cac_pool)
-    {
-      cac_pool->get_strand().dispatch(
-        boost::bind(&detail::cache_pool::stop, cac_pool)
-        );
-    }
+    cac_pool->get_strand().dispatch(
+      boost::bind(&detail::cache_pool::stop, cac_pool)
+      );
   }
 
   thread_group_.join_all();
 
-  BOOST_FOREACH(detail::cache_pool* cac_pool, cache_pool_list_)
+  thread_mapped_actor* mix = 0;
+  while (thread_mapped_actor_list_.pop(mix))
   {
-    if (cac_pool)
-    {
-      cac_pool->free_cache();
-    }
+    delete mix;
   }
 
-  BOOST_FOREACH(mixin* mi, mixin_list_)
+  BOOST_FOREACH(nonblocking_actor* s, nonblocking_actor_list_)
   {
-    if (mi)
-    {
-      mi->free_cache();
-    }
-  }
-
-  BOOST_FOREACH(mixin* mi, mixin_list_)
-  {
-    delete mi;
+    delete s;
   }
 
   BOOST_FOREACH(detail::cache_pool* cac_pool, cache_pool_list_)
   {
     delete cac_pool;
   }
-}
-///------------------------------------------------------------------------------
-void context::stop_mixin(detail::cache_pool* user)
-{
-  BOOST_FOREACH(mixin* mi, mixin_list_)
-  {
-    if (mi)
-    {
-      mi->stop(user);
-    }
-  }
-}
-///------------------------------------------------------------------------------
-void context::start_gc_timer(detail::cache_pool* cac_pool)
-{
-  timer_t& gc_tmr = cac_pool->get_gc_timer();
-  strand_t& snd = cac_pool->get_strand();
-  gc_tmr.expires_from_now(attrs_.gc_period_);
-  gc_tmr.async_wait(
-    snd.wrap(
-      boost::bind(
-        &context::gc, this,
-        cac_pool, boost::asio::placeholders::error
-        )
-      )
-    );
-}
-///------------------------------------------------------------------------------
-void context::gc(detail::cache_pool* cac_pool, errcode_t const& errc)
-{
-  if (errc != boost::asio::error::operation_aborted)
-  {
-    start_gc_timer(cac_pool);
-  }
-
-  /// free all cache
-  cac_pool->free_cache();
-
-  /// do gc
-  cac_pool->free_object();
 }
 ///------------------------------------------------------------------------------
 }

@@ -13,36 +13,28 @@
 #include <map>
 
 ///----------------------------------------------------------------------------
-game::game(gce::match_t svc_name, app_ctxid_list_t game_list)
-  : svc_name_(svc_name)
-  , game_list_(game_list)
-{
-}
-///----------------------------------------------------------------------------
-game::~game()
-{
-}
-///----------------------------------------------------------------------------
-gce::aid_t game::start(gce::self_t sire)
+gce::aid_t game::start(gce::actor<gce::stackful>& sire, gce::match_t svc_name, app_ctxid_list_t game_list)
 {
   return
     gce::spawn(
       sire,
       boost::bind(
-        &game::run, this, _1
+        &game::run, _1, svc_name, game_list
         ),
       gce::monitored
       );
 }
 ///----------------------------------------------------------------------------
-void game::run(gce::self_t self)
+void game::run(gce::actor<gce::stackful>& self, gce::match_t svc_name, app_ctxid_list_t game_list)
 {
   try
   {
     typedef std::map<std::string, gce::aid_t> user_list_t;
     user_list_t user_list;
 
-    gce::register_service(self, svc_name_);
+    gce::register_service(self, svc_name);
+
+    std::printf("game %s setup\n", gce::atom(svc_name).c_str());
 
     /// loop handle messages
     bool running = true;
@@ -80,7 +72,7 @@ void game::run(gce::self_t self)
           gce::spawn(
             self,
             boost::bind(
-              &user::run, _1, game_list_, old_usr_aid,
+              &user::run, _1, game_list, old_usr_aid,
               self.get_aid(), cid, username, passwd
               )
             );
@@ -117,16 +109,18 @@ void game::run(gce::self_t self)
       }
       else
       {
-        std::string errmsg("game::run unexpected message, type: ");
+        std::string errmsg("game unexpected message, type: ");
         errmsg += gce::atom(type);
-        throw std::runtime_error(errmsg);
+        std::printf("%s\n", errmsg.c_str());
       }
     }
+
+    std::printf("game %s quit\n", gce::atom(svc_name).c_str());
   }
   catch (std::exception& ex)
   {
-    std::printf("game::run except: %s\n", ex.what());
+    std::printf("game except: %s\n", ex.what());
   }
-  gce::deregister_service(self, svc_name_);
+  gce::deregister_service(self, svc_name);
 }
 ///----------------------------------------------------------------------------
