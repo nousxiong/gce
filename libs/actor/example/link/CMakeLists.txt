@@ -13,10 +13,7 @@
 #
 
 if (WIN32)
-  if (
-    ${CMAKE_GENERATOR} STREQUAL "Visual Studio 11" OR ${CMAKE_GENERATOR} STREQUAL "Visual Studio 12" OR
-    ${CMAKE_GENERATOR} STREQUAL "Visual Studio 11 2012" OR ${CMAKE_GENERATOR} STREQUAL "Visual Studio 12 2013"
-    )
+  if (${CMAKE_GENERATOR} MATCHES "Visual Studio 11 *" OR ${CMAKE_GENERATOR} MATCHES "Visual Studio 12 *")
     set (CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} /SAFESEH:NO")
   endif ()
 endif ()

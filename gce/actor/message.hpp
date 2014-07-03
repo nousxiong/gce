@@ -208,7 +208,7 @@ public:
 
   message& operator<<(message const m)
   {
-    boost::uint32_t msg_size = m.size();
+    boost::uint32_t msg_size = (boost::uint32_t)m.size();
     match_t msg_type = m.get_type();
     boost::uint32_t tag_offset = m.tag_offset_;
     boost::amsg::error_code_t ec = boost::amsg::success;
@@ -403,7 +403,7 @@ private:
     svcid_t svc, aid_t skt, bool is_err_ret
     )
   {
-    tag_offset_ = buf_.write_size();
+    tag_offset_ = (boost::uint32_t)buf_.write_size();
     if (aid_t* aid = boost::get<aid_t>(&tag))
     {
       *this << detail::tag_aid_t << *aid;

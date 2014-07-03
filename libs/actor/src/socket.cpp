@@ -373,7 +373,7 @@ void socket::send_msg(message const& m)
 {
   BOOST_ASSERT(skt_);
   msg::header hdr;
-  hdr.size_ = m.size();
+  hdr.size_ = (boost::uint32_t)m.size();
   hdr.type_ = m.get_type();
   hdr.tag_offset_ = m.tag_offset_;
 

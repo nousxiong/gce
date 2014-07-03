@@ -530,7 +530,7 @@ namespace boost{ namespace amsg{	namespace detail
 				error_code = sequence_length_overflow;
 				return 0;
 			}
-			::std::size_t size = 	byte_size_of_impl< ::boost::uint32_t,0>::size(len,error_code) + len;
+      ::std::size_t size = 	byte_size_of_impl< ::std::size_t,0>::size(len,error_code) + len;
 			return size;
 		}
 	};
@@ -570,7 +570,7 @@ namespace boost{ namespace amsg{	namespace detail
 				error_code = sequence_length_overflow;
 				return 0;
 			}
-			::std::size_t size = 	byte_size_of_impl< ::boost::uint32_t,0>::size(len,error_code);
+			::std::size_t size = 	byte_size_of_impl< ::std::size_t,0>::size(len,error_code);
 			for( typename value_type::const_iterator i = value.begin() ; i != value.end(); ++i )
 			{
 				const typename value_type::value_type& elem_value = *i;
@@ -1829,7 +1829,7 @@ namespace boost{ namespace amsg{	namespace detail
 				store_data.set_error_code(sequence_length_overflow);
 				return;
 			}
-			value_write_support<store_ty,::boost::uint32_t,0>::impl_type::write(store_data,len);
+			value_write_support<store_ty,::std::size_t,0>::impl_type::write(store_data,len);
 			if(store_data.bad())
 			{
 				store_data.set_error_code(stream_buffer_overflow);
@@ -1989,7 +1989,7 @@ namespace boost{ namespace amsg{	namespace detail
 				store_data.set_error_code(sequence_length_overflow);
 				return;
 			}
-			value_write_support<store_ty,::boost::uint32_t,tag>::impl_type::write(store_data,len);
+			value_write_support<store_ty,::std::size_t,tag>::impl_type::write(store_data,len);
 			if(store_data.bad())
 			{
 				store_data.set_error_code(stream_buffer_overflow);
