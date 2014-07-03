@@ -86,7 +86,7 @@ Hello world
 #include <iostream>
 #include <string>
 
-void mirror(gce::self_t self)
+void mirror(gce::actor<gce::stackful>& self)
 {
   /// wait for messages
   gce::message msg;
@@ -109,7 +109,7 @@ int main()
   gce::context ctx;
 
   /// create a hello_world actor, using thread-base actor
-  gce::mixin_t hello_world = gce::spawn(ctx);
+  gce::actor<gce::threaded> hello_world = gce::spawn(ctx);
 
   /// create a new actor that calls ’mirror(gce::self_t)’, using coroutine-base actor
   gce::aid_t mirror_actor = gce::spawn(hello_world, boost::bind(&mirror, _1));
@@ -139,7 +139,7 @@ Type matching
 #include <gce/actor/all.hpp>
 #include <iostream>
 
-void echo(gce::self_t self)
+void echo(gce::actor<gce::stackful>& self)
 {
   /// wait for "start" message. 
   /// if and only if after fetch "start", then others
@@ -159,7 +159,7 @@ int main()
 {
   gce::context ctx;
 
-  gce::mixin_t base = gce::spawn(ctx);
+  gce::actor<gce::threaded> base = gce::spawn(ctx);
 
   gce::aid_t echo_actor = gce::spawn(base, boost::bind(&echo, _1));
 
@@ -183,13 +183,13 @@ Actor link
 #include <gce/actor/all.hpp>
 #include <iostream>
 
-void quiter(gce::self_t self)
+void quiter(gce::actor<gce::stackful>& self)
 {
   /// wait for gce::exit from link actor
   gce::recv(self);
 }
 
-void link(gce::self_t self)
+void link(gce::actor<gce::stackful>& self)
 {
   /// create 10 actor and link with them
   for (std::size_t i=0; i<10; ++i)
@@ -205,7 +205,7 @@ int main()
 {
   gce::context ctx;
 
-  gce::mixin_t base = gce::spawn(ctx);
+  gce::actor<gce::threaded> base = gce::spawn(ctx);
 
   /// create a link actor and monitor it.
   gce::spawn(base, boost::bind(&link, _1), gce::monitored);

@@ -215,7 +215,7 @@ namespace boost{ namespace amsg{	namespace detail
 		static inline std::size_t size(const value_type& value , error_code_t& error_code)
 		{
 			int64_t temp = value;
-			return byte_size_of_impl<int64_t,tag>::size(temp,error_code);
+			return byte_size_of<int64_t,tag>::impl_type::size(temp,error_code);
 		}
 	};
 
@@ -530,7 +530,7 @@ namespace boost{ namespace amsg{	namespace detail
 				error_code = sequence_length_overflow;
 				return 0;
 			}
-			::std::size_t size = 	byte_size_of_impl< ::boost::uint32_t,0>::size(len,error_code) + len;
+			::std::size_t size = 	byte_size_of< ::boost::uint32_t,0>::impl_type::size(len,error_code) + len;
 			return size;
 		}
 	};
@@ -548,10 +548,10 @@ namespace boost{ namespace amsg{	namespace detail
 				error_code = sequence_length_overflow;
 				return 0;
 			}
-			::std::size_t size = 	byte_size_of_impl< ::boost::uint32_t,0>::size(len,error_code);
+			::std::size_t size = 	byte_size_of< ::boost::uint32_t,0>::impl_type::size(len,error_code);
 			for(::boost::uint32_t i = 0 ; i< len ; ++i)
 			{
-				size += byte_size_of_impl<wchar_t,0>::size(value[i],error_code);
+				size += byte_size_of<wchar_t,0>::impl_type::size(value[i],error_code);
 			}
 			return size;
 		}
@@ -570,11 +570,11 @@ namespace boost{ namespace amsg{	namespace detail
 				error_code = sequence_length_overflow;
 				return 0;
 			}
-			::std::size_t size = 	byte_size_of_impl< ::boost::uint32_t,0>::size(len,error_code);
+			::std::size_t size = 	byte_size_of< ::boost::uint32_t,0>::impl_type::size(len,error_code);
 			for( typename value_type::const_iterator i = value.begin() ; i != value.end(); ++i )
 			{
 				const typename value_type::value_type& elem_value = *i;
-				size += byte_size_of_impl<typename value_type::value_type,tag>::size(elem_value,error_code);
+				size += byte_size_of<typename value_type::value_type,tag>::impl_type::size(elem_value,error_code);
 			}
 			return size;
 		}
@@ -635,8 +635,8 @@ namespace boost{ namespace amsg{	namespace detail
 			{
 				typedef typename ::boost::remove_const<typename value_type::value_type::first_type>::type first_type;
 				typedef typename ::boost::remove_const<typename value_type::value_type::second_type>::type second_type;
-				size += byte_size_of_impl<first_type,tag>::size(i->first,error_code);
-				size += byte_size_of_impl<second_type,tag>::size(i->second,error_code);
+				size += byte_size_of<first_type,tag>::impl_type::size(i->first,error_code);
+				size += byte_size_of<second_type,tag>::impl_type::size(i->second,error_code);
 			}
 			return size;
 		}
@@ -677,7 +677,7 @@ namespace boost{ namespace amsg{	namespace detail
 		static inline void read(store_ty& store_data, value_type& value)
 		{
 			int64_t temp;
-			value_read_support_impl<store_ty,int64_t,tag>::read(store_data,temp);
+			value_read_support<store_ty,int64_t,tag>::impl_type::read(store_data,temp);
 			value = static_cast<ty>(temp);
 		}
 	};
@@ -689,7 +689,7 @@ namespace boost{ namespace amsg{	namespace detail
 		static inline void write(store_ty& store_data, const value_type& value)
 		{
 			int64_t temp = value;
-			value_write_support_impl<store_ty,int64_t,tag>::write(store_data,temp);
+			value_write_support<store_ty,int64_t,tag>::impl_type::write(store_data,temp);
 		}
 	};
 
