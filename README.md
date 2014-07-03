@@ -1,4 +1,4 @@
-GCE v1.0
+GCE v1.1
 =======
 
 GCE is an actor model implementation featuring lightweight & fast
@@ -33,7 +33,7 @@ or
 Dependencies
 ------------
 
-* CMake
+* CMake 2.8 and newer
 * Boost 1.55.0 and newer
 
 Need build sub librares:
@@ -218,3 +218,11 @@ int main()
   return 0;
 }
 ```
+
+Changelog
+---------------
+v1.1 
+* gce::mixin_t change to gce::actor<gce::threaded>
+* gce::self_t change to gce::actor<gce::stackful>
+* gce::slice_t change to gce::actor<gce::nonblocked>
+* add new type actor: gce::actor<gce::stackless>
