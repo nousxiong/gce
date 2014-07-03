@@ -17,6 +17,10 @@ Features Overview
 * Seamless cooperate with Boost.Asio
 * Lightweight cluster support
 
+Manual
+---------------
+manual.pdf
+
 Get the Sources
 ---------------
 
