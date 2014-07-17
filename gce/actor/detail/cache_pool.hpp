@@ -13,10 +13,12 @@
 #include <gce/actor/config.hpp>
 #include <gce/actor/actor_fwd.hpp>
 #include <gce/actor/actor_id.hpp>
-#include <gce/actor/detail/object_pool.hpp>
+#include <gce/actor/response.hpp>
+#include <gce/actor/detail/actor_pool.hpp>
 #include <gce/detail/unique_ptr.hpp>
 #include <boost/optional.hpp>
 #include <boost/noncopyable.hpp>
+#include <boost/scoped_ptr.hpp>
 #include <vector>
 #include <set>
 #include <map>
@@ -32,11 +34,7 @@ namespace detail
 {
 class socket;
 class acceptor;
-class cache_pool;
-typedef object_pool<coroutine_stackful_actor, cache_pool*> context_switching_actor_pool_t;
-typedef object_pool<coroutine_stackless_actor, cache_pool*> event_based_actor_pool_t;
-typedef object_pool<socket, cache_pool*> socket_pool_t;
-typedef object_pool<acceptor, cache_pool*> acceptor_pool_t;
+struct pack;
 
 class cache_pool
   : private boost::noncopyable
@@ -50,15 +48,20 @@ public:
   inline std::size_t get_index() { return index_; }
   inline strand_t& get_strand() { return snd_; }
 
-  coroutine_stackful_actor* get_context_switching_actor();
-  coroutine_stackless_actor* get_event_based_actor();
-  socket* get_socket();
-  acceptor* get_acceptor();
+  coroutine_stackful_actor* make_stackful_actor();
+  coroutine_stackless_actor* make_stackless_actor();
+  socket* make_socket();
+  acceptor* make_acceptor();
 
   void free_actor(coroutine_stackful_actor*);
   void free_actor(coroutine_stackless_actor*);
   void free_socket(socket*);
   void free_acceptor(acceptor*);
+
+  void on_recv(
+    detail::actor_index, sid_t sid, 
+    detail::pack&, detail::send_hint
+    );
 
   void register_service(match_t name, aid_t svc);
   aid_t find_service(match_t name);
@@ -79,6 +82,19 @@ public:
   void stop();
   inline bool stopped() const { return stopped_; }
 
+  void send_already_exited(aid_t recver, aid_t sender);
+  void send_already_exited(aid_t recver, response_t res);
+  void send(aid_t const& recver, detail::pack&, detail::send_hint);
+  aid_t filter_aid(aid_t const& src);
+  aid_t filter_svcid(svcid_t const& src);
+
+private:
+  void handle_recv(
+    detail::actor_index i, sid_t sid, 
+    detail::pack&, detail::send_hint
+    );
+  void send_already_exit(detail::pack&);
+
 private:
   /// Ensure start from a new cache line.
   byte_t pad0_[GCE_CACHE_LINE_SIZE];
@@ -88,12 +104,12 @@ private:
   GCE_CACHE_ALIGNED_VAR(strand_t, snd_)
 
   /// pools
-  GCE_CACHE_ALIGNED_VAR(boost::optional<context_switching_actor_pool_t>, context_switching_actor_pool_)
-  GCE_CACHE_ALIGNED_VAR(boost::optional<event_based_actor_pool_t>, event_based_actor_pool_)
-  GCE_CACHE_ALIGNED_VAR(boost::optional<socket_pool_t>, socket_pool_)
-  GCE_CACHE_ALIGNED_VAR(boost::optional<acceptor_pool_t>, acceptor_pool_)
+  struct pool_impl;
+  GCE_CACHE_ALIGNED_VAR(boost::scoped_ptr<pool_impl>, pool_list_)
 
   /// thread local vals
+  ctxid_t const ctxid_;
+  timestamp_t const timestamp_;
   typedef std::set<aid_t> skt_list_t;
   struct socket_list
   {

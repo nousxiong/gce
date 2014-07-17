@@ -77,6 +77,7 @@ public:
   inline attributes const& get_attributes() const { return attrs_; }
   inline timestamp_t get_timestamp() const { return timestamp_; }
   inline std::size_t get_cache_queue_size() const { return cache_queue_size_; }
+  inline detail::cache_pool* get_cache_pool(std::size_t index) const { return cache_pool_list_.at(index); }
 
   thread_mapped_actor& make_thread_mapped_actor();
   detail::cache_pool* select_cache_pool();

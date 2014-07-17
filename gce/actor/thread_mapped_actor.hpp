@@ -69,7 +69,7 @@ public:
   { 
     return nonblocking_actor_list_; 
   }
-  void on_recv(detail::pack&, base_type::send_hint);
+  void on_recv(detail::pack&, detail::send_hint);
 
   sid_t spawn(detail::spawn_type, match_t func, match_t ctxid, std::size_t stack_size);
 

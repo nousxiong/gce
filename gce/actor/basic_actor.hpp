@@ -16,6 +16,7 @@
 #include <gce/actor/detail/mailbox.hpp>
 #include <gce/actor/detail/request.hpp>
 #include <gce/actor/detail/link.hpp>
+#include <gce/actor/actor_fwd.hpp>
 #include <gce/actor/actor_id.hpp>
 #include <boost/function.hpp>
 #include <map>
@@ -35,7 +36,7 @@ struct pack;
 class basic_actor
 {
 public:
-  basic_actor(context* ctx, detail::cache_pool*, std::size_t cache_queue_index);
+  basic_actor(context* ctx, detail::cache_pool*, aid_t aid, std::size_t cache_queue_index);
   virtual ~basic_actor();
 
 public:
@@ -45,52 +46,36 @@ public:
   inline void chain(bool flag) { chain_ = flag; }
 
 public:
-  /// internal use
-  enum send_hint
-  {
-    async,
-    sync
-  };
+  void pri_send(aid_t, message const&, detail::send_hint hint = detail::sync);
+  void pri_send_svc(svcid_t, message const&, detail::send_hint hint = detail::sync);
+  void pri_relay(aid_t, message&, detail::send_hint hint = detail::sync);
+  void pri_relay_svc(svcid_t, message&, detail::send_hint hint = detail::sync);
 
-  void pri_send(aid_t, message const&, send_hint hint = sync);
-  void pri_send_svc(svcid_t, message const&, send_hint hint = sync);
-  void pri_relay(aid_t, message&, send_hint hint = sync);
-  void pri_relay_svc(svcid_t, message&, send_hint hint = sync);
+  void pri_request(response_t, aid_t, message const&, detail::send_hint hint = detail::sync);
+  void pri_request_svc(response_t, svcid_t, message const&, detail::send_hint hint = detail::sync);
+  void pri_reply(aid_t, message const&, detail::send_hint hint = detail::sync);
 
-  void pri_request(response_t, aid_t, message const&, send_hint hint = sync);
-  void pri_request_svc(response_t, svcid_t, message const&, send_hint hint = sync);
-  void pri_reply(aid_t, message const&, send_hint hint = sync);
-
-  void pri_link(aid_t, send_hint hint = sync);
-  void pri_monitor(aid_t, send_hint hint = sync);
+  void pri_link(aid_t, detail::send_hint hint = detail::sync);
+  void pri_monitor(aid_t, detail::send_hint hint = detail::sync);
 
   void pri_spawn(
     sid_t, detail::spawn_type, match_t func, match_t ctxid,
-    std::size_t stack_size, send_hint hint = sync
+    std::size_t stack_size, detail::send_hint hint = detail::sync
     );
 
-protected:
-  virtual void on_recv(detail::pack&, send_hint hint) = 0;
+  virtual void on_recv(detail::pack&, detail::send_hint hint) = 0;
 
 public:
   inline detail::cache_pool* get_cache_pool() { return user_; }
   void on_free();
 
 protected:
-  void update_aid();
   sid_t new_request();
 
   void add_link(aid_t, sktaid_t skt = aid_t());
-  void link(detail::link_t, send_hint hint = sync, detail::cache_pool* user = 0);
+  void link(detail::link_t, detail::send_hint hint = detail::sync, detail::cache_pool* user = 0);
   void send_exit(aid_t self_aid, exit_code_t, std::string const&);
   void remove_link(aid_t);
-  void send_already_exited(aid_t recver, aid_t sender);
-  void send_already_exited(aid_t recver, response_t res);
-  void send(aid_t const& recver, detail::pack&, send_hint);
-
-private:
-  aid_t filter_aid(aid_t const& src);
-  aid_t filter_svcid(svcid_t const& src);
 
 private:
   /// Ensure start from a new cache line.
@@ -126,16 +111,6 @@ inline bool check_local_valid(aid_t const& id, ctxid_t ctxid, timestamp_t timest
 {
   BOOST_ASSERT(id.ctxid_ == ctxid);
   return id.timestamp_ == timestamp;
-}
-
-inline bool check(aid_t const& id, ctxid_t ctxid, timestamp_t timestamp)
-{
-  if (ctxid != id.ctxid_ || timestamp != id.timestamp_)
-  {
-    return false;
-  }
-
-  return id && id.get_actor_ptr(ctxid, timestamp)->get_aid() == id;
 }
 }
 

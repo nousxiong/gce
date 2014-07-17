@@ -30,8 +30,8 @@ namespace gce
 namespace detail
 {
 ///----------------------------------------------------------------------------
-socket::socket(cache_pool* user)
-  : basic_actor(&user->get_context(), user, user->get_index())
+socket::socket(gce::aid_t aid, cache_pool* user)
+  : basic_actor(&user->get_context(), user, aid, user->get_index())
   , stat_(ready)
   , hb_(snd_)
   , sync_(ctx_->get_io_service())
@@ -51,8 +51,6 @@ void socket::init(net_option opt)
   BOOST_ASSERT_MSG(stat_ == ready, "socket status error");
   opt_ = opt;
   curr_reconn_ = u32_nil;
-
-  base_type::update_aid();
 }
 ///----------------------------------------------------------------------------
 void socket::connect(
@@ -108,21 +106,7 @@ void socket::stop()
   close();
 }
 ///----------------------------------------------------------------------------
-void socket::on_free()
-{
-  base_type::on_free();
-
-  stat_ = ready;
-  recv_cache_.clear();
-  conn_ = false;
-  conn_cache_.clear();
-  curr_reconn_ = 0;
-  straight_link_list_.clear();
-  remote_list_.clear();
-  is_router_ = false;
-}
-///----------------------------------------------------------------------------
-void socket::on_recv(pack& pk, base_type::send_hint)
+void socket::on_recv(pack& pk, detail::send_hint)
 {
   snd_.dispatch(
     boost::bind(
@@ -151,7 +135,7 @@ void socket::handle_net_msg(message& msg)
       if (!skt)
       {
         /// no socket found, send already exit back
-        base_type::send_already_exited(link->get_aid(), pk.recver_);
+        user_->send_already_exited(link->get_aid(), pk.recver_);
       }
       else
       {
@@ -161,25 +145,17 @@ void socket::handle_net_msg(message& msg)
         {
           add_router_link(pk.recver_, link->get_aid(), skt);
         }
-        base_type::send(pk.skt_, pk, sync);
+        user_->send(pk.skt_, pk, sync);
       }
     }
     else
     {
-      if (check(pk.recver_, ctxid_, timestamp_))
+      pk.skt_ = get_aid();
+      if (link->get_type() == linked)
       {
-        pk.skt_ = get_aid();
-        if (link->get_type() == linked)
-        {
-          add_straight_link(pk.recver_, link->get_aid());
-        }
-        base_type::send(pk.recver_, pk, sync);
+        add_straight_link(pk.recver_, link->get_aid());
       }
-      else
-      {
-        /// aid already expires, send exit msg
-        base_type::send_already_exited(link->get_aid(), pk.recver_);
-      }
+      user_->send(pk.recver_, pk, sync);
     }
   }
   else if (exit_t* ex = boost::get<exit_t>(&pk.tag_))
@@ -190,15 +166,12 @@ void socket::handle_net_msg(message& msg)
       BOOST_ASSERT(skt);
       pk.tag_ = fwd_exit_t(ex->get_code(), ex->get_aid(), get_aid());
       pk.skt_ = skt;
-      base_type::send(pk.skt_, pk, sync);
+      user_->send(pk.skt_, pk, sync);
     }
     else
     {
-      if (check(pk.recver_, ctxid_, timestamp_))
-      {
-        remove_straight_link(pk.recver_, ex->get_aid());
-        base_type::send(pk.recver_, pk, sync);
-      }
+      remove_straight_link(pk.recver_, ex->get_aid());
+      user_->send(pk.recver_, pk, sync);
     }
   }
   else if (spawn_t* spw = boost::get<spawn_t>(&pk.tag_))
@@ -213,7 +186,7 @@ void socket::handle_net_msg(message& msg)
       else
       {
         pk.skt_ = skt;
-        base_type::send(pk.skt_, pk, sync);
+        user_->send(pk.skt_, pk, sync);
       }
     }
     else
@@ -245,27 +218,24 @@ void socket::handle_net_msg(message& msg)
       if (skt)
       {
         pk.skt_ = skt;
-        base_type::send(pk.skt_, pk, sync);
+        user_->send(pk.skt_, pk, sync);
       }
     }
     else
     {
-      if (check(pk.recver_, ctxid_, timestamp_))
+      /// fwd to spawner
+      message m(msg_spawn_ret);
+      m << (boost::uint16_t)spr->get_error() << spr->get_id();
+      aid_t aid = spr->get_aid();
+      if (!aid)
       {
-        /// fwd to spawner
-        message m(msg_spawn_ret);
-        m << (boost::uint16_t)spr->get_error() << spr->get_id();
-        aid_t aid = spr->get_aid();
-        if (!aid)
-        {
-          /// we should make sure no timeout miss.
-          aid = get_aid();
-        }
-        pk.tag_ = aid;
-        pk.msg_ = m;
-
-        base_type::send(pk.recver_, pk, sync);
+        /// we should make sure no timeout miss.
+        aid = get_aid();
       }
+      pk.tag_ = aid;
+      pk.msg_ = m;
+
+      user_->send(pk.recver_, pk, sync);
     }
   }
   else
@@ -281,14 +251,14 @@ void socket::handle_net_msg(message& msg)
         {
           /// reply actor exit msg
           response_t res(req->get_id(), pk.recver_);
-          base_type::send_already_exited(req->get_aid(), res);
+          user_->send_already_exited(req->get_aid(), res);
         }
       }
 
       if (skt)
       {
         pk.skt_ = skt;
-        base_type::send(pk.skt_, pk, sync);
+        user_->send(pk.skt_, pk, sync);
       }
     }
     else
@@ -298,10 +268,7 @@ void socket::handle_net_msg(message& msg)
         pk.recver_ = user_->find_service(pk.svc_.name_);
       }
 
-      if (check(pk.recver_, ctxid_, timestamp_))
-      {
-        base_type::send(pk.recver_, pk, sync);
-      }
+      user_->send(pk.recver_, pk, sync);
     }
   }
 }
@@ -595,47 +562,30 @@ socket_ptr socket::make_socket(std::string const& ep)
 ///----------------------------------------------------------------------------
 void socket::handle_recv(pack& pk)
 {
-  if (check(pk.skt_, ctxid_, timestamp_))
+  BOOST_ASSERT(!check_local(pk.recver_, ctxid_));
+  if (link_t* link = boost::get<link_t>(&pk.tag_))
   {
-    BOOST_ASSERT(!check_local(pk.recver_, ctxid_));
-    if (link_t* link = boost::get<link_t>(&pk.tag_))
-    {
-      add_straight_link(link->get_aid(), pk.recver_);
-    }
-    else if (exit_t* ex = boost::get<exit_t>(&pk.tag_))
-    {
-      remove_straight_link(ex->get_aid(), pk.recver_);
-    }
-    else if (fwd_link_t* link = boost::get<fwd_link_t>(&pk.tag_))
-    {
-      add_router_link(link->get_aid(), pk.recver_, link->get_skt());
-      pk.tag_ = link_t(link->get_type(), link->get_aid());
-    }
-    else if (fwd_exit_t* ex = boost::get<fwd_exit_t>(&pk.tag_))
-    {
-      remove_router_link(ex->get_aid(), pk.recver_);
-      pk.tag_ = exit_t(ex->get_code(), ex->get_aid());
-    }
-    pk.msg_.push_tag(
-      pk.tag_, pk.recver_, pk.svc_,
-      pk.skt_, pk.is_err_ret_
-      );
-    send(pk.msg_);
+    add_straight_link(link->get_aid(), pk.recver_);
   }
-  else if (!pk.is_err_ret_)
+  else if (exit_t* ex = boost::get<exit_t>(&pk.tag_))
   {
-    if (detail::link_t* link = boost::get<detail::link_t>(&pk.tag_))
-    {
-      /// send actor exit msg
-      base_type::send_already_exited(link->get_aid(), pk.recver_);
-    }
-    else if (detail::request_t* req = boost::get<detail::request_t>(&pk.tag_))
-    {
-      /// reply actor exit msg
-      response_t res(req->get_id(), pk.recver_);
-      base_type::send_already_exited(req->get_aid(), res);
-    }
+    remove_straight_link(ex->get_aid(), pk.recver_);
   }
+  else if (fwd_link_t* link = boost::get<fwd_link_t>(&pk.tag_))
+  {
+    add_router_link(link->get_aid(), pk.recver_, link->get_skt());
+    pk.tag_ = link_t(link->get_type(), link->get_aid());
+  }
+  else if (fwd_exit_t* ex = boost::get<fwd_exit_t>(&pk.tag_))
+  {
+    remove_router_link(ex->get_aid(), pk.recver_);
+    pk.tag_ = exit_t(ex->get_code(), ex->get_aid());
+  }
+  pk.msg_.push_tag(
+    pk.tag_, pk.recver_, pk.svc_,
+    pk.skt_, pk.is_err_ret_
+    );
+  send(pk.msg_);
 }
 ///----------------------------------------------------------------------------
 void socket::add_straight_link(aid_t src, aid_t des)
@@ -717,7 +667,7 @@ void socket::on_neterr(aid_t self_aid, errcode_t ec)
       pk.skt_ = pr.first;
       pk.msg_ = m;
 
-      base_type::send(pk.recver_, pk, sync);
+      user_->send(pk.recver_, pk, sync);
     }
   }
   straight_link_list_.clear();
@@ -732,7 +682,7 @@ void socket::on_neterr(aid_t self_aid, errcode_t ec)
       pk.skt_ = des.second;
       pk.msg_ = m;
 
-      base_type::send(pk.skt_, pk, sync);
+      user_->send(pk.skt_, pk, sync);
     }
   }
   router_link_list_.clear();
@@ -933,7 +883,6 @@ void socket::free_self(
 
   user_->remove_socket(this);
   aid_t self_aid = get_aid();
-  base_type::update_aid();
   on_neterr(self_aid);
   base_type::send_exit(self_aid, exc, exit_msg);
   user_->free_socket(this);

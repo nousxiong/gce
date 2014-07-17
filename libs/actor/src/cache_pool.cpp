@@ -10,6 +10,7 @@
 #include <gce/actor/detail/cache_pool.hpp>
 #include <gce/actor/context.hpp>
 #include <gce/actor/coroutine_stackful_actor.hpp>
+#include <gce/actor/coroutine_stackless_actor.hpp>
 #include <gce/actor/detail/socket.hpp>
 #include <gce/actor/detail/acceptor.hpp>
 #include <boost/foreach.hpp>
@@ -18,38 +19,56 @@ namespace gce
 {
 namespace detail
 {
+typedef actor_pool<coroutine_stackful_actor> stackful_actor_pool_t;
+typedef actor_pool<coroutine_stackless_actor> stackless_actor_pool_t;
+typedef actor_pool<socket> socket_pool_t;
+typedef actor_pool<acceptor> acceptor_pool_t;
+///------------------------------------------------------------------------------
+/// cache_pool::pool_impl
+///------------------------------------------------------------------------------
+struct cache_pool::pool_impl
+{
+  GCE_CACHE_ALIGNED_VAR(boost::optional<stackful_actor_pool_t>, stackful_actor_pool_)
+  GCE_CACHE_ALIGNED_VAR(boost::optional<stackless_actor_pool_t>, stackless_actor_pool_)
+  GCE_CACHE_ALIGNED_VAR(boost::optional<socket_pool_t>, socket_pool_)
+  GCE_CACHE_ALIGNED_VAR(boost::optional<acceptor_pool_t>, acceptor_pool_)
+};
+///------------------------------------------------------------------------------
+/// cache_pool
 ///------------------------------------------------------------------------------
 cache_pool::cache_pool(context& ctx, std::size_t index, bool is_slice)
   : ctx_(&ctx)
   , index_(index)
   , snd_(ctx.get_io_service())
+  , pool_list_(new pool_impl)
+  , ctxid_(ctx_->get_attributes().id_)
+  , timestamp_(ctx_->get_timestamp())
   , curr_router_list_(router_list_.end())
   , curr_socket_list_(conn_list_.end())
   , curr_joint_list_(joint_list_.end())
   , stopped_(false)
 {
-  context_switching_actor_pool_ = 
+  ctxid_t ctxid = ctx.get_attributes().id_;
+  timestamp_t timestamp = ctx.get_timestamp();
+  boost::uint16_t idx = (boost::uint16_t)index_;
+  pool_list_->stackful_actor_pool_ = 
     boost::in_place(
-      this, this,
-      size_nil,
+      ctxid, timestamp, idx,
       is_slice ? 0 : ctx.get_attributes().actor_pool_reserve_size_
       );
-  event_based_actor_pool_ = 
+  pool_list_->stackless_actor_pool_ = 
     boost::in_place(
-      this, this,
-      size_nil,
+      ctxid, timestamp, idx,
       is_slice ? 0 : ctx.get_attributes().actor_pool_reserve_size_
       );
-  socket_pool_ = 
+  pool_list_->socket_pool_ = 
     boost::in_place(
-      this, this,
-      size_nil,
+      ctxid, timestamp, idx,
       is_slice ? 0 : ctx.get_attributes().socket_pool_reserve_size_
       );
-  acceptor_pool_ = 
+  pool_list_->acceptor_pool_ = 
     boost::in_place(
-      this, this,
-      size_nil,
+      ctxid, timestamp, idx,
       is_slice ? 0 : ctx.get_attributes().acceptor_pool_reserve_size_
       );
 }
@@ -58,44 +77,67 @@ cache_pool::~cache_pool()
 {
 }
 ///------------------------------------------------------------------------------
-coroutine_stackful_actor* cache_pool::get_context_switching_actor()
+coroutine_stackful_actor* cache_pool::make_stackful_actor()
 {
-  return context_switching_actor_pool_->get();
+  return pool_list_->stackful_actor_pool_->make(this);
 }
 ///------------------------------------------------------------------------------
-coroutine_stackless_actor* cache_pool::get_event_based_actor()
+coroutine_stackless_actor* cache_pool::make_stackless_actor()
 {
-  return event_based_actor_pool_->get();
+  return pool_list_->stackless_actor_pool_->make(this);
 }
 ///------------------------------------------------------------------------------
-socket* cache_pool::get_socket()
+socket* cache_pool::make_socket()
 {
-  return socket_pool_->get();
+  return pool_list_->socket_pool_->make(this);
 }
 ///------------------------------------------------------------------------------
-acceptor* cache_pool::get_acceptor()
+acceptor* cache_pool::make_acceptor()
 {
-  return acceptor_pool_->get();
+  return pool_list_->acceptor_pool_->make(this);
 }
 ///------------------------------------------------------------------------------
 void cache_pool::free_actor(coroutine_stackful_actor* a)
 {
-  context_switching_actor_pool_->free(a);
+  pool_list_->stackful_actor_pool_->free(a);
 }
 ///------------------------------------------------------------------------------
 void cache_pool::free_actor(coroutine_stackless_actor* a)
 {
-  event_based_actor_pool_->free(a);
+  pool_list_->stackless_actor_pool_->free(a);
 }
 ///------------------------------------------------------------------------------
 void cache_pool::free_socket(socket* skt)
 {
-  socket_pool_->free(skt);
+  pool_list_->socket_pool_->free(skt);
 }
 ///------------------------------------------------------------------------------
 void cache_pool::free_acceptor(acceptor* acpr)
 {
-  acceptor_pool_->free(acpr);
+  pool_list_->acceptor_pool_->free(acpr);
+}
+///------------------------------------------------------------------------------
+void cache_pool::on_recv(
+  detail::actor_index i, sid_t sid, 
+  detail::pack& pk, detail::send_hint hint
+  )
+{
+  if (hint == detail::sync)
+  {
+    snd_.dispatch(
+      boost::bind(
+        &cache_pool::handle_recv, this, i, sid, pk, hint
+        )
+      );
+  }
+  else
+  {
+    snd_.post(
+      boost::bind(
+        &cache_pool::handle_recv, this, i, sid, pk, hint
+        )
+      );
+  }
 }
 ///------------------------------------------------------------------------------
 void cache_pool::register_service(match_t name, aid_t svc)
@@ -400,6 +442,164 @@ void cache_pool::stop()
     a->stop();
   }
   acceptor_list_.clear();
+}
+///------------------------------------------------------------------------------
+void cache_pool::send_already_exited(aid_t recver, aid_t sender)
+{
+  aid_t target = filter_aid(recver);
+  if (target)
+  {
+    message m(exit);
+    std::string exit_msg("already exited");
+    m << exit_already << exit_msg;
+
+    detail::pack pk;
+    pk.tag_ = sender;
+    pk.recver_ = recver;
+    pk.skt_ = target;
+    pk.msg_ = m;
+    pk.is_err_ret_ = true;
+
+    send(target, pk, detail::async);
+  }
+}
+///------------------------------------------------------------------------------
+void cache_pool::send_already_exited(aid_t recver, response_t res)
+{
+  aid_t target = filter_aid(recver);
+  if (target)
+  {
+    message m(exit);
+    std::string exit_msg("already exited");
+    m << exit_already << exit_msg;
+
+    detail::pack pk;
+    pk.tag_ = res;
+    pk.recver_ = recver;
+    pk.skt_ = target;
+    pk.msg_ = m;
+    pk.is_err_ret_ = true;
+
+    send(target, pk, detail::async);
+  }
+}
+///------------------------------------------------------------------------------
+void cache_pool::send(aid_t const& recver, detail::pack& pk, detail::send_hint hint)
+{
+  pk.cache_queue_index_ = index_;
+  bool already_exit = true;
+  if (recver.in_pool())
+  {
+    detail::actor_index i = recver.get_actor_index(ctxid_, timestamp_);
+    if (i)
+    {
+      already_exit = false;
+      detail::cache_pool* cac = ctx_->get_cache_pool(i.cac_id_);
+      cac->on_recv(i, recver.sid_, pk, hint);
+    }
+  }
+  else
+  {
+    basic_actor* a = recver.get_actor_ptr(ctxid_, timestamp_);
+    if (a)
+    {
+      already_exit = false;
+      a->on_recv(pk, hint);
+    }
+  }
+
+  if (already_exit)
+  {
+    send_already_exit(pk);
+  }
+}
+///------------------------------------------------------------------------------
+aid_t cache_pool::filter_aid(aid_t const& src)
+{
+  aid_t target;
+
+  bool is_local = check_local(src, ctxid_);
+  if (is_local && check_local_valid(src, ctxid_, timestamp_))
+  {
+    target = src;
+  }
+  else
+  {
+    if (!is_local)
+    {
+      target = select_socket(src.ctxid_);
+    }
+  }
+  return target;
+}
+///------------------------------------------------------------------------------
+aid_t cache_pool::filter_svcid(svcid_t const& src)
+{
+  aid_t target;
+
+  if (src.ctxid_ == ctxid_nil || src.ctxid_ == ctxid_)
+  {
+    target = find_service(src.name_);
+  }
+  else
+  {
+    target = select_socket(src.ctxid_);
+  }
+  return target;
+}
+///------------------------------------------------------------------------------
+void cache_pool::handle_recv(
+  detail::actor_index i, sid_t sid, 
+  detail::pack& pk, detail::send_hint hint
+  )
+{
+  basic_actor* a = 0;
+  switch (i.type_)
+  {
+  case detail::actor_stackful:
+    {
+      a = pool_list_->stackful_actor_pool_->get(i, sid);
+    }break;
+  case detail::actor_stackless:
+    {
+      a = pool_list_->stackless_actor_pool_->get(i, sid);
+    }break;
+  case detail::actor_socket:
+    {
+      a = pool_list_->socket_pool_->get(i, sid);
+    }break;
+  case detail::actor_acceptor:
+    {
+      a = pool_list_->acceptor_pool_->get(i, sid);
+    }break;
+  }
+
+  if (a)
+  {
+    a->on_recv(pk, hint);
+  }
+  else
+  {
+    send_already_exit(pk);
+  }
+}
+///------------------------------------------------------------------------------
+void cache_pool::send_already_exit(detail::pack& pk)
+{
+  if (!pk.is_err_ret_)
+  {
+    if (detail::link_t* link = boost::get<detail::link_t>(&pk.tag_))
+    {
+      /// send actor exit msg
+      send_already_exited(link->get_aid(), pk.recver_);
+    }
+    else if (detail::request_t* req = boost::get<detail::request_t>(&pk.tag_))
+    {
+      /// reply actor exit msg
+      response_t res(req->get_id(), pk.recver_);
+      send_already_exited(req->get_aid(), res);
+    }
+  }
 }
 ///------------------------------------------------------------------------------
 }

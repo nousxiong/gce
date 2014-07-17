@@ -22,12 +22,15 @@ namespace gce
 {
 ///----------------------------------------------------------------------------
 nonblocking_actor::nonblocking_actor(context& ctx, std::size_t index)
-  : base_type(&ctx, ctx.select_cache_pool(), index)
+  : base_type(
+      &ctx, ctx.select_cache_pool(), 
+      aid_t(ctx.get_attributes().id_, ctx.get_timestamp(), this, sid_t(0)), 
+      index
+      )
   , cache_queue_list_(ctx_->get_cache_queue_size())
   , pack_queue_(1024)
   , cac_pool_(ctx, index, true)
 {
-  base_type::update_aid();
   user_ = &cac_pool_;
 }
 ///----------------------------------------------------------------------------
@@ -77,7 +80,7 @@ aid_t nonblocking_actor::recv(response_t res, message& msg)
   return sender;
 }
 ///----------------------------------------------------------------------------
-void nonblocking_actor::on_recv(detail::pack& pk, base_type::send_hint)
+void nonblocking_actor::on_recv(detail::pack& pk, detail::send_hint)
 {
   BOOST_ASSERT(pk.cache_queue_index_ != size_nil);
 
@@ -120,7 +123,7 @@ void nonblocking_actor::register_service(match_t name, aid_t svc, std::size_t ca
   message m(detail::msg_reg_svc);
   m << name << svc;
   pk.msg_ = m;
-  on_recv(pk, base_type::sync);
+  on_recv(pk, detail::sync);
 }
 ///------------------------------------------------------------------------------
 void nonblocking_actor::deregister_service(match_t name, aid_t svc, std::size_t cache_queue_index)
@@ -134,7 +137,7 @@ void nonblocking_actor::deregister_service(match_t name, aid_t svc, std::size_t 
   message m(detail::msg_dereg_svc);
   m << name << svc;
   pk.msg_ = m;
-  on_recv(pk, base_type::sync);
+  on_recv(pk, detail::sync);
 }
 ///------------------------------------------------------------------------------
 void nonblocking_actor::register_socket(ctxid_pair_t ctxid_pr, aid_t skt, std::size_t cache_queue_index)
@@ -148,7 +151,7 @@ void nonblocking_actor::register_socket(ctxid_pair_t ctxid_pr, aid_t skt, std::s
   message m(detail::msg_reg_skt);
   m << ctxid_pr << skt;
   pk.msg_ = m;
-  on_recv(pk, base_type::sync);
+  on_recv(pk, detail::sync);
 }
 ///------------------------------------------------------------------------------
 void nonblocking_actor::deregister_socket(ctxid_pair_t ctxid_pr, aid_t skt, std::size_t cache_queue_index)
@@ -162,7 +165,7 @@ void nonblocking_actor::deregister_socket(ctxid_pair_t ctxid_pr, aid_t skt, std:
   message m(detail::msg_dereg_skt);
   m << ctxid_pr << skt;
   pk.msg_ = m;
-  on_recv(pk, base_type::sync);
+  on_recv(pk, detail::sync);
 }
 ///----------------------------------------------------------------------------
 void nonblocking_actor::release_pack()
@@ -192,78 +195,61 @@ void nonblocking_actor::move_pack()
 ///----------------------------------------------------------------------------
 void nonblocking_actor::handle_recv(detail::pack& pk)
 {
-  if (check(pk.recver_, ctxid_, timestamp_))
+  bool is_response = false;
+  if (aid_t* aid = boost::get<aid_t>(&pk.tag_))
   {
-    bool is_response = false;
-    if (aid_t* aid = boost::get<aid_t>(&pk.tag_))
+    match_t type = pk.msg_.get_type();
+    if (type == detail::msg_reg_skt)
     {
-      match_t type = pk.msg_.get_type();
-      if (type == detail::msg_reg_skt)
-      {
-        ctxid_pair_t ctxid_pr;
-        aid_t skt;
-        pk.msg_ >> ctxid_pr >> skt;
-        user_->register_socket(ctxid_pr, skt);
-      }
-      else if (type == detail::msg_dereg_skt)
-      {
-        ctxid_pair_t ctxid_pr;
-        aid_t skt;
-        pk.msg_ >> ctxid_pr >> skt;
-        user_->deregister_socket(ctxid_pr, skt);
-      }
-      else if (type == detail::msg_reg_svc)
-      {
-        match_t name;
-        aid_t svc;
-        pk.msg_ >> name >> svc;
-        user_->register_service(name, svc);
-      }
-      else if (type == detail::msg_dereg_svc)
-      {
-        match_t name;
-        aid_t svc;
-        pk.msg_ >> name >> svc;
-        user_->deregister_service(name, svc);
-      }
-      else
-      {
-        mb_.push(*aid, pk.msg_);
-      }
+      ctxid_pair_t ctxid_pr;
+      aid_t skt;
+      pk.msg_ >> ctxid_pr >> skt;
+      user_->register_socket(ctxid_pr, skt);
     }
-    else if (detail::request_t* req = boost::get<detail::request_t>(&pk.tag_))
+    else if (type == detail::msg_dereg_skt)
     {
-      mb_.push(*req, pk.msg_);
+      ctxid_pair_t ctxid_pr;
+      aid_t skt;
+      pk.msg_ >> ctxid_pr >> skt;
+      user_->deregister_socket(ctxid_pr, skt);
     }
-    else if (detail::link_t* link = boost::get<detail::link_t>(&pk.tag_))
+    else if (type == detail::msg_reg_svc)
     {
-      add_link(link->get_aid(), pk.skt_);
-      return;
+      match_t name;
+      aid_t svc;
+      pk.msg_ >> name >> svc;
+      user_->register_service(name, svc);
     }
-    else if (detail::exit_t* ex = boost::get<detail::exit_t>(&pk.tag_))
+    else if (type == detail::msg_dereg_svc)
     {
-      mb_.push(*ex, pk.msg_);
-      base_type::remove_link(ex->get_aid());
+      match_t name;
+      aid_t svc;
+      pk.msg_ >> name >> svc;
+      user_->deregister_service(name, svc);
     }
-    else if (response_t* res = boost::get<response_t>(&pk.tag_))
+    else
     {
-      is_response = true;
-      mb_.push(*res, pk.msg_);
+      mb_.push(*aid, pk.msg_);
     }
   }
-  else if (!pk.is_err_ret_)
+  else if (detail::request_t* req = boost::get<detail::request_t>(&pk.tag_))
   {
-    if (detail::link_t* link = boost::get<detail::link_t>(&pk.tag_))
-    {
-      /// send actor exit msg
-      base_type::send_already_exited(link->get_aid(), pk.recver_);
-    }
-    else if (detail::request_t* req = boost::get<detail::request_t>(&pk.tag_))
-    {
-      /// reply actor exit msg
-      response_t res(req->get_id(), pk.recver_);
-      base_type::send_already_exited(req->get_aid(), res);
-    }
+    mb_.push(*req, pk.msg_);
+  }
+  else if (detail::link_t* link = boost::get<detail::link_t>(&pk.tag_))
+  {
+    add_link(link->get_aid(), pk.skt_);
+    return;
+  }
+  else if (detail::exit_t* ex = boost::get<detail::exit_t>(&pk.tag_))
+  {
+    mb_.push(*ex, pk.msg_);
+    base_type::remove_link(ex->get_aid());
+  }
+  else if (response_t* res = boost::get<response_t>(&pk.tag_))
+  {
+    is_response = true;
+    mb_.push(*res, pk.msg_);
   }
 }
 ///----------------------------------------------------------------------------

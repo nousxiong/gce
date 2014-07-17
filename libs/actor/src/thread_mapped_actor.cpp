@@ -22,13 +22,16 @@ namespace gce
 {
 ///----------------------------------------------------------------------------
 thread_mapped_actor::thread_mapped_actor(detail::cache_pool* user)
-  : base_type(&user->get_context(), user, user->get_index())
+  : base_type(
+      &user->get_context(), user, 
+      aid_t(user->get_context().get_attributes().id_, user->get_context().get_timestamp(), this, sid_t(0)), 
+      user->get_index()
+      )
   , recv_p_(0)
   , res_p_(0)
   , tmr_(ctx_->get_io_service())
   , tmr_sid_(0)
 {
-  base_type::update_aid();
 }
 ///----------------------------------------------------------------------------
 thread_mapped_actor::~thread_mapped_actor()
@@ -39,7 +42,7 @@ void thread_mapped_actor::send(aid_t recver, message const& m)
 {
   snd_.post(
     boost::bind(
-      &base_type::pri_send, this, recver, m, base_type::sync
+      &base_type::pri_send, this, recver, m, detail::sync
       )
     );
 }
@@ -48,7 +51,7 @@ void thread_mapped_actor::send(svcid_t recver, message const& m)
 {
   snd_.post(
     boost::bind(
-      &base_type::pri_send_svc, this, recver, m, base_type::sync
+      &base_type::pri_send_svc, this, recver, m, detail::sync
       )
     );
 }
@@ -57,7 +60,7 @@ void thread_mapped_actor::relay(aid_t des, message& m)
 {
   snd_.post(
     boost::bind(
-      &base_type::pri_relay, this, des, m, base_type::sync
+      &base_type::pri_relay, this, des, m, detail::sync
       )
     );
 }
@@ -66,7 +69,7 @@ void thread_mapped_actor::relay(svcid_t des, message& m)
 {
   snd_.post(
     boost::bind(
-      &base_type::pri_relay_svc, this, des, m, base_type::sync
+      &base_type::pri_relay_svc, this, des, m, detail::sync
       )
     );
 }
@@ -77,7 +80,7 @@ response_t thread_mapped_actor::request(aid_t recver, message const& m)
   snd_.post(
     boost::bind(
       &base_type::pri_request, this,
-      res, recver, m, base_type::sync
+      res, recver, m, detail::sync
       )
     );
   return res;
@@ -89,7 +92,7 @@ response_t thread_mapped_actor::request(svcid_t recver, message const& m)
   snd_.post(
     boost::bind(
       &base_type::pri_request_svc, this,
-      res, recver, m, base_type::sync
+      res, recver, m, detail::sync
       )
     );
   return res;
@@ -99,7 +102,7 @@ void thread_mapped_actor::reply(aid_t recver, message const& m)
 {
   snd_.post(
     boost::bind(
-      &base_type::pri_reply, this, recver, m, base_type::sync
+      &base_type::pri_reply, this, recver, m, detail::sync
       )
     );
 }
@@ -108,7 +111,7 @@ void thread_mapped_actor::link(aid_t target)
 {
   snd_.post(
     boost::bind(
-      &base_type::pri_link, this, target, base_type::sync
+      &base_type::pri_link, this, target, detail::sync
       )
     );
 }
@@ -117,7 +120,7 @@ void thread_mapped_actor::monitor(aid_t target)
 {
   snd_.post(
     boost::bind(
-      &base_type::pri_monitor, this, target, base_type::sync
+      &base_type::pri_monitor, this, target, detail::sync
       )
     );
 }
@@ -186,9 +189,9 @@ void thread_mapped_actor::wait(duration_t dur)
   boost::this_thread::sleep_for(dur);
 }
 ///----------------------------------------------------------------------------
-void thread_mapped_actor::on_recv(detail::pack& pk, base_type::send_hint hint)
+void thread_mapped_actor::on_recv(detail::pack& pk, detail::send_hint hint)
 {
-  if (hint == base_type::sync)
+  if (hint == detail::sync)
   {
     snd_.dispatch(
       boost::bind(
@@ -215,7 +218,7 @@ sid_t thread_mapped_actor::spawn(
   snd_.post(
     boost::bind(
       &base_type::pri_spawn, this,
-      sid, type, func, ctxid, stack_size, base_type::sync
+      sid, type, func, ctxid, stack_size, detail::sync
       )
     );
   return sid;
@@ -321,85 +324,68 @@ void thread_mapped_actor::handle_res_timeout(
 ///----------------------------------------------------------------------------
 void thread_mapped_actor::handle_recv(detail::pack& pk)
 {
-  if (check(pk.recver_, ctxid_, timestamp_))
+  bool is_response = false;
+
+  if (aid_t* aid = boost::get<aid_t>(&pk.tag_))
   {
-    bool is_response = false;
-
-    if (aid_t* aid = boost::get<aid_t>(&pk.tag_))
-    {
-      mb_.push(*aid, pk.msg_);
-    }
-    else if (detail::request_t* req = boost::get<detail::request_t>(&pk.tag_))
-    {
-      mb_.push(*req, pk.msg_);
-    }
-    else if (detail::link_t* link = boost::get<detail::link_t>(&pk.tag_))
-    {
-      add_link(link->get_aid(), pk.skt_);
-      return;
-    }
-    else if (detail::exit_t* ex = boost::get<detail::exit_t>(&pk.tag_))
-    {
-      mb_.push(*ex, pk.msg_);
-      base_type::remove_link(ex->get_aid());
-    }
-    else if (response_t* res = boost::get<response_t>(&pk.tag_))
-    {
-      is_response = true;
-      mb_.push(*res, pk.msg_);
-    }
-
-    detail::recv_t rcv;
-    message msg;
-
-    if (
-      (recv_p_ && !is_response) ||
-      (res_p_ && is_response)
-      )
-    {
-      if (recv_p_ && !is_response)
-      {
-        bool ret = mb_.pop(rcv, msg, curr_match_.match_list_);
-        if (!ret)
-        {
-          return;
-        }
-        recv_p_->set_value(std::make_pair(rcv, msg));
-        recv_p_ = 0;
-        curr_match_.clear();
-      }
-
-      if (res_p_ && is_response)
-      {
-        BOOST_ASSERT(recving_res_.valid());
-        bool ret = mb_.pop(recving_res_, msg);
-        if (!ret)
-        {
-          return;
-        }
-        res_p_->set_value(std::make_pair(recving_res_, msg));
-        res_p_ = 0;
-        recving_res_ = response_t();
-      }
-
-      ++tmr_sid_;
-      errcode_t ec;
-      tmr_.cancel(ec);
-    }
+    mb_.push(*aid, pk.msg_);
   }
-  else if (!pk.is_err_ret_)
+  else if (detail::request_t* req = boost::get<detail::request_t>(&pk.tag_))
   {
-    if (detail::link_t* link = boost::get<detail::link_t>(&pk.tag_))
+    mb_.push(*req, pk.msg_);
+  }
+  else if (detail::link_t* link = boost::get<detail::link_t>(&pk.tag_))
+  {
+    add_link(link->get_aid(), pk.skt_);
+    return;
+  }
+  else if (detail::exit_t* ex = boost::get<detail::exit_t>(&pk.tag_))
+  {
+    mb_.push(*ex, pk.msg_);
+    base_type::remove_link(ex->get_aid());
+  }
+  else if (response_t* res = boost::get<response_t>(&pk.tag_))
+  {
+    is_response = true;
+    mb_.push(*res, pk.msg_);
+  }
+
+  detail::recv_t rcv;
+  message msg;
+
+  if (
+    (recv_p_ && !is_response) ||
+    (res_p_ && is_response)
+    )
+  {
+    if (recv_p_ && !is_response)
     {
-      /// send actor exit msg
-      base_type::send_already_exited(link->get_aid(), pk.recver_);
+      bool ret = mb_.pop(rcv, msg, curr_match_.match_list_);
+      if (!ret)
+      {
+        return;
+      }
+      recv_p_->set_value(std::make_pair(rcv, msg));
+      recv_p_ = 0;
+      curr_match_.clear();
     }
-    else if (detail::request_t* req = boost::get<detail::request_t>(&pk.tag_))
+
+    if (res_p_ && is_response)
     {
-      /// reply actor exit msg
-      response_t res(req->get_id(), pk.recver_);
-      base_type::send_already_exited(req->get_aid(), res);
+      BOOST_ASSERT(recving_res_.valid());
+      bool ret = mb_.pop(recving_res_, msg);
+      if (!ret)
+      {
+        return;
+      }
+      res_p_->set_value(std::make_pair(recving_res_, msg));
+      res_p_ = 0;
+      recving_res_ = response_t();
     }
+
+    ++tmr_sid_;
+    errcode_t ec;
+    tmr_.cancel(ec);
   }
 }
 ///----------------------------------------------------------------------------

@@ -14,7 +14,6 @@
 #include <gce/actor/basic_actor.hpp>
 #include <gce/actor/actor_fwd.hpp>
 #include <gce/actor/match.hpp>
-#include <gce/actor/detail/object_pool.hpp>
 #include <gce/actor/detail/mailbox_fwd.hpp>
 
 namespace gce
@@ -31,8 +30,7 @@ class response_t;
 template <class> class actor;
 
 class coroutine_stackful_actor
-  : public detail::object_pool<coroutine_stackful_actor, detail::cache_pool*>::object
-  , public basic_actor
+  : public basic_actor
 {
   typedef basic_actor base_type;
   enum actor_code
@@ -102,7 +100,7 @@ public:
   typedef boost::function<void (self_ref_t)> func_t;
 
 public:
-  explicit coroutine_stackful_actor(detail::cache_pool*);
+  coroutine_stackful_actor(aid_t aid, detail::cache_pool*);
   ~coroutine_stackful_actor();
 
 public:
@@ -117,10 +115,10 @@ public:
 
 public:
   /// internal use
+  static detail::actor_type type() { return detail::actor_stackful; }
   void start(std::size_t);
   void init(func_t const& f);
-  void on_free();
-  void on_recv(detail::pack&, base_type::send_hint);
+  void on_recv(detail::pack&, detail::send_hint);
 
   inline sid_t spawn(detail::spawn_type type, match_t func, match_t ctxid, std::size_t stack_size)
   {

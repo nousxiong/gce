@@ -43,7 +43,7 @@ inline void connect_impl(
     "ctxid haven't set, please set it before connect"
     );
 
-  socket* s = user->get_socket();
+  socket* s = user->make_socket();
   s->init(opt);
   s->connect(
     sire, remote_func_list, target,
@@ -67,7 +67,7 @@ inline void bind_impl(
       );
   }
 
-  acceptor* a = user->get_acceptor();
+  acceptor* a = user->make_acceptor();
   a->init(opt);
   a->bind(sire, remote_func_list, ep, is_router);
 }

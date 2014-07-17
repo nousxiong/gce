@@ -33,6 +33,7 @@ public:
         recv(self, atom("ping_pong"), count_down);
         if (count_down == 0)
         {
+          send(self, partner, atom("ping_pong"), count_down);
           break;
         }
         --count_down;
@@ -61,7 +62,10 @@ public:
       send(base, pong, atom("prepare"), ping);
 
       send(base, ping, atom("ping_pong"), count_down);
-      recv(base);
+      for (std::size_t i=0; i<2; ++i)
+      {
+        recv(base);
+      }
     }
     catch (std::exception& ex)
     {

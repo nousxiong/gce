@@ -40,22 +40,17 @@ public:
           linked
           );
 
-      basic_actor* a =
-        aid.get_actor_ptr(
-          cac_pool->get_context().get_attributes().id_,
-          cac_pool->get_context().get_timestamp()
-          );
-      sid_t sid = aid.sid_;
-      sid += 100000;
-      ++sid;
+      aid_t tmp = aid;
+      tmp.sid_ += 100000;
+      ++tmp.sid_;
 
       message msg;
 
-      self.link(aid_t(ctxid_nil, aid.timestamp_, a, sid));
+      self.link(tmp);
       self.recv(msg);
       BOOST_ASSERT(msg.get_type() == exit);
 
-      response_t res = request(self, aid_t(ctxid_nil, aid.timestamp_, a, sid));
+      response_t res = request(self, tmp);
       self.recv(res, msg);
       BOOST_ASSERT(msg.get_type() == exit);
 

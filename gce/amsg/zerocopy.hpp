@@ -968,31 +968,31 @@ namespace boost{ namespace amsg
 	};
 
 	template<typename error_string_ty , int tag>
-	struct value_read_support<basic_zero_copy_buffer<error_string_ty>,::boost::uint8_t,tag>
+	struct value_read_support_impl<basic_zero_copy_buffer<error_string_ty>,::boost::uint8_t,tag>
 	{
 		typedef value_read_unsigned_char_like_support_zerocopy_impl<basic_zero_copy_buffer<error_string_ty>,::boost::uint8_t> impl_type;
 	};
 
 	template<typename error_string_ty , int tag>
-	struct value_write_support<basic_zero_copy_buffer<error_string_ty>,::boost::uint8_t,tag>
+	struct value_write_support_impl<basic_zero_copy_buffer<error_string_ty>, ::boost::uint8_t, tag>
 	{
 		typedef value_write_unsigned_char_like_support_zerocopy_impl<basic_zero_copy_buffer<error_string_ty>,::boost::uint8_t> impl_type;
 	};
 
 	template<typename error_string_ty , int tag>
-	struct value_read_support<basic_zero_copy_buffer<error_string_ty>,::boost::int8_t,tag>
+	struct value_read_support_impl<basic_zero_copy_buffer<error_string_ty>, ::boost::int8_t, tag>
 	{
 		typedef value_read_signed_char_like_support_zerocopy_impl<basic_zero_copy_buffer<error_string_ty>,::boost::int8_t> impl_type;
 	};
 
 	template<typename error_string_ty , int tag>
-	struct value_write_support<basic_zero_copy_buffer<error_string_ty>,::boost::int8_t,tag>
+	struct value_write_support_impl<basic_zero_copy_buffer<error_string_ty>, ::boost::int8_t, tag>
 	{
 		typedef value_write_signed_char_like_support_zerocopy_impl<basic_zero_copy_buffer<error_string_ty>,::boost::int8_t> impl_type;
 	};
 
 	template<typename error_string_ty , int tag>
-	struct value_read_support<basic_zero_copy_buffer<error_string_ty>,char,tag>
+	struct value_read_support_impl<basic_zero_copy_buffer<error_string_ty>, char, tag>
 	{
 		typedef char value_type;
 		typedef typename ::boost::mpl::if_<
@@ -1003,7 +1003,7 @@ namespace boost{ namespace amsg
 	};
 
 	template<typename error_string_ty , int tag>
-	struct value_write_support<basic_zero_copy_buffer<error_string_ty>,char,tag>
+	struct value_write_support_impl<basic_zero_copy_buffer<error_string_ty>, char, tag>
 	{
 		typedef char value_type;
 		typedef typename ::boost::mpl::if_<
@@ -1015,73 +1015,73 @@ namespace boost{ namespace amsg
 
 
 	template<typename error_string_ty , int tag>
-	struct value_read_support<basic_zero_copy_buffer<error_string_ty>,::boost::uint16_t,tag>
+	struct value_read_support_impl<basic_zero_copy_buffer<error_string_ty>, ::boost::uint16_t, tag>
 	{
 		typedef value_read_support_zerocopy_impl<basic_zero_copy_buffer<error_string_ty>,::boost::uint16_t> impl_type;
 	};
 
 	template<typename error_string_ty , int tag>
-	struct value_write_support<basic_zero_copy_buffer<error_string_ty>,::boost::uint16_t,tag>
+	struct value_write_support_impl<basic_zero_copy_buffer<error_string_ty>, ::boost::uint16_t, tag>
 	{
 		typedef value_write_support_zerocopy_impl<basic_zero_copy_buffer<error_string_ty>,::boost::uint16_t> impl_type;
 	};
 
 	template<typename error_string_ty , int tag>
-	struct value_read_support<basic_zero_copy_buffer<error_string_ty>,::boost::int16_t,tag>
+	struct value_read_support_impl<basic_zero_copy_buffer<error_string_ty>, ::boost::int16_t, tag>
 	{
 		typedef value_read_support_zerocopy_impl<basic_zero_copy_buffer<error_string_ty>,::boost::int16_t> impl_type;
 	};
 
 	template<typename error_string_ty , int tag>
-	struct value_write_support<basic_zero_copy_buffer<error_string_ty>,::boost::int16_t,tag>
+	struct value_write_support_impl<basic_zero_copy_buffer<error_string_ty>, ::boost::int16_t, tag>
 	{
 		typedef value_write_support_zerocopy_impl<basic_zero_copy_buffer<error_string_ty>,::boost::int16_t> impl_type;
 	};
 
 	template<typename error_string_ty , int tag>
-	struct value_read_support<basic_zero_copy_buffer<error_string_ty>,::boost::uint32_t,tag>
+	struct value_read_support_impl<basic_zero_copy_buffer<error_string_ty>, ::boost::uint32_t, tag>
 	{
 		typedef value_read_support_zerocopy_impl<basic_zero_copy_buffer<error_string_ty>,::boost::uint32_t> impl_type;
 	};
 
 	template<typename error_string_ty , int tag>
-	struct value_write_support<basic_zero_copy_buffer<error_string_ty>,::boost::uint32_t,tag>
+	struct value_write_support_impl<basic_zero_copy_buffer<error_string_ty>, ::boost::uint32_t, tag>
 	{
 		typedef value_write_support_zerocopy_impl<basic_zero_copy_buffer<error_string_ty>,::boost::uint32_t> impl_type;
 	};
 
 	template<typename error_string_ty , int tag>
-	struct value_read_support<basic_zero_copy_buffer<error_string_ty>,::boost::int32_t,tag>
+	struct value_read_support_impl<basic_zero_copy_buffer<error_string_ty>, ::boost::int32_t, tag>
 	{
 		typedef value_read_support_zerocopy_impl<basic_zero_copy_buffer<error_string_ty>,::boost::int32_t> impl_type;
 	};
 
 	template<typename error_string_ty , int tag>
-	struct value_write_support<basic_zero_copy_buffer<error_string_ty>,::boost::int32_t,tag>
+	struct value_write_support_impl<basic_zero_copy_buffer<error_string_ty>, ::boost::int32_t, tag>
 	{
 		typedef value_write_support_zerocopy_impl<basic_zero_copy_buffer<error_string_ty>,::boost::int32_t> impl_type;
 	};
 
 	template<typename error_string_ty , int tag>
-	struct value_read_support<basic_zero_copy_buffer<error_string_ty>,::boost::uint64_t,tag>
+	struct value_read_support_impl<basic_zero_copy_buffer<error_string_ty>, ::boost::uint64_t, tag>
 	{
 		typedef value_read_support_zerocopy_impl<basic_zero_copy_buffer<error_string_ty>,::boost::uint64_t> impl_type;
 	};
 
 	template<typename error_string_ty , int tag>
-	struct value_write_support<basic_zero_copy_buffer<error_string_ty>,::boost::uint64_t,tag>
+	struct value_write_support_impl<basic_zero_copy_buffer<error_string_ty>, ::boost::uint64_t, tag>
 	{
 		typedef value_write_support_zerocopy_impl<basic_zero_copy_buffer<error_string_ty>,::boost::uint64_t> impl_type;
 	};
 
 	template<typename error_string_ty , int tag>
-	struct value_read_support<basic_zero_copy_buffer<error_string_ty>,::boost::int64_t,tag>
+	struct value_read_support_impl<basic_zero_copy_buffer<error_string_ty>, ::boost::int64_t, tag>
 	{
 		typedef value_read_support_zerocopy_impl<basic_zero_copy_buffer<error_string_ty>,::boost::int64_t> impl_type;
 	};
 
 	template<typename error_string_ty , int tag>
-	struct value_write_support<basic_zero_copy_buffer<error_string_ty>,::boost::int64_t,tag>
+	struct value_write_support_impl<basic_zero_copy_buffer<error_string_ty>, ::boost::int64_t, tag>
 	{
 		typedef value_write_support_zerocopy_impl<basic_zero_copy_buffer<error_string_ty>,::boost::int64_t> impl_type;
 	};

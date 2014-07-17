@@ -88,7 +88,7 @@ public:
 
 public:
   /// internal use
-  void on_recv(detail::pack&, base_type::send_hint);
+  void on_recv(detail::pack&, detail::send_hint);
 
   void register_service(match_t name, aid_t svc, std::size_t cache_queue_index);
   void deregister_service(match_t name, aid_t svc, std::size_t cache_queue_index);

@@ -630,7 +630,7 @@ namespace boost{ namespace amsg{	namespace detail
 				error_code = sequence_length_overflow;
 				return 0;
 			}
-			::std::size_t size = 	byte_size_of_impl< ::boost::uint32_t,0>::size(len,error_code);
+			::std::size_t size = byte_size_of_impl< ::std::size_t, 0>::size(len, error_code);
 			for( typename value_type::const_iterator i = value.begin() ; i != value.end(); ++i )
 			{
 				typedef typename ::boost::remove_const<typename value_type::value_type::first_type>::type first_type;
@@ -659,15 +659,21 @@ namespace boost{ namespace amsg{	namespace detail
 	template<typename store_ty , typename ty , int tag>
 	struct value_read_support_impl
 	{
-		typedef ty value_type;
-		static inline void read(store_ty& store_data, value_type& value,::std::size_t max = 0);
+		struct impl_type
+		{
+			typedef ty value_type;
+			static inline void read(store_ty& store_data, value_type& value, ::std::size_t max = 0);
+		};
 	};
 
 	template<typename store_ty , typename ty , int tag>
 	struct value_write_support_impl
 	{
-		typedef ty value_type;
-		static inline void write(store_ty& store_data, const value_type& value,::std::size_t max = 0);
+		struct impl_type
+		{
+			typedef ty value_type;
+			static inline void write(store_ty& store_data, const value_type& value, ::std::size_t max = 0);
+		};
 	};
 
 	template<typename store_ty , typename ty , int tag>
@@ -677,7 +683,7 @@ namespace boost{ namespace amsg{	namespace detail
 		static inline void read(store_ty& store_data, value_type& value)
 		{
 			int64_t temp;
-			value_read_support_impl<store_ty,int64_t,tag>::read(store_data,temp);
+			value_read_support_impl<store_ty,int64_t,tag>::impl_type::read(store_data,temp);
 			value = static_cast<ty>(temp);
 		}
 	};
@@ -689,7 +695,7 @@ namespace boost{ namespace amsg{	namespace detail
 		static inline void write(store_ty& store_data, const value_type& value)
 		{
 			int64_t temp = value;
-			value_write_support_impl<store_ty,int64_t,tag>::write(store_data,temp);
+			value_write_support_impl<store_ty,int64_t,tag>::impl_type::write(store_data,temp);
 		}
 	};
 
@@ -700,7 +706,7 @@ namespace boost{ namespace amsg{	namespace detail
 		typedef typename ::boost::mpl::if_<
 			::boost::is_enum<value_type>,
 			value_read_support_enum_impl<store_ty,value_type,tag>,
-			value_read_support_impl<store_ty,value_type,tag>
+			typename value_read_support_impl<store_ty,value_type,tag>::impl_type
 		>::type impl_type;
 	};
 
@@ -711,7 +717,7 @@ namespace boost{ namespace amsg{	namespace detail
 		typedef typename ::boost::mpl::if_<
 			::boost::is_enum<value_type>,
 			value_write_support_enum_impl<store_ty,value_type,tag>,
-			value_write_support_impl<store_ty,value_type,tag>
+			typename value_write_support_impl<store_ty,value_type,tag>::impl_type
 		>::type impl_type;
 	};
 
@@ -1603,109 +1609,109 @@ namespace boost{ namespace amsg{	namespace detail
 
 
 	template<typename store_ty,int tag>
-	struct value_read_support<store_ty,::boost::uint8_t,tag>
+	struct value_read_support_impl<store_ty,::boost::uint8_t,tag>
 	{
 		typedef value_default_read_support_impl<store_ty,::boost::uint8_t> impl_type;
 	};
 
 	template<typename store_ty ,int tag>
-	struct value_write_support<store_ty,::boost::uint8_t,tag>
+	struct value_write_support_impl<store_ty, ::boost::uint8_t, tag>
 	{
 		typedef value_default_write_support_impl<store_ty,::boost::uint8_t> impl_type;
 	};
 
 	template<typename store_ty,int tag>
-	struct value_read_support<store_ty,::boost::int8_t,tag>
+	struct value_read_support_impl<store_ty, ::boost::int8_t, tag>
 	{
 		typedef value_default_read_char_like_support_impl<store_ty,::boost::int8_t> impl_type;
 	};
 
 	template<typename store_ty ,int tag>
-	struct value_write_support<store_ty,::boost::int8_t,tag>
+	struct value_write_support_impl<store_ty, ::boost::int8_t, tag>
 	{
 		typedef value_default_write_char_like_support_impl<store_ty,::boost::int8_t> impl_type;
 	};
 
 	template<typename store_ty,int tag>
-	struct value_read_support<store_ty,char,tag>
+	struct value_read_support_impl<store_ty, char, tag>
 	{
 		typedef value_default_read_char_like_support_impl<store_ty,char> impl_type;
 	};
 
 	template<typename store_ty ,int tag>
-	struct value_write_support<store_ty,char,tag>
+	struct value_write_support_impl<store_ty, char, tag>
 	{
 		typedef value_default_write_char_like_support_impl<store_ty,char> impl_type;
 	};
 
 	template<typename store_ty,int tag>
-	struct value_read_support<store_ty,::boost::uint16_t,tag>
+	struct value_read_support_impl<store_ty, ::boost::uint16_t, tag>
 	{
 		typedef value_default_read_support_impl<store_ty,::boost::uint16_t> impl_type;
 	};
 
 	template<typename store_ty ,int tag>
-	struct value_write_support<store_ty,::boost::uint16_t,tag>
+	struct value_write_support_impl<store_ty, ::boost::uint16_t, tag>
 	{
 		typedef value_default_write_support_impl<store_ty,::boost::uint16_t> impl_type;
 	};
 
 	template<typename store_ty,int tag>
-	struct value_read_support<store_ty,::boost::int16_t,tag>
+	struct value_read_support_impl<store_ty, ::boost::int16_t, tag>
 	{
 		typedef value_default_read_support_impl<store_ty,::boost::int16_t> impl_type;
 	};
 
 	template<typename store_ty ,int tag>
-	struct value_write_support<store_ty,::boost::int16_t,tag>
+	struct value_write_support_impl<store_ty, ::boost::int16_t, tag>
 	{
 		typedef value_default_write_support_impl<store_ty,::boost::int16_t> impl_type;
 	};
 
 	template<typename store_ty,int tag>
-	struct value_read_support<store_ty,::boost::uint32_t,tag>
+	struct value_read_support_impl<store_ty, ::boost::uint32_t, tag>
 	{
 		typedef value_default_read_support_impl<store_ty,::boost::uint32_t> impl_type;
 	};
 
 	template<typename store_ty ,int tag>
-	struct value_write_support<store_ty,::boost::uint32_t,tag>
+	struct value_write_support_impl<store_ty, ::boost::uint32_t, tag>
 	{
 		typedef value_default_write_support_impl<store_ty,::boost::uint32_t> impl_type;
 	};
 
 	template<typename store_ty,int tag>
-	struct value_read_support<store_ty,::boost::int32_t,tag>
+	struct value_read_support_impl<store_ty, ::boost::int32_t, tag>
 	{
 		typedef value_default_read_support_impl<store_ty,::boost::int32_t> impl_type;
 	};
 
 	template<typename store_ty ,int tag>
-	struct value_write_support<store_ty,::boost::int32_t,tag>
+	struct value_write_support_impl<store_ty, ::boost::int32_t, tag>
 	{
 		typedef value_default_write_support_impl<store_ty,::boost::int32_t> impl_type;
 	};
 
 	template<typename store_ty,int tag>
-	struct value_read_support<store_ty,::boost::uint64_t,tag>
+	struct value_read_support_impl<store_ty, ::boost::uint64_t, tag>
 	{
 		typedef value_default_read_support_impl<store_ty,::boost::uint64_t> impl_type;
 	};
 
 	template<typename store_ty ,int tag>
-	struct value_write_support<store_ty,::boost::uint64_t,tag>
+	struct value_write_support_impl<store_ty, ::boost::uint64_t, tag>
 	{
 		typedef value_default_write_support_impl<store_ty,::boost::uint64_t> impl_type;
 	};
 
 	template<typename store_ty,int tag>
-	struct value_read_support<store_ty,::boost::int64_t,tag>
+	struct value_read_support_impl<store_ty, ::boost::int64_t, tag>
 	{
 		typedef value_default_read_support_impl<store_ty,::boost::int64_t> impl_type;
 	};
 
 	template<typename store_ty ,int tag>
-	struct value_write_support<store_ty,::boost::int64_t,tag>
+	struct value_write_support_impl<store_ty, ::boost::int64_t, tag>
 	{
 		typedef value_default_write_support_impl<store_ty,::boost::int64_t> impl_type;
 	};
@@ -1713,61 +1719,73 @@ namespace boost{ namespace amsg{	namespace detail
 	template<typename store_ty>
 	struct value_read_support_impl<store_ty , float , 0>
 	{
-		typedef float value_type;
-		static inline void read(store_ty& store_data, value_type& value)
+		struct impl_type
 		{
-			store_data.read((char*)&value,sizeof(value_type));
-			if(store_data.bad())
+			typedef float value_type;
+			static inline void read(store_ty& store_data, value_type& value)
 			{
-				store_data.set_error_code(stream_buffer_overflow);
-				return;
+				store_data.read((char*)&value, sizeof(value_type));
+				if (store_data.bad())
+				{
+					store_data.set_error_code(stream_buffer_overflow);
+					return;
+				}
 			}
-		}
+		};
 	};
 
 	template<typename store_ty>
 	struct value_write_support_impl<store_ty , float , 0>
 	{
-		typedef float value_type;
-		static inline void write(store_ty& store_data,const value_type& value)
+		struct impl_type
 		{
-			store_data.write((const char*)&value,sizeof(value_type));
-			if(store_data.bad())
+			typedef float value_type;
+			static inline void write(store_ty& store_data, const value_type& value)
 			{
-				store_data.set_error_code(stream_buffer_overflow);
-				return;
+				store_data.write((const char*)&value, sizeof(value_type));
+				if (store_data.bad())
+				{
+					store_data.set_error_code(stream_buffer_overflow);
+					return;
+				}
 			}
-		}
+		};
 	};
 
 	template<typename store_ty>
 	struct value_read_support_impl<store_ty , double , 0>
 	{
-		typedef double value_type;
-		static inline void read(store_ty& store_data, value_type& value)
+		struct impl_type
 		{
-			store_data.read((char*)&value,sizeof(value_type));
-			if(store_data.bad())
+			typedef double value_type;
+			static inline void read(store_ty& store_data, value_type& value)
 			{
-				store_data.set_error_code(stream_buffer_overflow);
-				return;
+				store_data.read((char*)&value, sizeof(value_type));
+				if (store_data.bad())
+				{
+					store_data.set_error_code(stream_buffer_overflow);
+					return;
+				}
 			}
-		}
+		};
 	};
 
 	template<typename store_ty>
 	struct value_write_support_impl<store_ty , double , 0>
 	{
-		typedef double value_type;
-		static inline void write(store_ty& store_data,const value_type& value)
+		struct impl_type
 		{
-			store_data.write((const char*)&value,sizeof(value_type));
-			if(store_data.bad())
+			typedef double value_type;
+			static inline void write(store_ty& store_data, const value_type& value)
 			{
-				store_data.set_error_code(stream_buffer_overflow);
-				return;
+				store_data.write((const char*)&value, sizeof(value_type));
+				if (store_data.bad())
+				{
+					store_data.set_error_code(stream_buffer_overflow);
+					return;
+				}
 			}
-		}
+		};
 	};
 
 	static size_t to_str( const ::boost::uint32_t& Value , char * resultbuffer , size_t len)
@@ -1846,14 +1864,14 @@ namespace boost{ namespace amsg{	namespace detail
 
 
 	template<typename store_ty,typename alloc_ty , int tag>
-	struct value_read_support<store_ty , ::std::basic_string<char, ::std::char_traits<char>, alloc_ty> , tag>
+	struct value_read_support_impl<store_ty, ::std::basic_string<char, ::std::char_traits<char>, alloc_ty>, tag>
 	{
 		typedef ::std::basic_string<char, ::std::char_traits<char>, alloc_ty> value_type;
 		typedef value_string_read_support_impl<store_ty,value_type,tag> impl_type;
 	};
 
 	template<typename store_ty,typename alloc_ty , int tag>
-	struct value_write_support<store_ty , ::std::basic_string<char, ::std::char_traits<char>, alloc_ty> , tag>
+	struct value_write_support_impl<store_ty, ::std::basic_string<char, ::std::char_traits<char>, alloc_ty>, tag>
 	{
 		typedef ::std::basic_string<char, ::std::char_traits<char>, alloc_ty> value_type;
 		typedef value_string_write_support_impl<store_ty,value_type,tag> impl_type;
@@ -1927,14 +1945,14 @@ namespace boost{ namespace amsg{	namespace detail
 	};
 
 	template<typename store_ty,typename alloc_ty , int tag>
-	struct value_read_support<store_ty , ::std::basic_string<wchar_t, ::std::char_traits<wchar_t>, alloc_ty> , tag>
+	struct value_read_support_impl<store_ty, ::std::basic_string<wchar_t, ::std::char_traits<wchar_t>, alloc_ty>, tag>
 	{
 		typedef ::std::basic_string<wchar_t, ::std::char_traits<wchar_t>, alloc_ty> value_type;
 		typedef value_string_read_support_impl<store_ty,value_type,tag> impl_type;
 	};
 
 	template<typename store_ty,typename alloc_ty , int tag>
-	struct value_write_support<store_ty , ::std::basic_string<wchar_t, ::std::char_traits<wchar_t>, alloc_ty> , tag>
+	struct value_write_support_impl<store_ty, ::std::basic_string<wchar_t, ::std::char_traits<wchar_t>, alloc_ty>, tag>
 	{
 		typedef ::std::basic_string<wchar_t, ::std::char_traits<wchar_t>, alloc_ty> value_type;
 		typedef value_string_write_support_impl<store_ty,value_type,tag> impl_type;
@@ -2009,28 +2027,28 @@ namespace boost{ namespace amsg{	namespace detail
 	};
 
 	template<typename store_ty , typename ty,typename alloc_ty , int tag>
-	struct value_read_support<store_ty , ::std::deque<ty,alloc_ty> , tag>
+	struct value_read_support_impl<store_ty, ::std::deque<ty, alloc_ty>, tag>
 	{
 		typedef typename ::std::deque<ty,alloc_ty> value_type;
 		typedef value_support_read_seq_container_impl<store_ty,value_type,tag> impl_type;
 	};
 
 	template<typename store_ty , typename ty,typename alloc_ty , int tag>
-	struct value_write_support<store_ty , ::std::deque<ty,alloc_ty> , tag>
+	struct value_write_support_impl<store_ty, ::std::deque<ty, alloc_ty>, tag>
 	{
 		typedef typename ::std::deque<ty,alloc_ty> value_type;
 		typedef value_support_write_seq_container_impl<store_ty,value_type,tag> impl_type;
 	};
 
 	template<typename store_ty , typename ty,typename alloc_ty , int tag>
-	struct value_read_support<store_ty , ::std::list<ty,alloc_ty> , tag>
+	struct value_read_support_impl<store_ty, ::std::list<ty, alloc_ty>, tag>
 	{
 		typedef typename ::std::list<ty,alloc_ty> value_type;
 		typedef value_support_read_seq_container_impl<store_ty,value_type,tag> impl_type;
 	};
 
 	template<typename store_ty , typename ty,typename alloc_ty , int tag>
-	struct value_write_support<store_ty , ::std::list<ty,alloc_ty> , tag>
+	struct value_write_support_impl<store_ty, ::std::list<ty, alloc_ty>, tag>
 	{
 		typedef typename ::std::list<ty,alloc_ty> value_type;
 		typedef value_support_write_seq_container_impl<store_ty,value_type,tag> impl_type;
@@ -2090,7 +2108,7 @@ namespace boost{ namespace amsg{	namespace detail
 				store_data.set_error_code(sequence_length_overflow);
 				return;
 			}
-			value_write_support<store_ty,::boost::uint32_t,tag>::impl_type::write(store_data,len);
+			value_write_support<store_ty, ::std::size_t, tag>::impl_type::write(store_data, len);
 			if(store_data.bad())
 			{
 				store_data.set_error_code(stream_buffer_overflow);
@@ -2110,14 +2128,14 @@ namespace boost{ namespace amsg{	namespace detail
 	};
 
 	template<typename store_ty , typename ty,int array_size , int tag>
-	struct value_read_support<store_ty , ::boost::array<ty,array_size> , tag>
+	struct value_read_support_impl<store_ty, ::boost::array<ty, array_size>, tag>
 	{
 		typedef typename ::boost::array<ty,array_size> value_type;
 		typedef value_support_read_array_impl<store_ty,value_type,tag> impl_type;
 	};
 
 	template<typename store_ty , typename ty,int array_size , int tag>
-	struct value_write_support<store_ty , ::boost::array<ty,array_size> , tag>
+	struct value_write_support_impl<store_ty, ::boost::array<ty, array_size>, tag>
 	{
 		typedef typename ::boost::array<ty,array_size> value_type;
 		typedef value_support_write_array_impl<store_ty,value_type,tag> impl_type;
@@ -2125,14 +2143,14 @@ namespace boost{ namespace amsg{	namespace detail
 
 #if defined(AMSG_SUPPORT_CXX11)||defined(AMSG_SUPPORT_STD_ARRAY)
 	template<typename store_ty , typename ty,int array_size , int tag>
-	struct value_read_support<store_ty , ::std::array<ty,array_size> , tag>
+	struct value_read_support_impl<store_ty, ::std::array<ty, array_size>, tag>
 	{
 		typedef typename ::std::array<ty,array_size> value_type;
 		typedef value_support_read_array_impl<store_ty,value_type,tag> impl_type;
 	};
 
 	template<typename store_ty , typename ty,int array_size , int tag>
-	struct value_write_support<store_ty , ::std::array<ty,array_size> , tag>
+	struct value_write_support_impl<store_ty, ::std::array<ty, array_size>, tag>
 	{
 		typedef typename ::std::array<ty,array_size> value_type;
 		typedef value_support_write_array_impl<store_ty,value_type,tag> impl_type;
@@ -2140,14 +2158,14 @@ namespace boost{ namespace amsg{	namespace detail
 #endif
 
 	template<typename store_ty , typename ty,typename alloc_ty , int tag>
-	struct value_read_support<store_ty , ::std::vector<ty,alloc_ty> , tag>
+	struct value_read_support_impl<store_ty, ::std::vector<ty, alloc_ty>, tag>
 	{
 		typedef typename ::std::vector<ty,alloc_ty> value_type;
 		typedef value_support_read_seq_container_impl<store_ty,value_type,tag> impl_type;
 	};
 
 	template<typename store_ty , typename ty,typename alloc_ty , int tag>
-	struct value_write_support<store_ty , ::std::vector<ty,alloc_ty> , tag>
+	struct value_write_support_impl<store_ty, ::std::vector<ty, alloc_ty>, tag>
 	{
 		typedef typename ::std::vector<ty,alloc_ty> value_type;
 		typedef value_support_write_seq_container_impl<store_ty,value_type,tag> impl_type;
@@ -2252,28 +2270,28 @@ namespace boost{ namespace amsg{	namespace detail
 	};
 
 	template<typename store_ty , typename key_ty , typename ty , typename cmp_ty ,typename alloc_ty , int tag>
-	struct value_read_support<store_ty , ::std::map<key_ty,ty,cmp_ty,alloc_ty> ,tag>
+	struct value_read_support_impl<store_ty, ::std::map<key_ty, ty, cmp_ty, alloc_ty>, tag>
 	{
 		typedef typename ::std::map<key_ty,ty,cmp_ty,alloc_ty> value_type;
 		typedef value_support_read_unorder_container_impl<store_ty,value_type,tag> impl_type;
 	};
 
 	template<typename store_ty , typename key_ty , typename ty , typename cmp_ty ,typename alloc_ty , int tag>
-	struct value_write_support<store_ty , ::std::map<key_ty,ty,cmp_ty,alloc_ty> ,tag>
+	struct value_write_support_impl<store_ty, ::std::map<key_ty, ty, cmp_ty, alloc_ty>, tag>
 	{
 		typedef typename ::std::map<key_ty,ty,cmp_ty,alloc_ty> value_type;
 		typedef value_support_write_unorder_container_impl<store_ty,value_type,tag> impl_type;
 	};
 
 	template<typename store_ty , typename key_ty , typename ty , typename cmp_ty ,typename alloc_ty , int tag>
-	struct value_read_support<store_ty , ::boost::unordered_map<key_ty,ty,cmp_ty,alloc_ty> ,tag>
+	struct value_read_support_impl<store_ty, ::boost::unordered_map<key_ty, ty, cmp_ty, alloc_ty>, tag>
 	{
 		typedef typename ::boost::unordered_map<key_ty,ty,cmp_ty,alloc_ty> value_type;
 		typedef value_support_read_unorder_container_impl<store_ty,value_type,tag> impl_type;
 	};
 
 	template<typename store_ty , typename key_ty , typename ty , typename cmp_ty ,typename alloc_ty , int tag>
-	struct value_write_support<store_ty , ::boost::unordered_map<key_ty,ty,cmp_ty,alloc_ty> ,tag>
+	struct value_write_support_impl<store_ty, ::boost::unordered_map<key_ty, ty, cmp_ty, alloc_ty>, tag>
 	{
 		typedef typename ::boost::unordered_map<key_ty,ty,cmp_ty,alloc_ty> value_type;
 		typedef value_support_write_unorder_container_impl<store_ty,value_type,tag> impl_type;
@@ -2318,6 +2336,15 @@ namespace boost{ namespace amsg{	namespace detail
 	template <typename store_ty , typename ty , int tag>
 	struct value_read_support_impl<store_ty,smax_valid<ty>,tag>
 	{
+		struct impl_type
+		{
+			typedef smax_valid<ty> value_type;
+			static inline void read(store_ty& store_data, const value_type& value)
+			{
+				typedef typename ::boost::remove_const<ty>::type ref_type;
+				value_read_support<store_ty, ref_type, tag>::impl_type::read(store_data, value.obj, value.size);
+			}
+		};
 		typedef smax_valid<ty> value_type;
 		static inline void read(store_ty& store_data,const value_type& value)
 		{
@@ -2329,6 +2356,15 @@ namespace boost{ namespace amsg{	namespace detail
 	template <typename store_ty , typename ty , int tag>
 	struct value_write_support_impl<store_ty,smax_valid<ty>,tag>
 	{
+		struct impl_type
+		{
+			typedef smax_valid<ty> value_type;
+			static inline void write(store_ty& store_data, const value_type& value)
+			{
+				typedef typename ::boost::remove_const<ty>::type ref_type;
+				value_write_support<store_ty, ref_type, tag>::impl_type::write(store_data, value.obj, value.size);
+			}
+		};
 		typedef smax_valid<ty> value_type;
 		static inline void write(store_ty& store_data,const value_type& value)
 		{
@@ -2385,17 +2421,29 @@ namespace boost{ namespace amsg{	namespace detail
 	template <typename store_ty , typename ty , int tag>
 	struct value_read_support_impl<store_ty,sfix_op<ty>,tag>
 	{
-		typedef sfix_op<ty> value_type;
-		static inline void read(store_ty& store_data,const value_type& value)
+		struct impl_type
 		{
-			typedef typename ::boost::remove_const<ty>::type ref_type;
-			value_fix_size_read_support_impl<store_ty,ref_type>::read(store_data,value.obj);
-		}
+			typedef sfix_op<ty> value_type;
+			static inline void read(store_ty& store_data, const value_type& value)
+			{
+				typedef typename ::boost::remove_const<ty>::type ref_type;
+				value_fix_size_read_support_impl<store_ty, ref_type>::read(store_data, value.obj);
+			}
+		};
 	};
 
 	template <typename store_ty , typename ty , int tag>
 	struct value_write_support_impl<store_ty,sfix_op<ty>,tag>
 	{
+		struct impl_type
+		{
+			typedef sfix_op<ty> value_type;
+			static inline void write(store_ty& store_data, const value_type& value)
+			{
+				typedef typename ::boost::remove_const<ty>::type ref_type;
+				value__fix_size_write_support_impl<store_ty, ref_type>::write(store_data, value.obj);
+			}
+		};
 		typedef sfix_op<ty> value_type;
 		static inline void write(store_ty& store_data,const value_type& value)
 		{
@@ -2488,20 +2536,26 @@ inline ::std::size_t size_of(const ty& value , error_code_t& error_code)
 	template<typename store_ty,int tag>	\
 struct value_read_support_impl<store_ty,TYPE,tag>	\
 {\
-	typedef TYPE value_type;\
-	static inline void read(store_ty& store_data, value_type& value)\
-{\
-	BOOST_PP_SEQ_FOR_EACH( AMSG_READ_MEMBER_X , value , MEMBERS ) \
-}\
+	struct impl_type\
+	{\
+		typedef TYPE value_type;\
+		static inline void read(store_ty& store_data, value_type& value)\
+		{\
+			BOOST_PP_SEQ_FOR_EACH( AMSG_READ_MEMBER_X , value , MEMBERS ) \
+		}\
+	};\
 };\
 	template<typename store_ty,int tag>	\
 struct value_write_support_impl<store_ty,TYPE,tag>	\
 {\
-	typedef TYPE value_type;\
-	static inline void write(store_ty& store_data, const value_type& value)\
-{\
-	BOOST_PP_SEQ_FOR_EACH( AMSG_WRITE_MEMBER_X , value , MEMBERS ) \
-}\
+	struct impl_type\
+	{\
+		typedef TYPE value_type;\
+		static inline void write(store_ty& store_data, const value_type& value)\
+		{\
+			BOOST_PP_SEQ_FOR_EACH( AMSG_WRITE_MEMBER_X , value , MEMBERS ) \
+		}\
+	};\
 };\
 	template<int tag>	\
 struct byte_size_of_impl<TYPE,tag>	\

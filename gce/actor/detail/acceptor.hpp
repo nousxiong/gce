@@ -16,7 +16,6 @@
 #include <gce/actor/basic_actor.hpp>
 #include <gce/actor/net_option.hpp>
 #include <gce/actor/detail/basic_socket.hpp>
-#include <gce/actor/detail/object_pool.hpp>
 #include <gce/actor/detail/pack.hpp>
 #include <gce/actor/match.hpp>
 #include <boost/scoped_ptr.hpp>
@@ -32,8 +31,7 @@ class cache_pool;
 class basic_acceptor;
 
 class acceptor
-  : public object_pool<acceptor, cache_pool*>::object
-  , public basic_actor
+  : public basic_actor
 {
   typedef basic_actor base_type;
 
@@ -45,7 +43,7 @@ class acceptor
   };
 
 public:
-  explicit acceptor(cache_pool*);
+  acceptor(gce::aid_t aid, cache_pool*);
   ~acceptor();
 
 public:
@@ -56,9 +54,9 @@ public:
     );
 
 public:
+  static actor_type type() { return actor_acceptor; }
   void stop();
-  void on_free();
-  void on_recv(pack&, base_type::send_hint);
+  void on_recv(pack&, detail::send_hint);
   inline void send(aid_t recver, message const& m)
   {
     base_type::pri_send(recver, m);

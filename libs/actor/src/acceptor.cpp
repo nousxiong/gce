@@ -28,8 +28,8 @@ namespace gce
 namespace detail
 {
 ///----------------------------------------------------------------------------
-acceptor::acceptor(cache_pool* user)
-  : basic_actor(&user->get_context(), user, user->get_index())
+acceptor::acceptor(gce::aid_t aid, cache_pool* user)
+  : basic_actor(&user->get_context(), user, aid, user->get_index())
   , stat_(ready)
   , is_router_(false)
 {
@@ -43,8 +43,6 @@ void acceptor::init(net_option opt)
 {
   BOOST_ASSERT_MSG(stat_ == ready, "socket status error");
   opt_ = opt;
-
-  base_type::update_aid();
 }
 ///----------------------------------------------------------------------------
 void acceptor::bind(
@@ -72,16 +70,7 @@ void acceptor::stop()
   close();
 }
 ///----------------------------------------------------------------------------
-void acceptor::on_free()
-{
-  base_type::on_free();
-
-  stat_ = ready;
-  remote_func_list_.clear();
-  is_router_ = false;
-}
-///----------------------------------------------------------------------------
-void acceptor::on_recv(pack& pk, base_type::send_hint)
+void acceptor::on_recv(pack& pk, detail::send_hint)
 {
   snd_.dispatch(
     boost::bind(
@@ -153,7 +142,7 @@ void acceptor::run(aid_t sire, std::string const& ep, yield_t yield)
 ///----------------------------------------------------------------------------
 void acceptor::spawn_socket(cache_pool* user, socket_ptr prot)
 {
-  socket* s = user->get_socket();
+  socket* s = user->make_socket();
   s->init(opt_);
   s->start(remote_func_list_, prot, is_router_);
 }
@@ -196,26 +185,9 @@ basic_acceptor* acceptor::make_acceptor(std::string const& ep)
 ///----------------------------------------------------------------------------
 void acceptor::handle_recv(pack& pk)
 {
-  if (check(pk.recver_, ctxid_, timestamp_))
+  if (exit_t* ex = boost::get<exit_t>(&pk.tag_))
   {
-    if (exit_t* ex = boost::get<exit_t>(&pk.tag_))
-    {
-      base_type::remove_link(ex->get_aid());
-    }
-  }
-  else if (!pk.is_err_ret_)
-  {
-    if (detail::link_t* link = boost::get<detail::link_t>(&pk.tag_))
-    {
-      /// send actor exit msg
-      base_type::send_already_exited(link->get_aid(), pk.recver_);
-    }
-    else if (detail::request_t* req = boost::get<detail::request_t>(&pk.tag_))
-    {
-      /// reply actor exit msg
-      response_t res(req->get_id(), pk.recver_);
-      base_type::send_already_exited(req->get_aid(), res);
-    }
+    base_type::remove_link(ex->get_aid());
   }
 }
 ///----------------------------------------------------------------------------
@@ -234,7 +206,6 @@ void acceptor::free_self(exit_code_t exc, std::string const& exit_msg, yield_t y
 
   user_->remove_acceptor(this);
   aid_t self_aid = get_aid();
-  base_type::update_aid();
   base_type::send_exit(self_aid, exc, exit_msg);
   user_->free_acceptor(this);
 }

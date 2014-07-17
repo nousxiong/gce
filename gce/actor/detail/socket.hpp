@@ -17,7 +17,6 @@
 #include <gce/actor/basic_actor.hpp>
 #include <gce/actor/detail/basic_socket.hpp>
 #include <gce/actor/net_option.hpp>
-#include <gce/actor/detail/object_pool.hpp>
 #include <gce/actor/detail/pack.hpp>
 #include <gce/actor/match.hpp>
 #include <gce/actor/detail/buffer_ref.hpp>
@@ -32,8 +31,7 @@ namespace detail
 class cache_pool;
 
 class socket
-  : public object_pool<socket, cache_pool*>::object
-  , public basic_actor
+  : public basic_actor
 {
   typedef basic_actor base_type;
 
@@ -45,7 +43,7 @@ class socket
   };
 
 public:
-  explicit socket(cache_pool*);
+  socket(gce::aid_t aid, cache_pool*);
   ~socket();
 
 public:
@@ -61,10 +59,10 @@ public:
   }
 
 public:
+  static actor_type type() { return actor_socket; }
   void start(std::map<match_t, remote_func> const&, socket_ptr, bool is_router);
   void stop();
-  void on_free();
-  void on_recv(pack&, base_type::send_hint);
+  void on_recv(pack&, detail::send_hint);
 
   void link(aid_t) {}
   void monitor(aid_t) {}

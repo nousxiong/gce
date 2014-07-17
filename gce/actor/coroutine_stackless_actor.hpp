@@ -13,7 +13,6 @@
 #include <gce/actor/config.hpp>
 #include <gce/actor/basic_actor.hpp>
 #include <gce/actor/match.hpp>
-#include <gce/actor/detail/object_pool.hpp>
 #include <gce/actor/detail/mailbox_fwd.hpp>
 #include <gce/actor/detail/scoped_bool.hpp>
 #include <boost/bind.hpp>
@@ -32,19 +31,11 @@ class response_t;
 template <class> class actor;
 
 class coroutine_stackless_actor
-  : public detail::object_pool<coroutine_stackless_actor, detail::cache_pool*>::object
-  , public basic_actor
+  : public basic_actor
 {
   typedef basic_actor base_type;
 
 public:
-  enum status
-  {
-    ready = 0,
-    on,
-    off
-  };
-
   inline void send(aid_t recver, message const& m)
   {
     base_type::pri_send(recver, m);
@@ -100,7 +91,7 @@ public:
   typedef boost::function<void (self_ref_t)> wait_handler_t;
 
 public:
-  explicit coroutine_stackless_actor(detail::cache_pool*);
+  coroutine_stackless_actor(aid_t aid, detail::cache_pool*);
   ~coroutine_stackless_actor();
 
 public:
@@ -116,6 +107,7 @@ public:
 
 public:
   /// internal use
+  static detail::actor_type type() { return detail::actor_stackless; }
   void recv(recv_handler_t const&, match const& mach = match());
   void recv(
     recv_handler_t const&, response_t res, 
@@ -128,8 +120,7 @@ public:
 public:
   void init(func_t const& f);
   void start();
-  void on_free();
-  void on_recv(detail::pack&, base_type::send_hint);
+  void on_recv(detail::pack&, detail::send_hint);
 
   inline sid_t spawn(
     detail::spawn_type type, match_t func, 
@@ -166,7 +157,6 @@ private:
   /// Ensure start from a new cache line.
   byte_t pad0_[GCE_CACHE_LINE_SIZE];
 
-  GCE_CACHE_ALIGNED_VAR(status, stat_)
   GCE_CACHE_ALIGNED_VAR(func_t, f_)
   GCE_CACHE_ALIGNED_VAR(detail::coro_t, coro_)
 

@@ -27,7 +27,7 @@ inline aid_t make_stackful_actor(
   )
 {
   context& ctx = user->get_context();
-  coroutine_stackful_actor* a = user->get_context_switching_actor();
+  coroutine_stackful_actor* a = user->make_stackful_actor();
   a->init(f.f_);
   if (sire)
   {
@@ -43,7 +43,7 @@ inline aid_t make_stackless_actor(
   )
 {
   context& ctx = user->get_context();
-  coroutine_stackless_actor* a = user->get_event_based_actor();
+  coroutine_stackless_actor* a = user->make_stackless_actor();
   a->init(f.f_);
   if (sire)
   {

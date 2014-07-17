@@ -23,6 +23,31 @@ inline std::size_t minimum_stacksize()
 {
   return boost::coroutines::stack_allocator::minimum_stacksize();
 }
+
+namespace detail
+{
+enum actor_type
+{
+  actor_nil = -1, 
+  
+  actor_threaded,
+  actor_stackful,
+  actor_stackless,
+  actor_nonblocked,
+  actor_socket,
+  actor_acceptor,
+
+  actor_num
+};
+
+
+/// internal use
+enum send_hint
+{
+  async,
+  sync
+};
+}
 }
 
 #endif /// GCE_ACTOR_ACTOR_FWD_HPP
