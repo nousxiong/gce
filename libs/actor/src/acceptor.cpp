@@ -72,11 +72,7 @@ void acceptor::stop()
 ///----------------------------------------------------------------------------
 void acceptor::on_recv(pack& pk, detail::send_hint)
 {
-  snd_.dispatch(
-    boost::bind(
-      &acceptor::handle_recv, this, pk
-      )
-    );
+  handle_recv(pk);
 }
 ///----------------------------------------------------------------------------
 void send_ret(acceptor* a, aid_t sire)

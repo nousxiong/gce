@@ -8,7 +8,7 @@
 ///
 
 #include <gce/actor/detail/mailbox.hpp>
-#include <gce/actor/match.hpp>
+#include <gce/actor/pattern.hpp>
 #include <gce/detail/scope.hpp>
 #include <boost/foreach.hpp>
 #include <boost/bind.hpp>
@@ -66,7 +66,7 @@ bool mailbox::pop(recv_t& src, message& msg, match_list_t const& match_list)
   return false;
 }
 ///------------------------------------------------------------------------------
-bool mailbox::pop(response_t& res, message& msg)
+bool mailbox::pop(resp_t& res, message& msg)
 {
   res_msg_list_t::iterator itr(res_msg_list_.find(res.get_id()));
   if (itr != res_msg_list_.end())
@@ -87,7 +87,7 @@ bool mailbox::pop(response_t& res, message& msg)
       {
         recv_itr rtr = *itr->second;
         msg = rtr->second;
-        res = response_t(res.get_id(), recver);
+        res = resp_t(res.get_id(), recver);
         return true;
       }
     }
@@ -98,7 +98,7 @@ bool mailbox::pop(response_t& res, message& msg)
       {
         recv_itr rtr = *itr->second.second;
         msg = rtr->second;
-        res = response_t(res.get_id(), itr->second.first);
+        res = resp_t(res.get_id(), itr->second.first);
         return true;
       }
     }
@@ -150,7 +150,7 @@ void mailbox::push(request_t req, message const& msg)
   scp.reset();
 }
 ///------------------------------------------------------------------------------
-bool mailbox::push(response_t res, message const& msg)
+bool mailbox::push(resp_t res, message const& msg)
 {
   res_msg_list_.insert(std::make_pair(res.get_id(), std::make_pair(res, msg)));
   return false;

@@ -54,16 +54,16 @@ public:
     base_type::pri_relay_svc(des, m);
   }
 
-  inline response_t request(aid_t recver, message const& m)
+  inline resp_t request(aid_t recver, message const& m)
   {
-    response_t res(base_type::new_request(), get_aid(), recver);
+    resp_t res(base_type::new_request(), get_aid(), recver);
     base_type::pri_request(res, recver, m);
     return res;
   }
 
-  inline response_t request(svcid_t recver, message const& m)
+  inline resp_t request(svcid_t recver, message const& m)
   {
-    response_t res(base_type::new_request(), get_aid(), recver);
+    resp_t res(base_type::new_request(), get_aid(), recver);
     base_type::pri_request_svc(res, recver, m);
     return res;
   }
@@ -84,7 +84,7 @@ public:
   }
 
   aid_t recv(message&, match_list_t const& match_list = match_list_t());
-  aid_t recv(response_t, message&);
+  aid_t recv(resp_t, message&);
 
 public:
   /// internal use

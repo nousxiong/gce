@@ -18,7 +18,7 @@
 #include <gce/actor/message.hpp>
 #include <gce/actor/remote.hpp>
 #include <gce/actor/spawn.hpp>
-#include <gce/actor/match.hpp>
+#include <gce/actor/pattern.hpp>
 #include <gce/actor/service.hpp>
 #include <gce/actor/response.hpp>
 #include <gce/actor/actor_id.hpp>

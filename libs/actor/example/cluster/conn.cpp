@@ -51,7 +51,7 @@ void conn::run(gce::actor<gce::stackless>& self)
     {
       GCE_YIELD
       {
-        gce::response_t res =
+        gce::resp_t res =
           gce::request(
             self, group_aid_,
             gce::atom("add_conn")
@@ -146,7 +146,7 @@ void conn::timeout::run(gce::actor<gce::stackless>& self)
       {
         msg_ = gce::message();
         sender_ = gce::aid_t();
-        GCE_YIELD self.recv(sender_, msg_, gce::match(curr_tmo_));
+        GCE_YIELD self.recv(sender_, msg_, gce::pattern(curr_tmo_));
         gce::match_t type = msg_.get_type();
         if (sender_)
         {
@@ -229,7 +229,7 @@ void conn::recv::run(
             msg_ << conn_aid_;
             GCE_YIELD
             {
-              gce::response_t res = self.request(game_svcid_, msg_);
+              gce::resp_t res = self.request(game_svcid_, msg_);
               msg_ = gce::message();
               usr_aid_ = gce::aid_t();
               self.recv(res, usr_aid_, msg_, gce::seconds_t(5));

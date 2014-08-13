@@ -40,6 +40,17 @@
 #include <array>
 #endif
 
+#ifndef AMSG_INLINE
+# ifdef _MSC_VER
+#  pragma inline_recursion(on)
+#  define AMSG_INLINE __forceinline
+# elif defined(__GNUC__)
+#  define AMSG_INLINE inline __attribute__((always_inline))
+# else
+#  define AMSG_INLINE inline
+# endif
+#endif
+
 namespace boost{ namespace amsg{
 
 	enum error_code_t
@@ -60,17 +71,17 @@ namespace boost{ namespace amsg{
 
 		}
 
-		inline error_code_t error_code() const
+		AMSG_INLINE error_code_t error_code() const
 		{
 			return m_error_code;
 		}
 
-		inline void	set_error_code(error_code_t value)
+		AMSG_INLINE void	set_error_code(error_code_t value)
 		{
 			m_error_code = value;
 		}
 
-		inline const char * message()
+		AMSG_INLINE const char * message()
 		{
 			switch(m_error_code)
 			{
@@ -92,7 +103,7 @@ namespace boost{ namespace amsg{
 			return "";
 		}
 
-		inline bool error() const // true if error
+		AMSG_INLINE bool error() const // true if error
 		{
 			return m_error_code != success;
 		}
@@ -110,21 +121,21 @@ namespace boost{ namespace amsg{
 
 		}
 
-		inline const error_string_ty& info() const { return m_error_info; }
+		AMSG_INLINE const error_string_ty& info() const { return m_error_info; }
 
-		inline void append_debug_info(const char * info)
+		AMSG_INLINE void append_debug_info(const char * info)
 		{
 			m_error_info.append(info);
 		}
 
-		inline bool bad()const { return bad(); }
+		AMSG_INLINE bool bad()const { return m_stream.bad(); }
 
-		inline std::size_t read(char * buffer,std::size_t len)
+		AMSG_INLINE std::size_t read(char * buffer,std::size_t len)
 		{
 			return m_stream.read(buffer,len);
 		}
 
-		inline std::size_t write(const char * buffer,std::size_t len)
+		AMSG_INLINE std::size_t write(const char * buffer,std::size_t len)
 		{
 			return m_stream.write(buffer,len);
 		}
@@ -135,7 +146,7 @@ namespace boost{ namespace amsg{
 	};
 
 	template<typename stream_ty>
-	store<stream_ty> make_store(stream_ty& stream)
+  AMSG_INLINE store<stream_ty> make_store(stream_ty& stream)
 	{
 		return store<stream_ty>(stream);
 	}
@@ -159,14 +170,14 @@ namespace boost{ namespace amsg{	namespace detail
 #define byte_swap_64(x) bswap_64(x)
 #else
 	template<typename _ty>
-	inline _ty byte_swap_16(_ty value)
+	AMSG_INLINE _ty byte_swap_16(_ty value)
 	{
 		value= (value>>8) | (value<<8);
 		return value;
 	}
 
 	template<typename _ty>
-	inline _ty byte_swap_32(_ty value)
+	AMSG_INLINE _ty byte_swap_32(_ty value)
 	{
 		value= ((value<<8)&0xFF00FF00) | ((value>>8)&0x00FF00FF);
 		value= (value>>16) | (value<<16);
@@ -174,7 +185,7 @@ namespace boost{ namespace amsg{	namespace detail
 	}
 
 	template<typename _ty>
-	inline _ty byte_swap_64(_ty value)
+	AMSG_INLINE _ty byte_swap_64(_ty value)
 	{
 		value= ((value<< 8)&0xFF00FF00FF00FF00ULL) | ((value>> 8)&0x00FF00FF00FF00FFULL);
 		value= ((value<<16)&0xFFFF0000FFFF0000ULL) | ((value>>16)&0x0000FFFF0000FFFFULL);
@@ -205,14 +216,14 @@ namespace boost{ namespace amsg{	namespace detail
 	struct byte_size_of_impl
 	{
 		typedef typename ::boost::remove_const<ty>::type value_type;
-		static inline std::size_t size(const value_type& value , error_code_t& error_code);
+		static AMSG_INLINE std::size_t size(const value_type& value , error_code_t& error_code);
 	};
 
 	template<typename ty , int tag>
 	struct byte_size_of_enum_impl
 	{
 		typedef ty value_type;
-		static inline std::size_t size(const value_type& value , error_code_t& error_code)
+		static AMSG_INLINE std::size_t size(const value_type& value , error_code_t& error_code)
 		{
 			int64_t temp = value;
 			return byte_size_of_impl<int64_t,tag>::size(temp,error_code);
@@ -235,7 +246,7 @@ namespace boost{ namespace amsg{	namespace detail
 	{
 		typedef ty value_type;
 
-		static inline std::size_t size(const value_type& value , error_code_t& )
+		static AMSG_INLINE std::size_t size(const value_type& value , error_code_t& )
 		{
 			if(value < const_tag_as_type)
 			{
@@ -250,7 +261,7 @@ namespace boost{ namespace amsg{	namespace detail
 	{
 		typedef ty value_type;
 
-		static inline std::size_t size(const value_type& value , error_code_t& )
+		static AMSG_INLINE std::size_t size(const value_type& value , error_code_t& )
 		{
 			if(0 <= value && value < const_tag_as_type)
 			{
@@ -289,7 +300,7 @@ namespace boost{ namespace amsg{	namespace detail
 	{
 		typedef ::boost::uint16_t value_type;
 
-		static inline std::size_t size(const value_type& value , error_code_t& )
+		static AMSG_INLINE std::size_t size(const value_type& value , error_code_t& )
 		{
 			if(value < const_tag_as_type)
 			{
@@ -297,7 +308,7 @@ namespace boost{ namespace amsg{	namespace detail
 			}
 			else
 			{
-				if(value < 0100)
+				if(value < 0x100)
 				{
 					return 2;
 				}
@@ -311,7 +322,7 @@ namespace boost{ namespace amsg{	namespace detail
 	{
 		typedef ::boost::int16_t value_type;
 
-		static inline std::size_t size(const value_type& value , error_code_t& )
+		static AMSG_INLINE std::size_t size(const value_type& value , error_code_t& )
 		{
 			if(0 <= value && value < const_tag_as_type)
 			{
@@ -338,7 +349,7 @@ namespace boost{ namespace amsg{	namespace detail
 	{
 		typedef ::boost::uint32_t value_type;
 
-		static inline std::size_t size(const value_type& value , error_code_t& )
+		static AMSG_INLINE std::size_t size(const value_type& value , error_code_t& )
 		{
 			if(value < const_tag_as_type)
 			{
@@ -346,7 +357,7 @@ namespace boost{ namespace amsg{	namespace detail
 			}
 			else
 			{
-				if(value < 0100)
+				if(value < 0x100)
 				{
 					return 2;
 				}
@@ -368,7 +379,7 @@ namespace boost{ namespace amsg{	namespace detail
 	{
 		typedef ::boost::int32_t value_type;
 
-		static inline std::size_t size(const value_type& value , error_code_t& )
+		static AMSG_INLINE std::size_t size(const value_type& value , error_code_t& )
 		{
 			if(0 <= value && value < const_tag_as_type)
 			{
@@ -403,7 +414,7 @@ namespace boost{ namespace amsg{	namespace detail
 	{
 		typedef ::boost::uint64_t value_type;
 
-		static inline std::size_t size(const value_type& value , error_code_t& )
+		static AMSG_INLINE std::size_t size(const value_type& value , error_code_t& )
 		{
 			if(value < const_tag_as_type)
 			{
@@ -411,7 +422,7 @@ namespace boost{ namespace amsg{	namespace detail
 			}
 			else
 			{
-				if(value < 0100)
+				if(value < 0x100)
 				{
 					return 2;
 				}
@@ -449,7 +460,7 @@ namespace boost{ namespace amsg{	namespace detail
 	{
 		typedef ::boost::int64_t value_type;
 
-		static inline std::size_t size(const value_type& value , error_code_t& )
+		static AMSG_INLINE std::size_t size(const value_type& value , error_code_t& )
 		{
 			if(0 <= value && value < const_tag_as_type)
 			{
@@ -500,7 +511,7 @@ namespace boost{ namespace amsg{	namespace detail
 	{
 		typedef float value_type;
 
-		static inline std::size_t size(const value_type& , error_code_t& )
+		static AMSG_INLINE std::size_t size(const value_type& , error_code_t& )
 		{
 			return sizeof(value_type);
 		}
@@ -511,7 +522,7 @@ namespace boost{ namespace amsg{	namespace detail
 	{
 		typedef double value_type;
 
-		static inline std::size_t size(const value_type& , error_code_t& )
+		static AMSG_INLINE std::size_t size(const value_type& , error_code_t& )
 		{
 			return sizeof(value_type);
 		}
@@ -522,7 +533,7 @@ namespace boost{ namespace amsg{	namespace detail
 	{
 		typedef ::std::basic_string<char, ::std::char_traits<char>, alloc_ty> value_type;
 
-		static inline std::size_t size(const value_type& value , error_code_t& error_code , ::std::size_t max = 0)
+		static AMSG_INLINE std::size_t size(const value_type& value , error_code_t& error_code , ::std::size_t max = 0)
 		{
 			::std::size_t len = value.length();
 			if(max>0&&max<len)
@@ -540,7 +551,7 @@ namespace boost{ namespace amsg{	namespace detail
 	{
 		typedef ::std::basic_string<wchar_t, ::std::char_traits<wchar_t>, alloc_ty> value_type;
 
-		static inline std::size_t size(const value_type& value , error_code_t& error_code , ::std::size_t max = 0)
+		static AMSG_INLINE std::size_t size(const value_type& value , error_code_t& error_code , ::std::size_t max = 0)
 		{
 			::std::size_t len = value.length();
 			if(max>0&&max<len)
@@ -562,7 +573,7 @@ namespace boost{ namespace amsg{	namespace detail
 	{
 		typedef ty value_type;
 
-		static inline std::size_t size(const value_type& value , error_code_t& error_code , ::std::size_t max = 0)
+		static AMSG_INLINE std::size_t size(const value_type& value , error_code_t& error_code , ::std::size_t max = 0)
 		{
 			::std::size_t len = value.size();
 			if(max>0&&max<len)
@@ -622,7 +633,7 @@ namespace boost{ namespace amsg{	namespace detail
 	{
 		typedef ty value_type;
 
-		static inline std::size_t size(const value_type& value , error_code_t& error_code , ::std::size_t max = 0)
+		static AMSG_INLINE std::size_t size(const value_type& value , error_code_t& error_code , ::std::size_t max = 0)
 		{
 			::std::size_t len = value.size();
 			if(max>0&&max<len)
@@ -662,7 +673,7 @@ namespace boost{ namespace amsg{	namespace detail
 		struct impl_type
 		{
 			typedef ty value_type;
-			static inline void read(store_ty& store_data, value_type& value, ::std::size_t max = 0);
+			static AMSG_INLINE void read(store_ty& store_data, value_type& value, ::std::size_t max = 0);
 		};
 	};
 
@@ -672,7 +683,7 @@ namespace boost{ namespace amsg{	namespace detail
 		struct impl_type
 		{
 			typedef ty value_type;
-			static inline void write(store_ty& store_data, const value_type& value, ::std::size_t max = 0);
+			static AMSG_INLINE void write(store_ty& store_data, const value_type& value, ::std::size_t max = 0);
 		};
 	};
 
@@ -680,7 +691,7 @@ namespace boost{ namespace amsg{	namespace detail
 	struct value_read_support_enum_impl
 	{
 		typedef ty value_type;
-		static inline void read(store_ty& store_data, value_type& value)
+		static AMSG_INLINE void read(store_ty& store_data, value_type& value)
 		{
 			int64_t temp;
 			value_read_support_impl<store_ty,int64_t,tag>::impl_type::read(store_data,temp);
@@ -692,7 +703,7 @@ namespace boost{ namespace amsg{	namespace detail
 	struct value_write_support_enum_impl
 	{
 		typedef ty value_type;
-		static inline void write(store_ty& store_data, const value_type& value)
+		static AMSG_INLINE void write(store_ty& store_data, const value_type& value)
 		{
 			int64_t temp = value;
 			value_write_support_impl<store_ty,int64_t,tag>::impl_type::write(store_data,temp);
@@ -725,29 +736,29 @@ namespace boost{ namespace amsg{	namespace detail
 	struct value_default_read_support_impl
 	{
 		typedef ty value_type;
-		static inline void read(store_ty& store_data, value_type& value);
+		static AMSG_INLINE void read(store_ty& store_data, value_type& value);
 	};
 
 	template<typename store_ty , typename ty>
 	struct value_default_write_support_impl
 	{
 		typedef ty value_type;
-		static inline void write(store_ty& store_data, value_type& value);
+		static AMSG_INLINE void write(store_ty& store_data, value_type& value);
 	};
 
 	template<typename store_ty,typename ty,int type_byte_size=sizeof(ty)>
 	struct value_fix_size_support_impl
 	{
 		typedef ty value_type;
-		static inline void read(store_ty& store_data, value_type& value);
-		static inline void write(store_ty& store_data, value_type& value);
+		static AMSG_INLINE void read(store_ty& store_data, value_type& value);
+		static AMSG_INLINE void write(store_ty& store_data, value_type& value);
 	};
 
 	template<typename store_ty,typename ty>
 	struct value_fix_size_support_impl<store_ty,ty,1>
 	{
 		typedef ty value_type;
-		static inline void read(store_ty& store_data, value_type& value)
+		static AMSG_INLINE void read(store_ty& store_data, value_type& value)
 		{
 			store_data.read((char*)&value,1);
 			if(store_data.bad())
@@ -756,7 +767,7 @@ namespace boost{ namespace amsg{	namespace detail
 				return;
 			}
 		}
-		static inline void write(store_ty& store_data,const value_type& value)
+		static AMSG_INLINE void write(store_ty& store_data,const value_type& value)
 		{
 			store_data.write((const char *)&value,1);
 			if(store_data.bad())
@@ -771,7 +782,7 @@ namespace boost{ namespace amsg{	namespace detail
 	struct value_fix_size_support_impl<store_ty,ty,2>
 	{
 		typedef ty value_type;
-		static inline void read(store_ty& store_data, value_type& value)
+		static AMSG_INLINE void read(store_ty& store_data, value_type& value)
 		{
 			store_data.read((char*)&value,2);
 			if(store_data.bad())
@@ -781,7 +792,7 @@ namespace boost{ namespace amsg{	namespace detail
 			}
 			value = little_endian_to_host16(value);
 		}
-		static inline void write(store_ty& store_data, const value_type& value)
+		static AMSG_INLINE void write(store_ty& store_data, const value_type& value)
 		{
 			value_type write_value = host_to_little_endian16(value);
 			store_data.write((const char *)&write_value,2);
@@ -797,7 +808,7 @@ namespace boost{ namespace amsg{	namespace detail
 	struct value_fix_size_support_impl<store_ty,ty,4>
 	{
 		typedef ty value_type;
-		static inline void read(store_ty& store_data, value_type& value)
+		static AMSG_INLINE void read(store_ty& store_data, value_type& value)
 		{
 			store_data.read((char*)&value,4);
 			if(store_data.bad())
@@ -807,7 +818,7 @@ namespace boost{ namespace amsg{	namespace detail
 			}
 			value = little_endian_to_host32(value);
 		}
-		static inline void write(store_ty& store_data,const value_type& value)
+		static AMSG_INLINE void write(store_ty& store_data,const value_type& value)
 		{
 			value_type write_value = host_to_little_endian32(value);
 			store_data.write((const char *)&write_value,4);
@@ -823,7 +834,7 @@ namespace boost{ namespace amsg{	namespace detail
 	struct value_fix_size_support_impl<store_ty,ty,8>
 	{
 		typedef ty value_type;
-		static inline void read(store_ty& store_data, value_type& value)
+		static AMSG_INLINE void read(store_ty& store_data, value_type& value)
 		{
 			store_data.read((char*)&value,8);
 			if(store_data.bad())
@@ -833,7 +844,7 @@ namespace boost{ namespace amsg{	namespace detail
 			}
 			value = little_endian_to_host64(value);
 		}
-		static inline void write(store_ty& store_data,const value_type& value)
+		static AMSG_INLINE void write(store_ty& store_data,const value_type& value)
 		{
 			value_type write_value = host_to_little_endian64(value);
 			store_data.write((const char *)&write_value,8);
@@ -849,7 +860,7 @@ namespace boost{ namespace amsg{	namespace detail
 	struct value_fix_size_read_support_impl
 	{
 		typedef ty value_type;
-		static inline void read(store_ty& store_data, value_type& value)
+		static AMSG_INLINE void read(store_ty& store_data, value_type& value)
 		{
 			value_fix_size_support_impl<store_ty,ty,sizeof(ty)>::read(store_data,value);
 		}
@@ -859,7 +870,7 @@ namespace boost{ namespace amsg{	namespace detail
 	struct value__fix_size_write_support_impl
 	{
 		typedef ty value_type;
-		static inline void write(store_ty& store_data,const value_type& value)
+		static AMSG_INLINE void write(store_ty& store_data,const value_type& value)
 		{
 			value_fix_size_support_impl<store_ty,ty,sizeof(ty)>::write(store_data,value);
 		}
@@ -869,7 +880,7 @@ namespace boost{ namespace amsg{	namespace detail
 	struct value_default_read_support_impl<store_ty,::boost::uint8_t>
 	{
 		typedef ::boost::uint8_t value_type;
-		static inline void read(store_ty& store_data, value_type& value)
+		static AMSG_INLINE void read(store_ty& store_data, value_type& value)
 		{
 			const int bytes = sizeof(value_type);
 			value_type read_value[2]={0};
@@ -909,7 +920,7 @@ namespace boost{ namespace amsg{	namespace detail
 	{
 		typedef ::boost::uint8_t value_type;
 
-		static inline void write(store_ty& store_data, const value_type& value)
+		static AMSG_INLINE void write(store_ty& store_data, const value_type& value)
 		{
 			value_type write_value[2]={0};
 			int write_bytes = 0;
@@ -938,7 +949,7 @@ namespace boost{ namespace amsg{	namespace detail
 	struct value_default_read_char_like_support_impl
 	{
 		typedef char_like_ty value_type;
-		static inline void read(store_ty& store_data, value_type& value)
+		static AMSG_INLINE void read(store_ty& store_data, value_type& value)
 		{
 			const int bytes = sizeof(value_type);
 			value_type read_value[2]={0};
@@ -985,7 +996,7 @@ namespace boost{ namespace amsg{	namespace detail
 	struct value_default_write_char_like_support_impl
 	{
 		typedef char_like_ty value_type;
-		static inline void write(store_ty& store_data, const value_type& value)
+		static AMSG_INLINE void write(store_ty& store_data, const value_type& value)
 		{
 			value_type write_value[2]={0};
 			int write_bytes = 0;
@@ -1023,7 +1034,7 @@ namespace boost{ namespace amsg{	namespace detail
 	struct value_default_read_support_impl<store_ty , ::boost::uint16_t>
 	{
 		typedef ::boost::uint16_t value_type;
-		static inline void read(store_ty& store_data, value_type& value)
+		static AMSG_INLINE void read(store_ty& store_data, value_type& value)
 		{
 			const int bytes = sizeof(value_type);
 			value_type read_value[2]={0};
@@ -1066,7 +1077,7 @@ namespace boost{ namespace amsg{	namespace detail
 	struct value_default_write_support_impl<store_ty , ::boost::uint16_t>
 	{
 		typedef ::boost::uint16_t value_type;
-		static inline void write(store_ty& store_data, const value_type& value)
+		static AMSG_INLINE void write(store_ty& store_data, const value_type& value)
 		{
 			value_type write_value[2]={0};
 			int write_bytes = 0;
@@ -1104,7 +1115,7 @@ namespace boost{ namespace amsg{	namespace detail
 	struct value_default_read_support_impl<store_ty , ::boost::int16_t>
 	{
 		typedef ::boost::int16_t value_type;
-		static inline void read(store_ty& store_data, value_type& value)
+		static AMSG_INLINE void read(store_ty& store_data, value_type& value)
 		{
 			const int bytes = sizeof(value_type);
 			value_type read_value[2]={0};
@@ -1153,7 +1164,7 @@ namespace boost{ namespace amsg{	namespace detail
 	struct value_default_write_support_impl<store_ty , ::boost::int16_t>
 	{
 		typedef ::boost::int16_t value_type;
-		static inline void write(store_ty& store_data, const value_type& value)
+		static AMSG_INLINE void write(store_ty& store_data, const value_type& value)
 		{
 			value_type write_value[2]={0};
 			int write_bytes = 0;
@@ -1198,7 +1209,7 @@ namespace boost{ namespace amsg{	namespace detail
 	struct value_default_read_support_impl<store_ty , ::boost::uint32_t>
 	{
 		typedef ::boost::uint32_t value_type;
-		static inline void read(store_ty& store_data, value_type& value)
+		static AMSG_INLINE void read(store_ty& store_data, value_type& value)
 		{
 			const int bytes = sizeof(value_type);
 			value_type read_value[2]={0};
@@ -1241,7 +1252,7 @@ namespace boost{ namespace amsg{	namespace detail
 	struct value_default_write_support_impl<store_ty , ::boost::uint32_t>
 	{
 		typedef ::boost::uint32_t value_type;
-		static inline void write(store_ty& store_data, const value_type& value)
+		static AMSG_INLINE void write(store_ty& store_data, const value_type& value)
 		{
 			value_type write_value[2]={0};
 			int write_bytes = 0;
@@ -1287,7 +1298,7 @@ namespace boost{ namespace amsg{	namespace detail
 	struct value_default_read_support_impl<store_ty , ::boost::int32_t>
 	{
 		typedef ::boost::int32_t value_type;
-		static inline void read(store_ty& store_data, value_type& value)
+		static AMSG_INLINE void read(store_ty& store_data, value_type& value)
 		{
 			const int bytes = sizeof(value_type);
 			value_type read_value[2]={0};
@@ -1336,7 +1347,7 @@ namespace boost{ namespace amsg{	namespace detail
 	struct value_default_write_support_impl<store_ty , ::boost::int32_t>
 	{
 		typedef ::boost::int32_t value_type;
-		static inline void write(store_ty& store_data, const value_type& value)
+		static AMSG_INLINE void write(store_ty& store_data, const value_type& value)
 		{
 			value_type write_value[2]={0};
 			int write_bytes = 0;
@@ -1389,7 +1400,7 @@ namespace boost{ namespace amsg{	namespace detail
 	struct value_default_read_support_impl<store_ty , ::boost::uint64_t>
 	{
 		typedef ::boost::uint64_t value_type;
-		static inline void read(store_ty& store_data, value_type& value)
+		static AMSG_INLINE void read(store_ty& store_data, value_type& value)
 		{
 			const int bytes = sizeof(value_type);
 			value_type read_value[2]={0};
@@ -1431,7 +1442,7 @@ namespace boost{ namespace amsg{	namespace detail
 	struct value_default_write_support_impl<store_ty , ::boost::uint64_t>
 	{
 		typedef ::boost::uint64_t value_type;
-		static inline void write(store_ty& store_data, const value_type& value)
+		static AMSG_INLINE void write(store_ty& store_data, const value_type& value)
 		{
 			value_type write_value[2]={0};
 			int write_bytes = 0;
@@ -1493,7 +1504,7 @@ namespace boost{ namespace amsg{	namespace detail
 	struct value_default_read_support_impl<store_ty , ::boost::int64_t>
 	{
 		typedef ::boost::int64_t value_type;
-		static inline void read(store_ty& store_data, value_type& value)
+		static AMSG_INLINE void read(store_ty& store_data, value_type& value)
 		{
 			const int bytes = sizeof(value_type);
 			value_type read_value[2]={0};
@@ -1542,7 +1553,7 @@ namespace boost{ namespace amsg{	namespace detail
 	struct value_default_write_support_impl<store_ty , ::boost::int64_t>
 	{
 		typedef ::boost::int64_t value_type;
-		static inline void write(store_ty& store_data, const value_type& value)
+		static AMSG_INLINE void write(store_ty& store_data, const value_type& value)
 		{
 			value_type write_value[2]={0};
 			int write_bytes = 0;
@@ -1722,7 +1733,7 @@ namespace boost{ namespace amsg{	namespace detail
 		struct impl_type
 		{
 			typedef float value_type;
-			static inline void read(store_ty& store_data, value_type& value)
+			static AMSG_INLINE void read(store_ty& store_data, value_type& value)
 			{
 				store_data.read((char*)&value, sizeof(value_type));
 				if (store_data.bad())
@@ -1740,7 +1751,7 @@ namespace boost{ namespace amsg{	namespace detail
 		struct impl_type
 		{
 			typedef float value_type;
-			static inline void write(store_ty& store_data, const value_type& value)
+			static AMSG_INLINE void write(store_ty& store_data, const value_type& value)
 			{
 				store_data.write((const char*)&value, sizeof(value_type));
 				if (store_data.bad())
@@ -1758,7 +1769,7 @@ namespace boost{ namespace amsg{	namespace detail
 		struct impl_type
 		{
 			typedef double value_type;
-			static inline void read(store_ty& store_data, value_type& value)
+			static AMSG_INLINE void read(store_ty& store_data, value_type& value)
 			{
 				store_data.read((char*)&value, sizeof(value_type));
 				if (store_data.bad())
@@ -1776,7 +1787,7 @@ namespace boost{ namespace amsg{	namespace detail
 		struct impl_type
 		{
 			typedef double value_type;
-			static inline void write(store_ty& store_data, const value_type& value)
+			static AMSG_INLINE void write(store_ty& store_data, const value_type& value)
 			{
 				store_data.write((const char*)&value, sizeof(value_type));
 				if (store_data.bad())
@@ -1788,7 +1799,7 @@ namespace boost{ namespace amsg{	namespace detail
 		};
 	};
 
-	static size_t to_str( const ::boost::uint32_t& Value , char * resultbuffer , size_t len)
+  static AMSG_INLINE size_t to_str(const ::boost::uint32_t& Value, char * resultbuffer, size_t len)
 	{
 		::boost::uint32_t temp = Value;
 		resultbuffer[len-1] = 0;
@@ -2327,7 +2338,7 @@ namespace boost{ namespace amsg{	namespace detail
 	};
 
 	template<typename ty>
-	inline smax_valid<ty> operator & (ty& value,const smax& sm)
+	AMSG_INLINE smax_valid<ty> operator & (ty& value,const smax& sm)
 	{
 		smax_valid<ty> valid(sm.size,value);
 		return valid;
@@ -2339,14 +2350,14 @@ namespace boost{ namespace amsg{	namespace detail
 		struct impl_type
 		{
 			typedef smax_valid<ty> value_type;
-			static inline void read(store_ty& store_data, const value_type& value)
+			static AMSG_INLINE void read(store_ty& store_data, const value_type& value)
 			{
 				typedef typename ::boost::remove_const<ty>::type ref_type;
 				value_read_support<store_ty, ref_type, tag>::impl_type::read(store_data, value.obj, value.size);
 			}
 		};
 		typedef smax_valid<ty> value_type;
-		static inline void read(store_ty& store_data,const value_type& value)
+		static AMSG_INLINE void read(store_ty& store_data,const value_type& value)
 		{
 			typedef typename ::boost::remove_const<ty>::type ref_type;
 			value_read_support<store_ty,ref_type,tag>::impl_type::read(store_data,value.obj,value.size);
@@ -2359,14 +2370,14 @@ namespace boost{ namespace amsg{	namespace detail
 		struct impl_type
 		{
 			typedef smax_valid<ty> value_type;
-			static inline void write(store_ty& store_data, const value_type& value)
+			static AMSG_INLINE void write(store_ty& store_data, const value_type& value)
 			{
 				typedef typename ::boost::remove_const<ty>::type ref_type;
 				value_write_support<store_ty, ref_type, tag>::impl_type::write(store_data, value.obj, value.size);
 			}
 		};
 		typedef smax_valid<ty> value_type;
-		static inline void write(store_ty& store_data,const value_type& value)
+		static AMSG_INLINE void write(store_ty& store_data,const value_type& value)
 		{
 			typedef typename ::boost::remove_const<ty>::type ref_type;
 			value_write_support<store_ty,ref_type,tag>::impl_type::write(store_data,value.obj,value.size);
@@ -2378,7 +2389,7 @@ namespace boost{ namespace amsg{	namespace detail
 	{
 		typedef smax_valid<ty> value_type;
 
-		static inline std::size_t size(const value_type& value , error_code_t& error_code)
+		static AMSG_INLINE std::size_t size(const value_type& value , error_code_t& error_code)
 		{
 			typedef typename ::boost::remove_const<ty>::type ref_type;
 			return byte_size_of<ref_type,tag>::impl_type::size(value.obj , error_code , value.size);
@@ -2412,7 +2423,7 @@ namespace boost{ namespace amsg{	namespace detail
 	}
 
 	template<typename ty>
-	inline sfix_op<ty> operator & (ty& value,const sfix_def&)
+	AMSG_INLINE sfix_op<ty> operator & (ty& value,const sfix_def&)
 	{
 		sfix_op<ty> op(value);
 		return op;
@@ -2424,7 +2435,7 @@ namespace boost{ namespace amsg{	namespace detail
 		struct impl_type
 		{
 			typedef sfix_op<ty> value_type;
-			static inline void read(store_ty& store_data, const value_type& value)
+			static AMSG_INLINE void read(store_ty& store_data, const value_type& value)
 			{
 				typedef typename ::boost::remove_const<ty>::type ref_type;
 				value_fix_size_read_support_impl<store_ty, ref_type>::read(store_data, value.obj);
@@ -2438,14 +2449,14 @@ namespace boost{ namespace amsg{	namespace detail
 		struct impl_type
 		{
 			typedef sfix_op<ty> value_type;
-			static inline void write(store_ty& store_data, const value_type& value)
+			static AMSG_INLINE void write(store_ty& store_data, const value_type& value)
 			{
 				typedef typename ::boost::remove_const<ty>::type ref_type;
 				value__fix_size_write_support_impl<store_ty, ref_type>::write(store_data, value.obj);
 			}
 		};
 		typedef sfix_op<ty> value_type;
-		static inline void write(store_ty& store_data,const value_type& value)
+		static AMSG_INLINE void write(store_ty& store_data,const value_type& value)
 		{
 			typedef typename ::boost::remove_const<ty>::type ref_type;
 			value__fix_size_write_support_impl<store_ty,ref_type>::write(store_data,value.obj);
@@ -2457,7 +2468,7 @@ namespace boost{ namespace amsg{	namespace detail
 	{
 		typedef sfix_op<ty> value_type;
 
-		static inline std::size_t size(const value_type& , error_code_t&)
+		static AMSG_INLINE std::size_t size(const value_type& , error_code_t&)
 		{
 			typedef typename ::boost::remove_const<ty>::type ref_type;
 			return sizeof(ref_type);
@@ -2466,49 +2477,49 @@ namespace boost{ namespace amsg{	namespace detail
 
 }
 template <int tag , typename store_ty , typename ty>
-inline void read_x(store_ty& store_data, ty& value)
+AMSG_INLINE void read_x(store_ty& store_data, ty& value)
 {
 	::boost::amsg::detail::value_read_support<store_ty,ty,tag>::impl_type::read(store_data,value);
 }
 
 template <int tag , typename store_ty , typename ty>
-inline void read_x(store_ty& store_data, const ty& value)
+AMSG_INLINE void read_x(store_ty& store_data, const ty& value)
 {
 	::boost::amsg::detail::value_read_support<store_ty,ty,tag>::impl_type::read(store_data,value);
 }
 
 template <int tag , typename store_ty , typename ty>
-inline void write_x(store_ty& store_data,const ty& value)
+AMSG_INLINE void write_x(store_ty& store_data,const ty& value)
 {
 	::boost::amsg::detail::value_write_support<store_ty,ty,tag>::impl_type::write(store_data,value);
 }
 
 template <typename store_ty , typename ty>
-inline void read(store_ty& store_data, ty& value)
+AMSG_INLINE void read(store_ty& store_data, ty& value)
 {
 	::boost::amsg::detail::value_read_support<store_ty,ty,0>::impl_type::read(store_data,value);
 }
 
 template <typename store_ty , typename ty>
-inline void read(store_ty& store_data, const ty& value)
+AMSG_INLINE void read(store_ty& store_data, const ty& value)
 {
 	::boost::amsg::detail::value_read_support<store_ty,ty,0>::impl_type::read(store_data,value);
 }
 
 template <typename store_ty , typename ty>
-inline void write(store_ty& store_data,const ty& value)
+AMSG_INLINE void write(store_ty& store_data,const ty& value)
 {
 	::boost::amsg::detail::value_write_support<store_ty,ty,0>::impl_type::write(store_data,value);
 }
 
 template <int tag , typename ty>
-inline ::std::size_t size_of_x(const ty& value , error_code_t& error_code)
+AMSG_INLINE ::std::size_t size_of_x(const ty& value , error_code_t& error_code)
 {
 	return ::boost::amsg::detail::byte_size_of<ty,tag>::impl_type::size(value,error_code);
 }
 
 template <typename ty>
-inline ::std::size_t size_of(const ty& value , error_code_t& error_code)
+AMSG_INLINE ::std::size_t size_of(const ty& value , error_code_t& error_code)
 {
 	return ::boost::amsg::detail::byte_size_of<ty,0>::impl_type::size(value,error_code);
 }
@@ -2539,7 +2550,7 @@ struct value_read_support_impl<store_ty,TYPE,tag>	\
 	struct impl_type\
 	{\
 		typedef TYPE value_type;\
-		static inline void read(store_ty& store_data, value_type& value)\
+		static AMSG_INLINE void read(store_ty& store_data, value_type& value)\
 		{\
 			BOOST_PP_SEQ_FOR_EACH( AMSG_READ_MEMBER_X , value , MEMBERS ) \
 		}\
@@ -2551,7 +2562,7 @@ struct value_write_support_impl<store_ty,TYPE,tag>	\
 	struct impl_type\
 	{\
 		typedef TYPE value_type;\
-		static inline void write(store_ty& store_data, const value_type& value)\
+		static AMSG_INLINE void write(store_ty& store_data, const value_type& value)\
 		{\
 			BOOST_PP_SEQ_FOR_EACH( AMSG_WRITE_MEMBER_X , value , MEMBERS ) \
 		}\
@@ -2561,7 +2572,7 @@ struct value_write_support_impl<store_ty,TYPE,tag>	\
 struct byte_size_of_impl<TYPE,tag>	\
 {\
 	typedef TYPE value_type;\
-	static inline ::std::size_t size(const value_type& value , ::boost::amsg::error_code_t& error_code)\
+	static AMSG_INLINE ::std::size_t size(const value_type& value , ::boost::amsg::error_code_t& error_code)\
 {\
 	::std::size_t size = 0;\
 	BOOST_PP_SEQ_FOR_EACH( AMSG_SIZE_MEMBER_X , value , MEMBERS ) \

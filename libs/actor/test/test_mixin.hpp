@@ -30,7 +30,7 @@ private:
   {
     actor<threaded> a = spawn(ctx);
     std::size_t size = 10;
-    std::vector<response_t> res_list(size);
+    std::vector<resp_t> res_list(size);
     for (std::size_t i=0; i<size; ++i)
     {
       aid_t aid =

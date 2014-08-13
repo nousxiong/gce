@@ -22,14 +22,13 @@ class spawn_t
 public:
   spawn_t()
     : type_(spw_nil)
-    , func_(match_nil)
     , ctxid_(ctxid_nil)
     , stack_size_(0)
   {
   }
 
   spawn_t(
-    spawn_type type, match_t func, match_t ctxid,
+    spawn_type type, std::string const& func, match_t ctxid,
     std::size_t stack_size, sid_t sid, aid_t aid
     )
     : type_(type)
@@ -47,7 +46,7 @@ public:
 
 public:
   inline spawn_type get_type() const { return type_; }
-  inline match_t get_func() const { return func_; }
+  inline std::string const& get_func() const { return func_; }
   inline match_t get_ctxid() const { return ctxid_; }
   inline std::size_t get_stack_size() const { return stack_size_; }
   inline sid_t get_id() const { return sid_; }
@@ -55,7 +54,7 @@ public:
 
 private:
   spawn_type type_;
-  match_t func_;
+  std::string func_;
   match_t ctxid_;
   std::size_t stack_size_;
   sid_t sid_;

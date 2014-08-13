@@ -36,6 +36,9 @@ enum actor_type
   actor_nonblocked,
   actor_socket,
   actor_acceptor,
+#ifdef GCE_LUA
+  actor_lua,
+#endif
 
   actor_num
 };

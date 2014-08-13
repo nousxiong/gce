@@ -34,6 +34,9 @@ class coroutine_stackful_actor;
 class thread_mapped_actor;
 class coroutine_stackless_actor;
 class nonblocking_actor;
+#ifdef GCE_LUA
+class lua_actor;
+#endif
 namespace detail
 {
 class socket;
@@ -46,7 +49,7 @@ static match_t const tag_spawn_t = atom("gce_spw_t");
 static match_t const tag_spawn_ret_t = atom("gce_spw_ret_t");
 
 typedef boost::variant<
-  aid_t, request_t, response_t, link_t, exit_t,
+  aid_t, request_t, resp_t, link_t, exit_t,
   fwd_link_t, fwd_exit_t, spawn_t, spawn_ret_t
   > tag_t;
 }
@@ -162,7 +165,7 @@ public:
   inline std::size_t size() const { return buf_.write_size(); }
   inline match_t get_type() const { return type_; }
   inline boost::uint32_t get_tag_offset() const { return tag_offset_; }
-  inline void set_type(match_t type) { type_ = type; }
+  inline void set_type(match_type type) { type_ = type; }
 
   template <typename T>
   message& operator<<(T const& t)
@@ -333,6 +336,22 @@ public:
     return *this;
   }
 
+#ifdef GCE_LUA
+  message& operator<<(duration_type const& dur)
+  {
+    *this << dur.dur_.count();
+    return *this;
+  }
+
+  message& operator>>(duration_type& dur)
+  {
+    duration_t::rep c;
+    *this >> c;
+    dur = duration_type(duration_t(c));
+    return *this;
+  }
+#endif
+
   template <typename Clock>
   message& operator<<(boost::chrono::time_point<Clock, typename Clock::duration> const& tp)
   {
@@ -397,6 +416,26 @@ public:
     return buf_.data() == small_;
   }
 
+#ifdef GCE_LUA
+  inline int get_overloading_type() const
+  {
+    return (int)detail::overloading_1;
+  }
+
+  inline std::string to_string()
+  {
+    std::string rt;
+    rt += "<";
+    rt += gce::atom(get_type());
+    rt += ".";
+    rt += boost::lexical_cast<std::string>(size());
+    rt += ">";
+    return rt;
+  }
+
+  GCE_LUA_SERIALIZE_FUNC
+#endif
+
 private:
   void push_tag(
     detail::tag_t& tag, aid_t recver,
@@ -422,7 +461,7 @@ private:
       *this << detail::tag_exit_t <<
         ex->get_code() << ex->get_aid();
     }
-    else if (response_t* res = boost::get<response_t>(&tag))
+    else if (resp_t* res = boost::get<resp_t>(&tag))
     {
       *this << detail::tag_response_t <<
         res->get_id() << res->get_aid();
@@ -490,12 +529,12 @@ private:
         sid_t id;
         aid_t aid;
         *this >> id >> aid;
-        tag = response_t(id, aid);
+        tag = resp_t(id, aid);
       }
       else if (tag_type == detail::tag_spawn_t)
       {
         boost::uint16_t type;
-        match_t func;
+        std::string func;
         match_t ctxid;
         std::size_t stack_size;
         sid_t sid;
@@ -585,9 +624,20 @@ private:
   friend class thread_mapped_actor;
   friend class coroutine_stackless_actor;
   friend class nonblocking_actor;
+#ifdef GCE_LUA
+  friend class lua_actor;
+#endif
   friend class detail::socket;
   detail::request_t req_;
 };
+
+typedef message msg_t;
+#ifdef GCE_LUA
+inline msg_t lua_msg()
+{
+  return msg_t();
+}
+#endif
 }
 
 template<typename CharT, typename TraitsT>

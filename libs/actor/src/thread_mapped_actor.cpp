@@ -74,9 +74,9 @@ void thread_mapped_actor::relay(svcid_t des, message& m)
     );
 }
 ///----------------------------------------------------------------------------
-response_t thread_mapped_actor::request(aid_t recver, message const& m)
+resp_t thread_mapped_actor::request(aid_t recver, message const& m)
 {
-  response_t res(base_type::new_request(), get_aid(), recver);
+  resp_t res(base_type::new_request(), get_aid(), recver);
   snd_.post(
     boost::bind(
       &base_type::pri_request, this,
@@ -86,9 +86,9 @@ response_t thread_mapped_actor::request(aid_t recver, message const& m)
   return res;
 }
 ///----------------------------------------------------------------------------
-response_t thread_mapped_actor::request(svcid_t recver, message const& m)
+resp_t thread_mapped_actor::request(svcid_t recver, message const& m)
 {
-  response_t res(base_type::new_request(), get_aid(), recver);
+  resp_t res(base_type::new_request(), get_aid(), recver);
   snd_.post(
     boost::bind(
       &base_type::pri_request_svc, this,
@@ -125,7 +125,7 @@ void thread_mapped_actor::monitor(aid_t target)
     );
 }
 ///----------------------------------------------------------------------------
-aid_t thread_mapped_actor::recv(message& msg, match const& mach)
+aid_t thread_mapped_actor::recv(message& msg, pattern const& patt)
 {
   recv_promise_t p;
   recv_future_t f = p.get_future();
@@ -133,7 +133,7 @@ aid_t thread_mapped_actor::recv(message& msg, match const& mach)
   snd_.post(
     boost::bind(
       &thread_mapped_actor::try_recv, this,
-      boost::ref(p), boost::cref(mach)
+      boost::ref(p), boost::cref(patt)
       )
     );
 
@@ -160,7 +160,7 @@ aid_t thread_mapped_actor::recv(message& msg, match const& mach)
   return sender;
 }
 ///----------------------------------------------------------------------------
-aid_t thread_mapped_actor::recv(response_t res, message& msg, duration_t tmo)
+aid_t thread_mapped_actor::recv(resp_t res, message& msg, duration_t tmo)
 {
   res_promise_t p;
   res_future_t f = p.get_future();
@@ -210,7 +210,7 @@ void thread_mapped_actor::on_recv(detail::pack& pk, detail::send_hint hint)
 }
 ///----------------------------------------------------------------------------
 sid_t thread_mapped_actor::spawn(
-  detail::spawn_type type, match_t func, 
+  detail::spawn_type type, std::string const& func, 
   match_t ctxid, std::size_t stack_size
   )
 {
@@ -224,12 +224,12 @@ sid_t thread_mapped_actor::spawn(
   return sid;
 }
 ///----------------------------------------------------------------------------
-void thread_mapped_actor::try_recv(recv_promise_t& p, match const& mach)
+void thread_mapped_actor::try_recv(recv_promise_t& p, pattern const& patt)
 {
   std::pair<detail::recv_t, message> rcv;
-  if (!mb_.pop(rcv.first, rcv.second, mach.match_list_))
+  if (!mb_.pop(rcv.first, rcv.second, patt.match_list_))
   {
-    duration_t tmo = mach.timeout_;
+    duration_t tmo = patt.timeout_;
     if (tmo > zero)
     {
       if (tmo < infin)
@@ -237,7 +237,7 @@ void thread_mapped_actor::try_recv(recv_promise_t& p, match const& mach)
         start_recv_timer(tmo, p);
       }
       recv_p_ = &p;
-      curr_match_ = mach;
+      curr_pattern_ = patt;
       return;
     }
   }
@@ -245,9 +245,9 @@ void thread_mapped_actor::try_recv(recv_promise_t& p, match const& mach)
   p.set_value(rcv);
 }
 ///----------------------------------------------------------------------------
-void thread_mapped_actor::try_response(res_promise_t& p, response_t res, duration_t tmo)
+void thread_mapped_actor::try_response(res_promise_t& p, resp_t res, duration_t tmo)
 {
-  std::pair<response_t, message> res_pr;
+  std::pair<resp_t, message> res_pr;
   res_pr.first = res;
   if (!mb_.pop(res_pr.first, res_pr.second))
   {
@@ -301,7 +301,7 @@ void thread_mapped_actor::handle_recv_timeout(
     /// timed out
     BOOST_ASSERT(&p == recv_p_);
     recv_p_ = 0;
-    curr_match_.clear();
+    curr_pattern_.clear();
     std::pair<detail::recv_t, message> rcv;
     p.set_value(rcv);
   }
@@ -316,8 +316,8 @@ void thread_mapped_actor::handle_res_timeout(
     /// timed out
     BOOST_ASSERT(&p == res_p_);
     res_p_ = 0;
-    recving_res_ = response_t();
-    std::pair<response_t, message> res_pr;
+    recving_res_ = resp_t();
+    std::pair<resp_t, message> res_pr;
     p.set_value(res_pr);
   }
 }
@@ -344,7 +344,7 @@ void thread_mapped_actor::handle_recv(detail::pack& pk)
     mb_.push(*ex, pk.msg_);
     base_type::remove_link(ex->get_aid());
   }
-  else if (response_t* res = boost::get<response_t>(&pk.tag_))
+  else if (resp_t* res = boost::get<resp_t>(&pk.tag_))
   {
     is_response = true;
     mb_.push(*res, pk.msg_);
@@ -360,14 +360,14 @@ void thread_mapped_actor::handle_recv(detail::pack& pk)
   {
     if (recv_p_ && !is_response)
     {
-      bool ret = mb_.pop(rcv, msg, curr_match_.match_list_);
+      bool ret = mb_.pop(rcv, msg, curr_pattern_.match_list_);
       if (!ret)
       {
         return;
       }
       recv_p_->set_value(std::make_pair(rcv, msg));
       recv_p_ = 0;
-      curr_match_.clear();
+      curr_pattern_.clear();
     }
 
     if (res_p_ && is_response)
@@ -380,7 +380,7 @@ void thread_mapped_actor::handle_recv(detail::pack& pk)
       }
       res_p_->set_value(std::make_pair(recving_res_, msg));
       res_p_ = 0;
-      recving_res_ = response_t();
+      recving_res_ = resp_t();
     }
 
     ++tmr_sid_;

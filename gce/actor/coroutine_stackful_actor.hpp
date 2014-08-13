@@ -12,8 +12,7 @@
 
 #include <gce/actor/config.hpp>
 #include <gce/actor/basic_actor.hpp>
-#include <gce/actor/actor_fwd.hpp>
-#include <gce/actor/match.hpp>
+#include <gce/actor/pattern.hpp>
 #include <gce/actor/detail/mailbox_fwd.hpp>
 
 namespace gce
@@ -25,7 +24,6 @@ class mailbox;
 }
 class thread_mapped_actor;
 class context;
-class response_t;
 
 template <class> class actor;
 
@@ -67,16 +65,16 @@ public:
     base_type::pri_relay_svc(des, m);
   }
 
-  inline response_t request(aid_t recver, message const& m)
+  inline resp_t request(aid_t recver, message const& m)
   {
-    response_t res(base_type::new_request(), get_aid(), recver);
+    resp_t res(base_type::new_request(), get_aid(), recver);
     base_type::pri_request(res, recver, m);
     return res;
   }
 
-  inline response_t request(svcid_t recver, message const& m)
+  inline resp_t request(svcid_t recver, message const& m)
   {
-    response_t res(base_type::new_request(), get_aid(), recver);
+    resp_t res(base_type::new_request(), get_aid(), recver);
     base_type::pri_request_svc(res, recver, m);
     return res;
   }
@@ -104,9 +102,9 @@ public:
   ~coroutine_stackful_actor();
 
 public:
-  aid_t recv(message&, match const& mach = match());
+  aid_t recv(message&, pattern const& patt = pattern());
   aid_t recv(
-    response_t, message&, 
+    resp_t, message&, 
     duration_t tmo = seconds_t(GCE_DEFAULT_REQUEST_TIMEOUT_SEC)
     );
   void wait(duration_t);
@@ -120,7 +118,7 @@ public:
   void init(func_t const& f);
   void on_recv(detail::pack&, detail::send_hint);
 
-  inline sid_t spawn(detail::spawn_type type, match_t func, match_t ctxid, std::size_t stack_size)
+  inline sid_t spawn(detail::spawn_type type, std::string const& func, match_t ctxid, std::size_t stack_size)
   {
     sid_t sid = base_type::new_request();
     base_type::pri_spawn(sid, type, func, ctxid, stack_size);
@@ -150,9 +148,9 @@ private:
   bool recving_;
   bool responsing_;
   detail::recv_t recving_rcv_;
-  response_t recving_res_;
+  resp_t recving_res_;
   message recving_msg_;
-  match curr_match_;
+  pattern curr_pattern_;
   timer_t tmr_;
   std::size_t tmr_sid_;
   yield_t* yld_;

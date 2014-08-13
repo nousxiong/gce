@@ -111,7 +111,7 @@ private:
       aid_t first_id;
       for (std::size_t i=0; i<root_num; ++i)
       {
-        aid_t aid = spawn(base, atom("my_actor"), i);
+        aid_t aid = spawn(base, "my_actor", i);
         send(base, aid, atom("init"), last_id);
         if (i == 0)
         {
@@ -121,7 +121,7 @@ private:
       }
 
       int i = 0;
-      response_t res = request(base, last_id, atom("hi"), i);
+      resp_t res = request(base, last_id, atom("hi"), i);
       message msg;
       aid_t sender = base.recv(res, msg);
       BOOST_ASSERT(sender == first_id);

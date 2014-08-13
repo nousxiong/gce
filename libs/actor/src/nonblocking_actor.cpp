@@ -66,7 +66,7 @@ aid_t nonblocking_actor::recv(message& msg, match_list_t const& match_list)
   return sender;
 }
 ///----------------------------------------------------------------------------
-aid_t nonblocking_actor::recv(response_t res, message& msg)
+aid_t nonblocking_actor::recv(resp_t res, message& msg)
 {
   aid_t sender;
 
@@ -246,7 +246,7 @@ void nonblocking_actor::handle_recv(detail::pack& pk)
     mb_.push(*ex, pk.msg_);
     base_type::remove_link(ex->get_aid());
   }
-  else if (response_t* res = boost::get<response_t>(&pk.tag_))
+  else if (resp_t* res = boost::get<resp_t>(&pk.tag_))
   {
     is_response = true;
     mb_.push(*res, pk.msg_);

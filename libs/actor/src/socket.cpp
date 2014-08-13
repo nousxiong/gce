@@ -108,11 +108,7 @@ void socket::stop()
 ///----------------------------------------------------------------------------
 void socket::on_recv(pack& pk, detail::send_hint)
 {
-  snd_.dispatch(
-    boost::bind(
-      &socket::handle_recv, this, pk
-      )
-    );
+  handle_recv(pk);
 }
 ///----------------------------------------------------------------------------
 void socket::handle_net_msg(message& msg)
@@ -192,21 +188,42 @@ void socket::handle_net_msg(message& msg)
     else
     {
       /// spawn actor
-      remote_list_t::iterator itr(remote_list_.find(spw->get_func()));
-      if (itr == remote_list_.end())
+      spawn_type sty = spw->get_type();
+      if (sty == spw_stacked || sty == spw_evented)
       {
-        send_spawn_ret(spw, pk, spawn_func_not_found, aid_t(), true);
+        match_t func = gce::atom(spw->get_func().c_str());
+        remote_list_t::iterator itr(remote_list_.find(func));
+        if (itr == remote_list_.end())
+        {
+          send_spawn_ret(spw, pk, spawn_func_not_found, aid_t(), true);
+        }
+        else
+        {
+          context& ctx = user_->get_context();
+          cache_pool* user = ctx.select_cache_pool();
+          user->get_strand().post(
+            boost::bind(
+              &socket::spawn_remote_actor, this,
+              user, *spw, itr->second
+              )
+            );
+        }
       }
       else
       {
-        context& ctx = user_->get_context();
-        cache_pool* user = ctx.select_cache_pool();
-        user->get_strand().post(
-          boost::bind(
-            &socket::spawn_remote_actor, this,
-            user, *spw, itr->second
-            )
-          );
+#ifdef GCE_LUA
+        if (sty == spw_luaed)
+        {
+          context& ctx = user_->get_context();
+          cache_pool* user = ctx.select_cache_pool();
+          user->get_strand().post(
+            boost::bind(
+              &socket::spawn_remote_lua_actor, this,
+              user, *spw, spw->get_func()
+              )
+            );
+        }
+#endif
       }
     }
   }
@@ -250,7 +267,7 @@ void socket::handle_net_msg(message& msg)
         if (!skt && !is_svc)
         {
           /// reply actor exit msg
-          response_t res(req->get_id(), pk.recver_);
+          resp_t res(req->get_id(), pk.recver_);
           user_->send_already_exited(req->get_aid(), res);
         }
       }
@@ -291,11 +308,28 @@ void socket::spawn_remote_actor(cache_pool* user, spawn_t spw, remote_func f)
       )
     );
 }
+#ifdef GCE_LUA
+///----------------------------------------------------------------------------
+void socket::spawn_remote_lua_actor(cache_pool* user, spawn_t spw, std::string const& script)
+{
+  aid_t aid = user->spawn_lua_actor(script, aid_t(), no_link);
+  user_->get_strand().post(
+    boost::bind(
+      &socket::end_spawn_remote_actor, this, spw, aid
+      )
+    );
+}
+#endif
 ///----------------------------------------------------------------------------
 void socket::end_spawn_remote_actor(spawn_t spw, aid_t aid)
 {
   pack pk;
-  send_spawn_ret(&spw, pk, spawn_ok, aid, false);
+  spawn_error err = spawn_ok;
+  if (!aid)
+  {
+    err = spawn_func_not_found;
+  }
+  send_spawn_ret(&spw, pk, err, aid, false);
 }
 ///----------------------------------------------------------------------------
 void socket::send_spawn_ret(

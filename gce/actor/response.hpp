@@ -15,14 +15,14 @@
 
 namespace gce
 {
-class response_t
+class response
 {
 public:
-  response_t() : id_(sid_nil) {}
-  response_t(sid_t id, aid_t aid) : id_(id), aid_(aid){}
-  response_t(sid_t id, aid_t aid, aid_t recver) : id_(id), aid_(aid), recver_(recver) {}
-  response_t(sid_t id, aid_t aid, svcid_t svc) : id_(id), aid_(aid), svc_(svc) {}
-  ~response_t() {}
+  response() : id_(sid_nil) {}
+  response(sid_t id, aid_t aid) : id_(id), aid_(aid){}
+  response(sid_t id, aid_t aid, aid_t recver) : id_(id), aid_(aid), recver_(recver) {}
+  response(sid_t id, aid_t aid, svcid_t svc) : id_(id), aid_(aid), svc_(svc) {}
+  ~response() {}
 
 public:
   inline bool valid() const { return id_ != sid_nil; }
@@ -33,6 +33,26 @@ public:
   inline aid_t get_recver() const { return recver_; }
   inline svcid_t get_svcid() const { return svc_; }
 
+#ifdef GCE_LUA
+  /// internal use
+  inline int get_overloading_type() const
+  {
+    return (int)detail::overloading_1;
+  }
+
+  inline std::string to_string()
+  {
+    std::string rt;
+    rt += "<";
+    rt += boost::lexical_cast<std::string>(id_);
+    rt += ".";
+    rt += aid_.to_string();
+    rt += ">";
+    return rt;
+  }
+
+#endif
+
 private:
   sid_t id_;
   aid_t aid_;
@@ -41,6 +61,8 @@ private:
   aid_t recver_;
   svcid_t svc_;
 };
+
+typedef response resp_t;
 }
 
 #endif /// GCE_ACTOR_RESPONSE_HPP

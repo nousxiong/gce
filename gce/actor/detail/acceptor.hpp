@@ -17,7 +17,7 @@
 #include <gce/actor/net_option.hpp>
 #include <gce/actor/detail/basic_socket.hpp>
 #include <gce/actor/detail/pack.hpp>
-#include <gce/actor/match.hpp>
+#include <gce/actor/pattern.hpp>
 #include <boost/scoped_ptr.hpp>
 #include <map>
 

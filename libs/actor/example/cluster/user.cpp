@@ -21,7 +21,7 @@ void user::run(
     if (old_usr_aid)
     {
       /// verify username and passwd, if valid then kick old session
-      gce::response_t res =
+      gce::resp_t res =
         gce::request(self, old_usr_aid, gce::atom("kick"));
       gce::recv(self);
     }

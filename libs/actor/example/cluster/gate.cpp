@@ -36,13 +36,13 @@ void quit_callback(
   gce::actor<gce::stackful>& self, std::vector<gce::aid_t>& conn_group_list
   )
 {
-  std::vector<gce::response_t> res_list;
+  std::vector<gce::resp_t> res_list;
   BOOST_FOREACH(gce::aid_t aid, conn_group_list)
   {
     res_list.push_back(self.request(aid, gce::atom("stop")));
   }
 
-  BOOST_FOREACH(gce::response_t res, res_list)
+  BOOST_FOREACH(gce::resp_t res, res_list)
   {
     gce::message msg;
     self.recv(res, msg);

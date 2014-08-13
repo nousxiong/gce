@@ -15,7 +15,7 @@
 #include <gce/actor/response.hpp>
 #include <gce/actor/actor_id.hpp>
 #include <gce/actor/message.hpp>
-#include <gce/actor/match.hpp>
+#include <gce/actor/pattern.hpp>
 #include <boost/bind.hpp>
 #include <algorithm>
 
@@ -47,15 +47,15 @@ inline bool check_exit(std::vector<match_t>& match_list)
 }
 
 template <typename Recver>
-inline aid_t recv(Recver& recver, message& msg, match& mach)
+inline aid_t recv(Recver& recver, message& msg, pattern& patt)
 {
-  bool add_exit = check_exit(mach.match_list_);
+  bool add_exit = check_exit(patt.match_list_);
   if (add_exit)
   {
-    mach.match_list_.push_back(exit);
+    patt.match_list_.push_back(exit);
   }
 
-  aid_t sender = recver.recv(msg, mach);
+  aid_t sender = recver.recv(msg, patt);
   if (add_exit && msg.get_type() == exit)
   {
     exit_code_t exc;
@@ -71,15 +71,15 @@ inline aid_t recv(Recver& recver, message& msg, match& mach)
   return sender;
 }
 
-inline aid_t recv(actor<nonblocked>& recver, message& msg, match& mach)
+inline aid_t recv(actor<nonblocked>& recver, message& msg, pattern& patt)
 {
-  bool has_exit = check_exit(mach.match_list_);
+  bool has_exit = check_exit(patt.match_list_);
   if (!has_exit)
   {
-    mach.match_list_.push_back(exit);
+    patt.match_list_.push_back(exit);
   }
 
-  aid_t sender = recver.recv(msg, mach.match_list_);
+  aid_t sender = recver.recv(msg, patt.match_list_);
   if (!has_exit && msg.get_type() == exit)
   {
     exit_code_t exc;
@@ -91,7 +91,7 @@ inline aid_t recv(actor<nonblocked>& recver, message& msg, match& mach)
 }
 
 template <typename Recver>
-inline aid_t recv(Recver& recver, response_t res, message& msg, duration_t tmo)
+inline aid_t recv(Recver& recver, resp_t res, message& msg, duration_t tmo)
 {
   aid_t sender = recver.recv(res, msg, tmo);
   if (msg.get_type() == exit)
@@ -109,7 +109,7 @@ inline aid_t recv(Recver& recver, response_t res, message& msg, duration_t tmo)
   return sender;
 }
 
-inline aid_t recv(actor<nonblocked>& recver, response_t res, message& msg, duration_t)
+inline aid_t recv(actor<nonblocked>& recver, resp_t res, message& msg, duration_t)
 {
   aid_t sender = recver.recv(res, msg);
   if (msg.get_type() == exit)
@@ -124,12 +124,12 @@ inline aid_t recv(actor<nonblocked>& recver, response_t res, message& msg, durat
 ///------------------------------------------------------------------------------
 /// recv stackless
 ///------------------------------------------------------------------------------
-inline bool begin_recv(match& mach)
+inline bool begin_recv(pattern& patt)
 {
-  bool add_exit = check_exit(mach.match_list_);
+  bool add_exit = check_exit(patt.match_list_);
   if (add_exit)
   {
-    mach.match_list_.push_back(exit);
+    patt.match_list_.push_back(exit);
   }
   return add_exit;
 }
@@ -242,26 +242,26 @@ template <typename Recver>
 inline aid_t recv(Recver& recver, duration_t tmo = infin)
 {
   message msg;
-  match mach(tmo);
-  return detail::recv(recver, msg, mach);
+  pattern patt(tmo);
+  return detail::recv(recver, msg, patt);
 }
 ///----------------------------------------------------------------------------
 template <typename Recver>
 inline aid_t recv(Recver& recver, match_t type, duration_t tmo = infin)
 {
   message msg;
-  match mach(tmo);
-  mach.match_list_.push_back(type);
-  return detail::recv(recver, msg, mach);
+  pattern patt(tmo);
+  patt.match_list_.push_back(type);
+  return detail::recv(recver, msg, patt);
 }
 ///----------------------------------------------------------------------------
 template <typename Recver, typename A1>
 inline aid_t recv(Recver& recver, match_t type, A1& a1, duration_t tmo = infin)
 {
   message msg;
-  match mach(tmo);
-  mach.match_list_.push_back(type);
-  aid_t sender = detail::recv(recver, msg, mach);
+  pattern patt(tmo);
+  patt.match_list_.push_back(type);
+  aid_t sender = detail::recv(recver, msg, patt);
   if (sender)
   {
     msg >> a1;
@@ -273,9 +273,9 @@ template <typename Recver, typename A1, typename A2>
 inline aid_t recv(Recver& recver, match_t type, A1& a1, A2& a2, duration_t tmo = infin)
 {
   message msg;
-  match mach(tmo);
-  mach.match_list_.push_back(type);
-  aid_t sender = detail::recv(recver, msg, mach);
+  pattern patt(tmo);
+  patt.match_list_.push_back(type);
+  aid_t sender = detail::recv(recver, msg, patt);
   if (sender)
   {
     msg >> a1 >> a2;
@@ -289,9 +289,9 @@ inline aid_t recv(
   )
 {
   message msg;
-  match mach(tmo);
-  mach.match_list_.push_back(type);
-  aid_t sender = detail::recv(recver, msg, mach);
+  pattern patt(tmo);
+  patt.match_list_.push_back(type);
+  aid_t sender = detail::recv(recver, msg, patt);
   if (sender)
   {
     msg >> a1 >> a2 >> a3;
@@ -305,9 +305,9 @@ inline aid_t recv(
   )
 {
   message msg;
-  match mach(tmo);
-  mach.match_list_.push_back(type);
-  aid_t sender = detail::recv(recver, msg, mach);
+  pattern patt(tmo);
+  patt.match_list_.push_back(type);
+  aid_t sender = detail::recv(recver, msg, patt);
   if (sender)
   {
     msg >> a1 >> a2 >> a3 >> a4;
@@ -325,9 +325,9 @@ inline aid_t recv(
   )
 {
   message msg;
-  match mach(tmo);
-  mach.match_list_.push_back(type);
-  aid_t sender = detail::recv(recver, msg, mach);
+  pattern patt(tmo);
+  patt.match_list_.push_back(type);
+  aid_t sender = detail::recv(recver, msg, patt);
   if (sender)
   {
     msg >> a1 >> a2 >> a3 >> a4 >> a5;
@@ -337,14 +337,14 @@ inline aid_t recv(
 ///----------------------------------------------------------------------------
 inline void recv(actor<stackless>& recver, aid_t& sender, duration_t tmo = infin)
 {
-  match mach(tmo);
-  bool has_exit = detail::begin_recv(mach);
+  pattern patt(tmo);
+  bool has_exit = detail::begin_recv(patt);
   recver.recv(
     boost::bind(
       &detail::handle_recv0, _1, _2, _3,
       boost::ref(sender), has_exit
       ),
-    mach
+    patt
     );
 }
 ///----------------------------------------------------------------------------
@@ -354,15 +354,15 @@ inline void recv(
   A1& a1, duration_t tmo = infin
   )
 {
-  match mach(tmo);
-  mach.match_list_.push_back(type);
-  bool has_exit = detail::begin_recv(mach);
+  pattern patt(tmo);
+  patt.match_list_.push_back(type);
+  bool has_exit = detail::begin_recv(patt);
   recver.recv(
     boost::bind(
       &detail::handle_recv1<A1>, _1, _2, _3,
       boost::ref(sender), has_exit, boost::ref(a1)
       ),
-    mach
+    patt
     );
 }
 ///----------------------------------------------------------------------------
@@ -374,15 +374,15 @@ inline void recv(
   A1& a1, A2& a2, duration_t tmo = infin
   )
 {
-  match mach(tmo);
-  mach.match_list_.push_back(type);
-  bool has_exit = detail::begin_recv(mach);
+  pattern patt(tmo);
+  patt.match_list_.push_back(type);
+  bool has_exit = detail::begin_recv(patt);
   recver.recv(
     boost::bind(
       &detail::handle_recv2<A1, A2>, _1, _2, _3,
       boost::ref(sender), has_exit, boost::ref(a1), boost::ref(a2)
       ),
-    mach
+    patt
     );
 }
 ///----------------------------------------------------------------------------
@@ -394,16 +394,16 @@ inline void recv(
   A1& a1, A2& a2, A3& a3, duration_t tmo = infin
   )
 {
-  match mach(tmo);
-  mach.match_list_.push_back(type);
-  bool has_exit = detail::begin_recv(mach);
+  pattern patt(tmo);
+  patt.match_list_.push_back(type);
+  bool has_exit = detail::begin_recv(patt);
   recver.recv(
     boost::bind(
       &detail::handle_recv3<A1, A2, A3>, _1, _2, _3,
       boost::ref(sender), has_exit, boost::ref(a1), boost::ref(a2),
       boost::ref(a3)
       ),
-    mach
+    patt
     );
 }
 ///----------------------------------------------------------------------------
@@ -416,16 +416,16 @@ inline void recv(
   A1& a1, A2& a2, A3& a3, A4& a4, duration_t tmo = infin
   )
 {
-  match mach(tmo);
-  mach.match_list_.push_back(type);
-  bool has_exit = detail::begin_recv(mach);
+  pattern patt(tmo);
+  patt.match_list_.push_back(type);
+  bool has_exit = detail::begin_recv(patt);
   recver.recv(
     boost::bind(
       &detail::handle_recv4<A1, A2, A3, A4>, _1, _2, _3,
       boost::ref(sender), has_exit, boost::ref(a1), boost::ref(a2),
       boost::ref(a3), boost::ref(a4)
       ),
-    mach
+    patt
     );
 }
 ///----------------------------------------------------------------------------
@@ -438,30 +438,30 @@ inline void recv(
   A1& a1, A2& a2, A3& a3, A4& a4, A5& a5, duration_t tmo = infin
   )
 {
-  match mach(tmo);
-  mach.match_list_.push_back(type);
-  bool has_exit = detail::begin_recv(mach);
+  pattern patt(tmo);
+  patt.match_list_.push_back(type);
+  bool has_exit = detail::begin_recv(patt);
   recver.recv(
     boost::bind(
       &detail::handle_recv5<A1, A2, A3, A4, A5>, _1, _2, _3,
       boost::ref(sender), has_exit, boost::ref(a1), boost::ref(a2),
       boost::ref(a3), boost::ref(a4), boost::ref(a5)
       ),
-    mach
+    patt
     );
 }
 ///----------------------------------------------------------------------------
 /// Receive response
 ///----------------------------------------------------------------------------
 template <typename Recver>
-inline aid_t recv(Recver& recver, response_t res, duration_t tmo = infin)
+inline aid_t recv(Recver& recver, resp_t res, duration_t tmo = infin)
 {
   message msg;
   return detail::recv(recver, res, msg, tmo);
 }
 ///----------------------------------------------------------------------------
 template <typename Recver, typename A1>
-inline aid_t recv(Recver& recver, response_t res, A1& a1, duration_t tmo = infin)
+inline aid_t recv(Recver& recver, resp_t res, A1& a1, duration_t tmo = infin)
 {
   message msg;
   aid_t sender = detail::recv(recver, res, msg, tmo);
@@ -473,7 +473,7 @@ inline aid_t recv(Recver& recver, response_t res, A1& a1, duration_t tmo = infin
 }
 ///----------------------------------------------------------------------------
 template <typename Recver, typename A1, typename A2>
-inline aid_t recv(Recver& recver, response_t res, A1& a1, A2& a2, duration_t tmo = infin)
+inline aid_t recv(Recver& recver, resp_t res, A1& a1, A2& a2, duration_t tmo = infin)
 {
   message msg;
   aid_t sender = detail::recv(recver, res, msg, tmo);
@@ -485,7 +485,7 @@ inline aid_t recv(Recver& recver, response_t res, A1& a1, A2& a2, duration_t tmo
 }
 ///----------------------------------------------------------------------------
 template <typename Recver, typename A1, typename A2, typename A3>
-inline aid_t recv(Recver& recver, response_t res, A1& a1, A2& a2, A3& a3, duration_t tmo = infin)
+inline aid_t recv(Recver& recver, resp_t res, A1& a1, A2& a2, A3& a3, duration_t tmo = infin)
 {
   message msg;
   aid_t sender = detail::recv(recver, res, msg, tmo);
@@ -498,7 +498,7 @@ inline aid_t recv(Recver& recver, response_t res, A1& a1, A2& a2, A3& a3, durati
 ///----------------------------------------------------------------------------
 template <typename Recver, typename A1, typename A2, typename A3, typename A4>
 inline aid_t recv(
-  Recver& recver, response_t res, A1& a1, A2& a2, A3& a3, A4& a4, duration_t tmo = infin
+  Recver& recver, resp_t res, A1& a1, A2& a2, A3& a3, A4& a4, duration_t tmo = infin
   )
 {
   message msg;
@@ -515,7 +515,7 @@ template <
   typename A3, typename A4, typename A5
   >
 inline aid_t recv(
-  Recver& recver, response_t res,
+  Recver& recver, resp_t res,
   A1& a1, A2& a2, A3& a3, A4& a4, A5& a5, duration_t tmo = infin
   )
 {
@@ -528,9 +528,9 @@ inline aid_t recv(
   return sender;
 }
 ///----------------------------------------------------------------------------
-inline void recv(actor<stackless>& recver, response_t res, aid_t& sender, duration_t tmo = infin)
+inline void recv(actor<stackless>& recver, resp_t res, aid_t& sender, duration_t tmo = infin)
 {
-  match mach(tmo);
+  pattern patt(tmo);
   recver.recv(
     boost::bind(
       &detail::handle_recv0, _1, _2, _3,
@@ -542,7 +542,7 @@ inline void recv(actor<stackless>& recver, response_t res, aid_t& sender, durati
 ///----------------------------------------------------------------------------
 template <typename A1>
 inline void recv(
-  actor<stackless>& recver, response_t res, aid_t& sender,
+  actor<stackless>& recver, resp_t res, aid_t& sender,
   A1& a1, duration_t tmo = infin
   )
 {
@@ -559,7 +559,7 @@ template <
   typename A1, typename A2
   >
 inline void recv(
-  actor<stackless>& recver, response_t res, aid_t& sender,
+  actor<stackless>& recver, resp_t res, aid_t& sender,
   A1& a1, A2& a2, duration_t tmo = infin
   )
 {
@@ -576,7 +576,7 @@ template <
   typename A1, typename A2, typename A3
   >
 inline void recv(
-  actor<stackless>& recver, response_t res, aid_t& sender,
+  actor<stackless>& recver, resp_t res, aid_t& sender,
   A1& a1, A2& a2, A3& a3, duration_t tmo = infin
   )
 {
@@ -595,7 +595,7 @@ template <
   typename A3, typename A4
   >
 inline void recv(
-  actor<stackless>& recver, response_t res, aid_t& sender,
+  actor<stackless>& recver, resp_t res, aid_t& sender,
   A1& a1, A2& a2, A3& a3, A4& a4, duration_t tmo = infin
   )
 {
@@ -614,7 +614,7 @@ template <
   typename A3, typename A4, typename A5
   >
 inline void recv(
-  actor<stackless>& recver, response_t res, aid_t& sender,
+  actor<stackless>& recver, resp_t res, aid_t& sender,
   A1& a1, A2& a2, A3& a3, A4& a4, A5& a5, duration_t tmo = infin
   )
 {

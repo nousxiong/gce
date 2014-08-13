@@ -169,14 +169,14 @@ inline void connect(
   detail::cache_pool* user = sire.get_context()->select_cache_pool();
   detail::connect(sire, user, target, ep, target_is_router, opt, remote_func_list);
 
-  match mach;
-  mach.match_list_.push_back(detail::msg_new_conn);
+  pattern patt;
+  patt.match_list_.push_back(detail::msg_new_conn);
   sire.recv(
     boost::bind(
       &detail::handle_connect, _1, _2, _3, 
       sire.get_cache_pool()
       ), 
-    mach
+    patt
     );
 }
 
@@ -223,13 +223,13 @@ inline void bind(
       )
     );
 
-  match mach;
-  mach.match_list_.push_back(detail::msg_new_bind);
+  pattern patt;
+  patt.match_list_.push_back(detail::msg_new_bind);
   sire.recv(
     boost::bind(
       &detail::handle_bind, _1, _2, _3
       ), 
-    mach
+    patt
     );
 }
 }

@@ -74,7 +74,7 @@ public:
         aid_t cln =
           spawn(
             base_svr,
-            atom("echo_client"),
+            "echo_client",
             atom("client")
             );
         send(base_svr, cln, atom("init"), svr, echo_num);

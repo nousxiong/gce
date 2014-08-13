@@ -7,45 +7,45 @@
 /// See https://github.com/nousxiong/gce for latest version.
 ///
 
-#ifndef GCE_ACTOR_MATCH_HPP
-#define GCE_ACTOR_MATCH_HPP
+#ifndef GCE_ACTOR_PATTERN_HPP
+#define GCE_ACTOR_PATTERN_HPP
 
 #include <gce/actor/config.hpp>
 
 namespace gce
 {
-struct match
+struct pattern
 {
-  match()
+  pattern()
     : timeout_(infin)
   {
   }
 
-  explicit match(duration_t tmo)
+  explicit pattern(duration_t tmo)
     : timeout_(tmo)
   {
   }
 
-  explicit match(match_list_t match_list, duration_t tmo = infin)
+  explicit pattern(match_list_t match_list, duration_t tmo = infin)
     : timeout_(tmo)
     , match_list_(match_list)
   {
   }
 
-  explicit match(match_t type1, duration_t tmo = infin)
+  explicit pattern(match_t type1, duration_t tmo = infin)
     : timeout_(tmo)
   {
     match_list_.push_back(type1);
   }
 
-  match(match_t type1, match_t type2, duration_t tmo = infin)
+  pattern(match_t type1, match_t type2, duration_t tmo = infin)
     : timeout_(tmo)
   {
     match_list_.push_back(type1);
     match_list_.push_back(type2);
   }
 
-  match(match_t type1, match_t type2, match_t type3, duration_t tmo = infin)
+  pattern(match_t type1, match_t type2, match_t type3, duration_t tmo = infin)
     : timeout_(tmo)
   {
     match_list_.push_back(type1);
@@ -53,7 +53,7 @@ struct match
     match_list_.push_back(type3);
   }
 
-  match(match_t type1, match_t type2, match_t type3, match_t type4, duration_t tmo = infin)
+  pattern(match_t type1, match_t type2, match_t type3, match_t type4, duration_t tmo = infin)
     : timeout_(tmo)
   {
     match_list_.push_back(type1);
@@ -62,7 +62,7 @@ struct match
     match_list_.push_back(type4);
   }
 
-  match(match_t type1, match_t type2, match_t type3, match_t type4, match_t type5, duration_t tmo = infin)
+  pattern(match_t type1, match_t type2, match_t type3, match_t type4, match_t type5, duration_t tmo = infin)
     : timeout_(tmo)
   {
     match_list_.push_back(type1);
@@ -78,10 +78,46 @@ struct match
     match_list_.clear();
   }
 
+#ifdef GCE_LUA
+  /// internal use
+  inline int get_overloading_type() const
+  {
+    return (int)detail::overloading_0;
+  }
+
+  inline void set_timeout(duration_t tmo)
+  {
+    timeout_ = tmo;
+  }
+
+  inline void add_match(match_type type)
+  {
+    match_list_.push_back(type);
+  }
+
+  inline std::string to_string()
+  {
+    std::string rt;
+    rt += "<";
+    rt += boost::lexical_cast<std::string>(timeout_.count());
+    rt += ".";
+    rt += boost::lexical_cast<std::string>(match_list_.size());
+    rt += ">";
+    return rt;
+  }
+#endif
+
   duration_t timeout_;
   match_list_t match_list_;
 };
+
+#ifdef GCE_LUA
+inline pattern lua_pattern()
+{
+  return pattern();
+}
+#endif
 }
 
-#endif /// GCE_ACTOR_MATCH_HPP
+#endif /// GCE_ACTOR_PATTERN_HPP
 

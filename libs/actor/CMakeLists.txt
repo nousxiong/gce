@@ -1,4 +1,4 @@
-#
+﻿#
 # This file is part of the CMake build system for Gce
 #
 # CMake auto-generated configuration options.
@@ -14,7 +14,6 @@
 
 # Provide user options to customise the build process.
 set (GCE_CACHE_LINE_SIZE "64" CACHE STRING "Cache line size")
-set (GCE_FREE_CACHE_SIZE "8" CACHE STRING "Free-queue cache size")
 set (GCE_SOCKET_RECV_CACHE_SIZE "65535" CACHE STRING "Socket recv cache size")
 set (GCE_SOCKET_RECV_MAX_SIZE "60000" CACHE STRING "Socket max recv size")
 set (GCE_SMALL_MSG_SIZE "128" CACHE STRING "Small message size")
@@ -27,6 +26,9 @@ option (GCE_ACTOR_BUILD_TEST "Build Gce.Actor tests" ON)
 set (LINK_LIBS ${Boost_LIBRARIES} ${CMAKE_THREAD_LIBS_INIT})
 if (UNIX)
   set (LINK_LIBS ${LINK_LIBS} rt)
+endif ()
+if (GCE_LUA)
+  set(LINK_LIBS ${LINK_LIBS} ${Lua_LIBRARIES})
 endif ()
 
 # Not only x64 linux need this, but all linux gcc, we need this.
@@ -85,3 +87,6 @@ configure_file (
   )
 
 install (FILES ${PROJECT_BINARY_DIR}/gce/actor/user.hpp DESTINATION include/gce/actor)
+if (GCE_LUA)
+  install (FILES ${PROJECT_SOURCE_DIR}/gce/actor/lua/*.lua DESTINATION bin)
+endif ()

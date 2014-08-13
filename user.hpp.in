@@ -1,4 +1,4 @@
-///
+﻿///
 /// user.hpp
 /// CMake auto-generated configuration options. 
 /// Do not check in modified versions of this file.
@@ -20,6 +20,8 @@
 
 /// User options.
 #define GCE_ASIO_ALLOC_HANDLER_SIZE @GCE_ASIO_ALLOC_HANDLER_SIZE@
+
+#cmakedefine GCE_LUA
 
 #if defined(_WIN32) || defined(__WIN32__) || defined(WIN32)
 # define GCE_WINVER @GCE_WINVER@

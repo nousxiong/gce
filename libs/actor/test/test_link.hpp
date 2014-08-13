@@ -28,7 +28,7 @@ public:
   {
     detail::cache_pool* cac_pool = self.get_cache_pool();
     std::size_t size = 10;
-    std::vector<response_t> res_list(size);
+    std::vector<resp_t> res_list(size);
     for (std::size_t i=0; i<size; ++i)
     {
       aid_t aid =
@@ -50,7 +50,7 @@ public:
       self.recv(msg);
       BOOST_ASSERT(msg.get_type() == exit);
 
-      response_t res = request(self, tmp);
+      resp_t res = request(self, tmp);
       self.recv(res, msg);
       BOOST_ASSERT(msg.get_type() == exit);
 

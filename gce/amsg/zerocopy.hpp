@@ -36,12 +36,12 @@ namespace boost{ namespace amsg
     {
     }
 
-    void append_debug_info(const char * info)
+    AMSG_INLINE void append_debug_info(const char * info)
     {
       m_error_info.append(info);
     }
 
-    std::size_t read(char * buffer,std::size_t len)
+    AMSG_INLINE std::size_t read(char * buffer, std::size_t len)
     {
       if(this->m_read_ptr + len > this->m_tail_ptr)
       {
@@ -53,7 +53,7 @@ namespace boost{ namespace amsg
       return len;
     }
 
-    unsigned char get_char()
+    AMSG_INLINE unsigned char get_char()
     {
       if(this->m_read_ptr + 1 > this->m_tail_ptr)
       {
@@ -63,7 +63,7 @@ namespace boost{ namespace amsg
       return *m_read_ptr++;
     }
 
-    std::size_t write(const char * buffer,std::size_t len)
+    AMSG_INLINE std::size_t write(const char * buffer, std::size_t len)
     {
       std::size_t writed_len = this->m_write_ptr + len - this->m_header_ptr;
       if(writed_len > this->m_length)
@@ -76,9 +76,9 @@ namespace boost{ namespace amsg
       return len;
     }
 
-    bool bad(){ return m_status != good; }
+    AMSG_INLINE bool bad(){ return m_status != good; }
 
-    unsigned char * append_write(std::size_t len)
+    AMSG_INLINE unsigned char * append_write(std::size_t len)
     {
       std::size_t writed_len = (::std::size_t)(this->m_write_ptr + len - this->m_header_ptr);
       if(writed_len > this->m_length)
@@ -91,7 +91,7 @@ namespace boost{ namespace amsg
       return append_ptr;
     }
 
-    inline unsigned char * skip_read(std::size_t len)
+    AMSG_INLINE unsigned char * skip_read(std::size_t len)
     {
       if(this->m_read_ptr + len > this->m_tail_ptr)
       {
@@ -103,33 +103,33 @@ namespace boost{ namespace amsg
       return skip_ptr;
     }
 
-    inline const unsigned char * read_ptr()
+    AMSG_INLINE const unsigned char * read_ptr()
     {
       return this->m_read_ptr;
     }
 
-    inline unsigned char * write_ptr()
+    AMSG_INLINE unsigned char * write_ptr()
     {
       return this->m_write_ptr;
     }
 
-    inline void clear()
+    AMSG_INLINE void clear()
     {
       this->m_read_ptr = this->m_header_ptr;
       this->m_write_ptr = this->m_header_ptr;
     }
 
-    inline const unsigned char * data() const
+    AMSG_INLINE const unsigned char * data() const
     {
       return this->m_header_ptr;
     }
 
-    inline ::std::size_t read_length() const
+    AMSG_INLINE ::std::size_t read_length() const
     {
       return this->m_read_ptr - this->m_header_ptr;
     }
 
-    inline ::std::size_t write_length() const
+    AMSG_INLINE ::std::size_t write_length() const
     {
       return this->m_write_ptr - this->m_header_ptr;
     }
@@ -143,21 +143,21 @@ namespace boost{ namespace amsg
 	struct value_read_support_zerocopy_impl
 	{
 		typedef ty value_type;
-		static inline void read(store_ty& store_data, value_type& value);
+		static AMSG_INLINE void read(store_ty& store_data, value_type& value);
 	};
 
 	template<typename store_ty , typename ty>
 	struct value_write_support_zerocopy_impl
 	{
 		typedef ty value_type;
-		static inline void write(store_ty& store_data, value_type& value);
+		static AMSG_INLINE void write(store_ty& store_data, value_type& value);
 	};
 
 	template<typename store_ty,typename char_like_ty>
 	struct value_read_unsigned_char_like_support_zerocopy_impl
 	{
 		typedef char_like_ty value_type;
-		static inline void read(store_ty& store_data, value_type& value)
+		static AMSG_INLINE void read(store_ty& store_data, value_type& value)
 		{
 			const int bytes = sizeof(value_type);
 			value = store_data.get_char();
@@ -195,7 +195,7 @@ namespace boost{ namespace amsg
 	struct value_write_unsigned_char_like_support_zerocopy_impl
 	{
 		typedef char_like_ty value_type;
-		static inline void write(store_ty& store_data, const value_type& value)
+		static AMSG_INLINE void write(store_ty& store_data, const value_type& value)
 		{
 			if(value < const_tag_as_type)
 			{
@@ -220,7 +220,7 @@ namespace boost{ namespace amsg
 	struct value_read_signed_char_like_support_zerocopy_impl
 	{
 		typedef char_like_ty value_type;
-		static inline void read(store_ty& store_data, value_type& value)
+		static AMSG_INLINE void read(store_ty& store_data, value_type& value)
 		{
 			const int bytes = sizeof(value_type);
 			::boost::uint8_t tag = store_data.get_char();
@@ -265,7 +265,7 @@ namespace boost{ namespace amsg
 	struct value_write_signed_char_like_support_zerocopy_impl
 	{
 		typedef char_like_ty value_type;
-		static inline void write(store_ty& store_data, const value_type& value)
+		static AMSG_INLINE void write(store_ty& store_data, const value_type& value)
 		{
 			if(0 <= value && value < const_tag_as_type)
 			{
@@ -298,7 +298,7 @@ namespace boost{ namespace amsg
 	{
 		typedef ::boost::uint16_t value_type;
 		typedef basic_zero_copy_buffer<error_string_ty> store_ty;
-		static inline void read(store_ty& store_data, value_type& value)
+		static AMSG_INLINE void read(store_ty& store_data, value_type& value)
 		{
 			const int bytes = sizeof(value_type);
 			value = store_data.get_char();
@@ -339,7 +339,7 @@ namespace boost{ namespace amsg
 	{
 		typedef ::boost::uint16_t value_type;
 		typedef basic_zero_copy_buffer<error_string_ty> store_ty;
-		static inline void write(store_ty& store_data, const value_type& value)
+		static AMSG_INLINE void write(store_ty& store_data, const value_type& value)
 		{
 			if(value < const_tag_as_type)
 			{
@@ -377,7 +377,7 @@ namespace boost{ namespace amsg
 	{
 		typedef ::boost::int16_t value_type;
 		typedef basic_zero_copy_buffer<error_string_ty> store_ty;
-		static inline void read(store_ty& store_data, value_type& value)
+		static AMSG_INLINE void read(store_ty& store_data, value_type& value)
 		{
 			const int bytes = sizeof(value_type);
 			::boost::uint8_t tag = store_data.get_char();
@@ -425,7 +425,7 @@ namespace boost{ namespace amsg
 	{
 		typedef ::boost::int16_t value_type;
 		typedef basic_zero_copy_buffer<error_string_ty> store_ty;
-		static inline void write(store_ty& store_data, const value_type& value)
+		static AMSG_INLINE void write(store_ty& store_data, const value_type& value)
 		{
 			if(0 <= value && value < const_tag_as_type)
 			{
@@ -470,7 +470,7 @@ namespace boost{ namespace amsg
 	{
 		typedef ::boost::uint32_t value_type;
 		typedef basic_zero_copy_buffer<error_string_ty> store_ty;
-		static inline void read(store_ty& store_data, value_type& value)
+		static AMSG_INLINE void read(store_ty& store_data, value_type& value)
 		{
 			const ::std::size_t bytes = sizeof(value_type);
 			value = store_data.get_char();
@@ -510,7 +510,7 @@ namespace boost{ namespace amsg
 	{
 		typedef ::boost::uint32_t value_type;
 		typedef basic_zero_copy_buffer<error_string_ty> store_ty;
-		static inline void write(store_ty& store_data, const value_type& value)
+		static AMSG_INLINE void write(store_ty& store_data, const value_type& value)
 		{
 			if(value < const_tag_as_type)
 			{
@@ -565,7 +565,7 @@ namespace boost{ namespace amsg
 	{
 		typedef ::boost::int32_t value_type;
 		typedef basic_zero_copy_buffer<error_string_ty> store_ty;
-		static inline void read(store_ty& store_data, value_type& value)
+		static AMSG_INLINE void read(store_ty& store_data, value_type& value)
 		{
 			const int bytes = sizeof(value_type);
 			::boost::uint8_t tag = store_data.get_char();
@@ -613,7 +613,7 @@ namespace boost{ namespace amsg
 	{
 		typedef ::boost::int32_t value_type;
 		typedef basic_zero_copy_buffer<error_string_ty> store_ty;
-		static inline void write(store_ty& store_data, const value_type& value)
+		static AMSG_INLINE void write(store_ty& store_data, const value_type& value)
 		{
 			if(0 <= value && value < const_tag_as_type)
 			{
@@ -675,7 +675,7 @@ namespace boost{ namespace amsg
 	{
 		typedef ::boost::uint64_t value_type;
 		typedef basic_zero_copy_buffer<error_string_ty> store_ty;
-		static inline void read(store_ty& store_data, value_type& value)
+		static AMSG_INLINE void read(store_ty& store_data, value_type& value)
 		{
 			const int bytes = sizeof(value_type);
 			value = store_data.get_char();
@@ -715,7 +715,7 @@ namespace boost{ namespace amsg
 	{
 		typedef ::boost::uint64_t value_type;
 		typedef basic_zero_copy_buffer<error_string_ty> store_ty;
-		static inline void write(store_ty& store_data, const value_type& value)
+		static AMSG_INLINE void write(store_ty& store_data, const value_type& value)
 		{
 			if(value < const_tag_as_type)
 			{
@@ -816,7 +816,7 @@ namespace boost{ namespace amsg
 	{
 		typedef ::boost::int64_t value_type;
 		typedef basic_zero_copy_buffer<error_string_ty> store_ty;
-		static inline void read(store_ty& store_data, value_type& value)
+		static AMSG_INLINE void read(store_ty& store_data, value_type& value)
 		{
 			const int bytes = sizeof(value_type);
 			::boost::uint8_t tag = store_data.get_char();
@@ -864,7 +864,7 @@ namespace boost{ namespace amsg
 	{
 		typedef ::boost::int64_t value_type;
 		typedef basic_zero_copy_buffer<error_string_ty> store_ty;
-		static inline void write(store_ty& store_data, const value_type& value)
+		static AMSG_INLINE void write(store_ty& store_data, const value_type& value)
 		{
 			if(0 <= value && value < const_tag_as_type)
 			{

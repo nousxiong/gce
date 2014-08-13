@@ -28,7 +28,7 @@ public:
   static void my_actor(actor<stackful>& self, aid_t base_id)
   {
     std::size_t size = 1;
-    std::vector<response_t> res_list(size);
+    std::vector<resp_t> res_list(size);
     for (std::size_t i=0; i<size; ++i)
     {
       aid_t aid = spawn(self, boost::bind(&match_ut::my_actor_child, _1));

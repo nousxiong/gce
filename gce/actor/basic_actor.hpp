@@ -51,15 +51,15 @@ public:
   void pri_relay(aid_t, message&, detail::send_hint hint = detail::sync);
   void pri_relay_svc(svcid_t, message&, detail::send_hint hint = detail::sync);
 
-  void pri_request(response_t, aid_t, message const&, detail::send_hint hint = detail::sync);
-  void pri_request_svc(response_t, svcid_t, message const&, detail::send_hint hint = detail::sync);
+  void pri_request(resp_t, aid_t, message const&, detail::send_hint hint = detail::sync);
+  void pri_request_svc(resp_t, svcid_t, message const&, detail::send_hint hint = detail::sync);
   void pri_reply(aid_t, message const&, detail::send_hint hint = detail::sync);
 
   void pri_link(aid_t, detail::send_hint hint = detail::sync);
   void pri_monitor(aid_t, detail::send_hint hint = detail::sync);
 
   void pri_spawn(
-    sid_t, detail::spawn_type, match_t func, match_t ctxid,
+    sid_t, detail::spawn_type, std::string const& func, match_t ctxid,
     std::size_t stack_size, detail::send_hint hint = detail::sync
     );
 

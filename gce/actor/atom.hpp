@@ -11,6 +11,7 @@
 #define GCE_ACTOR_ATOM_HPP
 
 #include <gce/config.hpp>
+#include <boost/lexical_cast.hpp>
 #include <boost/integer.hpp>
 #include <string>
 #include <cstring>
@@ -79,6 +80,107 @@ inline std::string atom(boost::uint64_t what)
   ret.assign(buf + pos, 20 - pos);
   return ret;
 }
+
+namespace detail
+{
+#ifdef GCE_LUA
+  enum overloading_type
+  {
+    overloading_0 = 0,
+    overloading_1,
+  };
+#endif
+} /// namespace detail
+} /// namespace gce
+
+#ifdef GCE_LUA
+# define GCE_LUA_SERIALIZE_FUNC \
+  template <typename Strm> \
+  inline void serialize(Strm& s) \
+  { \
+    s << *this; \
+  } \
+  template <typename Strm> \
+  inline void deserialize(Strm& s) \
+  { \
+    s >> *this; \
+  } \
+  template <typename Self> \
+  inline Self make() \
+  { \
+    return Self(); \
+  }
+
+# define GCE_LUA_REG_SERIALIZE_FUNC(class_name) \
+  .addFunction("serialize", &class_name::serialize<message>) \
+  .addFunction("deserialize", &class_name::deserialize<message>) \
+  .addFunction("make", &class_name::make<class_name>)
+
+#endif /// GCE_LUA
+
+namespace gce
+{
+struct match_type
+{
+  match_type()
+    : val_(0)
+  {
+  }
+
+  match_type(boost::uint64_t val)
+    : val_(val)
+  {
+  }
+  
+#ifdef GCE_LUA
+  inline int get_overloading_type() const
+  {
+    return (int)detail::overloading_0;
+  }
+#endif
+
+  inline operator boost::uint64_t() const
+  {
+    return val_;
+  }
+
+  inline void operator=(boost::uint64_t val)
+  {
+    val_ = val;
+  }
+
+  inline void operator=(boost::uint32_t val)
+  {
+    val_ = val;
+  }
+
+#ifdef GCE_LUA
+  inline std::string to_string()
+  {
+    std::string rt;
+    rt += "<";
+    rt += boost::lexical_cast<std::string>(val_);
+    rt += ">";
+    return rt;
+  }
+
+  GCE_LUA_SERIALIZE_FUNC
+#endif
+
+  boost::uint64_t val_;
+};
+
+#ifdef GCE_LUA
+inline match_type s2i(char const* str)
+{
+  return atom(str);
+}
+
+inline std::string i2s(match_type what)
+{
+  return atom(what);
+}
+#endif
 }
 
 #endif /// GCE_ACTOR_ATOM_HPP

@@ -40,14 +40,14 @@ coroutine_stackful_actor::~coroutine_stackful_actor()
 {
 }
 ///----------------------------------------------------------------------------
-aid_t coroutine_stackful_actor::recv(message& msg, match const& mach)
+aid_t coroutine_stackful_actor::recv(message& msg, pattern const& patt)
 {
   aid_t sender;
   detail::recv_t rcv;
 
-  if (!mb_.pop(rcv, msg, mach.match_list_))
+  if (!mb_.pop(rcv, msg, patt.match_list_))
   {
-    duration_t tmo = mach.timeout_;
+    duration_t tmo = patt.timeout_;
     if (tmo > zero)
     {
       detail::scoped_bool<bool> scp(recving_);
@@ -55,7 +55,7 @@ aid_t coroutine_stackful_actor::recv(message& msg, match const& mach)
       {
         start_recv_timer(tmo);
       }
-      curr_match_ = mach;
+      curr_pattern_ = patt;
       actor_code ac = yield();
       if (ac == actor_timeout)
       {
@@ -90,7 +90,7 @@ aid_t coroutine_stackful_actor::recv(message& msg, match const& mach)
   return sender;
 }
 ///----------------------------------------------------------------------------
-aid_t coroutine_stackful_actor::recv(response_t res, message& msg, duration_t tmo)
+aid_t coroutine_stackful_actor::recv(resp_t res, message& msg, duration_t tmo)
 {
   aid_t sender;
 
@@ -112,7 +112,7 @@ aid_t coroutine_stackful_actor::recv(response_t res, message& msg, duration_t tm
 
       res = recving_res_;
       msg = recving_msg_;
-      recving_res_ = response_t();
+      recving_res_ = resp_t();
       recving_msg_ = message();
     }
     else
@@ -281,7 +281,7 @@ void coroutine_stackful_actor::handle_recv(detail::pack& pk)
     mb_.push(*ex, pk.msg_);
     base_type::remove_link(ex->get_aid());
   }
-  else if (response_t* res = boost::get<response_t>(&pk.tag_))
+  else if (resp_t* res = boost::get<resp_t>(&pk.tag_))
   {
     is_response = true;
     mb_.push(*res, pk.msg_);
@@ -294,12 +294,12 @@ void coroutine_stackful_actor::handle_recv(detail::pack& pk)
   {
     if (recving_ && !is_response)
     {
-      bool ret = mb_.pop(recving_rcv_, recving_msg_, curr_match_.match_list_);
+      bool ret = mb_.pop(recving_rcv_, recving_msg_, curr_pattern_.match_list_);
       if (!ret)
       {
         return;
       }
-      curr_match_.clear();
+      curr_pattern_.clear();
     }
 
     if (responsing_ && is_response)

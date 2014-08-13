@@ -17,10 +17,44 @@ project (gce)
 
 # The version number.
 set (GCE_VERSION_MAJOR 1)
-set (GCE_VERSION_MINOR 0)
+set (GCE_VERSION_MINOR 2)
+
+# Add library.
+macro (gce_add_library library_name)
+  string (TOUPPER ${library_name} gce_add_library_upper_name)
+  set (${gce_add_library_upper_name}_LIBRARYDIR "" CACHE PATH "Path to ${library_name} libraries directory")
+  set (${gce_add_library_upper_name}_INCLUDEDIR "" CACHE PATH "Path to ${library_name} include directory")
+  include_directories (${${gce_add_library_upper_name}_INCLUDEDIR})
+endmacro (gce_add_library)
+
+# Set lib.
+macro (gce_set_lib library_name name)
+  string (TOUPPER ${library_name} gce_set_lib_upper_name)
+  string (TOLOWER ${name} gce_set_lib_lower_name)
+  find_library (${name}_LIBRARY_DEBUG NAMES ${gce_set_lib_lower_name}_debug PATHS "${${gce_set_lib_upper_name}_LIBRARYDIR}" NO_DEFAULT_PATH)
+  find_library (${name}_LIBRARY_RELEASE NAMES ${gce_set_lib_lower_name} PATHS "${${gce_set_lib_upper_name}_LIBRARYDIR}" NO_DEFAULT_PATH)
+
+  if (${name}_LIBRARY_DEBUG AND ${name}_LIBRARY_RELEASE)
+    if (CMAKE_CONFIGURATION_TYPES OR CMAKE_BUILD_TYPE)
+      set (${name}_LIBRARIES optimized ${${name}_LIBRARY_RELEASE} debug ${${name}_LIBRARY_DEBUG})
+    else ()
+      set (${name}_LIBRARIES ${${name}_LIBRARY_RELEASE})
+    endif ()
+  endif ()
+
+  if (${name}_LIBRARY_RELEASE AND NOT ${name}_LIBRARY_DEBUG)
+    set (${name}_LIBRARIES ${${name}_LIBRARY_RELEASE})
+  endif ()
+
+  if (${name}_LIBRARY_DEBUG AND NOT ${name}_LIBRARY_RELEASE)
+    set (${name}_LIBRARIES ${${name}_LIBRARY_DEBUG})
+  endif ()
+endmacro (gce_set_lib)
 
 # Provide user options to customise the build process.
 set (GCE_ASIO_ALLOC_HANDLER_SIZE "1024" CACHE STRING "Boost.Asio handler allocator size")
+
+option (GCE_LUA "Allow gce using lua actor" OFF)
 
 if (UNIX)
   option (GCE_STATIC "Build gce runtime static" OFF)
@@ -43,6 +77,12 @@ if (GCE_STATIC)
   if (GLIBC_LIBRARYDIR)
     link_directories (${GLIBC_LIBRARYDIR})
   endif ()
+endif ()
+
+# Set lua
+if (GCE_LUA)
+  gce_add_library(lua)
+  gce_set_lib(lua Lua)
 endif ()
 
 # Add the source and build tree to the search path for include gce header files.

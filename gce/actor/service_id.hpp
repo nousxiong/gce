@@ -85,11 +85,39 @@ public:
     return false;
   }
 
+#ifdef GCE_LUA
+  /// internal use
+  inline int get_overloading_type() const
+  {
+    return (int)detail::overloading_1;
+  }
+
+  inline std::string to_string()
+  {
+    std::string rt;
+    rt += "<";
+    rt += boost::lexical_cast<std::string>(ctxid_);
+    rt += ".";
+    rt += boost::lexical_cast<std::string>(name_);
+    rt += ">";
+    return rt;
+  }
+
+  GCE_LUA_SERIALIZE_FUNC
+#endif
+
   ctxid_t ctxid_;
   match_t name_;
 };
 
 typedef service_id svcid_t;
+
+#ifdef GCE_LUA
+inline svcid_t lua_svcid()
+{
+  return svcid_t();
+}
+#endif
 }
 
 template<typename CharT, typename TraitsT>

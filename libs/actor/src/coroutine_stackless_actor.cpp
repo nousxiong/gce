@@ -32,14 +32,14 @@ coroutine_stackless_actor::~coroutine_stackless_actor()
 {
 }
 ///----------------------------------------------------------------------------
-void coroutine_stackless_actor::recv(aid_t& sender, message& msg, match const& mach)
+void coroutine_stackless_actor::recv(aid_t& sender, message& msg, pattern const& patt)
 {
   recv(
     boost::bind(
       &coroutine_stackless_actor::recv_handler, this, _1, _2, _3, 
       boost::ref(sender), boost::ref(msg)
       ), 
-    mach
+    patt
     );
 }
 ///----------------------------------------------------------------------------
@@ -56,7 +56,7 @@ aid_t coroutine_stackless_actor::recv(message& msg, match_list_t const& match_li
   return sender;
 }
 ///----------------------------------------------------------------------------
-void coroutine_stackless_actor::recv(response_t res, aid_t& sender, message& msg, duration_t tmo)
+void coroutine_stackless_actor::recv(resp_t res, aid_t& sender, message& msg, duration_t tmo)
 {
   recv(
     boost::bind(
@@ -68,7 +68,7 @@ void coroutine_stackless_actor::recv(response_t res, aid_t& sender, message& msg
     );
 }
 ///----------------------------------------------------------------------------
-aid_t coroutine_stackless_actor::recv(response_t res, message& msg)
+aid_t coroutine_stackless_actor::recv(resp_t res, message& msg)
 {
   aid_t sender;
 
@@ -91,16 +91,16 @@ void coroutine_stackless_actor::wait(duration_t dur)
 }
 ///----------------------------------------------------------------------------
 void coroutine_stackless_actor::recv(
-  coroutine_stackless_actor::recv_handler_t const& f, match const& mach
+  coroutine_stackless_actor::recv_handler_t const& f, pattern const& patt
   )
 {
   aid_t sender;
   detail::recv_t rcv;
   message msg;
 
-  if (!mb_.pop(rcv, msg, mach.match_list_))
+  if (!mb_.pop(rcv, msg, patt.match_list_))
   {
-    duration_t tmo = mach.timeout_;
+    duration_t tmo = patt.timeout_;
     if (tmo > zero)
     {
       if (tmo < infin)
@@ -108,7 +108,7 @@ void coroutine_stackless_actor::recv(
         start_recv_timer(tmo, f);
       }
       recv_h_ = f;
-      curr_match_ = mach;
+      curr_pattern_ = patt;
       return;
     }
   }
@@ -124,7 +124,7 @@ void coroutine_stackless_actor::recv(
 }
 ///----------------------------------------------------------------------------
 void coroutine_stackless_actor::recv(
-  coroutine_stackless_actor::recv_handler_t const& f, response_t res, duration_t tmo
+  coroutine_stackless_actor::recv_handler_t const& f, resp_t res, duration_t tmo
   )
 {
   aid_t sender;
@@ -173,7 +173,7 @@ void coroutine_stackless_actor::init(coroutine_stackless_actor::func_t const& f)
 ///----------------------------------------------------------------------------
 void coroutine_stackless_actor::start()
 {
-  snd_.dispatch(boost::bind(&coroutine_stackless_actor::run, this));
+  run();
 }
 ///----------------------------------------------------------------------------
 void coroutine_stackless_actor::on_recv(detail::pack& pk, detail::send_hint)
@@ -257,7 +257,7 @@ void coroutine_stackless_actor::handle_recv_timeout(
   {
     BOOST_ASSERT(recv_h_);
     recv_h_.clear();
-    curr_match_.clear();
+    curr_pattern_.clear();
     try
     {
       actor<stackless> aref(*this);
@@ -278,7 +278,7 @@ void coroutine_stackless_actor::handle_res_timeout(
   {
     BOOST_ASSERT(res_h_);
     res_h_.clear();
-    curr_match_.clear();
+    curr_pattern_.clear();
     try
     {
       actor<stackless> aref(*this);
@@ -333,7 +333,7 @@ void coroutine_stackless_actor::handle_recv(detail::pack& pk)
     mb_.push(*ex, pk.msg_);
     base_type::remove_link(ex->get_aid());
   }
-  else if (response_t* res = boost::get<response_t>(&pk.tag_))
+  else if (resp_t* res = boost::get<resp_t>(&pk.tag_))
   {
     is_response = true;
     mb_.push(*res, pk.msg_);
@@ -351,13 +351,13 @@ void coroutine_stackless_actor::handle_recv(detail::pack& pk)
   {
     if (recv_h_ && !is_response)
     {
-      bool ret = mb_.pop(rcv, msg, curr_match_.match_list_);
+      bool ret = mb_.pop(rcv, msg, curr_pattern_.match_list_);
       if (!ret)
       {
         return;
       }
       sender = end_recv(rcv, msg);
-      curr_match_.clear();
+      curr_pattern_.clear();
       hdr = recv_h_;
       recv_h_.clear();
     }
@@ -373,7 +373,7 @@ void coroutine_stackless_actor::handle_recv(detail::pack& pk)
       sender = end_recv(recving_res_);
       hdr = res_h_;
       res_h_.clear();
-      recving_res_ = response_t();
+      recving_res_ = resp_t();
     }
 
     ++tmr_sid_;
@@ -414,7 +414,7 @@ aid_t coroutine_stackless_actor::end_recv(detail::recv_t& rcv, message& msg)
   return sender;
 }
 ///----------------------------------------------------------------------------
-aid_t coroutine_stackless_actor::end_recv(response_t& res)
+aid_t coroutine_stackless_actor::end_recv(resp_t& res)
 {
   return res.get_aid();
 }

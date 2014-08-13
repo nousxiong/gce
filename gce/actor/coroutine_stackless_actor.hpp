@@ -12,7 +12,7 @@
 
 #include <gce/actor/config.hpp>
 #include <gce/actor/basic_actor.hpp>
-#include <gce/actor/match.hpp>
+#include <gce/actor/pattern.hpp>
 #include <gce/actor/detail/mailbox_fwd.hpp>
 #include <gce/actor/detail/scoped_bool.hpp>
 #include <boost/bind.hpp>
@@ -26,7 +26,6 @@ class mailbox;
 }
 class thread_mapped_actor;
 class context;
-class response_t;
 
 template <class> class actor;
 
@@ -56,16 +55,16 @@ public:
     base_type::pri_relay_svc(des, m);
   }
 
-  inline response_t request(aid_t recver, message const& m)
+  inline resp_t request(aid_t recver, message const& m)
   {
-    response_t res(new_request(), get_aid(), recver);
+    resp_t res(new_request(), get_aid(), recver);
     base_type::pri_request(res, recver, m);
     return res;
   }
 
-  inline response_t request(svcid_t recver, message const& m)
+  inline resp_t request(svcid_t recver, message const& m)
   {
-    response_t res(new_request(), get_aid(), recver);
+    resp_t res(new_request(), get_aid(), recver);
     base_type::pri_request_svc(res, recver, m);
     return res;
   }
@@ -95,22 +94,22 @@ public:
   ~coroutine_stackless_actor();
 
 public:
-  void recv(aid_t& sender, message& msg, match const& mach = match());
+  void recv(aid_t& sender, message& msg, pattern const& patt = pattern());
   aid_t recv(message& msg, match_list_t const& match_list = match_list_t());
   void recv(
-    response_t res, aid_t& sender, message& msg, 
+    resp_t res, aid_t& sender, message& msg, 
     duration_t tmo = seconds_t(GCE_DEFAULT_REQUEST_TIMEOUT_SEC)
     );
-  aid_t recv(response_t res, message& msg);
+  aid_t recv(resp_t res, message& msg);
 
   void wait(duration_t);
 
 public:
   /// internal use
   static detail::actor_type type() { return detail::actor_stackless; }
-  void recv(recv_handler_t const&, match const& mach = match());
+  void recv(recv_handler_t const&, pattern const& patt = pattern());
   void recv(
-    recv_handler_t const&, response_t res, 
+    recv_handler_t const&, resp_t res, 
     duration_t tmo = seconds_t(GCE_DEFAULT_REQUEST_TIMEOUT_SEC)
     );
 
@@ -123,7 +122,7 @@ public:
   void on_recv(detail::pack&, detail::send_hint);
 
   inline sid_t spawn(
-    detail::spawn_type type, match_t func, 
+    detail::spawn_type type, std::string const& func, 
     match_t ctxid, std::size_t stack_size
     )
   {
@@ -148,7 +147,7 @@ private:
   void handle_recv(detail::pack&);
 
   aid_t end_recv(detail::recv_t&, message&);
-  aid_t end_recv(response_t&);
+  aid_t end_recv(resp_t&);
 
   void recv_handler(self_ref_t, aid_t, message, aid_t&, message&);
   void wait_handler(self_ref_t);
@@ -164,8 +163,8 @@ private:
   recv_handler_t recv_h_;
   recv_handler_t res_h_;
   wait_handler_t wait_h_;
-  response_t recving_res_;
-  match curr_match_;
+  resp_t recving_res_;
+  pattern curr_pattern_;
   timer_t tmr_;
   std::size_t tmr_sid_;
 };

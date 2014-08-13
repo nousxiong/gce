@@ -15,34 +15,10 @@
 #include <gce/actor/service_id.hpp>
 #include <iostream>
 
-#define GCE_ACTOR_PTR_TYPE_NUM_LENGTH 10
-#define GCE_ACTOR_TYPE_NUM_LENGTH 100
-#define GCE_CAC_ID_NUM_LENGTH 10000
-
 namespace gce
 {
 namespace detail
 {
-inline sid_t make_sid(sid_t src, bool flag)
-{
-  return src * GCE_ACTOR_PTR_TYPE_NUM_LENGTH + (sid_t)(flag ? 1 : 0);
-}
-
-inline boost::uint64_t make_uintptr(
-  boost::uint32_t id, 
-  boost::uint16_t cac_id, 
-  detail::actor_type type
-  )
-{
-  boost::uint64_t id_tmp = id;
-  boost::uint64_t cac_id_tmp = cac_id;
-  boost::uint64_t type_tmp = (boost::uint64_t)type;
-  return 
-    id_tmp * GCE_CAC_ID_NUM_LENGTH * GCE_ACTOR_TYPE_NUM_LENGTH + 
-    cac_id_tmp * GCE_ACTOR_TYPE_NUM_LENGTH + 
-    type_tmp;
-}
-
 struct actor_index
 {
   actor_index()
@@ -255,11 +231,57 @@ public:
     svc_ = svc;
   }
 
+#ifdef GCE_LUA
+  inline int get_overloading_type() const
+  {
+    return (int)detail::overloading_0;
+  }
+
+  inline bool is_nil() const
+  {
+    return !(*this);
+  }
+
+  inline std::string to_string()
+  {
+    std::string rt;
+    rt += "<";
+    rt += boost::lexical_cast<std::string>(ctxid_);
+    rt += ".";
+    rt += boost::lexical_cast<std::string>(timestamp_);
+    rt += ".";
+    rt += boost::lexical_cast<std::string>(uintptr_);
+    rt += ".";
+    if (in_pool())
+    {
+      rt += boost::lexical_cast<std::string>(cac_id_);
+      rt += ".";
+      rt += boost::lexical_cast<std::string>((int)type_);
+      rt += ".";
+    }
+    rt += boost::lexical_cast<std::string>(sid_);
+    rt += ".";
+    rt += svc_.to_string();
+    rt += ">";
+
+    return rt;
+  }
+
+  GCE_LUA_SERIALIZE_FUNC
+#endif
+
   svcid_t svc_;
 };
 
 typedef actor_id aid_t;
 typedef actor_id sktaid_t;
+
+#ifdef GCE_LUA
+inline aid_t lua_aid()
+{
+  return aid_t();
+}
+#endif
 }
 
 template<typename CharT, typename TraitsT>

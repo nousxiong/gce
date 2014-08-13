@@ -92,7 +92,7 @@ public:
 
   private:
     std::size_t const size_;
-    std::vector<response_t> res_list_;
+    std::vector<resp_t> res_list_;
 
     std::size_t i_;
     aid_t base_id_;

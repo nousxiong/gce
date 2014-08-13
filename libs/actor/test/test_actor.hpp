@@ -30,7 +30,7 @@ private:
   static void my_actor(actor<stackful>& self, aid_t base_id)
   {
     std::size_t size = 50;
-    std::vector<response_t> res_list(size);
+    std::vector<resp_t> res_list(size);
     for (std::size_t i=0; i<size; ++i)
     {
       aid_t aid =

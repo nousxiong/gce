@@ -112,7 +112,7 @@ void basic_actor::pri_relay(aid_t recver, message& m, detail::send_hint hint)
   else if (m.req_.valid())
   {
     /// reply actor exit msg
-    response_t res(m.req_.get_id(), recver);
+    resp_t res(m.req_.get_id(), recver);
     user_->send_already_exited(m.req_.get_aid(), res);
   }
 }
@@ -150,7 +150,7 @@ void basic_actor::pri_relay_svc(svcid_t recver, message& m, detail::send_hint hi
   }
 }
 ///----------------------------------------------------------------------------
-void basic_actor::pri_request(response_t res, aid_t recver, message const& m, detail::send_hint hint)
+void basic_actor::pri_request(resp_t res, aid_t recver, message const& m, detail::send_hint hint)
 {
   aid_t target = user_->filter_aid(recver);
   aid_t sender = get_aid();
@@ -172,12 +172,12 @@ void basic_actor::pri_request(response_t res, aid_t recver, message const& m, de
   else
   {
     /// reply actor exit msg
-    response_t res(req.get_id(), recver);
+    resp_t res(req.get_id(), recver);
     user_->send_already_exited(req.get_aid(), res);
   }
 }
 ///----------------------------------------------------------------------------
-void basic_actor::pri_request_svc(response_t res, svcid_t recver, message const& m, detail::send_hint hint)
+void basic_actor::pri_request_svc(resp_t res, svcid_t recver, message const& m, detail::send_hint hint)
 {
   aid_t target = user_->filter_svcid(recver);
   aid_t sender = get_aid();
@@ -212,7 +212,7 @@ void basic_actor::pri_reply(aid_t recver, message const& m, detail::send_hint hi
     detail::pack pk;
     if (mb_.pop(recver, req))
     {
-      response_t res(req.get_id(), get_aid());
+      resp_t res(req.get_id(), get_aid());
       pk.tag_ = res;
     }
     else
@@ -242,7 +242,7 @@ void basic_actor::pri_monitor(aid_t target, detail::send_hint hint)
 }
 ///----------------------------------------------------------------------------
 void basic_actor::pri_spawn(
-  sid_t sid, detail::spawn_type type, match_t func, match_t ctxid,
+  sid_t sid, detail::spawn_type type, std::string const& func, match_t ctxid,
   std::size_t stack_size, detail::send_hint hint
   )
 {
@@ -262,6 +262,7 @@ void basic_actor::pri_spawn(
   pk.tag_ = detail::spawn_t(type, func, ctxid, stack_size, sid, get_aid());
   pk.skt_ = skt;
   pk.msg_ = message(detail::msg_spawn);
+  pk.recver_.ctxid_ = ctxid_nil;
 
   if (!chain_)
   {

@@ -58,7 +58,7 @@ private:
     }
 
     int i = 0;
-    response_t res = request(self, last_id, atom("hi"), i);
+    resp_t res = request(self, last_id, atom("hi"), i);
     message msg;
     aid_t sender = self.recv(res, msg);
     BOOST_ASSERT(sender == first_id);

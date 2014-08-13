@@ -13,7 +13,7 @@
 #include <gce/actor/config.hpp>
 #include <gce/actor/basic_actor.hpp>
 #include <gce/actor/detail/pack.hpp>
-#include <gce/actor/match.hpp>
+#include <gce/actor/pattern.hpp>
 #include <boost/thread/future.hpp>
 #include <boost/optional.hpp>
 #include <boost/scoped_ptr.hpp>
@@ -45,16 +45,16 @@ public:
   void relay(aid_t, message&);
   void relay(svcid_t, message&);
 
-  response_t request(aid_t, message const&);
-  response_t request(svcid_t, message const&);
+  resp_t request(aid_t, message const&);
+  resp_t request(svcid_t, message const&);
   void reply(aid_t, message const&);
 
   void link(aid_t);
   void monitor(aid_t);
 
-  aid_t recv(message&, match const& mach = match());
+  aid_t recv(message&, pattern const& patt = pattern());
   aid_t recv(
-    response_t, message&,
+    resp_t, message&,
     duration_t tmo = seconds_t(GCE_DEFAULT_REQUEST_TIMEOUT_SEC)
     );
   void wait(duration_t);
@@ -71,17 +71,17 @@ public:
   }
   void on_recv(detail::pack&, detail::send_hint);
 
-  sid_t spawn(detail::spawn_type, match_t func, match_t ctxid, std::size_t stack_size);
+  sid_t spawn(detail::spawn_type, std::string const& func, match_t ctxid, std::size_t stack_size);
 
 private:
   typedef boost::optional<std::pair<detail::recv_t, message> > recv_optional_t;
-  typedef boost::optional<std::pair<response_t, message> > res_optional_t;
+  typedef boost::optional<std::pair<resp_t, message> > res_optional_t;
   typedef boost::promise<recv_optional_t> recv_promise_t;
   typedef boost::promise<res_optional_t> res_promise_t;
   typedef boost::unique_future<recv_optional_t> recv_future_t;
   typedef boost::unique_future<res_optional_t> res_future_t;
-  void try_recv(recv_promise_t&, match const&);
-  void try_response(res_promise_t&, response_t, duration_t);
+  void try_recv(recv_promise_t&, pattern const&);
+  void try_response(res_promise_t&, resp_t, duration_t);
   void start_recv_timer(duration_t, recv_promise_t&);
   void start_recv_timer(duration_t, res_promise_t&);
   void handle_recv_timeout(errcode_t const&, recv_promise_t&, std::size_t);
@@ -97,8 +97,8 @@ private:
   std::vector<nonblocking_actor*> nonblocking_actor_list_;
   recv_promise_t* recv_p_;
   res_promise_t* res_p_;
-  response_t recving_res_;
-  match curr_match_;
+  resp_t recving_res_;
+  pattern curr_pattern_;
   timer_t tmr_;
   std::size_t tmr_sid_;
 };

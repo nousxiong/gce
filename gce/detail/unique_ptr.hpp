@@ -21,6 +21,15 @@ namespace gce
 {
 namespace detail
 {
+template <typename T>
+struct default_deleter
+{
+  void operator()(T* t) const 
+  {
+    boost::checked_delete(t);
+  }
+};
+
 /// Unique pointer with deleter(like C++11 std::unique_ptr).
 /// All member functions never throws.
 template <typename T>
@@ -38,11 +47,13 @@ class unique_ptr
 public:
   unique_ptr()
     : px_(0)
+    , deleter_(default_deleter<T>())
   {
   }
 
   explicit unique_ptr(T* p)
     : px_(p)
+    , deleter_(default_deleter<T>())
   {
   }
 
@@ -55,14 +66,7 @@ public:
 
   ~unique_ptr()
   {
-    if (deleter_)
-    {
-      deleter_(px_);
-    }
-    else
-    {
-      boost::checked_delete(px_);
-    }
+    deleter_(px_);
   }
 
 public:

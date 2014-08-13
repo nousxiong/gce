@@ -28,6 +28,9 @@ namespace gce
 class context;
 class coroutine_stackful_actor;
 class coroutine_stackless_actor;
+#ifdef GCE_LUA
+class lua_actor;
+#endif
 struct attributes;
 
 namespace detail
@@ -48,13 +51,26 @@ public:
   inline std::size_t get_index() { return index_; }
   inline strand_t& get_strand() { return snd_; }
 
+#ifdef GCE_LUA
+  inline lua_State* get_lua_state() { return L_.get(); }
+  void init_lua(std::string const& gce_path);
+  luabridge::LuaRef get_script(std::string const& file);
+#endif
+
   coroutine_stackful_actor* make_stackful_actor();
   coroutine_stackless_actor* make_stackless_actor();
+#ifdef GCE_LUA
+  lua_actor* make_lua_actor();
+  aid_t spawn_lua_actor(std::string const& script, aid_t sire, link_type);
+#endif
   socket* make_socket();
   acceptor* make_acceptor();
 
   void free_actor(coroutine_stackful_actor*);
   void free_actor(coroutine_stackless_actor*);
+#ifdef GCE_LUA
+  void free_actor(lua_actor*);
+#endif
   void free_socket(socket*);
   void free_acceptor(acceptor*);
 
@@ -83,7 +99,7 @@ public:
   inline bool stopped() const { return stopped_; }
 
   void send_already_exited(aid_t recver, aid_t sender);
-  void send_already_exited(aid_t recver, response_t res);
+  void send_already_exited(aid_t recver, resp_t res);
   void send(aid_t const& recver, detail::pack&, detail::send_hint);
   aid_t filter_aid(aid_t const& src);
   aid_t filter_svcid(svcid_t const& src);
@@ -102,6 +118,10 @@ private:
   GCE_CACHE_ALIGNED_VAR(context*, ctx_)
   GCE_CACHE_ALIGNED_VAR(std::size_t, index_)
   GCE_CACHE_ALIGNED_VAR(strand_t, snd_)
+
+#ifdef GCE_LUA
+  GCE_CACHE_ALIGNED_VAR(detail::unique_ptr<lua_State>, L_)
+#endif
 
   /// pools
   struct pool_impl;
@@ -131,6 +151,11 @@ private:
 
   std::set<socket*> socket_list_;
   std::set<acceptor*> acceptor_list_;
+
+#ifdef GCE_LUA
+  typedef std::map<std::string, luabridge::LuaRef> script_list_t;
+  script_list_t script_list_;
+#endif
 
   bool stopped_;
 };

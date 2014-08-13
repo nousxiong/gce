@@ -60,6 +60,31 @@ context::context(attributes attrs)
       nonblocking_actor_list_[i] = new nonblocking_actor(*this, index);
     }
 
+#ifdef GCE_LUA
+    if (attrs_.lua_gce_path_list_.empty())
+    {
+      attrs_.lua_gce_path_list_.push_back(".");
+    }
+    std::string lua_gce_path;
+    BOOST_FOREACH(std::string& path, attrs_.lua_gce_path_list_)
+    {
+      path += "?.lua";
+      lua_gce_path += path;
+      lua_gce_path += ";";
+    }
+    lua_gce_path.pop_back();
+
+    lua_register_t& lua_reg = attrs_.lua_reg_;
+    for (std::size_t i=0; i<cache_pool_size_; ++i)
+    {
+      cache_pool_list_[i]->init_lua(lua_gce_path);
+      if (lua_reg)
+      {
+        lua_reg(cache_pool_list_[i]->get_lua_state());
+      }
+    }
+#endif
+
     for (std::size_t i=0; i<attrs_.thread_num_; ++i)
     {
       thread_group_.create_thread(

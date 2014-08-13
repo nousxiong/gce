@@ -28,7 +28,7 @@ namespace detail
 class mailbox
 {
   typedef std::pair<recv_t, message> recv_pair_t;
-  typedef std::pair<response_t, message> res_msg_pair_t;
+  typedef std::pair<resp_t, message> res_msg_pair_t;
   typedef std::map<sid_t, res_msg_pair_t> res_msg_list_t;
 
 public:
@@ -39,13 +39,13 @@ public:
 
 public:
   bool pop(recv_t&, message&, match_list_t const&);
-  bool pop(response_t&, message&);
+  bool pop(resp_t&, message&);
   bool pop(aid_t, request_t&);
 
   void push(aid_t, message const&);
   void push(exit_t, message const&);
   void push(request_t, message const&);
-  bool push(response_t, message const&);
+  bool push(resp_t, message const&);
 
 private:
   void add_match_msg(recv_t const&, aid_t sender, message const&);

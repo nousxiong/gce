@@ -47,12 +47,13 @@
 #include "test_remote_relay.hpp"
 #include "test_send_recv.hpp"
 #include "test_service.hpp"
+#include "test_lua_actor.hpp"
 
 int main()
 {
   try
   {
-    gce::coro_ut::run();
+    /*gce::coro_ut::run();
     gce::send_recv_ut::run();
     gce::actor_ut::run();
     gce::response_ut::run();
@@ -75,7 +76,10 @@ int main()
     gce::router_link_ut::run();
     gce::router_broken_ut::run();
     gce::remote_relay_ut::run();
-    gce::service_ut::run();
+    gce::service_ut::run();*/
+#ifdef GCE_LUA
+    gce::lua_actor_ut::run();
+#endif
   }
   catch (std::exception& ex)
   {

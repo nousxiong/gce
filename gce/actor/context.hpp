@@ -24,6 +24,9 @@ namespace gce
 {
 typedef std::size_t thrid_t;
 typedef boost::function<void (thrid_t)> thread_callback_t;
+#ifdef GCE_LUA
+  typedef boost::function<void (lua_State*)> lua_register_t;
+#endif
 struct attributes
 {
   attributes()
@@ -50,6 +53,10 @@ struct attributes
   std::size_t max_cache_match_size_;
   std::vector<thread_callback_t> thread_begin_cb_list_;
   std::vector<thread_callback_t> thread_end_cb_list_;
+#ifdef GCE_LUA
+  std::vector<std::string> lua_gce_path_list_;
+  lua_register_t lua_reg_;
+#endif
 };
 
 namespace detail

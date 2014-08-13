@@ -9,8 +9,11 @@
 
 #include <gce/actor/detail/cache_pool.hpp>
 #include <gce/actor/context.hpp>
+#include <gce/actor/send.hpp>
 #include <gce/actor/coroutine_stackful_actor.hpp>
 #include <gce/actor/coroutine_stackless_actor.hpp>
+#include <gce/actor/service.hpp>
+#include <gce/actor/lua_actor.hpp>
 #include <gce/actor/detail/socket.hpp>
 #include <gce/actor/detail/acceptor.hpp>
 #include <boost/foreach.hpp>
@@ -21,8 +24,18 @@ namespace detail
 {
 typedef actor_pool<coroutine_stackful_actor> stackful_actor_pool_t;
 typedef actor_pool<coroutine_stackless_actor> stackless_actor_pool_t;
+#ifdef GCE_LUA
+  typedef actor_pool<lua_actor> lua_actor_pool_t;
+#endif
 typedef actor_pool<socket> socket_pool_t;
 typedef actor_pool<acceptor> acceptor_pool_t;
+
+#ifdef GCE_LUA
+static std::string const init_lua_script = 
+  "local p = gce_path \
+  local package_path = package.path \
+  package.path = string.format(\"%s;%s\", package_path, p)";
+#endif
 ///------------------------------------------------------------------------------
 /// cache_pool::pool_impl
 ///------------------------------------------------------------------------------
@@ -30,9 +43,27 @@ struct cache_pool::pool_impl
 {
   GCE_CACHE_ALIGNED_VAR(boost::optional<stackful_actor_pool_t>, stackful_actor_pool_)
   GCE_CACHE_ALIGNED_VAR(boost::optional<stackless_actor_pool_t>, stackless_actor_pool_)
+#ifdef GCE_LUA
+  GCE_CACHE_ALIGNED_VAR(boost::optional<lua_actor_pool_t>, lua_actor_pool_)
+#endif
   GCE_CACHE_ALIGNED_VAR(boost::optional<socket_pool_t>, socket_pool_)
   GCE_CACHE_ALIGNED_VAR(boost::optional<acceptor_pool_t>, acceptor_pool_)
 };
+#ifdef GCE_LUA
+///------------------------------------------------------------------------------
+/// lua_state_deletor
+///------------------------------------------------------------------------------
+struct lua_state_deletor
+{
+  void operator()(lua_State* L)
+  {
+    if (L)
+    {
+      lua_close(L);
+    }
+  }
+};
+#endif
 ///------------------------------------------------------------------------------
 /// cache_pool
 ///------------------------------------------------------------------------------
@@ -40,6 +71,9 @@ cache_pool::cache_pool(context& ctx, std::size_t index, bool is_slice)
   : ctx_(&ctx)
   , index_(index)
   , snd_(ctx.get_io_service())
+#ifdef GCE_LUA
+  , L_(is_slice ? 0 : luaL_newstate(), lua_state_deletor())
+#endif
   , pool_list_(new pool_impl)
   , ctxid_(ctx_->get_attributes().id_)
   , timestamp_(ctx_->get_timestamp())
@@ -61,6 +95,13 @@ cache_pool::cache_pool(context& ctx, std::size_t index, bool is_slice)
       ctxid, timestamp, idx,
       is_slice ? 0 : ctx.get_attributes().actor_pool_reserve_size_
       );
+#ifdef GCE_LUA
+  pool_list_->lua_actor_pool_ = 
+    boost::in_place(
+      ctxid, timestamp, idx,
+      is_slice ? 0 : ctx.get_attributes().actor_pool_reserve_size_
+      );
+#endif
   pool_list_->socket_pool_ = 
     boost::in_place(
       ctxid, timestamp, idx,
@@ -77,6 +118,167 @@ cache_pool::~cache_pool()
 {
 }
 ///------------------------------------------------------------------------------
+#ifdef GCE_LUA
+inline void serialize_number(msg_t& msg, int src)
+{
+  msg << (boost::int32_t)src;
+}
+inline void serialize_string(msg_t& msg, std::string const& src)
+{
+  msg << src;
+}
+inline void serialize_boolean(msg_t& msg, bool src)
+{
+  msg << src;
+}
+///------------------------------------------------------------------------------
+inline int deserialize_number(msg_t& m)
+{
+  boost::int32_t des;
+  m >> des;
+  return (int)des;
+}
+inline std::string deserialize_string(msg_t& m)
+{
+  std::string des;
+  m >> des;
+  return des;
+}
+inline bool deserialize_boolean(msg_t& m)
+{
+  bool des;
+  m >> des;
+  return des;
+}
+///------------------------------------------------------------------------------
+inline void print(std::string const& str)
+{
+  if (!str.empty())
+  {
+    std::printf("%s\n", str.c_str());
+  }
+  else
+  {
+    std::printf("\n", str.c_str());
+  }
+}
+///------------------------------------------------------------------------------
+void cache_pool::init_lua(std::string const& gce_path)
+{
+  lua_State* L = L_.get();
+  luaL_openlibs(L);
+
+  luabridge::getGlobalNamespace(L)
+    .beginNamespace("detail")
+      .beginClass<aid_t>("aid_t")
+        .addFunction("get_overloading_type", &aid_t::get_overloading_type)
+        .addFunction("is_nil", &aid_t::is_nil)
+        .addFunction("to_string", &aid_t::to_string)
+        GCE_LUA_REG_SERIALIZE_FUNC(aid_t)
+      .endClass()
+      .beginClass<svcid_t>("svcid_t")
+        .addFunction("get_overloading_type", &svcid_t::get_overloading_type)
+        .addFunction("to_string", &svcid_t::to_string)
+        GCE_LUA_REG_SERIALIZE_FUNC(svcid_t)
+      .endClass()
+      .beginClass<msg_t>("msg_t")
+        .addFunction("get_overloading_type", &msg_t::get_overloading_type)
+        .addFunction("set_type", &msg_t::set_type)
+        .addFunction("to_string", &msg_t::to_string)
+        GCE_LUA_REG_SERIALIZE_FUNC(msg_t)
+      .endClass()
+      .beginClass<match_type>("match_t")
+        .addFunction("get_overloading_type", &match_type::get_overloading_type)
+        .addFunction("to_string", &match_type::to_string)
+      .endClass()
+      .beginClass<resp_t>("resp_t")
+        .addFunction("get_overloading_type", &resp_t::get_overloading_type)
+        .addFunction("to_string", &resp_t::to_string)
+      .endClass()
+      .beginClass<pattern>("pattern_t")
+        .addFunction("get_overloading_type", &pattern::get_overloading_type)
+        .addFunction("set_timeout", &pattern::set_timeout)
+        .addFunction("add_match", &pattern::add_match)
+        .addFunction("to_string", &pattern::to_string)
+      .endClass()
+      .beginClass<duration_type>("duration_t")
+        .addFunction("to_string", &duration_type::to_string)
+        GCE_LUA_REG_SERIALIZE_FUNC(duration_type)
+      .endClass()
+      .beginClass<basic_actor>("basic_actor")
+        .addFunction("get_aid", &basic_actor::get_aid)
+      .endClass()
+      .deriveClass<lua_actor, basic_actor>("actor")
+        .addFunction("set_coro", &lua_actor::set_coro)
+        .addFunction("send", &lua_actor::send)
+        .addFunction("send2svc", &lua_actor::send2svc)
+        .addFunction("relay", &lua_actor::relay)
+        .addFunction("relay2svc", &lua_actor::relay2svc)
+        .addFunction("request", &lua_actor::request)
+        .addFunction("request2svc", &lua_actor::request2svc)
+        .addFunction("reply", &lua_actor::reply)
+        .addFunction("link", &lua_actor::link)
+        .addFunction("monitor", &lua_actor::monitor)
+        .addFunction("recv", &lua_actor::recv)
+        .addFunction("recv_match", &lua_actor::recv_match)
+        .addFunction("recv_response", &lua_actor::recv_response)
+        .addFunction("recv_response_timeout", &lua_actor::recv_response_timeout)
+        .addFunction("wait", &lua_actor::wait)
+        .addFunction("spawn", &lua_actor::spawn)
+        .addFunction("spawn_remote", &lua_actor::spawn_remote)
+      .endClass()
+      .addFunction("infin", &make_infin)
+      .addFunction("zero", &make_zero)
+      .addFunction("millisecs", &lua_millisecs)
+      .addFunction("seconds", &lua_seconds)
+      .addFunction("minutes", &lua_minutes)
+      .addFunction("hours", &lua_hours)
+      .addFunction("msg", &lua_msg)
+      .addFunction("aid", &lua_aid)
+      .addFunction("svcid", &lua_svcid)
+      .addFunction("pattern", &lua_pattern)
+      .addFunction("atom", &s2i)
+      .addFunction("deatom", &i2s)
+      .addFunction("default_stacksize", &default_stacksize)
+      .addFunction("serialize_number", &serialize_number)
+      .addFunction("serialize_string", &serialize_string)
+      .addFunction("serialize_boolean", &serialize_boolean)
+      .addFunction("deserialize_number", &deserialize_number)
+      .addFunction("deserialize_string", &deserialize_string)
+      .addFunction("deserialize_boolean", &deserialize_boolean)
+      .addFunction("print", &print)
+    .endNamespace()
+    ;
+
+  luabridge::setGlobal(L, gce_path, "gce_path");
+  if (luaL_dostring(L, init_lua_script.c_str()) != 0)
+  {
+    throw std::runtime_error(lua_tostring(L, -1));
+  }
+}
+///------------------------------------------------------------------------------
+luabridge::LuaRef cache_pool::get_script(std::string const& file)
+{
+  script_list_t::iterator itr(script_list_.find(file));
+  if (itr != script_list_.end())
+  {
+    return itr->second;
+  }
+  else
+  {
+    lua_State* L = L_.get();
+    luabridge::LuaRef sf(L);
+    if (luaL_loadfile(L, file.c_str()) != 0)
+    {
+      return sf;
+    }
+    sf.pop(L);
+    script_list_.insert(std::make_pair(file, sf));
+    return sf;
+  }
+}
+#endif
+///------------------------------------------------------------------------------
 coroutine_stackful_actor* cache_pool::make_stackful_actor()
 {
   return pool_list_->stackful_actor_pool_->make(this);
@@ -86,6 +288,26 @@ coroutine_stackless_actor* cache_pool::make_stackless_actor()
 {
   return pool_list_->stackless_actor_pool_->make(this);
 }
+#ifdef GCE_LUA
+///------------------------------------------------------------------------------
+lua_actor* cache_pool::make_lua_actor()
+{
+  return pool_list_->lua_actor_pool_->make(this);
+}
+///------------------------------------------------------------------------------
+aid_t cache_pool::spawn_lua_actor(std::string const& script, aid_t sire, link_type type)
+{
+  lua_actor* a = make_lua_actor();
+  a->init(script);
+  if (sire)
+  {
+    gce::send(*a, sire, msg_new_actor, (boost::uint16_t)type);
+  }
+  aid_t aid = a->get_aid();
+  a->start();
+  return aid;
+}
+#endif
 ///------------------------------------------------------------------------------
 socket* cache_pool::make_socket()
 {
@@ -106,6 +328,13 @@ void cache_pool::free_actor(coroutine_stackless_actor* a)
 {
   pool_list_->stackless_actor_pool_->free(a);
 }
+#ifdef GCE_LUA
+///------------------------------------------------------------------------------
+void cache_pool::free_actor(lua_actor* a)
+{
+  pool_list_->lua_actor_pool_->free(a);
+}
+#endif
 ///------------------------------------------------------------------------------
 void cache_pool::free_socket(socket* skt)
 {
@@ -464,7 +693,7 @@ void cache_pool::send_already_exited(aid_t recver, aid_t sender)
   }
 }
 ///------------------------------------------------------------------------------
-void cache_pool::send_already_exited(aid_t recver, response_t res)
+void cache_pool::send_already_exited(aid_t recver, resp_t res)
 {
   aid_t target = filter_aid(recver);
   if (target)
@@ -564,6 +793,12 @@ void cache_pool::handle_recv(
     {
       a = pool_list_->stackless_actor_pool_->get(i, sid);
     }break;
+#ifdef GCE_LUA
+  case detail::actor_lua:
+    {
+      a = pool_list_->lua_actor_pool_->get(i, sid);
+    }break;
+#endif
   case detail::actor_socket:
     {
       a = pool_list_->socket_pool_->get(i, sid);
@@ -596,7 +831,7 @@ void cache_pool::send_already_exit(detail::pack& pk)
     else if (detail::request_t* req = boost::get<detail::request_t>(&pk.tag_))
     {
       /// reply actor exit msg
-      response_t res(req->get_id(), pk.recver_);
+      resp_t res(req->get_id(), pk.recver_);
       send_already_exited(req->get_aid(), res);
     }
   }

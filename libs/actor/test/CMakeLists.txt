@@ -22,7 +22,21 @@ endif ()
 set (TESTS_LINK_LIBS gce_actor ${LINK_LIBS})
 file (GLOB_RECURSE GCE_ACTOR_UNIT_TEST_FILES "${CMAKE_CURRENT_SOURCE_DIR}/*.cpp")
 file (GLOB_RECURSE GCE_ACTOR_UNIT_TEST_FILES ${GCE_ACTOR_UNIT_TEST_FILES} "${CMAKE_CURRENT_SOURCE_DIR}/*.hpp")
+
 add_executable (gce_actor_ut ${GCE_ACTOR_UNIT_TEST_FILES})
+
+# Copy lua files to build dir
+if (GCE_LUA)
+  add_custom_command (
+    TARGET gce_actor_ut
+    POST_BUILD
+    COMMAND ${CMAKE_COMMAND} -E echo "copy lua files to build dir..."
+    COMMAND ${CMAKE_COMMAND} -E copy_directory ${CMAKE_CURRENT_SOURCE_DIR}/test_lua_actor ${PROJECT_BINARY_DIR}/libs/actor/test/test_lua_actor
+    COMMAND ${CMAKE_COMMAND} -E copy_directory ${PROJECT_SOURCE_DIR}/gce/actor/lua ${PROJECT_BINARY_DIR}/libs/actor/test
+    COMMAND ${CMAKE_COMMAND} -E echo "done."
+    VERBATIM
+    )
+endif ()
 
 if (GCE_STATIC)
   set (GCE_LINK_PROP "${GCE_LINK_PROP} -static -static-libgcc -static-libstdc++")
@@ -33,3 +47,6 @@ endif ()
 
 target_link_libraries (gce_actor_ut ${TESTS_LINK_LIBS})
 install (TARGETS gce_actor_ut RUNTIME DESTINATION bin)
+if (GCE_LUA)
+  install (DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/test_lua_actor DESTINATION bin)
+endif ()

@@ -62,12 +62,12 @@ public:
     a_.relay(des, m);
   }
 
-  inline response_t request(aid_t recver, message const& m)
+  inline resp_t request(aid_t recver, message const& m)
   {
     return a_.request(recver, m);
   }
 
-  inline response_t request(svcid_t recver, message const& m)
+  inline resp_t request(svcid_t recver, message const& m)
   {
     return a_.request(recver, m);
   }
@@ -87,13 +87,13 @@ public:
     a_.monitor(target);
   }
 
-  inline aid_t recv(message& msg, match const& mach = match())
+  inline aid_t recv(message& msg, pattern const& patt = pattern())
   {
-    return a_.recv(msg, mach);
+    return a_.recv(msg, patt);
   }
 
   inline aid_t recv(
-    response_t res, message& msg, 
+    resp_t res, message& msg, 
     duration_t tmo = seconds_t(GCE_DEFAULT_REQUEST_TIMEOUT_SEC)
     )
   {
@@ -123,7 +123,7 @@ public:
 public:
   /// internal use
   inline sid_t spawn(
-    detail::spawn_type type, match_t func, 
+    detail::spawn_type type, std::string const& func, 
     match_t ctxid, std::size_t stack_size
     )
   {
@@ -177,12 +177,12 @@ public:
     a_.relay(des, m);
   }
 
-  inline response_t request(aid_t recver, message const& m)
+  inline resp_t request(aid_t recver, message const& m)
   {
     return a_.request(recver, m);
   }
 
-  inline response_t request(svcid_t recver, message const& m)
+  inline resp_t request(svcid_t recver, message const& m)
   {
     return a_.request(recver, m);
   }
@@ -202,13 +202,13 @@ public:
     a_.monitor(target);
   }
 
-  inline aid_t recv(message& msg, match const& mach = match())
+  inline aid_t recv(message& msg, pattern const& patt = pattern())
   {
-    return a_.recv(msg, mach);
+    return a_.recv(msg, patt);
   }
 
   inline aid_t recv(
-    response_t res, message& msg, 
+    resp_t res, message& msg, 
     duration_t tmo = seconds_t(GCE_DEFAULT_REQUEST_TIMEOUT_SEC)
     )
   {
@@ -233,7 +233,7 @@ public:
 public:
   /// internal use
   inline sid_t spawn(
-    detail::spawn_type type, match_t func, 
+    detail::spawn_type type, std::string const& func, 
     match_t ctxid, std::size_t stack_size
     )
   {
@@ -297,12 +297,12 @@ public:
     a_.relay(des, m);
   }
 
-  inline response_t request(aid_t recver, message const& m)
+  inline resp_t request(aid_t recver, message const& m)
   {
     return a_.request(recver, m);
   }
 
-  inline response_t request(svcid_t recver, message const& m)
+  inline resp_t request(svcid_t recver, message const& m)
   {
     return a_.request(recver, m);
   }
@@ -322,9 +322,9 @@ public:
     a_.monitor(target);
   }
 
-  inline void recv(aid_t& sender, message& msg, match const& mach = match())
+  inline void recv(aid_t& sender, message& msg, pattern const& patt = pattern())
   {
-    a_.recv(sender, msg, mach);
+    a_.recv(sender, msg, patt);
   }
 
   inline aid_t recv(message& msg, match_list_t const& match_list = match_list_t())
@@ -333,14 +333,14 @@ public:
   }
 
   inline void recv(
-    response_t res, aid_t& sender, message& msg, 
+    resp_t res, aid_t& sender, message& msg, 
     duration_t tmo = seconds_t(GCE_DEFAULT_REQUEST_TIMEOUT_SEC)
     )
   {
     a_.recv(res, sender, msg, tmo);
   }
 
-  inline aid_t recv(response_t res, message& msg)
+  inline aid_t recv(resp_t res, message& msg)
   {
     return a_.recv(res, msg);
   }
@@ -362,13 +362,13 @@ public:
 
 public:
   /// internal use
-  inline void recv(recv_handler_t const& h, match const& mach = match())
+  inline void recv(recv_handler_t const& h, pattern const& patt = pattern())
   {
-    a_.recv(h, mach);
+    a_.recv(h, patt);
   }
 
   inline void recv(
-    recv_handler_t const& h, response_t res, 
+    recv_handler_t const& h, resp_t res, 
     duration_t tmo = seconds_t(GCE_DEFAULT_REQUEST_TIMEOUT_SEC)
     )
   {
@@ -381,7 +381,7 @@ public:
   }
 
   inline sid_t spawn(
-    detail::spawn_type type, match_t func, 
+    detail::spawn_type type, std::string const& func, 
     match_t ctxid, std::size_t stack_size
     )
   {
@@ -497,12 +497,12 @@ public:
     a_.relay(des, m);
   }
 
-  inline response_t request(aid_t recver, message const& m)
+  inline resp_t request(aid_t recver, message const& m)
   {
     a_.request(recver, m);
   }
 
-  inline response_t request(svcid_t recver, message const& m)
+  inline resp_t request(svcid_t recver, message const& m)
   {
     a_.request(recver, m);
   }
@@ -527,7 +527,7 @@ public:
     return a_.recv(msg, match_list);
   }
 
-  inline aid_t recv(response_t res, message& msg)
+  inline aid_t recv(resp_t res, message& msg)
   {
     return a_.recv(res, msg);
   }

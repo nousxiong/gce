@@ -18,7 +18,7 @@
 #include <gce/actor/detail/basic_socket.hpp>
 #include <gce/actor/net_option.hpp>
 #include <gce/actor/detail/pack.hpp>
-#include <gce/actor/match.hpp>
+#include <gce/actor/pattern.hpp>
 #include <gce/actor/detail/buffer_ref.hpp>
 #include <map>
 #include <deque>
@@ -70,6 +70,9 @@ public:
 private:
   void handle_net_msg(message&);
   void spawn_remote_actor(cache_pool*, spawn_t, remote_func);
+#ifdef GCE_LUA
+  void spawn_remote_lua_actor(cache_pool*, spawn_t, std::string const& script);
+#endif
   void end_spawn_remote_actor(spawn_t, aid_t aid);
   void send_spawn_ret(spawn_t*, pack&, spawn_error, aid_t aid, bool is_err_ret);
   void send(message const&);

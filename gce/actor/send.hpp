@@ -27,7 +27,7 @@ inline void send(Sender& sender, Recver recver, message& m)
 }
 
 template <typename Sender, typename Recver>
-inline response_t request(Sender& sender, Recver recver, message& m)
+inline resp_t request(Sender& sender, Recver recver, message& m)
 {
   return sender.request(recver, m);
 }
@@ -113,21 +113,21 @@ inline void send(
 /// Request
 ///----------------------------------------------------------------------------
 template <typename Sender, typename Recver>
-inline response_t request(Sender& sender, Recver recver)
+inline resp_t request(Sender& sender, Recver recver)
 {
   message m;
   return detail::request(sender, recver, m);
 }
 ///----------------------------------------------------------------------------
 template <typename Sender, typename Recver>
-inline response_t request(Sender& sender, Recver recver, match_t type)
+inline resp_t request(Sender& sender, Recver recver, match_t type)
 {
   message m(type);
   return detail::request(sender, recver, m);
 }
 ///----------------------------------------------------------------------------
 template <typename Sender, typename Recver, typename A1>
-inline response_t request(Sender& sender, Recver recver, match_t type, A1 const& a1)
+inline resp_t request(Sender& sender, Recver recver, match_t type, A1 const& a1)
 {
   message m(type);
   m << a1;
@@ -135,7 +135,7 @@ inline response_t request(Sender& sender, Recver recver, match_t type, A1 const&
 }
 ///----------------------------------------------------------------------------
 template <typename Sender, typename Recver, typename A1, typename A2>
-inline response_t request(
+inline resp_t request(
   Sender& sender, Recver recver, match_t type,
   A1 const& a1, A2 const& a2
   )
@@ -146,7 +146,7 @@ inline response_t request(
 }
 ///----------------------------------------------------------------------------
 template <typename Sender, typename Recver, typename A1, typename A2, typename A3>
-inline response_t request(
+inline resp_t request(
   Sender& sender, Recver recver, match_t type,
   A1 const& a1, A2 const& a2, A3 const& a3
   )
@@ -157,7 +157,7 @@ inline response_t request(
 }
 ///----------------------------------------------------------------------------
 template <typename Sender, typename Recver, typename A1, typename A2, typename A3, typename A4>
-inline response_t request(
+inline resp_t request(
   Sender& sender, Recver recver, match_t type,
   A1 const& a1, A2 const& a2, A3 const& a3, A4 const& a4
   )
@@ -170,7 +170,7 @@ inline response_t request(
 template <
   typename Sender, typename Recver, typename A1, typename A2,
   typename A3, typename A4, typename A5>
-inline response_t request(
+inline resp_t request(
   Sender& sender, Recver recver, match_t type,
   A1 const& a1, A2 const& a2, A3 const& a3, A4 const& a4, A5 const& a5
   )

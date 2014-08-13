@@ -72,7 +72,7 @@ void node::run(gce::actor<gce::stackful>& self, gce::svcid_t master)
       master_aid = master_->start(self);
 
       /// wait master setup
-      gce::response_t res = gce::request(self, master_aid, gce::atom("init"));
+      gce::resp_t res = gce::request(self, master_aid, gce::atom("init"));
       gce::recv(self, res);
     }
 
@@ -86,7 +86,7 @@ void node::run(gce::actor<gce::stackful>& self, gce::svcid_t master)
         );
 
     /// tell master a new node online
-    gce::response_t res = gce::request(self, master, gce::atom("logon"), node_svc);
+    gce::resp_t res = gce::request(self, master, gce::atom("logon"), node_svc);
     std::string errmsg;
     gce::recv(self, res, errmsg, gce::seconds_t(5));
     if (!errmsg.empty())
@@ -155,7 +155,7 @@ void node::run(gce::actor<gce::stackful>& self, gce::svcid_t master)
         }
 
         /// stop all given apps
-        std::vector<gce::response_t> response_list;
+        std::vector<gce::resp_t> response_list;
         BOOST_FOREACH(gate_info& info, ni.gate_list_)
         {
           app_list_t::iterator itr(gate_list.find(info.svc_name_));
@@ -178,7 +178,7 @@ void node::run(gce::actor<gce::stackful>& self, gce::svcid_t master)
           }
         }
 
-        BOOST_FOREACH(gce::response_t res, response_list)
+        BOOST_FOREACH(gce::resp_t res, response_list)
         {
           gce::message msg;
           self.recv(res, msg);
@@ -236,7 +236,7 @@ void node::run(gce::actor<gce::stackful>& self, gce::svcid_t master)
 
   std::printf("node %s stopping...\n", gce::atom(ctx_.get_attributes().id_).c_str());
 
-  std::vector<gce::response_t> response_list;
+  std::vector<gce::resp_t> response_list;
   BOOST_REVERSE_FOREACH(app_list_t::value_type& pr, gate_list)
   {
     response_list.push_back(
@@ -259,7 +259,7 @@ void node::run(gce::actor<gce::stackful>& self, gce::svcid_t master)
   }
 
 
-  BOOST_FOREACH(gce::response_t res, response_list)
+  BOOST_FOREACH(gce::resp_t res, response_list)
   {
     gce::message msg;
     self.recv(res, msg);

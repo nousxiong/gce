@@ -31,7 +31,7 @@ private:
     //try
     {
       std::size_t size = 50;
-      std::vector<response_t> res_list(size);
+      std::vector<resp_t> res_list(size);
       for (std::size_t i=0; i<size; ++i)
       {
         aid_t aid =
@@ -41,10 +41,10 @@ private:
             monitored
             );
         res_list[i] = request(self, aid);
-        match mach;
-        mach.match_list_.push_back(atom("ret"));
+        pattern patt;
+        patt.match_list_.push_back(atom("ret"));
         message msg;
-        self.recv(msg, mach);
+        self.recv(msg, patt);
       }
 
       timer_t tmr(self.get_cache_pool()->get_context().get_io_service());
