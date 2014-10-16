@@ -1,4 +1,4 @@
-﻿///
+///
 /// Copyright (c) 2009-2014 Nous Xiong (348944179 at qq dot com)
 ///
 /// Distributed under the Boost Software License, Version 1.0. (See accompanying
@@ -22,6 +22,8 @@
 #include <string>
 #include <vector>
 
+static std::size_t const test_count = 1;
+
 #include <boost/timer/timer.hpp>
 #include "test_coro.hpp"
 #include "test_actor.hpp"
@@ -37,6 +39,7 @@
 #include "test_link.hpp"
 #include "test_message.hpp"
 #include "test_relay.hpp"
+#include "test_common_relay.hpp"
 #include "test_socket.hpp"
 #include "test_socket_broken.hpp"
 #include "test_remote_link.hpp"
@@ -45,15 +48,22 @@
 #include "test_router_broken.hpp"
 #include "test_remote.hpp"
 #include "test_remote_relay.hpp"
+#include "test_remote_common_relay.hpp"
 #include "test_send_recv.hpp"
 #include "test_service.hpp"
-#include "test_lua_actor.hpp"
+#ifdef GCE_LUA
+# include "test_lua_actor.hpp"
+# include "test_lua_socket.hpp"
+# include "test_lua_service.hpp"
+#endif
+#include "test_batch_pingpong.hpp"
+//#include "test_partial.hpp"
 
 int main()
 {
   try
   {
-    /*gce::coro_ut::run();
+    gce::coro_ut::run();
     gce::send_recv_ut::run();
     gce::actor_ut::run();
     gce::response_ut::run();
@@ -67,6 +77,7 @@ int main()
     gce::match_ut::run();
     gce::link_ut::run();
     gce::relay_ut::run();
+    gce::common_relay_ut::run();
     gce::message_ut::run();
     gce::socket_ut::run();
     gce::socket_broken_ut::run();
@@ -76,10 +87,15 @@ int main()
     gce::router_link_ut::run();
     gce::router_broken_ut::run();
     gce::remote_relay_ut::run();
-    gce::service_ut::run();*/
+    gce::remote_common_relay_ut::run();
+    gce::service_ut::run();
+    //gce::test_partial_ut::run();
 #ifdef GCE_LUA
     gce::lua_actor_ut::run();
+    gce::lua_socket_ut::run();
+    gce::lua_service_ut::run();
 #endif
+    //gce::batch_pingpong_ut::run();
   }
   catch (std::exception& ex)
   {

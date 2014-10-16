@@ -1,4 +1,4 @@
-﻿///
+///
 /// Copyright (c) 2009-2014 Nous Xiong (348944179 at qq dot com)
 ///
 /// Distributed under the Boost Software License, Version 1.0. (See accompanying
@@ -11,7 +11,31 @@
 #define GCE_ACTOR_CONFIG_HPP
 
 #include <gce/config.hpp>
-#include <gce/actor/user.hpp>
+
+#ifndef GCE_CACHE_LINE_SIZE
+# define GCE_CACHE_LINE_SIZE 64
+#endif
+
+#ifndef GCE_SOCKET_RECV_CACHE_SIZE
+# define GCE_SOCKET_RECV_CACHE_SIZE 65535
+#endif
+
+#ifndef GCE_SOCKET_RECV_MAX_SIZE
+# define GCE_SOCKET_RECV_MAX_SIZE 60000
+#endif
+
+#ifndef GCE_SMALL_MSG_SIZE
+# define GCE_SMALL_MSG_SIZE 128
+#endif
+
+#ifndef GCE_MSG_MIN_GROW_SIZE
+# define GCE_MSG_MIN_GROW_SIZE 64
+#endif
+
+#ifndef GCE_DEFAULT_REQUEST_TIMEOUT_SEC
+# define GCE_DEFAULT_REQUEST_TIMEOUT_SEC 180
+#endif
+
 #include <gce/integer.hpp>
 #include <gce/actor/atom.hpp>
 
@@ -22,6 +46,7 @@
 #include <boost/atomic.hpp>
 
 #include <gce/amsg/amsg.hpp>
+#include <gce/amsg/zerocopy.hpp>
 #ifdef GCE_LUA
 # include <lua.hpp>
 # include <gce/lua_bridge/LuaBridge.h>
@@ -38,7 +63,7 @@
 
 #define GCE_MAX_MSG_SIZE (GCE_SOCKET_RECV_CACHE_SIZE - GCE_SOCKET_RECV_MAX_SIZE)
 #define GCE_ZERO_TIME 0
-#define GCE_INFIN_TIME 99999999
+#define GCE_INFIN_TIME 199999999
 
 namespace gce
 {
@@ -54,125 +79,8 @@ typedef boost::chrono::seconds seconds_t;
 typedef boost::chrono::minutes minutes_t;
 typedef boost::chrono::hours hours_t;
 
-#ifdef GCE_LUA
-struct duration_type
-{
-  enum type
-  {
-    raw = 0,
-    millisec,
-    second,
-    minute,
-    hour
-  };
-
-  duration_type()
-    : dur_(duration_t::zero())
-    , ty_(raw)
-  {
-  }
-
-  duration_type(duration_t d)
-    : dur_(d)
-    , ty_(raw)
-  {
-  }
-
-  duration_type(millisecs_t d)
-    : dur_(d)
-    , ty_(millisec)
-  {
-  }
-
-  duration_type(seconds_t d)
-    : dur_(d)
-    , ty_(second)
-  {
-  }
-
-  duration_type(minutes_t d)
-    : dur_(d)
-    , ty_(minute)
-  {
-  }
-
-  duration_type(hours_t d)
-    : dur_(d)
-    , ty_(hour)
-  {
-  }
-
-  inline operator duration_t() const
-  {
-    return dur_;
-  }
-
-  inline void operator=(duration_t d)
-  {
-    dur_ = d;
-  }
-
-  inline std::string to_string()
-  {
-    std::string rt;
-    rt += "<";
-    switch (ty_)
-    {
-    case millisec:
-      rt += boost::lexical_cast<std::string>(boost::chrono::duration_cast<millisecs_t>(dur_).count());
-      break;
-    case second:
-      rt += boost::lexical_cast<std::string>(boost::chrono::duration_cast<seconds_t>(dur_).count());
-      break;
-    case minute:
-      rt += boost::lexical_cast<std::string>(boost::chrono::duration_cast<minutes_t>(dur_).count());
-      break;
-    case hour:
-      rt += boost::lexical_cast<std::string>(boost::chrono::duration_cast<hours_t>(dur_).count());
-      break;
-    default:
-      rt += boost::lexical_cast<std::string>(dur_.count());
-      break;
-    }
-    rt += ">";
-    return rt;
-  }
-
-  GCE_LUA_SERIALIZE_FUNC
-
-  duration_t dur_;
-  type ty_;
-};
-inline duration_type lua_millisecs(int val)
-{
-  return millisecs_t(val);
-}
-inline duration_type lua_seconds(int val)
-{
-  return seconds_t(val);
-}
-inline duration_type lua_minutes(int val)
-{
-  return minutes_t(val);
-}
-inline duration_type lua_hours(int val)
-{
-  return hours_t(val);
-}
-
-inline duration_type make_zero()
-{
-  return duration_t(GCE_ZERO_TIME);
-}
-
-inline duration_type make_infin()
-{
-  return duration_t(GCE_INFIN_TIME);
-}
-#endif
-
-static duration_t zero(GCE_ZERO_TIME);
-static duration_t infin(GCE_INFIN_TIME);
+static duration_t const zero(GCE_ZERO_TIME);
+static duration_t const infin(seconds_t(GCE_INFIN_TIME));
 
 typedef boost::uint32_t sid_t;
 static boost::uint32_t const sid_nil = static_cast<sid_t>(-1);
@@ -194,20 +102,22 @@ enum link_type
 };
 
 /// actor type tags
+struct threaded {};
 struct stackful {};
 struct stackless {};
-struct threaded {};
 struct nonblocked {};
+struct socket {};
+struct acceptor {};
 #ifdef GCE_LUA
 struct luaed {};
 #endif
 
 typedef match_t exit_code_t;
-static exit_code_t const exit = atom("gce_actor_exit");
+static exit_code_t const exit = atom("gce_exit");
 static exit_code_t const exit_normal = atom("gce_ex_normal");
 static exit_code_t const exit_except = atom("gce_ex_except");
 static exit_code_t const exit_remote = atom("gce_ex_remote");
-static exit_code_t const exit_already = atom("gce_ex_already");
+static exit_code_t const exit_already = atom("gce_ex_alread");
 static exit_code_t const exit_neterr = atom("gce_ex_neterr");
 
 namespace detail
@@ -242,8 +152,8 @@ enum socket_type
 enum spawn_type
 {
   spw_nil = 0,
-  spw_stacked,
-  spw_evented,
+  spw_stackful,
+  spw_stackless,
 #ifdef GCE_LUA
   spw_luaed,
 #endif

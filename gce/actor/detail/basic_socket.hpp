@@ -1,4 +1,4 @@
-﻿///
+///
 /// Copyright (c) 2009-2014 Nous Xiong (348944179 at qq dot com)
 ///
 /// Distributed under the Boost Software License, Version 1.0. (See accompanying
@@ -17,7 +17,6 @@ namespace gce
 {
 namespace detail
 {
-class cache_pool;
 class basic_socket
 {
 public:
@@ -25,7 +24,7 @@ public:
   virtual ~basic_socket() {}
 
 public:
-  virtual void init(cache_pool*) = 0;
+  virtual void init(strand_t&) = 0;
   virtual void send(byte_t const*, std::size_t, byte_t const*, std::size_t) = 0;
   virtual std::size_t recv(byte_t*, std::size_t, yield_t) = 0;
   virtual void connect(yield_t) = 0;

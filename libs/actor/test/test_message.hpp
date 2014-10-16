@@ -1,4 +1,4 @@
-﻿///
+///
 /// Copyright (c) 2009-2014 Nous Xiong (348944179 at qq dot com)
 ///
 /// Distributed under the Boost Software License, Version 1.0. (See accompanying
@@ -42,10 +42,12 @@ public:
   static void run()
   {
     std::cout << "message_ut begin." << std::endl;
-    for (std::size_t i=0; i<100; ++i)
+    for (std::size_t i=0; i<test_count; ++i)
     {
       test_common();
+      if (test_count > 1) std::cout << "\r" << i;
     }
+    if (test_count > 1) std::cout << std::endl;
     std::cout << "message_ut end." << std::endl;
   }
 

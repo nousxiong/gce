@@ -1,5 +1,5 @@
 #
-# This file is part of the CMake build system for Gce
+# This file is part of the CMake build system for GCE
 #
 # CMake auto-generated configuration options. 
 # Do not check in modified versions of this file.
@@ -19,7 +19,7 @@ if (WIN32)
 endif ()
 
 # Build tests.
-set (TESTS_LINK_LIBS gce_actor ${LINK_LIBS})
+set (TESTS_LINK_LIBS ${LINK_LIBS})
 file (GLOB_RECURSE GCE_ACTOR_UNIT_TEST_FILES "${CMAKE_CURRENT_SOURCE_DIR}/*.cpp")
 file (GLOB_RECURSE GCE_ACTOR_UNIT_TEST_FILES ${GCE_ACTOR_UNIT_TEST_FILES} "${CMAKE_CURRENT_SOURCE_DIR}/*.hpp")
 
@@ -46,6 +46,7 @@ if (GCE_LINK_PROP)
 endif ()
 
 target_link_libraries (gce_actor_ut ${TESTS_LINK_LIBS})
+
 install (TARGETS gce_actor_ut RUNTIME DESTINATION bin)
 if (GCE_LUA)
   install (DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/test_lua_actor DESTINATION bin)

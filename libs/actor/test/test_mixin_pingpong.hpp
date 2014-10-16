@@ -1,4 +1,4 @@
-﻿///
+///
 /// Copyright (c) 2009-2014 Nous Xiong (348944179 at qq dot com)
 ///
 /// Distributed under the Boost Software License, Version 1.0. (See accompanying
@@ -16,12 +16,17 @@ public:
   static void run()
   {
     std::cout << "mixin_pingpong_ut begin." << std::endl;
-    test();
+    for (std::size_t i=0; i<test_count; ++i)
+    {
+      test();
+      if (test_count > 1) std::cout << "\r" << i;
+    }
+    if (test_count > 1) std::cout << std::endl;
     std::cout << "mixin_pingpong_ut end." << std::endl;
   }
 
 private:
-  static void pong_actor(actor<threaded> pong)
+  static void pong_actor(threaded_actor pong)
   {
     message msg;
     while (true)
@@ -46,8 +51,8 @@ private:
       attrs.thread_num_ = 2;
       context ctx(attrs);
 
-      actor<threaded> ping = spawn(ctx);
-      actor<threaded> pong = spawn(ctx);
+      threaded_actor ping = spawn(ctx);
+      threaded_actor pong = spawn(ctx);
       aid_t pong_id = pong.get_aid();
       boost::thread thr(
         boost::bind(
@@ -62,7 +67,7 @@ private:
         ping.send(pong_id, m);
         ping.recv(m);
       }
-      send(ping, pong_id, 2);
+      ping->send(pong_id, 2);
       thr.join();
     }
     catch (std::exception& ex)

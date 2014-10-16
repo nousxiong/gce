@@ -1,4 +1,4 @@
-﻿///
+///
 /// Copyright (c) 2009-2014 Nous Xiong (348944179 at qq dot com)
 ///
 /// Distributed under the Boost Software License, Version 1.0. (See accompanying
@@ -18,8 +18,8 @@ public:
   public:
     typedef boost::chrono::system_clock system_clock_t;
     typedef system_clock_t::time_point time_point_t;
-    typedef boost::chrono::milliseconds milliseconds_t;
-    typedef boost::chrono::milliseconds::rep fps_rep_t;
+    typedef millisecs_t milliseconds_t;
+    typedef millisecs_t::rep fps_rep_t;
 
   public:
     my_3d_engine(context& ctx, int count_down, fps_rep_t fps = 60)
@@ -29,7 +29,7 @@ public:
       , stopped_(false)
     {
       aid_t counter = spawn(base_, boost::bind(&slice_ut::cd, _1));
-      send(cln_, counter, atom("cd"), count_down);
+      cln_->send(counter, "cd", count_down);
     }
 
     ~my_3d_engine()
@@ -60,12 +60,12 @@ public:
     void update(milliseconds_t /*dt*/)
     {
       int count_down;
-      aid_t counter = recv(cln_, atom("cd"), count_down);
+      aid_t counter = cln_->recv("cd", count_down);
       if (counter)
       {
         if (count_down > 0)
         {
-          send(cln_, counter, atom("cd"), count_down);
+          cln_->send(counter, "cd", count_down);
         }
         else
         {
@@ -76,21 +76,21 @@ public:
 
   private:
     milliseconds_t const frame_;
-    actor<threaded> base_;
-    actor<nonblocked> cln_;
+    threaded_actor base_;
+    nonblocked_actor cln_;
     bool stopped_;
   };
 
-  static void cd(actor<stackful>& self)
+  static void cd(stackful_actor self)
   {
     try
     {
       int count_down;
       while (true)
       {
-        aid_t cln = recv(self, atom("cd"), count_down);
+        aid_t cln = self->recv("cd", count_down);
         --count_down;
-        send(self, cln, atom("cd"), count_down);
+        self->send(cln, "cd", count_down);
         if (count_down <= 0)
         {
           break;
@@ -107,7 +107,12 @@ public:
   static void run()
   {
     std::cout << "slice_ut begin." << std::endl;
-    test_base();
+    for (std::size_t i=0; i<test_count; ++i)
+    {
+      test_base();
+      if (test_count > 1) std::cout << "\r" << i;
+    }
+    if (test_count > 1) std::cout << std::endl;
     std::cout << "slice_ut end." << std::endl;
   }
 

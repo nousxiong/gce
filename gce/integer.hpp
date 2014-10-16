@@ -1,4 +1,4 @@
-﻿///
+///
 /// integer.hpp
 ///
 /// Copyright (c) 2009-2014 Nous Xiong (348944179 at qq dot com)

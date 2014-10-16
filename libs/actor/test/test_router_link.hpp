@@ -1,4 +1,4 @@
-﻿///
+///
 /// Copyright (c) 2009-2014 Nous Xiong (348944179 at qq dot com)
 ///
 /// Distributed under the Boost Software License, Version 1.0. (See accompanying
@@ -15,7 +15,12 @@ public:
   static void run()
   {
     std::cout << "router_link_ut begin." << std::endl;
-    test_base();
+    for (std::size_t i=0; i<test_count; ++i)
+    {
+      test_base();
+      if (test_count > 1) std::cout << "\r" << i;
+    }
+    if (test_count > 1) std::cout << std::endl;
     std::cout << "router_link_ut end." << std::endl;
   }
 
@@ -34,17 +39,18 @@ public:
       attrs.id_ = atom("two");
       context ctx2(attrs);
       
-      actor<threaded> base = spawn(ctx);
-      actor<threaded> base1 = spawn(ctx1);
-      actor<threaded> base2 = spawn(ctx2);
-
-      gce::bind(base, "tcp://127.0.0.1:14923", true);
-
+      threaded_actor base = spawn(ctx);
+      threaded_actor base1 = spawn(ctx1);
+      threaded_actor base2 = spawn(ctx2);
+      
       net_option opt;
+      opt.is_router_ = true;
+      gce::bind(base, "tcp://127.0.0.1:14923", remote_func_list_t(), opt);
+
       opt.reconn_period_ = seconds_t(1);
-      connect(base1, atom("router"), "tcp://127.0.0.1:14923", true, opt);
-      connect(base2, atom("router"), "tcp://127.0.0.1:14923", true, opt);
-      wait(base2, boost::chrono::milliseconds(100));
+      connect(base1, "router", "tcp://127.0.0.1:14923", opt);
+      connect(base2, "router", "tcp://127.0.0.1:14923", opt);
+      base2.sleep_for(millisecs_t(100));
 
       std::vector<aid_t> quiter_list(quiter_num);
       for (std::size_t i=0; i<quiter_num; ++i)
@@ -62,13 +68,13 @@ public:
 
       for (std::size_t i=0; i<quiter_num; ++i)
       {
-        send(base1, quiter_list[i]);
+        base1->send(quiter_list[i]);
       }
 
       for (std::size_t i=0; i<quiter_num; ++i)
       {
-        recv(base1);
-        recv(base2);
+        base1->recv();
+        base2->recv();
       }
     }
     catch (std::exception& ex)
@@ -77,11 +83,11 @@ public:
     }
   }
 
-  static void quiter(actor<stackful>& self)
+  static void quiter(stackful_actor self)
   {
     try
     {
-      recv(self);
+      self->recv();
     }
     catch (std::exception& ex)
     {

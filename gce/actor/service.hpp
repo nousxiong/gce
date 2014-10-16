@@ -1,4 +1,4 @@
-﻿///
+///
 /// Copyright (c) 2009-2014 Nous Xiong (348944179 at qq dot com)
 ///
 /// Distributed under the Boost Software License, Version 1.0. (See accompanying
@@ -12,54 +12,46 @@
 
 #include <gce/actor/config.hpp>
 #include <gce/actor/actor.hpp>
-#include <gce/actor/detail/cache_pool.hpp>
-#include <gce/actor/context.hpp>
 #include <gce/actor/service_id.hpp>
+#include <gce/actor/detail/service.hpp>
+#include <gce/actor/detail/to_match.hpp>
 
 namespace gce
 {
-namespace detail
+template <typename Match>
+void register_service(stackful_actor self, Match name)
 {
-template <typename Actor>
-inline void register_service(Actor& a, match_t name)
-{
-  cache_pool* user = a.get_cache_pool();
-  context& ctx = user->get_context();
-  user->register_service(name, a.get_aid());
-  ctx.register_service(name, a.get_aid(), user->get_index());
+  detail::register_service(
+    self.get_aid(), self.get_service(), detail::to_match(name)
+    );
 }
 
-template <typename Actor>
-inline void deregister_service(Actor& a, match_t name)
+template <typename Match>
+void deregister_service(stackful_actor self, Match name)
 {
-  cache_pool* user = a.get_cache_pool();
-  context& ctx = user->get_context();
-  user->deregister_service(name, a.get_aid());
-  ctx.deregister_service(name, a.get_aid(), user->get_index());
-}
+  detail::deregister_service(
+    self.get_aid(), self.get_service(), detail::to_match(name)
+    );
 }
 
-inline void register_service(actor<stackful>& self, match_t name)
+template <typename Match>
+void register_service(stackless_actor self, Match name)
 {
-  detail::register_service(self, name);
+  detail::register_service(
+    self.get_aid(), self.get_service(), detail::to_match(name)
+    );
 }
 
-inline void deregister_service(actor<stackful>& self, match_t name)
+template <typename Match>
+void deregister_service(stackless_actor self, Match name)
 {
-  detail::deregister_service(self, name);
+  detail::deregister_service(
+    self.get_aid(), self.get_service(), detail::to_match(name)
+    );
 }
 
-inline void register_service(actor<stackless>& self, match_t name)
-{
-  detail::register_service(self, name);
-}
-
-inline void deregister_service(actor<stackless>& self, match_t name)
-{
-  detail::deregister_service(self, name);
-}
-
-inline gce::svcid_t make_svcid(ctxid_t ctxid, match_t name)
+template <typename Ctxid, typename Match>
+svcid_t make_svcid(Ctxid ctxid, Match name)
 {
   return svcid_t(ctxid, name);
 }

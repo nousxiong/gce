@@ -1,4 +1,4 @@
-﻿///
+///
 /// Copyright (c) 2009-2014 Nous Xiong (348944179 at qq dot com)
 ///
 /// Distributed under the Boost Software License, Version 1.0. (See accompanying
@@ -15,7 +15,12 @@ public:
   static void run()
   {
     std::cout << "socket_broken_ut begin." << std::endl;
-    test_base();
+    for (std::size_t i=0; i<test_count; ++i)
+    {
+      test_base();
+      if (test_count > 1) std::cout << "\r" << i;
+    }
+    if (test_count > 1) std::cout << std::endl;
     std::cout << "socket_broken_ut end." << std::endl;
   }
 
@@ -29,9 +34,9 @@ public:
       attributes attrs;
       attrs.id_ = atom("one");
       context ctx(attrs);
-      actor<threaded> base = spawn(ctx);
+      threaded_actor base = spawn(ctx);
 
-      actor<threaded> a = spawn(ctx);
+      threaded_actor a = spawn(ctx);
       gce::bind(base, "tcp://127.0.0.1:14923");
 
       std::vector<aid_t> quiter_list(quiter_num);
@@ -43,7 +48,7 @@ public:
           )
         );
 
-      recv(base);
+      base->recv();
       BOOST_FOREACH(aid_t const& aid, quiter_list)
       {
         base.link(aid);
@@ -53,7 +58,7 @@ public:
 
       for (std::size_t i=0; i<quiter_num; ++i)
       {
-        recv(base);
+        base->recv();
       }
     }
     catch (std::exception& ex)
@@ -64,7 +69,7 @@ public:
 
   static void two(
     std::vector<aid_t>& quiter_list,
-    aid_t base_id, actor<threaded> a
+    aid_t base_id, threaded_actor a
     )
   {
     try
@@ -72,12 +77,12 @@ public:
       attributes attrs;
       attrs.id_ = atom("two");
       context ctx(attrs);
-      actor<threaded> base = spawn(ctx);
+      threaded_actor base = spawn(ctx);
 
-      wait(base, boost::chrono::milliseconds(100));
+      base.sleep_for(millisecs_t(100));
       net_option opt;
       opt.reconn_period_ = seconds_t(1);
-      connect(base, atom("one"), "tcp://127.0.0.1:14923", false, opt);
+      connect(base, "one", "tcp://127.0.0.1:14923", opt);
 
       BOOST_FOREACH(aid_t& aid, quiter_list)
       {
@@ -91,15 +96,15 @@ public:
             );
       }
 
-      send(a, base_id, atom("notify"));
+      a->send(base_id, "notify");
       BOOST_FOREACH(aid_t const& aid, quiter_list)
       {
-        send(base, aid, atom("quit"));
+        base->send(aid, "quit");
       }
 
       for (std::size_t i=0; i<quiter_list.size(); ++i)
       {
-        recv(base);
+        base->recv();
       }
     }
     catch (std::exception& ex)
@@ -108,11 +113,11 @@ public:
     }
   }
 
-  static void quiter(actor<stackful>& self)
+  static void quiter(stackful_actor self)
   {
     try
     {
-      recv(self);
+      self->recv();
     }
     catch (std::exception& ex)
     {

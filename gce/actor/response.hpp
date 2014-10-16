@@ -1,4 +1,4 @@
-﻿///
+///
 /// Copyright (c) 2009-2014 Nous Xiong (348944179 at qq dot com)
 ///
 /// Distributed under the Boost Software License, Version 1.0. (See accompanying
@@ -25,22 +25,17 @@ public:
   ~response() {}
 
 public:
-  inline bool valid() const { return id_ != sid_nil; }
-  inline sid_t get_id() const { return id_; }
-  inline aid_t get_aid() const { return aid_; }
+  bool valid() const { return id_ != sid_nil; }
+  sid_t get_id() const { return id_; }
+  aid_t get_aid() const { return aid_; }
 
   /// for local use
-  inline aid_t get_recver() const { return recver_; }
-  inline svcid_t get_svcid() const { return svc_; }
+  aid_t get_recver() const { return recver_; }
+  svcid_t get_svcid() const { return svc_; }
 
 #ifdef GCE_LUA
   /// internal use
-  inline int get_overloading_type() const
-  {
-    return (int)detail::overloading_1;
-  }
-
-  inline std::string to_string()
+  std::string to_string()
   {
     std::string rt;
     rt += "<";

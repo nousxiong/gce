@@ -1,4 +1,4 @@
-﻿///
+///
 /// Copyright (c) 2009-2014 Nous Xiong (348944179 at qq dot com)
 ///
 /// Distributed under the Boost Software License, Version 1.0. (See accompanying
@@ -15,7 +15,12 @@ public:
   static void run()
   {
     std::cout << "router_ut begin." << std::endl;
-    test_base();
+    for (std::size_t i=0; i<test_count; ++i)
+    {
+      test_base();
+      if (test_count > 1) std::cout << "\r" << i;
+    }
+    if (test_count > 1) std::cout << std::endl;
     std::cout << "router_ut end." << std::endl;
   }
 
@@ -34,11 +39,13 @@ public:
       attrs.id_ = atom("two");
       context ctx2(attrs);
       
-      actor<threaded> base = spawn(ctx);
-      actor<threaded> base1 = spawn(ctx1);
-      actor<threaded> base2 = spawn(ctx2);
+      threaded_actor base = spawn(ctx);
+      threaded_actor base1 = spawn(ctx1);
+      threaded_actor base2 = spawn(ctx2);
 
-      gce::bind(base, "tcp://127.0.0.1:14923", true);
+      net_option opt;
+      opt.is_router_ = true;
+      gce::bind(base, "tcp://127.0.0.1:14923", remote_func_list_t(), opt);
 
       aid_t echo_aid =
         spawn(
@@ -49,20 +56,19 @@ public:
           monitored
           );
 
-      net_option opt;
       opt.reconn_period_ = seconds_t(1);
-      connect(base1, atom("router"), "tcp://127.0.0.1:14923", true, opt);
-      connect(base2, atom("router"), "tcp://127.0.0.1:14923", true, opt);
-      wait(base2, boost::chrono::milliseconds(100));
+      connect(base1, "router", "tcp://127.0.0.1:14923", opt);
+      connect(base2, "router", "tcp://127.0.0.1:14923", opt);
+      base2.sleep_for(millisecs_t(100));
 
       for (std::size_t i=0; i<echo_num; ++i)
       {
-        send(base1, echo_aid, atom("echo"));
-        recv(base1, atom("echo"));
+        base1->send(echo_aid, "echo");
+        base1->recv("echo");
       }
-      send(base1, echo_aid, atom("end"));
+      base1->send(echo_aid, "end");
 
-      recv(base2);
+      base2->recv();
     }
     catch (std::exception& ex)
     {
@@ -70,7 +76,7 @@ public:
     }
   }
 
-  static void echo(actor<stackful>& self)
+  static void echo(stackful_actor self)
   {
     try
     {

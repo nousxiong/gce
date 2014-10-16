@@ -1,4 +1,4 @@
-﻿///
+///
 /// Copyright (c) 2009-2014 Nous Xiong (348944179 at qq dot com)
 ///
 /// Distributed under the Boost Software License, Version 1.0. (See accompanying
@@ -15,20 +15,25 @@ public:
   static void run()
   {
     std::cout << "mixin_ut begin." << std::endl;
-    test_common();
+    for (std::size_t i=0; i<test_count; ++i)
+    {
+      test_common();
+      if (test_count > 1) std::cout << "\r" << i;
+    }
+    if (test_count > 1) std::cout << std::endl;
     std::cout << "mixin_ut end." << std::endl;
   }
 
 private:
-  static void my_child(actor<stackful>& self)
+  static void my_child(stackful_actor self)
   {
-    aid_t aid = recv(self);
-    reply(self, aid);
+    aid_t aid = self->recv();
+    self->reply(aid);
   }
 
   static void my_thr(context& ctx)
   {
-    actor<threaded> a = spawn(ctx);
+    threaded_actor a = spawn(ctx);
     std::size_t size = 10;
     std::vector<resp_t> res_list(size);
     for (std::size_t i=0; i<size; ++i)
@@ -38,7 +43,7 @@ private:
           a,
           boost::bind(&mixin_ut::my_child, _1)
           );
-      res_list[i] = request(a, aid);
+      res_list[i] = a->request(aid);
     }
 
     for (std::size_t i=0; i<size; ++i)
@@ -46,7 +51,7 @@ private:
       aid_t aid;
       do
       {
-        aid = recv(a, res_list[i], seconds_t(1));
+        aid = a->respond(res_list[i], seconds_t(1));
       }
       while (!aid);
     }

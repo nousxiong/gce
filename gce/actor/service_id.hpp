@@ -1,4 +1,4 @@
-﻿///
+///
 /// Copyright (c) 2009-2014 Nous Xiong (348944179 at qq dot com)
 ///
 /// Distributed under the Boost Software License, Version 1.0. (See accompanying
@@ -11,6 +11,7 @@
 #define GCE_ACTOR_SERVICE_ID_HPP
 
 #include <gce/actor/config.hpp>
+#include <gce/actor/detail/to_match.hpp>
 
 namespace gce
 {
@@ -18,20 +19,25 @@ class service_id
 {
 public:
   service_id()
-    : ctxid_(ctxid_nil)
-    , name_(match_nil)
+    : nil_(0)
+    , ctxid_(0)
+    , name_(0)
   {
   }
 
-  explicit service_id(match_t name)
-    : ctxid_(ctxid_nil)
-    , name_(name)
+  template <typename Match>
+  explicit service_id(Match name)
+    : nil_(0)
+    , ctxid_(0)
+    , name_(detail::to_match(name))
   {
   }
 
-  service_id(ctxid_t ctxid, match_t name)
-    : ctxid_(ctxid)
-    , name_(name)
+  template <typename Ctxid, typename Match>
+  service_id(Ctxid ctxid, Match name)
+    : nil_(1)
+    , ctxid_(detail::to_match(ctxid))
+    , name_(detail::to_match(name))
   {
   }
 
@@ -40,30 +46,40 @@ public:
   }
 
 public:
-  inline operator bool() const
+  operator bool() const
   {
-    return name_ != match_nil;
+    return nil_ != 0;
   }
 
-  inline bool operator!() const
+  bool operator!() const
   {
-    return name_ == match_nil;
+    return nil_ == 0;
   }
 
-  inline bool operator==(service_id const& rhs) const
+  bool operator==(service_id const& rhs) const
   {
     return
+      nil_ == rhs.nil_ && 
       ctxid_ == rhs.ctxid_ &&
       name_ == rhs.name_;
   }
 
-  inline bool operator!=(service_id const& rhs) const
+  bool operator!=(service_id const& rhs) const
   {
     return !(*this == rhs);
   }
 
-  inline bool operator<(service_id const& rhs) const
+  bool operator<(service_id const& rhs) const
   {
+    if (nil_ < rhs.nil_)
+    {
+      return true;
+    }
+    else if (ctxid_ > rhs.ctxid_)
+    {
+      return false;
+    }
+
     if (ctxid_ < rhs.ctxid_)
     {
       return true;
@@ -87,15 +103,17 @@ public:
 
 #ifdef GCE_LUA
   /// internal use
-  inline int get_overloading_type() const
+  int get_overloading_type() const
   {
-    return (int)detail::overloading_1;
+    return (int)detail::overloading_svcid;
   }
 
-  inline std::string to_string()
+  std::string to_string()
   {
     std::string rt;
     rt += "<";
+    rt += boost::lexical_cast<std::string>(nil_);
+    rt += ".";
     rt += boost::lexical_cast<std::string>(ctxid_);
     rt += ".";
     rt += boost::lexical_cast<std::string>(name_);
@@ -106,6 +124,7 @@ public:
   GCE_LUA_SERIALIZE_FUNC
 #endif
 
+  boost::uint16_t nil_;
   ctxid_t ctxid_;
   match_t name_;
 };
@@ -113,7 +132,7 @@ public:
 typedef service_id svcid_t;
 
 #ifdef GCE_LUA
-inline svcid_t lua_svcid()
+svcid_t lua_svcid()
 {
   return svcid_t();
 }
@@ -125,11 +144,11 @@ std::basic_ostream<CharT, TraitsT>& operator<<(
   std::basic_ostream<CharT, TraitsT>& strm, gce::svcid_t const& svc
   )
 {
-  strm << "<" << svc.ctxid_ << "." << svc.name_ << ">";
+  strm << "<" << svc.nil_ << "." << svc.ctxid_ << "." << svc.name_ << ">";
   return strm;
 }
 
-GCE_PACK(gce::svcid_t, (ctxid_)(name_));
+GCE_PACK(gce::svcid_t, (nil_)(ctxid_)(name_));
 
 #endif /// GCE_ACTOR_SERVICE_ID_HPP
 

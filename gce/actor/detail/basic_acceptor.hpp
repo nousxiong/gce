@@ -1,4 +1,4 @@
-﻿///
+///
 /// Copyright (c) 2009-2014 Nous Xiong (348944179 at qq dot com)
 ///
 /// Distributed under the Boost Software License, Version 1.0. (See accompanying
@@ -17,7 +17,6 @@ namespace gce
 {
 namespace detail
 {
-class basic_socket;
 class basic_acceptor
 {
 public:

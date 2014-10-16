@@ -1,4 +1,4 @@
-﻿///
+///
 /// Copyright (c) 2009-2014 Nous Xiong (348944179 at qq dot com)
 ///
 /// Distributed under the Boost Software License, Version 1.0. (See accompanying
@@ -19,7 +19,7 @@ namespace gce
 class adaptor
 {
 public:
-  adaptor(actor<stackless>& a, errcode_t& ec, std::size_t& bytes_transferred)
+  adaptor(stackless_actor a, errcode_t& ec, std::size_t& bytes_transferred)
     : a_(a)
     , ec_(ec)
     , bytes_transferred_(&bytes_transferred)
@@ -28,7 +28,7 @@ public:
   {
   }
 
-  adaptor(actor<stackless>& a, errcode_t& ec, boost::asio::ip::tcp::resolver::iterator& itr)
+  adaptor(stackless_actor a, errcode_t& ec, boost::asio::ip::tcp::resolver::iterator& itr)
     : a_(a)
     , ec_(ec)
     , bytes_transferred_(0)
@@ -37,7 +37,7 @@ public:
   {
   }
 
-  adaptor(actor<stackless>& a, errcode_t& ec)
+  adaptor(stackless_actor a, errcode_t& ec)
     : a_(a)
     , ec_(ec)
     , bytes_transferred_(0)
@@ -46,7 +46,7 @@ public:
   {
   }
 
-  adaptor(actor<stackless>& a, errcode_t& ec, int& signal_number)
+  adaptor(stackless_actor a, errcode_t& ec, int& signal_number)
     : a_(a)
     , ec_(ec)
     , bytes_transferred_(0)
@@ -87,7 +87,7 @@ public:
   }
 
 private:
-  actor<stackless> a_;
+  stackless_actor a_;
   errcode_t& ec_;
   std::size_t* bytes_transferred_;
   boost::asio::ip::tcp::resolver::iterator* itr_;

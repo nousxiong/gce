@@ -1,5 +1,5 @@
 #
-# This file is part of the CMake build system for Gce
+# This file is part of the CMake build system for GCE
 #
 # CMake auto-generated configuration options. 
 # Do not check in modified versions of this file.

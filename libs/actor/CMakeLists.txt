@@ -1,5 +1,5 @@
-﻿#
-# This file is part of the CMake build system for Gce
+#
+# This file is part of the CMake build system for GCE
 #
 # CMake auto-generated configuration options.
 # Do not check in modified versions of this file.
@@ -13,15 +13,9 @@
 #
 
 # Provide user options to customise the build process.
-set (GCE_CACHE_LINE_SIZE "64" CACHE STRING "Cache line size")
-set (GCE_SOCKET_RECV_CACHE_SIZE "65535" CACHE STRING "Socket recv cache size")
-set (GCE_SOCKET_RECV_MAX_SIZE "60000" CACHE STRING "Socket max recv size")
-set (GCE_SMALL_MSG_SIZE "128" CACHE STRING "Small message size")
-set (GCE_MSG_MIN_GROW_SIZE "64" CACHE STRING "Message grow min size")
-set (GCE_DEFAULT_REQUEST_TIMEOUT_SEC "180" CACHE STRING "Default request timeout seconds, 180 secs")
-
-option (GCE_ACTOR_BUILD_EXAMPLE "Build Gce.Actor examples" ON)
-option (GCE_ACTOR_BUILD_TEST "Build Gce.Actor tests" ON)
+option (GCE_ACTOR_DEV "GCE.Actor dev mode" OFF)
+option (GCE_ACTOR_BUILD_EXAMPLE "Build GCE.Actor examples" ON)
+option (GCE_ACTOR_BUILD_TEST "Build GCE.Actor tests" ON)
 
 set (LINK_LIBS ${Boost_LIBRARIES} ${CMAKE_THREAD_LIBS_INIT})
 if (UNIX)
@@ -29,6 +23,9 @@ if (UNIX)
 endif ()
 if (GCE_LUA)
   set(LINK_LIBS ${LINK_LIBS} ${Lua_LIBRARIES})
+  if (UNIX)
+    set (LINK_LIBS ${LINK_LIBS} dl)
+  endif ()
 endif ()
 
 # Not only x64 linux need this, but all linux gcc, we need this.
@@ -36,19 +33,14 @@ if (CMAKE_COMPILER_IS_GNUCXX AND NOT MINGW)
   add_definitions (-fPIC)
 endif ()
 
-# Set up all files.
-file (GLOB_RECURSE GCE_ACTOR_HEADER_FILES "${PROJECT_SOURCE_DIR}/gce/actor/*.hpp")
-file (GLOB_RECURSE GCE_ACTOR_SOURCE_FILES "${PROJECT_SOURCE_DIR}/libs/actor/src/*.cpp")
+if (GCE_ACTOR_DEV)
+  # Set up all files.
+  file (GLOB_RECURSE GCE_ACTOR_HEADER_FILES "${PROJECT_SOURCE_DIR}/gce/actor/*.hpp")
+  file (GLOB_RECURSE GCE_ACTOR_SOURCE_FILES "${PROJECT_SOURCE_DIR}/libs/actor/src/src.cpp")
 
-# Gce.Actor library.
-add_library (gce_actor STATIC ${GCE_ACTOR_SOURCE_FILES} ${GCE_ACTOR_HEADER_FILES})
-
-install (
-  TARGETS gce_actor
-  RUNTIME DESTINATION bin
-  LIBRARY DESTINATION lib
-  ARCHIVE DESTINATION lib
-  )
+  # GCE.Actor library for dev
+  add_library (gce_actor STATIC ${GCE_ACTOR_SOURCE_FILES} ${GCE_ACTOR_HEADER_FILES})
+endif ()
 
 # All headers need install include dependences.
 install (
@@ -80,13 +72,6 @@ if (GCE_ACTOR_BUILD_TEST)
   add_subdirectory (test)
 endif ()
 
-# Configure a header file to pass some of the CMake settings to the source code.
-configure_file (
-  "${CMAKE_CURRENT_SOURCE_DIR}/user.hpp.in"
-  "${PROJECT_BINARY_DIR}/gce/actor/user.hpp"
-  )
-
-install (FILES ${PROJECT_BINARY_DIR}/gce/actor/user.hpp DESTINATION include/gce/actor)
 if (GCE_LUA)
   install (FILES ${PROJECT_SOURCE_DIR}/gce/actor/lua/*.lua DESTINATION bin)
 endif ()

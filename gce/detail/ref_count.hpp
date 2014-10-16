@@ -1,4 +1,4 @@
-﻿///
+///
 /// Copyright (c) 2009-2014 Nous Xiong (348944179 at qq dot com)
 ///
 /// Distributed under the Boost Software License, Version 1.0. (See accompanying
@@ -37,7 +37,6 @@ public:
     return count_;
   }
 
-  #if !defined(BOOST_NO_ARGUMENT_DEPENDENT_LOOKUP)
   inline friend void intrusive_ptr_add_ref(ref_count* p)
   {
     p->count_.fetch_add(1, boost::memory_order_relaxed);
@@ -52,51 +51,12 @@ public:
       p->deleter_();
     }
   }
-#endif
-
-  void add_ref()
-  {
-    count_.fetch_add(1, boost::memory_order_relaxed);
-  }
-
-  void release()
-  {
-    if (count_.fetch_sub(1, boost::memory_order_release) == 1)
-    {
-      boost::atomic_thread_fence(boost::memory_order_acquire);
-      BOOST_ASSERT(deleter_);
-      deleter_();
-    }
-  }
 
 private:
   boost::function<void ()> deleter_;
   boost::atomic_long count_;
 };
-}
-}
 
-#if defined(BOOST_NO_ARGUMENT_DEPENDENT_LOOKUP)
-
-namespace boost
-{
-inline void intrusive_ptr_add_ref(gce::detail::ref_count* p)
-{
-  p->add_ref();
-}
-
-inline void intrusive_ptr_release(gce::detail::ref_count* p)
-{
-  p->release();
-}
-} // namespace boost
-
-#endif
-
-namespace gce
-{
-namespace detail
-{
 /// single-thread ref count
 class ref_count_st
 {
@@ -116,7 +76,6 @@ public:
     return count_;
   }
 
-  #if !defined(BOOST_NO_ARGUMENT_DEPENDENT_LOOKUP)
   inline friend void intrusive_ptr_add_ref(ref_count_st* p)
   {
     ++p->count_;
@@ -130,21 +89,6 @@ public:
       p->deleter_();
     }
   }
-#endif
-
-  void add_ref()
-  {
-    ++count_;
-  }
-
-  void release()
-  {
-    if (--count_ == 0)
-    {
-      BOOST_ASSERT(deleter_);
-      deleter_();
-    }
-  }
 
 private:
   boost::function<void ()> deleter_;
@@ -152,22 +96,5 @@ private:
 };
 }
 }
-
-#if defined(BOOST_NO_ARGUMENT_DEPENDENT_LOOKUP)
-
-namespace boost
-{
-inline void intrusive_ptr_add_ref(gce::detail::ref_count_st* p)
-{
-  p->add_ref();
-}
-
-inline void intrusive_ptr_release(gce::detail::ref_count_st* p)
-{
-  p->release();
-}
-} // namespace boost
-
-#endif
 
 #endif /// GCE_DETAIL_REF_COUNT_HPP

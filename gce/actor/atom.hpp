@@ -1,4 +1,4 @@
-﻿///
+///
 /// Copyright (c) 2009-2014 Nous Xiong (348944179 at qq dot com)
 ///
 /// Distributed under the Boost Software License, Version 1.0. (See accompanying
@@ -19,13 +19,10 @@
 namespace gce
 {
 /// Since lordoffox's str2val.h (http://bbs.cppfans.org/forum.php?mod=viewthread&tid=56&extra=page%3D1)
-inline boost::uint64_t atom(char const* str)
+boost::uint64_t atom(char const* str)
 {
   std::size_t len = std::strlen(str);
-  if (len > 14)
-  {
-    return 0;
-  }
+  BOOST_ASSERT(len <= 13);
 
   static char const* const encoding_table =
     "\x0\x0\x0\x0\x0\x0\x0\x0\x0\x0\x0\x0\x0\x0\x0\x0"
@@ -64,7 +61,7 @@ inline boost::uint64_t atom(char const* str)
 }
 
 /// Since lordoffox's str2val.h (http://bbs.cppfans.org/forum.php?mod=viewthread&tid=56&extra=page%3D1)
-inline std::string atom(boost::uint64_t what)
+std::string atom(boost::uint64_t what)
 {
   std::string ret;
   static std::string::const_pointer const decoding_table = "\0abcdefghijklmnopqrstuvwxyz_";
@@ -84,11 +81,35 @@ inline std::string atom(boost::uint64_t what)
 namespace detail
 {
 #ifdef GCE_LUA
-  enum overloading_type
-  {
-    overloading_0 = 0,
-    overloading_1,
-  };
+enum overloading_type
+{
+  overloading_0 = 0,
+  overloading_1,
+  overloading_2,
+
+  overloading_aid = overloading_0,
+  overloading_svcid = overloading_1,
+
+  overloading_pattern = overloading_0,
+  overloading_match_t = overloading_1,
+  overloading_duration = overloading_2,
+
+  overloading_msg = overloading_0,
+};
+
+int lua_overloading_0()
+{
+  return (int)overloading_0;
+}
+int lua_overloading_1()
+{
+  return (int)overloading_1;
+}
+int lua_overloading_2()
+{
+  return (int)overloading_2;
+}
+
 #endif
 } /// namespace detail
 } /// namespace gce
@@ -96,17 +117,19 @@ namespace detail
 #ifdef GCE_LUA
 # define GCE_LUA_SERIALIZE_FUNC \
   template <typename Strm> \
-  inline void serialize(Strm& s) \
+  Strm serialize(Strm& s) \
   { \
     s << *this; \
+    return s; \
   } \
   template <typename Strm> \
-  inline void deserialize(Strm& s) \
+  Strm deserialize(Strm& s) \
   { \
     s >> *this; \
+    return s; \
   } \
   template <typename Self> \
-  inline Self make() \
+  Self make() \
   { \
     return Self(); \
   }
@@ -127,35 +150,43 @@ struct match_type
   {
   }
 
+  explicit match_type(int val)
+    : val_((boost::uint64_t)val)
+  {
+  }
+
   match_type(boost::uint64_t val)
     : val_(val)
   {
   }
-  
-#ifdef GCE_LUA
-  inline int get_overloading_type() const
-  {
-    return (int)detail::overloading_0;
-  }
-#endif
 
-  inline operator boost::uint64_t() const
+  operator boost::uint64_t() const
   {
     return val_;
   }
 
-  inline void operator=(boost::uint64_t val)
+  void operator=(boost::uint64_t val)
   {
     val_ = val;
   }
 
-  inline void operator=(boost::uint32_t val)
+  void operator=(boost::uint32_t val)
   {
     val_ = val;
+  }
+
+  bool equals(match_type const& rhs) const
+  {
+    return val_ == rhs.val_;
   }
 
 #ifdef GCE_LUA
-  inline std::string to_string()
+  int get_overloading_type() const
+  {
+    return (int)detail::overloading_match_t;
+  }
+
+  std::string to_string()
   {
     std::string rt;
     rt += "<";
@@ -171,12 +202,17 @@ struct match_type
 };
 
 #ifdef GCE_LUA
-inline match_type s2i(char const* str)
+match_type make_match(int i)
+{
+  return match_type(i);
+}
+
+match_type s2i(char const* str)
 {
   return atom(str);
 }
 
-inline std::string i2s(match_type what)
+std::string i2s(match_type what)
 {
   return atom(what);
 }

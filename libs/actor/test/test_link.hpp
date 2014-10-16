@@ -1,4 +1,4 @@
-﻿///
+///
 /// Copyright (c) 2009-2014 Nous Xiong (348944179 at qq dot com)
 ///
 /// Distributed under the Boost Software License, Version 1.0. (See accompanying
@@ -15,18 +15,22 @@ public:
   static void run()
   {
     std::cout << "link_ut begin." << std::endl;
-    test_common();
+    for (std::size_t i=0; i<test_count; ++i)
+    {
+      test_common();
+      if (test_count > 1) std::cout << "\r" << i;
+    }
+    if (test_count > 1) std::cout << std::endl;
     std::cout << "link_ut end." << std::endl;
   }
 
-  static void my_actor_child(actor<stackful>& self)
+  static void my_actor_child(stackful_actor self)
   {
-    aid_t aid = recv(self, 3);
+    aid_t aid = self->recv(3);
   }
 
-  static void my_actor(actor<stackful>& self)
+  static void my_actor(stackful_actor self)
   {
-    detail::cache_pool* cac_pool = self.get_cache_pool();
     std::size_t size = 10;
     std::vector<resp_t> res_list(size);
     for (std::size_t i=0; i<size; ++i)
@@ -50,19 +54,19 @@ public:
       self.recv(msg);
       BOOST_ASSERT(msg.get_type() == exit);
 
-      resp_t res = request(self, tmp);
-      self.recv(res, msg);
+      resp_t res = self->request(tmp);
+      self.respond(res, msg);
       BOOST_ASSERT(msg.get_type() == exit);
 
-      res_list[i] = request(self, aid, 3);
+      res_list[i] = self->request(aid, 3);
     }
 
-    recv(self, exit);
+    self->recv(exit);
   }
 
   static void my_thr(context& ctx)
   {
-    actor<threaded> a = spawn(ctx);
+    threaded_actor a = spawn(ctx);
     for (std::size_t i=0; i<100; ++i)
     {
       spawn(
@@ -74,11 +78,11 @@ public:
 
     for (std::size_t i=0; i<100; ++i)
     {
-      recv(a);
+      a->recv();
     }
   }
 
-  static void my_root(actor<stackful>& self)
+  static void my_root(stackful_actor self)
   {
     for (std::size_t i=0; i<100; ++i)
     {
@@ -91,7 +95,7 @@ public:
 
     for (std::size_t i=0; i<100; ++i)
     {
-      recv(self);
+      self->recv();
     }
   }
 
@@ -103,7 +107,7 @@ public:
       //std::size_t my_actor_size = 21;
       attributes attrs;
       context ctx(attrs);
-      actor<threaded> base = spawn(ctx);
+      threaded_actor base = spawn(ctx);
 
       boost::thread_group thrs;
       for (std::size_t i=0; i<user_thr_num; ++i)

@@ -1,4 +1,4 @@
-﻿///
+///
 /// Copyright (c) 2009-2014 Nous Xiong (348944179 at qq dot com)
 ///
 /// Distributed under the Boost Software License, Version 1.0. (See accompanying
@@ -15,23 +15,28 @@ public:
   static void run()
   {
     std::cout << "coro_ut begin." << std::endl;
-    test_common();
+    for (std::size_t i=0; i<test_count; ++i)
+    {
+      test_common();
+      if (test_count > 1) std::cout << "\r" << i;
+    }
+    if (test_count > 1) std::cout << std::endl;
     std::cout << "coro_ut end." << std::endl;
   }
 
 private:
-  static void my_actor(actor<stackful>& self, aid_t base)
+  static void my_actor(stackful_actor self, aid_t base)
   {
     std::size_t loop_num = 10;
     yield_t yield = self.get_yield();
-    timer_t tmr(self.get_cache_pool()->get_context().get_io_service());
+    timer_t tmr(self.get_context().get_io_service());
 
     for (std::size_t i=0; i<loop_num; ++i)
     {
-      send(self, base, atom("echo"));
-      recv(self, atom("echo"));
+      self->send(base, "echo");
+      self->recv("echo");
 
-      tmr.expires_from_now(boost::chrono::milliseconds(1));
+      tmr.expires_from_now(millisecs_t(1));
       tmr.async_wait(yield);
     }
   }
@@ -40,9 +45,9 @@ private:
   {
     try
     {
-      std::size_t actor_num = 100;
+      std::size_t actor_num = 10;
       context ctx;
-      actor<threaded> base = spawn(ctx);
+      threaded_actor base = spawn(ctx);
 
       for (std::size_t a=0; a<5; ++a)
       {

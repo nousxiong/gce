@@ -1,4 +1,4 @@
-﻿///
+///
 /// Copyright (c) 2009-2014 Nous Xiong (348944179 at qq dot com)
 ///
 /// Distributed under the Boost Software License, Version 1.0. (See accompanying
@@ -32,32 +32,32 @@ public:
   }
 
 public:
-  inline bool valid() const
+  bool valid() const
   {
     return sid_ != gce::u32_nil;
   }
 
-  inline bool operator==(endpoint const& rhs) const
+  bool operator==(endpoint const& rhs) const
   {
     return sid_ == rhs.sid_;
   }
 
-  inline bool operator!=(endpoint const& rhs) const
+  bool operator!=(endpoint const& rhs) const
   {
     return sid_ != rhs.sid_;
   }
 
-  inline bool operator<(endpoint const& rhs) const
+  bool operator<(endpoint const& rhs) const
   {
     return sid_ < rhs.sid_;
   }
 
-  inline boost::uint32_t get_group_index() const
+  boost::uint32_t get_group_index() const
   {
     return group_index_;
   }
 
-  inline boost::uint32_t get_session_id() const
+  boost::uint32_t get_session_id() const
   {
     return sid_;
   }
@@ -67,13 +67,13 @@ private:
   boost::uint32_t sid_;
 };
 
-inline gce::message& operator<<(gce::message& m, endpoint const& src)
+gce::message& operator<<(gce::message& m, endpoint const& src)
 {
   m << src.get_group_index() << src.get_session_id();
   return m;
 }
 
-inline gce::message& operator>>(gce::message& msg, endpoint& des)
+gce::message& operator>>(gce::message& msg, endpoint& des)
 {
   boost::uint32_t group_index;
   boost::uint32_t sid;

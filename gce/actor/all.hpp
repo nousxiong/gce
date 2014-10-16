@@ -1,4 +1,4 @@
-﻿///
+///
 /// Copyright (c) 2009-2014 Nous Xiong (348944179 at qq dot com)
 ///
 /// Distributed under the Boost Software License, Version 1.0. (See accompanying
@@ -11,15 +11,15 @@
 #define GCE_ACTOR_ALL_HPP
 
 #include <gce/actor/context.hpp>
-#include <gce/actor/send.hpp>
-#include <gce/actor/recv.hpp>
-#include <gce/actor/wait.hpp>
 #include <gce/actor/actor.hpp>
 #include <gce/actor/message.hpp>
 #include <gce/actor/remote.hpp>
 #include <gce/actor/spawn.hpp>
 #include <gce/actor/pattern.hpp>
 #include <gce/actor/service.hpp>
+#ifdef GCE_HAS_SCRIPT
+# include <gce/actor/script.hpp>
+#endif
 #include <gce/actor/response.hpp>
 #include <gce/actor/actor_id.hpp>
 #include <gce/actor/net_option.hpp>

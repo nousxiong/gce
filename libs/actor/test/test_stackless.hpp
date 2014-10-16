@@ -1,4 +1,4 @@
-﻿///
+///
 /// Copyright (c) 2009-2014 Nous Xiong (348944179 at qq dot com)
 ///
 /// Distributed under the Boost Software License, Version 1.0. (See accompanying
@@ -15,7 +15,12 @@ public:
   static void run()
   {
     std::cout << "stackless_ut begin." << std::endl;
-    test_common();
+    for (std::size_t i=0; i<test_count; ++i)
+    {
+      test_common();
+      if (test_count > 1) std::cout << "\r" << i;
+    }
+    if (test_count > 1) std::cout << std::endl;
     std::cout << "stackless_ut end." << std::endl;
   }
 
@@ -24,12 +29,12 @@ public:
     : public boost::enable_shared_from_this<my_child>
   {
   public:
-    void run(actor<stackless>& self)
+    void run(stackless_actor self)
     {
       GCE_REENTER (self)
       {
-        GCE_YIELD recv(self, aid_);
-        reply(self, aid_);
+        GCE_YIELD self->recv(aid_);
+        self->reply(aid_);
       }
     }
 
@@ -55,7 +60,7 @@ public:
     }
 
   public:
-    void run(actor<stackless>& self)
+    void run(stackless_actor self)
     {
       GCE_REENTER (self)
       {
@@ -69,24 +74,24 @@ public:
               ),
             aid_
             );
-          res_list_[i_] = request(self, aid_);
+          res_list_[i_] = self->request(aid_);
         }
 
-        GCE_YIELD wait(self, boost::chrono::milliseconds(1));
+        GCE_YIELD self.sleep_for(millisecs_t(1));
 
         for (i_=0; i_<size_; ++i_)
         {
           do
           {
-            GCE_YIELD self.recv(res_list_[i_], aid_, msg_, seconds_t(1));
+            GCE_YIELD self.respond(res_list_[i_], aid_, msg_, seconds_t(1));
           }
           while (!aid_);
         }
 
-        tmr_.expires_from_now(boost::chrono::milliseconds(1));
+        tmr_.expires_from_now(millisecs_t(1));
         GCE_YIELD tmr_.async_wait(adaptor(self, ec_));
 
-        send(self, base_id_);
+        self->send(base_id_);
       }
     }
 
@@ -105,7 +110,7 @@ public:
 
   static void my_thr(context& ctx, aid_t base_id)
   {
-    actor<threaded> a = spawn(ctx);
+    threaded_actor a = spawn(ctx);
     io_service_t& ios = ctx.get_io_service();
     for (std::size_t i=0; i<2; ++i)
     {
@@ -131,7 +136,7 @@ public:
       std::size_t my_actor_size = free_actor_num + user_thr_num * 2;
       attributes attrs;
       context ctx(attrs);
-      actor<threaded> base = spawn(ctx);
+      threaded_actor base = spawn(ctx);
 
       io_service_t& ios = ctx.get_io_service();
       aid_t base_id = base.get_aid();
@@ -164,7 +169,7 @@ public:
 
       for (std::size_t i=0; i<my_actor_size; ++i)
       {
-        recv(base);
+        base->recv();
       }
     }
     catch (std::exception& ex)

@@ -1,4 +1,4 @@
-﻿///
+///
 /// Copyright (c) 2009-2014 Nous Xiong (348944179 at qq dot com)
 ///
 /// Distributed under the Boost Software License, Version 1.0. (See accompanying
@@ -17,7 +17,7 @@
 
 typedef std::vector<gce::svcid_t> app_ctxid_list_t;
 ///----------------------------------------------------------------------------
-inline gce::svcid_t select_game_app(
+gce::svcid_t select_game_app(
   app_ctxid_list_t const& game_list,
   std::string const& username
   )

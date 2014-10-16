@@ -1,4 +1,4 @@
-﻿///
+///
 /// Copyright (c) 2009-2014 Nous Xiong (348944179 at qq dot com)
 ///
 /// Distributed under the Boost Software License, Version 1.0. (See accompanying
@@ -11,27 +11,40 @@
 #define GCE_ACTOR_NET_OPTION_HPP
 
 #include <gce/actor/config.hpp>
+#include <gce/actor/duration.hpp>
 
 namespace gce
 {
 struct net_option
 {
   net_option()
-    : heartbeat_period_(30)
+    : is_router_(false)
+    , heartbeat_period_(seconds_t(30))
     , heartbeat_count_(3)
-    , init_reconn_period_(3)
+    , init_reconn_period_(seconds_t(3))
     , init_reconn_try_(2)
-    , reconn_period_(10)
+    , reconn_period_(seconds_t(10))
     , reconn_try_(3)
   {
   }
 
-  seconds_t heartbeat_period_;
-  std::size_t heartbeat_count_;
-  seconds_t init_reconn_period_; /// init conn, between two connects' period
-  std::size_t init_reconn_try_; /// init conn, how many try to reconnect before give up
-  seconds_t reconn_period_; /// in one reconn, between two connects' period
-  std::size_t reconn_try_; /// how many try to reconnect before drop cache msgs
+  /// if is router, set it true
+  bool is_router_;
+
+  duration_type heartbeat_period_;
+  int heartbeat_count_;
+
+  /// init conn, between two connects' period
+  duration_type init_reconn_period_;
+
+  /// init conn, how many try to reconnect before give up
+  int init_reconn_try_;
+
+  /// in one reconn, between two connects' period
+  duration_type reconn_period_;
+
+  /// how many try to reconnect before drop cache msgs
+  int reconn_try_;
 };
 }
 

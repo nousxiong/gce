@@ -1,4 +1,4 @@
-﻿///
+///
 /// Copyright (c) 2009-2014 Nous Xiong (348944179 at qq dot com)
 ///
 /// Distributed under the Boost Software License, Version 1.0. (See accompanying
@@ -25,8 +25,8 @@ public:
   ~link_t() {}
 
 public:
-  inline link_type get_type() const { return type_; }
-  inline aid_t get_aid() const { return aid_; }
+  link_type get_type() const { return type_; }
+  aid_t get_aid() const { return aid_; }
 
 private:
   link_type type_;
@@ -49,9 +49,9 @@ public:
   }
 
 public:
-  inline link_type get_type() const { return type_; }
-  inline aid_t get_aid() const { return aid_; }
-  inline aid_t get_skt() const { return skt_; }
+  link_type get_type() const { return type_; }
+  aid_t get_aid() const { return aid_; }
+  aid_t get_skt() const { return skt_; }
 
 private:
   link_type type_;

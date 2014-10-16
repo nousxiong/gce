@@ -1,4 +1,4 @@
-﻿///
+///
 /// Copyright (c) 2009-2014 Nous Xiong (348944179 at qq dot com)
 ///
 /// Distributed under the Boost Software License, Version 1.0. (See accompanying
@@ -14,12 +14,12 @@
 
 namespace gce
 {
-inline std::size_t default_stacksize()
+std::size_t default_stacksize()
 {
   return boost::coroutines::stack_allocator::default_stacksize();
 }
 
-inline std::size_t minimum_stacksize()
+std::size_t minimum_stacksize()
 {
   return boost::coroutines::stack_allocator::minimum_stacksize();
 }
@@ -37,18 +37,10 @@ enum actor_type
   actor_socket,
   actor_acceptor,
 #ifdef GCE_LUA
-  actor_lua,
+  actor_luaed,
 #endif
 
   actor_num
-};
-
-
-/// internal use
-enum send_hint
-{
-  async,
-  sync
 };
 }
 }

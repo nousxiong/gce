@@ -1,4 +1,4 @@
-﻿///
+///
 /// Copyright (c) 2009-2014 Nous Xiong (348944179 at qq dot com)
 ///
 /// Distributed under the Boost Software License, Version 1.0. (See accompanying
@@ -16,7 +16,12 @@ public:
   static void run()
   {
     std::cout << "stackless_pingpong_ut begin." << std::endl;
-    test();
+    for (std::size_t i=0; i<test_count; ++i)
+    {
+      test();
+      if (test_count > 1) std::cout << "\r" << i;
+    }
+    if (test_count > 1) std::cout << std::endl;
     std::cout << "stackless_pingpong_ut end." << std::endl;
   }
 
@@ -35,7 +40,7 @@ private:
     }
 
   public:
-    void run(actor<stackless>& self)
+    void run(stackless_actor self)
     {
       GCE_REENTER (self)
       {
@@ -76,7 +81,7 @@ private:
     }
 
   public:
-    void run(actor<stackless>& self)
+    void run(stackless_actor self)
     {
       GCE_REENTER (self)
       {
@@ -90,13 +95,19 @@ private:
           aid_
           );
 
-        for (i_=0; i_<msg_size; ++i_)
+        for (i_=0, size_=msg_size/100; i_<size_; ++i_)
         {
-          self.send(aid_, msg_);
-          GCE_YIELD self.recv(aid_, msg_);
+          for (j_=0; j_<100; ++j_)
+          {
+            self.send(aid_, msg_);
+          }
+          for (j_=0; j_<100; ++j_)
+          {
+            GCE_YIELD self.recv(aid_, msg_);
+          }
         }
 
-        send(self, aid_, 2);
+        self->send(aid_, 2);
       }
     }
 
@@ -106,6 +117,8 @@ private:
 
     message msg_;
     std::size_t i_;
+    std::size_t j_;
+    std::size_t size_;
   };
 
   static void test()
@@ -113,7 +126,7 @@ private:
     try
     {
       context ctx;
-      actor<threaded> base = spawn(ctx);
+      threaded_actor base = spawn(ctx);
 
       aid_t base_id = base.get_aid();
       aid_t aid =
@@ -127,7 +140,7 @@ private:
           );
 
       boost::timer::auto_cpu_timer t;
-      recv(base);
+      base->recv();
     }
     catch (std::exception& ex)
     {

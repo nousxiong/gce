@@ -1,4 +1,4 @@
-﻿///
+///
 /// Copyright (c) 2009-2014 Nous Xiong (348944179 at qq dot com)
 ///
 /// Distributed under the Boost Software License, Version 1.0. (See accompanying
@@ -15,18 +15,23 @@ public:
   static void run()
   {
     std::cout << "response_ut begin." << std::endl;
-    test_common();
+    for (std::size_t i=0; i<test_count; ++i)
+    {
+      test_common();
+      if (test_count > 1) std::cout << "\r" << i;
+    }
+    if (test_count > 1) std::cout << std::endl;
     std::cout << "response_ut end." << std::endl;
   }
 
 private:
-  static void my_child(actor<stackful>& self)
+  static void my_child(stackful_actor self)
   {
-    aid_t aid = recv(self);
-    send(self, aid, atom("ret"));
+    aid_t aid = self->recv();
+    self->send(aid, "ret");
   }
 
-  static void my_actor(actor<stackful>& self, aid_t base_id)
+  static void my_actor(stackful_actor self, aid_t base_id)
   {
     //try
     {
@@ -40,16 +45,14 @@ private:
             boost::bind(&response_ut::my_child, _1),
             monitored
             );
-        res_list[i] = request(self, aid);
-        pattern patt;
-        patt.match_list_.push_back(atom("ret"));
+        res_list[i] = self->request(aid);
         message msg;
-        self.recv(msg, patt);
+        self.recv(msg, pattern("ret"));
       }
 
-      timer_t tmr(self.get_cache_pool()->get_context().get_io_service());
+      timer_t tmr(self.get_context().get_io_service());
       yield_t yield = self.get_yield();
-      tmr.expires_from_now(boost::chrono::milliseconds(1));
+      tmr.expires_from_now(millisecs_t(1));
       tmr.async_wait(yield);
 
       for (std::size_t i=0; i<size; ++i)
@@ -58,15 +61,15 @@ private:
         message msg;
         do
         {
-          aid = self.recv(res_list[i], msg, seconds_t(1));
+          aid = self.respond(res_list[i], msg, seconds_t(1));
         }
         while (!aid);
       }
 
-      tmr.expires_from_now(boost::chrono::milliseconds(1));
+      tmr.expires_from_now(millisecs_t(1));
       tmr.async_wait(yield);
 
-      send(self, base_id);
+      self->send(base_id);
     }
     /*catch (std::exception& ex)
     {
@@ -76,7 +79,7 @@ private:
 
   static void my_thr(context& ctx, aid_t base_id)
   {
-    actor<threaded> a = spawn(ctx);
+    threaded_actor a = spawn(ctx);
     for (std::size_t i=0; i<2; ++i)
     {
       spawn(a, boost::bind(&response_ut::my_actor, _1, base_id));
@@ -92,7 +95,7 @@ private:
       std::size_t my_actor_size = free_actor_num + user_thr_num * 2;
       attributes attrs;
       context ctx(attrs);
-      actor<threaded> base = spawn(ctx);
+      threaded_actor base = spawn(ctx);
 
       aid_t base_id = base.get_aid();
       for (std::size_t i=0; i<free_actor_num; ++i)
@@ -121,7 +124,7 @@ private:
 
       for (std::size_t i=0; i<my_actor_size; ++i)
       {
-        recv(base);
+        base->recv();
       }
     }
     catch (std::exception& ex)

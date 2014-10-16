@@ -1,4 +1,4 @@
-﻿///
+///
 /// Copyright (c) 2009-2014 Nous Xiong (348944179 at qq dot com)
 ///
 /// Distributed under the Boost Software License, Version 1.0. (See accompanying
@@ -15,7 +15,7 @@
 typedef gce::match_t hash_t;
 
 /// from《The C Programming Language》
-inline hash_t hash(char const* str, std::size_t size)
+hash_t hash(char const* str, std::size_t size)
 {
   hash_t ret = 0;
   for (std::size_t i=0; i<size; ++i)

@@ -1,4 +1,4 @@
-﻿///
+///
 /// Copyright (c) 2009-2014 Nous Xiong (348944179 at qq dot com)
 ///
 /// Distributed under the Boost Software License, Version 1.0. (See accompanying
@@ -25,7 +25,12 @@ public:
   static void run()
   {
     std::cout << "remote_ut begin." << std::endl;
-    test_base();
+    for (std::size_t i=0; i<test_count; ++i)
+    {
+      test_base();
+      if (test_count > 1) std::cout << "\r" << i;
+    }
+    if (test_count > 1) std::cout << std::endl;
     std::cout << "remote_ut end." << std::endl;
   }
 
@@ -43,22 +48,20 @@ public:
       attrs.id_ = atom("client");
       context ctx_cln(attrs);
 
-      actor<threaded> base_cln = spawn(ctx_cln);
-      actor<threaded> base_svr = spawn(ctx_svr);
+      threaded_actor base_cln = spawn(ctx_cln);
+      threaded_actor base_svr = spawn(ctx_svr);
 
       remote_func_list_t func_list;
       func_list.push_back(
-        std::make_pair(
-          atom("echo_client"),
-          make_actor_func<stackful>(
-            boost::bind(&remote_ut::echo_client, _1)
-            )
+        make_remote_func<stackful>(
+          "echo_client", 
+          boost::bind(&remote_ut::echo_client, _1)
           )
         );
-      gce::bind(base_cln, "tcp://127.0.0.1:14923", false, func_list);
+      gce::bind(base_cln, "tcp://127.0.0.1:14923", func_list);
       net_option opt;
       opt.reconn_period_ = seconds_t(1);
-      connect(base_svr, atom("client"), "tcp://127.0.0.1:14923", false, opt);
+      connect(base_svr, "client", "tcp://127.0.0.1:14923", opt);
 
       aid_t svr =
         spawn(
@@ -71,16 +74,11 @@ public:
 
       for (std::size_t i=0; i<client_num; ++i)
       {
-        aid_t cln =
-          spawn(
-            base_svr,
-            "echo_client",
-            atom("client")
-            );
-        send(base_svr, cln, atom("init"), svr, echo_num);
+        aid_t cln = spawn_remote(base_svr, "echo_client", "client");
+        base_svr->send(cln, "init", svr, echo_num);
       }
 
-      recv(base_svr);
+      base_svr->recv();
     }
     catch (std::exception& ex)
     {
@@ -88,7 +86,7 @@ public:
     }
   }
 
-  static void echo_server(actor<stackful>& self, std::size_t client_num)
+  static void echo_server(stackful_actor self, std::size_t client_num)
   {
     try
     {
@@ -116,20 +114,20 @@ public:
     }
   }
 
-  static void echo_client(actor<stackful>& self)
+  static void echo_client(stackful_actor self)
   {
     try
     {
       aid_t svr;
       std::size_t echo_num;
-      recv(self, atom("init"), svr, echo_num);
+      self->recv("init", svr, echo_num);
 
       echo_data d;
       d.hi_ = "hello";
       d.i_ = 1;
 
-      message m(atom("echo"));
-      m << d << std::string("tag") << int(2);
+      message m("echo");
+      m << d << "tag" << int(2);
 
       for (std::size_t i=0; i<echo_num; ++i)
       {
@@ -158,7 +156,7 @@ public:
         BOOST_ASSERT(it == 2);
       }
 
-      send(self, svr, atom("end"));
+      self->send(svr, "end");
     }
     catch (std::exception& ex)
     {

@@ -1,4 +1,4 @@
-﻿///
+///
 /// Copyright (c) 2009-2014 Nous Xiong (348944179 at qq dot com)
 ///
 /// Distributed under the Boost Software License, Version 1.0. (See accompanying
@@ -43,22 +43,32 @@ public:
   }
 
 public:
-  inline std::size_t remain_write_size() const { return size_ - write_size_; }
-  inline std::size_t remain_read_size() const { return write_size_ - read_size_; }
-  inline std::size_t write_size() const { return write_size_; }
-  inline std::size_t read_size() const { return read_size_; }
-  inline byte_t* get_write_data() { return buf_ + write_size_; }
-  inline byte_t* get_read_data() { return buf_ + read_size_; }
-  inline byte_t const* data() const { return buf_; }
-  inline std::size_t size() const { return size_; }
+  std::size_t remain_write_size() const { return size_ - write_size_; }
+  std::size_t remain_read_size() const { return write_size_ - read_size_; }
+  std::size_t write_size() const { return write_size_; }
+  std::size_t read_size() const { return read_size_; }
+  byte_t* get_write_data() { return buf_ + write_size_; }
+  byte_t* get_read_data() { return buf_ + read_size_; }
+  byte_t const* data() const { return buf_; }
+  std::size_t size() const { return size_; }
 
-  inline void clear()
+  void clear()
   {
     write_size_ = 0;
     read_size_ = 0;
   }
 
-  inline void reset(byte_t* buf, std::size_t size)
+  void clear_read()
+  {
+    read_size_ = 0;
+  }
+
+  void clear_write()
+  {
+    write_size_ = 0;
+  }
+
+  void reset(byte_t* buf, std::size_t size)
   {
     buf_ = buf;
     size_ = size;
@@ -74,7 +84,7 @@ public:
     }
   }
 
-  inline void read(std::size_t size)
+  void read(std::size_t size)
   {
     if (read_size_ + size > write_size_)
     {
@@ -84,7 +94,7 @@ public:
     read_size_ += size;
   }
 
-  inline void write(std::size_t size)
+  void write(std::size_t size)
   {
     if (write_size_ + size > size_)
     {

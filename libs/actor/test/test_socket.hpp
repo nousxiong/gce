@@ -1,4 +1,4 @@
-﻿///
+///
 /// Copyright (c) 2009-2014 Nous Xiong (348944179 at qq dot com)
 ///
 /// Distributed under the Boost Software License, Version 1.0. (See accompanying
@@ -15,7 +15,12 @@ public:
   static void run()
   {
     std::cout << "socket_ut begin." << std::endl;
-    test_base();
+    for (std::size_t i=0; i<test_count; ++i)
+    {
+      test_base();
+      if (test_count > 1) std::cout << "\r" << i;
+    }
+    if (test_count > 1) std::cout << std::endl;
     std::cout << "socket_ut end." << std::endl;
   }
 
@@ -24,7 +29,7 @@ public:
   {
     try
     {
-      std::size_t echo_num = 100;
+      std::size_t echo_num = 10;
 
       attributes attrs;
       attrs.id_ = atom("one");
@@ -32,8 +37,8 @@ public:
       attrs.id_ = atom("two");
       context ctx2(attrs);
       
-      actor<threaded> base1 = spawn(ctx1);
-      actor<threaded> base2 = spawn(ctx2);
+      threaded_actor base1 = spawn(ctx1);
+      threaded_actor base2 = spawn(ctx2);
 
       gce::bind(base2, "tcp://127.0.0.1:14923");
 
@@ -48,16 +53,16 @@ public:
 
       net_option opt;
       opt.reconn_period_ = seconds_t(1);
-      connect(base1, atom("two"), "tcp://127.0.0.1:14923", false, opt);
+      connect(base1, "two", "tcp://127.0.0.1:14923", opt);
 
       for (std::size_t i=0; i<echo_num; ++i)
       {
-        send(base1, echo_aid, atom("echo"));
-        recv(base1, atom("echo"));
+        base1->send(echo_aid, "echo");
+        base1->recv("echo");
       }
-      send(base1, echo_aid, atom("end"));
+      base1->send(echo_aid, "end");
 
-      recv(base2);
+      base2->recv();
     }
     catch (std::exception& ex)
     {
@@ -65,7 +70,7 @@ public:
     }
   }
 
-  static void echo(actor<stackful>& self)
+  static void echo(stackful_actor self)
   {
     try
     {

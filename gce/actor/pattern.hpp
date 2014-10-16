@@ -1,4 +1,4 @@
-﻿///
+///
 /// Copyright (c) 2009-2014 Nous Xiong (348944179 at qq dot com)
 ///
 /// Distributed under the Boost Software License, Version 1.0. (See accompanying
@@ -11,6 +11,7 @@
 #define GCE_ACTOR_PATTERN_HPP
 
 #include <gce/actor/config.hpp>
+#include <gce/actor/detail/to_match.hpp>
 
 namespace gce
 {
@@ -32,44 +33,49 @@ struct pattern
   {
   }
 
-  explicit pattern(match_t type1, duration_t tmo = infin)
+  template <typename Match1>
+  explicit pattern(Match1 type1, duration_t tmo = infin)
     : timeout_(tmo)
   {
-    match_list_.push_back(type1);
+    match_list_.push_back(detail::to_match(type1));
   }
 
-  pattern(match_t type1, match_t type2, duration_t tmo = infin)
+  template <typename Match1, typename Match2>
+  pattern(Match1 type1, Match2 type2, duration_t tmo = infin)
     : timeout_(tmo)
   {
-    match_list_.push_back(type1);
-    match_list_.push_back(type2);
+    match_list_.push_back(detail::to_match(type1));
+    match_list_.push_back(detail::to_match(type2));
   }
 
-  pattern(match_t type1, match_t type2, match_t type3, duration_t tmo = infin)
+  template <typename Match1, typename Match2, typename Match3>
+  pattern(Match1 type1, Match2 type2, Match3 type3, duration_t tmo = infin)
     : timeout_(tmo)
   {
-    match_list_.push_back(type1);
-    match_list_.push_back(type2);
-    match_list_.push_back(type3);
+    match_list_.push_back(detail::to_match(type1));
+    match_list_.push_back(detail::to_match(type2));
+    match_list_.push_back(detail::to_match(type3));
   }
 
-  pattern(match_t type1, match_t type2, match_t type3, match_t type4, duration_t tmo = infin)
+  template <typename Match1, typename Match2, typename Match3, typename Match4>
+  pattern(Match1 type1, Match2 type2, Match3 type3, Match4 type4, duration_t tmo = infin)
     : timeout_(tmo)
   {
-    match_list_.push_back(type1);
-    match_list_.push_back(type2);
-    match_list_.push_back(type3);
-    match_list_.push_back(type4);
+    match_list_.push_back(detail::to_match(type1));
+    match_list_.push_back(detail::to_match(type2));
+    match_list_.push_back(detail::to_match(type3));
+    match_list_.push_back(detail::to_match(type4));
   }
 
-  pattern(match_t type1, match_t type2, match_t type3, match_t type4, match_t type5, duration_t tmo = infin)
+  template <typename Match1, typename Match2, typename Match3, typename Match4, typename Match5>
+  pattern(Match1 type1, Match2 type2, Match3 type3, Match4 type4, Match5 type5, duration_t tmo = infin)
     : timeout_(tmo)
   {
-    match_list_.push_back(type1);
-    match_list_.push_back(type2);
-    match_list_.push_back(type3);
-    match_list_.push_back(type4);
-    match_list_.push_back(type5);
+    match_list_.push_back(detail::to_match(type1));
+    match_list_.push_back(detail::to_match(type2));
+    match_list_.push_back(detail::to_match(type3));
+    match_list_.push_back(detail::to_match(type4));
+    match_list_.push_back(detail::to_match(type5));
   }
 
   void clear()
@@ -78,24 +84,30 @@ struct pattern
     match_list_.clear();
   }
 
-#ifdef GCE_LUA
-  /// internal use
-  inline int get_overloading_type() const
+  template <typename Match>
+  void add_match(Match type)
   {
-    return (int)detail::overloading_0;
+    match_list_.push_back(detail::to_match(type));
   }
 
-  inline void set_timeout(duration_t tmo)
+#ifdef GCE_LUA
+  /// internal use
+  int get_overloading_type() const
+  {
+    return (int)detail::overloading_pattern;
+  }
+
+  void set_timeout(duration_t tmo)
   {
     timeout_ = tmo;
   }
 
-  inline void add_match(match_type type)
+  void add_match_type(match_type type)
   {
     match_list_.push_back(type);
   }
 
-  inline std::string to_string()
+  std::string to_string()
   {
     std::string rt;
     rt += "<";
@@ -112,7 +124,7 @@ struct pattern
 };
 
 #ifdef GCE_LUA
-inline pattern lua_pattern()
+pattern lua_pattern()
 {
   return pattern();
 }

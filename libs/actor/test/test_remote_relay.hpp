@@ -1,4 +1,4 @@
-﻿///
+///
 /// Copyright (c) 2009-2014 Nous Xiong (348944179 at qq dot com)
 ///
 /// Distributed under the Boost Software License, Version 1.0. (See accompanying
@@ -15,16 +15,21 @@ public:
   static void run()
   {
     std::cout << "remote_relay_ut begin." << std::endl;
-    test_common();
+    for (std::size_t i=0; i<test_count; ++i)
+    {
+      test_common();
+      if (test_count > 1) std::cout << "\r" << i;
+    }
+    if (test_count > 1) std::cout << std::endl;
     std::cout << "remote_relay_ut end." << std::endl;
   }
 
 private:
-  static void my_actor(actor<stackful>& self)
+  static void my_actor(stackful_actor self)
   {
     message msg;
     aid_t last_id;
-    recv(self, atom("init"), last_id);
+    self->recv("init", last_id);
 
     aid_t sender = self.recv(msg);
     if (last_id)
@@ -33,7 +38,7 @@ private:
     }
     else
     {
-      message m(atom("hello"));
+      message m("hello");
       self.reply(sender, m);
     }
   }
@@ -47,9 +52,11 @@ private:
       attrs.id_ = atom("router");
       attrs.thread_num_ = 1;
       context ctx(attrs);
-      actor<threaded> base = spawn(ctx);
+      threaded_actor base = spawn(ctx);
 
-      gce::bind(base, "tcp://127.0.0.1:14924", true);
+      net_option opt;
+      opt.is_router_ = true;
+      gce::bind(base, "tcp://127.0.0.1:14924", remote_func_list_t(), opt);
 
       boost::thread_group thrs;
       for (std::size_t i=0; i<root_num; ++i)
@@ -65,12 +72,12 @@ private:
       std::vector<aid_t> root_list(root_num);
       for (std::size_t i=0; i<root_num; ++i)
       {
-        root_list[i] = recv(base);
+        root_list[i] = base->recv();
       }
 
       BOOST_FOREACH(aid_t aid, root_list)
       {
-        send(base, aid);
+        base->send(aid);
       }
       thrs.join_all();
     }
@@ -82,7 +89,7 @@ private:
 
   static void root(
     std::size_t id, std::size_t root_num,
-    aid_t base_aid, actor<threaded> mix
+    aid_t base_aid, threaded_actor mix
     )
   {
     try
@@ -91,28 +98,27 @@ private:
       attrs.id_ = id;
       attrs.thread_num_ = 1;
       context ctx(attrs);
-      actor<threaded> base = spawn(ctx);
+      threaded_actor base = spawn(ctx);
 
       net_option opt;
+      opt.is_router_ = true;
       opt.reconn_period_ = seconds_t(1);
       remote_func_list_t func_list;
       func_list.push_back(
-        std::make_pair(
-          atom("my_actor"),
-          make_actor_func<stackful>(
-            boost::bind(&remote_relay_ut::my_actor, _1)
-            )
+        make_remote_func<stackful>(
+          "my_actor", 
+          boost::bind(&remote_relay_ut::my_actor, _1)
           )
         );
-      connect(base, atom("router"), "tcp://127.0.0.1:14924", true, opt, func_list);
-      wait(base, boost::chrono::milliseconds(1000));
+      connect(base, "router", "tcp://127.0.0.1:14924", opt, func_list);
+      base.sleep_for(millisecs_t(1000));
 
       aid_t last_id;
       aid_t first_id;
       for (std::size_t i=0; i<root_num; ++i)
       {
-        aid_t aid = spawn(base, "my_actor", i);
-        send(base, aid, atom("init"), last_id);
+        aid_t aid = spawn_remote(base, "my_actor", i);
+        base->send(aid, "init", last_id);
         if (i == 0)
         {
           first_id = aid;
@@ -121,14 +127,14 @@ private:
       }
 
       int i = 0;
-      resp_t res = request(base, last_id, atom("hi"), i);
+      resp_t res = base->request(last_id, "hi", i);
       message msg;
-      aid_t sender = base.recv(res, msg);
+      aid_t sender = base.respond(res, msg);
       BOOST_ASSERT(sender == first_id);
       BOOST_ASSERT(msg.get_type() == atom("hello"));
 
-      send(mix, base_aid);
-      recv(mix);
+      mix->send(base_aid);
+      mix->recv();
     }
     catch (std::exception& ex)
     {

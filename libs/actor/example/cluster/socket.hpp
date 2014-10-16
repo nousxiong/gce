@@ -1,4 +1,4 @@
-﻿///
+///
 /// Copyright (c) 2009-2014 Nous Xiong (348944179 at qq dot com)
 ///
 /// Distributed under the Boost Software License, Version 1.0. (See accompanying
@@ -13,6 +13,7 @@
 #include <gce/actor/all.hpp>
 #include <boost/asio.hpp>
 #include <boost/array.hpp>
+#include <boost/predef.h>
 
 struct msg_header
 {
@@ -34,7 +35,7 @@ public:
 public:
   explicit basic_socket(gce::io_service_t& ios)
     : sock_(ios)
-#if defined(_WIN32) || defined(__WIN32__) || defined(WIN32)
+#ifdef BOOST_OS_WINDOWS
     , max_batch_size_(64) /// no winnt below
 #else
     , max_batch_size_((std::min)(64, IOV_MAX))

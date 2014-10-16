@@ -1,4 +1,4 @@
-﻿///
+///
 /// Copyright (c) 2009-2014 Nous Xiong (348944179 at qq dot com)
 ///
 /// Distributed under the Boost Software License, Version 1.0. (See accompanying
@@ -22,20 +22,36 @@ struct pack
 {
   pack()
     : is_err_ret_(false)
-    , cache_queue_index_(size_nil)
+    , concurrency_index_(size_nil)
     , cache_index_(u64_nil)
+    , type_(actor_nil)
+    , sid_(sid_nil)
+    , expiry_(false)
   {
   }
 
-  detail::tag_t tag_;
+  ~pack()
+  {
+  }
+
+  tag_t tag_;
   aid_t recver_;
   aid_t skt_;
   svcid_t svc_;
   bool is_err_ret_;
   message msg_;
 
-  std::size_t cache_queue_index_;
+  /// for nonblocked actor recv
+  std::size_t concurrency_index_;
   boost::uint64_t cache_index_;
+  actor_type type_;
+
+  /// for in pool actor recv
+  actor_index ai_;
+  sid_t sid_;
+
+  /// expiry flag
+  bool expiry_;
 };
 }
 }

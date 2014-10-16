@@ -1,4 +1,4 @@
-﻿///
+///
 /// Copyright (c) 2009-2014 Nous Xiong (348944179 at qq dot com)
 ///
 /// Distributed under the Boost Software License, Version 1.0. (See accompanying
@@ -45,12 +45,12 @@ public:
   }
 
 public:
-  inline spawn_type get_type() const { return type_; }
-  inline std::string const& get_func() const { return func_; }
-  inline match_t get_ctxid() const { return ctxid_; }
-  inline std::size_t get_stack_size() const { return stack_size_; }
-  inline sid_t get_id() const { return sid_; }
-  inline aid_t get_aid() const { return aid_; }
+  spawn_type get_type() const { return type_; }
+  std::string const& get_func() const { return func_; }
+  match_t get_ctxid() const { return ctxid_; }
+  std::size_t get_stack_size() const { return stack_size_; }
+  sid_t get_id() const { return sid_; }
+  aid_t get_aid() const { return aid_; }
 
 private:
   spawn_type type_;
@@ -89,9 +89,9 @@ public:
   }
 
 public:
-  inline spawn_error get_error() const { return err_; }
-  inline sid_t get_id() const { return sid_; }
-  inline aid_t get_aid() const { return aid_; }
+  spawn_error get_error() const { return err_; }
+  sid_t get_id() const { return sid_; }
+  aid_t get_aid() const { return aid_; }
 
 private:
   spawn_error err_;

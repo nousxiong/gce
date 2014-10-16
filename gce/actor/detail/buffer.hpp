@@ -1,4 +1,4 @@
-﻿///
+///
 /// Copyright (c) 2009-2014 Nous Xiong (348944179 at qq dot com)
 ///
 /// Distributed under the Boost Software License, Version 1.0. (See accompanying
@@ -51,10 +51,10 @@ public:
   }
 
 public:
-  inline byte_t* data() { return data_; }
-  inline std::size_t size() const { return size_; }
+  byte_t* data() { return data_; }
+  std::size_t size() const { return size_; }
 
-  inline void resize(std::size_t size)
+  void resize(std::size_t size)
   {
     if (size > size_)
     {

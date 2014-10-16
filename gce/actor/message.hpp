@@ -1,4 +1,4 @@
-﻿///
+///
 /// Copyright (c) 2009-2014 Nous Xiong (348944179 at qq dot com)
 ///
 /// Distributed under the Boost Software License, Version 1.0. (See accompanying
@@ -11,6 +11,7 @@
 #define GCE_ACTOR_MESSAGE_HPP
 
 #include <gce/actor/config.hpp>
+#include <gce/actor/duration.hpp>
 #include <gce/actor/detail/buffer.hpp>
 #include <gce/actor/detail/buffer_ref.hpp>
 #include <gce/actor/detail/request.hpp>
@@ -19,8 +20,7 @@
 #include <gce/actor/detail/spawn.hpp>
 #include <gce/actor/detail/link.hpp>
 #include <gce/actor/detail/exit.hpp>
-#include <gce/amsg/amsg.hpp>
-#include <gce/amsg/zerocopy.hpp>
+#include <gce/actor/detail/to_match.hpp>
 #include <boost/variant/variant.hpp>
 #include <boost/variant/get.hpp>
 #include <boost/utility/string_ref.hpp>
@@ -29,14 +29,6 @@
 
 namespace gce
 {
-class basic_actor;
-class coroutine_stackful_actor;
-class thread_mapped_actor;
-class coroutine_stackless_actor;
-class nonblocking_actor;
-#ifdef GCE_LUA
-class lua_actor;
-#endif
 namespace detail
 {
 class socket;
@@ -44,7 +36,7 @@ static match_t const tag_aid_t = atom("gce_aid_t");
 static match_t const tag_request_t = atom("gce_request_t");
 static match_t const tag_link_t = atom("gce_link_t");
 static match_t const tag_exit_t = atom("gce_exit_t");
-static match_t const tag_response_t = atom("gce_response_t");
+static match_t const tag_response_t = atom("gce_resp_t");
 static match_t const tag_spawn_t = atom("gce_spw_t");
 static match_t const tag_spawn_ret_t = atom("gce_spw_ret_t");
 
@@ -52,6 +44,8 @@ typedef boost::variant<
   aid_t, request_t, resp_t, link_t, exit_t,
   fwd_link_t, fwd_exit_t, spawn_t, spawn_ret_t
   > tag_t;
+
+typedef boost::variant<int, aid_t, request_t> relay_t;
 }
 
 class message
@@ -61,19 +55,23 @@ public:
     : type_(match_nil)
     , tag_offset_(u32_nil)
     , buf_(small_, GCE_SMALL_MSG_SIZE)
+    , is_copy_read_size_(false)
   {
   }
 
-  message(match_t type)
-    : type_(type)
+  template <typename Match>
+  message(Match type)
+    : type_(detail::to_match(type))
     , tag_offset_(u32_nil)
     , buf_(small_, GCE_SMALL_MSG_SIZE)
+    , is_copy_read_size_(false)
   {
   }
 
   message(byte_t const* data, std::size_t size)
     : type_(match_nil)
     , tag_offset_(u32_nil)
+    , is_copy_read_size_(0)
   {
     if (size <= GCE_SMALL_MSG_SIZE)
     {
@@ -87,13 +85,15 @@ public:
     std::memcpy(buf_.get_write_data(), data, size);
     buf_.write(size);
   }
-
+  
+  template <typename Match>
   message(
-    match_t type, byte_t const* data,
+    Match type, byte_t const* data,
     std::size_t size, boost::uint32_t tag_offset
     )
-    : type_(type)
+    : type_(detail::to_match(type))
     , tag_offset_(tag_offset)
+    , is_copy_read_size_(0)
   {
     if (size <= GCE_SMALL_MSG_SIZE)
     {
@@ -111,6 +111,8 @@ public:
   message(message const& other)
     : type_(other.type_)
     , tag_offset_(other.tag_offset_)
+    , relay_(other.relay_)
+    , is_copy_read_size_(other.is_copy_read_size_)
   {
     detail::buffer_ref const& buf = other.buf_;
     large_ = other.large_;
@@ -125,6 +127,10 @@ public:
       buf_.reset(large_->data(), large_->size());
     }
     buf_.write(buf.write_size());
+    if (is_copy_read_size_)
+    {
+      buf_.read(buf.read_size());
+    }
   }
 
   message& operator=(message const& rhs)
@@ -133,6 +139,8 @@ public:
     {
       type_ = rhs.type_;
       tag_offset_ = rhs.tag_offset_;
+      relay_ = rhs.relay_;
+      is_copy_read_size_ = rhs.is_copy_read_size_;
       detail::buffer_ref const& buf = rhs.buf_;
       buf_.clear();
 
@@ -153,19 +161,33 @@ public:
         buf_.reset(large_->data(), large_->size());
       }
       buf_.write(buf.write_size());
+      if (is_copy_read_size_)
+      {
+        buf_.read(buf.read_size());
+      }
     }
     return *this;
   }
 
-  inline byte_t const* data() const
+  byte_t const* data() const
   {
     return buf_.data();
   }
 
-  inline std::size_t size() const { return buf_.write_size(); }
-  inline match_t get_type() const { return type_; }
-  inline boost::uint32_t get_tag_offset() const { return tag_offset_; }
-  inline void set_type(match_type type) { type_ = type; }
+  std::size_t size() const { return buf_.write_size(); }
+  match_t get_type() const { return type_; }
+#ifdef GCE_LUA
+  match_type get_match_type() const { return match_type(type_); }
+#endif
+  boost::uint32_t get_tag_offset() const { return tag_offset_; }
+
+  template <typename Match>
+  void set_type(Match type) { type_ = detail::to_match(type); }
+#ifdef GCE_LUA
+  void set_match_type(match_type type) { type_ = type; }
+#endif
+  void reset_write() { buf_.clear_write(); }
+  void reset_read() { buf_.clear_read(); }
 
   template <typename T>
   message& operator<<(T const& t)
@@ -214,6 +236,7 @@ public:
     boost::uint32_t msg_size = (boost::uint32_t)m.size();
     match_t msg_type = m.get_type();
     boost::uint32_t tag_offset = m.tag_offset_;
+
     boost::amsg::error_code_t ec = boost::amsg::success;
     std::size_t size = boost::amsg::size_of(msg_size, ec);
     size += boost::amsg::size_of(msg_type, ec);
@@ -288,6 +311,17 @@ public:
     byte_t* write_data = buf_.get_write_data();
     buf_.write(size);
     std::memcpy(write_data, str.data(), size);
+    return *this;
+  }
+
+  message& operator<<(char const* str)
+  {
+    boost::uint32_t size = (boost::uint32_t)std::strlen(str);
+    *this << size;
+    reserve(size);
+    byte_t* write_data = buf_.get_write_data();
+    buf_.write(size);
+    std::memcpy(write_data, str, size);
     return *this;
   }
 
@@ -411,18 +445,18 @@ public:
     return *this;
   }
 
-  inline bool is_small() const
+  bool is_small() const
   {
     return buf_.data() == small_;
   }
 
 #ifdef GCE_LUA
-  inline int get_overloading_type() const
+  int get_overloading_type() const
   {
-    return (int)detail::overloading_1;
+    return (int)detail::overloading_msg;
   }
 
-  inline std::string to_string()
+  std::string to_string()
   {
     std::string rt;
     rt += "<";
@@ -436,7 +470,7 @@ public:
   GCE_LUA_SERIALIZE_FUNC
 #endif
 
-private:
+public:
   void push_tag(
     detail::tag_t& tag, aid_t recver,
     svcid_t svc, aid_t skt, bool is_err_ret
@@ -564,7 +598,35 @@ private:
     return has_tag;
   }
 
-  inline void reserve(std::size_t size)
+  void enable_copy_read_size()
+  {
+    is_copy_read_size_ = true;
+  }
+
+  void disable_copy_read_size()
+  {
+    is_copy_read_size_ = false;
+  }
+
+  template <typename T>
+  T const* get_relay() const
+  {
+    return boost::get<T>(&relay_);
+  }
+
+  template <typename T>
+  void set_relay(T const& relay)
+  {
+    relay_ = relay;
+  }
+
+  void clear_relay()
+  {
+    relay_ = detail::relay_t();
+  }
+
+private:
+  void reserve(std::size_t size)
   {
     std::size_t old_buf_capacity = buf_.size();
     std::size_t old_buf_size = buf_.write_size();
@@ -607,7 +669,7 @@ private:
     }
   }
 
-  inline void make_large(std::size_t size)
+  void make_large(std::size_t size)
   {
     large_.reset(new detail::buffer(size));
   }
@@ -619,21 +681,13 @@ private:
   detail::buffer_ptr large_;
   detail::buffer_ref buf_;
 
-  friend class basic_actor;
-  friend class coroutine_stackful_actor;
-  friend class thread_mapped_actor;
-  friend class coroutine_stackless_actor;
-  friend class nonblocking_actor;
-#ifdef GCE_LUA
-  friend class lua_actor;
-#endif
-  friend class detail::socket;
-  detail::request_t req_;
+  detail::relay_t relay_;
+  bool is_copy_read_size_;
 };
 
 typedef message msg_t;
 #ifdef GCE_LUA
-inline msg_t lua_msg()
+msg_t lua_msg()
 {
   return msg_t();
 }

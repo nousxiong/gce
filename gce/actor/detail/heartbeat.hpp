@@ -1,4 +1,4 @@
-﻿///
+///
 /// Copyright (c) 2009-2014 Nous Xiong (348944179 at qq dot com)
 ///
 /// Distributed under the Boost Software License, Version 1.0. (See accompanying
@@ -11,26 +11,39 @@
 #define GCE_ACTOR_DETAIL_HEARTBEAT_HPP
 
 #include <gce/actor/config.hpp>
-#include <gce/actor/detail/cache_pool.hpp>
+#include <gce/actor/duration.hpp>
+#include <boost/asio/placeholders.hpp>
+#include <boost/bind.hpp>
 #include <boost/function.hpp>
 
 namespace gce
 {
 namespace detail
 {
-class cache_pool;
 class heartbeat
 {
   typedef boost::function<void ()> timeout_func_t;
 
 public:
-  explicit heartbeat(strand_t&);
-  ~heartbeat();
+  explicit heartbeat(strand_t& snd)
+    : snd_(snd)
+    , tmr_(snd_.get_io_service())
+    , sync_(snd_.get_io_service())
+    , max_count_(0)
+    , curr_count_(0)
+    , stopped_(false)
+    , waiting_(0)
+  {
+  }
+
+  ~heartbeat()
+  {
+  }
 
 public:
   template <typename F>
   void init(
-    seconds_t period, std::size_t max_count, 
+    duration_type period, std::size_t max_count, 
     F f, F t = timeout_func_t()
     )
   {
@@ -45,22 +58,95 @@ public:
     tick_ = t;
   }
 
-  void start();
-  void stop();
-  void beat();
-  void wait_end(yield_t);
+  void start()
+  {
+    curr_count_ = max_count_;
+    stopped_ = false;
+    start_timer();
+  }
 
-  void clear();
+  void stop()
+  {
+    if (!stopped_)
+    {
+      stopped_ = true;
+      errcode_t ignore_ec;
+      tmr_.cancel(ignore_ec);
+    }
+  }
+
+  void beat()
+  {
+    if (!stopped_)
+    {
+      curr_count_ = max_count_;
+    }
+  }
+
+  void wait_end(yield_t yield)
+  {
+    if (waiting_ > 0)
+    {
+      errcode_t ec;
+      sync_.expires_from_now(infin);
+      sync_.async_wait(yield[ec]);
+    }
+  }
+
+  void clear()
+  {
+    timeout_.clear();
+    tick_.clear();
+  }
 
 private:
-  void start_timer();
-  void handle_timeout(errcode_t const&);
+  void start_timer()
+  {
+    ++waiting_;
+    tmr_.expires_from_now(period_);
+    tmr_.async_wait(
+      snd_.wrap(
+        boost::bind(
+          &heartbeat::handle_timeout, this,
+          boost::asio::placeholders::error
+          )
+        )
+      );
+  }
+
+  void handle_timeout(errcode_t const& errc)
+  {
+    --waiting_;
+    if (!stopped_ && !errc)
+    {
+      --curr_count_;
+      if (tick_)
+      {
+        tick_();
+      }
+
+      if (curr_count_ == 0)
+      {
+        timeout_();
+      }
+      else
+      {
+        start_timer();
+      }
+    }
+
+    if (stopped_)
+    {
+      errcode_t ignore_ec;
+      sync_.cancel(ignore_ec);
+    }
+  }
 
 private:
   strand_t& snd_;
   timer_t tmr_;
   timer_t sync_;
-  seconds_t period_;
+  duration_type period_;
   std::size_t max_count_;
   std::size_t curr_count_;
 

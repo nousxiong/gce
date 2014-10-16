@@ -1,4 +1,4 @@
-﻿///
+///
 /// Copyright (c) 2009-2014 Nous Xiong (348944179 at qq dot com)
 ///
 /// Distributed under the Boost Software License, Version 1.0. (See accompanying
@@ -15,31 +15,36 @@ public:
   static void run()
   {
     std::cout << "send_recv_ut begin." << std::endl;
-    test_base();
+    for (std::size_t i=0; i<test_count; ++i)
+    {
+      test_base();
+      if (test_count > 1) std::cout << "\r" << i;
+    }
+    if (test_count > 1) std::cout << std::endl;
     std::cout << "send_recv_ut end." << std::endl;
   }
 
 public:
-  static void ping_pong(actor<stackful>& self)
+  static void ping_pong(stackful_actor self)
   {
     try
     {
       aid_t host, partner;
-      host = recv(self, atom("prepare"), partner);
+      host = self->recv("prepare", partner);
 
       int count_down;
       while (true)
       {
-        recv(self, atom("ping_pong"), count_down);
+        self->recv("ping_pong", count_down);
         if (count_down == 0)
         {
-          send(self, partner, atom("ping_pong"), count_down);
+          self->send(partner, "ping_pong", count_down);
           break;
         }
         --count_down;
-        send(self, partner, atom("ping_pong"), count_down);
+        self->send(partner, "ping_pong", count_down);
       }
-      send(self, host);
+      self->send(host);
     }
     catch (std::exception& ex)
     {
@@ -52,19 +57,19 @@ public:
     try
     {
       context ctx;
-      actor<threaded> base = spawn(ctx);
+      threaded_actor base = spawn(ctx);
 
       int const count_down = 10000;
       aid_t ping = spawn(base, boost::bind(&send_recv_ut::ping_pong, _1));
       aid_t pong = spawn(base, boost::bind(&send_recv_ut::ping_pong, _1));
 
-      send(base, ping, atom("prepare"), pong);
-      send(base, pong, atom("prepare"), ping);
+      base->send(ping, "prepare", pong);
+      base->send(pong, "prepare", ping);
 
-      send(base, ping, atom("ping_pong"), count_down);
+      base->send(ping, "ping_pong", count_down);
       for (std::size_t i=0; i<2; ++i)
       {
-        recv(base);
+        base->recv();
       }
     }
     catch (std::exception& ex)

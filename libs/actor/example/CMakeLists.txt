@@ -1,5 +1,5 @@
 #
-# This file is part of the CMake build system for Gce
+# This file is part of the CMake build system for GCE
 #
 # CMake auto-generated configuration options.
 # Do not check in modified versions of this file.
@@ -13,21 +13,21 @@
 #
 
 # Build examples.
-set (EXAMPLES_LINK_LIBS gce_actor ${LINK_LIBS})
+set (EXAMPLES_LINK_LIBS ${LINK_LIBS})
 
 if (GCE_STATIC)
   set (GCE_LINK_PROP "${GCE_LINK_PROP} -static -static-libgcc -static-libstdc++")
 endif ()
 
-# Gce work with asio.
+# GCE work with asio.
 add_subdirectory (asio)
 
-# Gce cluster.
+# GCE cluster.
 add_subdirectory (cluster)
 
 
 
-# Gce cluster client.
+# GCE cluster client.
 add_subdirectory (cluster_client)
 
 

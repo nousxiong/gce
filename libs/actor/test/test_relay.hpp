@@ -1,4 +1,4 @@
-﻿///
+///
 /// Copyright (c) 2009-2014 Nous Xiong (348944179 at qq dot com)
 ///
 /// Distributed under the Boost Software License, Version 1.0. (See accompanying
@@ -15,12 +15,17 @@ public:
   static void run()
   {
     std::cout << "relay_ut begin." << std::endl;
-    test_common();
+    for (std::size_t i=0; i<test_count; ++i)
+    {
+      test_common();
+      if (test_count > 1) std::cout << "\r" << i;
+    }
+    if (test_count > 1) std::cout << std::endl;
     std::cout << "relay_ut end." << std::endl;
   }
 
 private:
-  static void my_actor(actor<stackful>& self, aid_t last_id)
+  static void my_actor(stackful_actor self, aid_t last_id)
   {
     message msg;
     aid_t sender = self.recv(msg);
@@ -30,12 +35,12 @@ private:
     }
     else
     {
-      message m(atom("hello"));
+      message m("hello");
       self.reply(sender, m);
     }
   }
 
-  static void root(actor<stackful>& self)
+  static void root(stackful_actor self)
   {
     std::size_t free_actor_num = 20;
 
@@ -58,9 +63,9 @@ private:
     }
 
     int i = 0;
-    resp_t res = request(self, last_id, atom("hi"), i);
+    resp_t res = self->request(last_id, "hi", i);
     message msg;
-    aid_t sender = self.recv(res, msg);
+    aid_t sender = self.respond(res, msg);
     BOOST_ASSERT(sender == first_id);
     BOOST_ASSERT(msg.get_type() == atom("hello"));
   }
@@ -71,7 +76,7 @@ private:
     {
       std::size_t root_num = 100;
       context ctx;
-      actor<threaded> base = spawn(ctx);
+      threaded_actor base = spawn(ctx);
 
       for (std::size_t i=0; i<root_num; ++i)
       {
@@ -86,7 +91,7 @@ private:
 
       for (std::size_t i=0; i<root_num; ++i)
       {
-        recv(base);
+        base->recv();
       }
     }
     catch (std::exception& ex)

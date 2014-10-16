@@ -27,7 +27,6 @@ template <
   >
 class actor_pool
 {
-  typedef T value_type;
   typedef Alloc allocator_t;
   typedef T* pointer;
 
@@ -43,22 +42,22 @@ class actor_pool
       BOOST_ASSERT(sid_ == sid_nil);
     }
 
-    inline operator bool() const
+    operator bool() const
     {
       return sid_ != sid_nil;
     }
 
-    inline bool operator!() const
+    bool operator!() const
     {
       return sid_ == sid_nil;
     }
 
-    inline void use(sid_t sid)
+    void use(sid_t sid)
     {
       sid_ = sid;
     }
 
-    inline void unuse()
+    void unuse()
     {
       sid_ = sid_nil;
     }
@@ -92,71 +91,72 @@ public:
   }
 
 public:
-  inline pointer make()
+  pointer make()
   {
     std::pair<gce::aid_t, actor_index> pr = get();
     return new ((pointer)pool_[pr.second.id_].segment_) T(pr.first);
   }
 
   template <typename A1>
-  inline pointer make(A1 a1)
+  pointer make(A1 a1)
   {
     std::pair<gce::aid_t, actor_index> pr = get();
     return new ((pointer)pool_[pr.second.id_].segment_) T(pr.first, a1);
   }
 
   template <typename A1, typename A2>
-  inline pointer make(A1 a1, A2 a2)
+  pointer make(A1 a1, A2 a2)
   {
     std::pair<gce::aid_t, actor_index> pr = get();
     return new ((pointer)pool_[pr.second.id_].segment_) T(pr.first, a1, a2);
   }
 
   template <typename A1, typename A2, typename A3>
-  inline pointer make(A1 a1, A2 a2, A3 a3)
+  pointer make(A1 a1, A2 a2, A3 a3)
   {
     std::pair<gce::aid_t, actor_index> pr = get();
     return new ((pointer)pool_[pr.second.id_].segment_) T(pr.first, a1, a2, a3);
   }
 
   template <typename A1, typename A2, typename A3, typename A4>
-  inline pointer make(A1 a1, A2 a2, A3 a3, A4 a4)
+  pointer make(A1 a1, A2 a2, A3 a3, A4 a4)
   {
     std::pair<gce::aid_t, actor_index> pr = get();
     return new ((pointer)pool_[pr.second.id_].segment_) T(pr.first, a1, a2, a3, a4);
   }
 
   template <typename A1, typename A2, typename A3, typename A4, typename A5>
-  inline pointer make(A1 a1, A2 a2, A3 a3, A4 a4, A5 a5)
+  pointer make(A1 a1, A2 a2, A3 a3, A4 a4, A5 a5)
   {
     std::pair<gce::aid_t, actor_index> pr = get();
     return new ((pointer)pool_[pr.second.id_].segment_) T(pr.first, a1, a2, a3, a4, a5);
   }
 
-  inline pointer get(actor_index i, sid_t sid)
+  pointer find(actor_index i, sid_t sid)
   {
     pointer p = 0;
-    if (
-      i && i.id_ < pool_.size() && pool_[i.id_] && 
-      pool_[i.id_].sid_ == sid
-      )
+    if (i && i.id_ < pool_.size())
     {
-      p = (pointer)pool_[i.id_].segment_;
+      object& o = pool_[i.id_];
+      if (o && o.sid_ == sid)
+      {
+        p = (pointer)o.segment_;
+      }
     }
     return p;
   }
 
-  inline void free(pointer a)
+  void free(pointer a)
   {
     if (a)
     {
-      a->~value_type();
+      a->~T();
       free(a->get_aid());
     }
   }
 
 private:
-  inline std::pair<gce::aid_t, actor_index> get()
+  std::pair<gce::aid_t, actor_index> get()
   {
     actor_index i;
     if (free_list_.empty())
@@ -173,13 +173,13 @@ private:
       i.id_ = id;
     }
 
-    i.cac_id_ = owner_;
-    i.type_ = value_type::type();
+    i.svc_id_ = owner_;
+    i.type_ = T::get_type();
     pool_[i.id_].use(++sid_base_);
-    return std::make_pair(gce::aid_t(ctxid_, timestamp_, i.id_, i.cac_id_, i.type_, sid_base_), i);
+    return std::make_pair(gce::aid_t(ctxid_, timestamp_, i.id_, i.svc_id_, i.type_, sid_base_), i);
   }
 
-  inline void free(gce::aid_t aid)
+  void free(gce::aid_t const& aid)
   {
     if (aid)
     {

@@ -1,4 +1,4 @@
-﻿///
+///
 /// Copyright (c) 2009-2014 Nous Xiong (348944179 at qq dot com)
 ///
 /// Distributed under the Boost Software License, Version 1.0. (See accompanying
@@ -11,660 +11,246 @@
 #define GCE_ACTOR_SPAWN_HPP
 
 #include <gce/actor/config.hpp>
-#include <gce/actor/recv.hpp>
-#include <gce/actor/send.hpp>
 #include <gce/actor/actor.hpp>
 #include <gce/actor/context.hpp>
-#include <gce/actor/detail/cache_pool.hpp>
+#include <gce/actor/detail/spawn_actor.hpp>
+#include <gce/actor/detail/to_match.hpp>
+#include <boost/mpl/if.hpp>
+#include <boost/type_traits.hpp>
 
 namespace gce
 {
+///------------------------------------------------------------------------------
+/// Spawn a actor using given threaded_actor
+///------------------------------------------------------------------------------
+template <typename F>
+aid_t spawn(
+  threaded_actor sire, F f,
+  link_type type = no_link,
+  std::size_t stack_size = default_stacksize()
+  )
+{
+#ifdef GCE_LUA
+  typedef typename boost::remove_const<
+    typename boost::remove_reference<
+      typename boost::remove_volatile<F>::type
+      >::type
+    >::type param_t;
+  typedef typename boost::mpl::if_<
+    typename boost::is_same<param_t, char const*>::type, luaed, 
+    typename boost::mpl::if_<
+      typename boost::is_same<param_t, std::string>::type, luaed, stackful
+      >::type
+    >::type select_t;
+#else
+  typedef stackful select_t;
+#endif
+  return detail::spawn(select_t(), sire, f, false, type, stack_size);
+}
+
+template <typename Tag, typename F>
+aid_t spawn(
+  threaded_actor sire, F f,
+  link_type type = no_link,
+  std::size_t stack_size = default_stacksize()
+  )
+{
+  return detail::spawn(Tag(), sire, f, false, type, stack_size);
+}
+
+///------------------------------------------------------------------------------
+/// Spawn a actor using given stackful_actor
+///------------------------------------------------------------------------------
+template <typename F>
+aid_t spawn(
+  stackful_actor sire, F f,
+  link_type type = no_link,
+  bool sync_sire = false,
+  std::size_t stack_size = default_stacksize()
+  )
+{
+#ifdef GCE_LUA
+  typedef typename boost::remove_const<
+    typename boost::remove_reference<
+      typename boost::remove_volatile<F>::type
+      >::type
+    >::type param_t;
+  typedef typename boost::mpl::if_<
+    typename boost::is_same<param_t, char const*>::type, luaed, 
+    typename boost::mpl::if_<
+      typename boost::is_same<param_t, std::string>::type, luaed, stackful
+      >::type
+    >::type select_t;
+#else
+  typedef stackful select_t;
+#endif
+  return detail::spawn(select_t(), sire, f, sync_sire, type, stack_size);
+}
+
+template <typename Tag, typename F>
+aid_t spawn(
+  stackful_actor sire, F f,
+  link_type type = no_link,
+  bool sync_sire = false,
+  std::size_t stack_size = default_stacksize()
+  )
+{
+  return detail::spawn(Tag(), sire, f, sync_sire, type, stack_size);
+}
+
+///------------------------------------------------------------------------------
+/// spawn a actor using given stackless_actor
+///------------------------------------------------------------------------------
 namespace detail
 {
-inline aid_t make_stackful_actor(
-  aid_t sire, cache_pool* user,
-  actor_func<stackful> const& f, std::size_t stack_size
-  )
-{
-  context& ctx = user->get_context();
-  coroutine_stackful_actor* a = user->make_stackful_actor();
-  a->init(f.f_);
-  if (sire)
-  {
-    send(*a, sire, msg_new_actor);
-  }
-  aid_t aid = a->get_aid();
-  a->start(stack_size);
-  return aid;
-}
-
-inline aid_t make_stackless_actor(
-  aid_t sire, cache_pool* user,
-  actor_func<stackless> const& f, std::size_t stack_size
-  )
-{
-  context& ctx = user->get_context();
-  coroutine_stackless_actor* a = user->make_stackless_actor();
-  a->init(f.f_);
-  if (sire)
-  {
-    send(*a, sire, msg_new_actor);
-  }
-  aid_t aid = a->get_aid();
-  a->start();
-  return aid;
-}
-
-template <typename Sire>
-inline cache_pool* select_cache_pool(Sire& sire, bool sync_sire)
-{
-  detail::cache_pool* user = 0;
-  if (sync_sire)
-  {
-    user = sire.get_cache_pool();
-  }
-  else
-  {
-    user = sire.get_context()->select_cache_pool();
-  }
-  return user;
-}
-
-template <typename Sire>
-inline aid_t end_spawn(Sire& sire, link_type type)
-{
-  pattern patt(detail::msg_new_actor);
-  message msg;
-  aid_t aid = sire.recv(msg, patt);
-  if (!aid)
-  {
-    throw std::runtime_error("spawn actor failed!");
-  }
-
-  if (type == linked)
-  {
-    sire.link(aid);
-  }
-  else if (type == monitored)
-  {
-    sire.monitor(aid);
-  }
-  return aid;
-}
-
-typedef boost::function<void (actor<stackless>&, aid_t)> spawn_handler_t;
-inline void handle_spawn(
-  actor<stackless>& self, aid_t aid,
-  message msg, link_type type, spawn_handler_t const& hdr
-  )
-{
-  if (aid)
-  {
-    if (type == linked)
-    {
-      self.link(aid);
-    }
-    else if (type == monitored)
-    {
-      self.monitor(aid);
-    }
-  }
-
-  hdr(self, aid);
-}
-
-/// spawn coroutine_stackful_actor using NONE coroutine_stackless_actor
-template <typename Sire, typename F>
-inline aid_t spawn(
-  stackful,
-  Sire& sire, F f, cache_pool* user,
-  link_type type, std::size_t stack_size
-  )
-{
-  user->get_strand().post(
-    boost::bind(
-      &detail::make_stackful_actor,
-      sire.get_aid(), user,
-      make_actor_func<stackful>(f), stack_size
-      )
-    );
-  return end_spawn(sire, type);
-}
-
-/// spawn coroutine_stackless_actor using NONE coroutine_stackless_actor
-template <typename Sire, typename F>
-inline aid_t spawn(
-  stackless,
-  Sire& sire, F f, cache_pool* user,
-  link_type type, std::size_t stack_size
-  )
-{
-  user->get_strand().post(
-    boost::bind(
-      &detail::make_stackless_actor,
-      sire.get_aid(), user,
-      make_actor_func<stackless>(f), stack_size
-      )
-    );
-  return end_spawn(sire, type);
-}
-
-#ifdef GCE_LUA
-/// spawn lua_actor using NONE coroutine_stackless_actor
-template <typename Sire>
-inline aid_t spawn(
-  luaed,
-  Sire& sire, std::string const& script, 
-  cache_pool* user, link_type type
-  )
-{
-  user->get_strand().post(
-    boost::bind(
-    &cache_pool::spawn_lua_actor, user,
-      script, sire.get_aid(), type
-      )
-    );
-  return end_spawn(sire, type);
-}
-#endif
-
-/// spawn coroutine_stackful_actor using coroutine_stackless_actor
-template <typename F, typename SpawnHandler>
-inline void spawn(
-  stackful,
-  actor<stackless>& sire, F f, SpawnHandler h,
-  cache_pool* user, link_type type, std::size_t stack_size
-  )
-{
-  user->get_strand().post(
-    boost::bind(
-      &detail::make_stackful_actor,
-      sire.get_aid(), user,
-      make_actor_func<stackful>(f), stack_size
-      )
-    );
-
-  pattern patt(detail::msg_new_actor);
-  sire.recv(
-    boost::bind(
-      &handle_spawn, _1, _2, _3,
-      type, spawn_handler_t(h)
-      ),
-    patt
-    );
-}
-
-/// spawn coroutine_stackless_actor using coroutine_stackless_actor
-template <typename F, typename SpawnHandler>
-inline void spawn(
-  stackless,
-  actor<stackless>& sire, F f, SpawnHandler h,
-  cache_pool* user, link_type type, std::size_t stack_size
-  )
-{
-  user->get_strand().post(
-    boost::bind(
-      &detail::make_stackless_actor,
-      sire.get_aid(), user,
-      make_actor_func<stackless>(f), stack_size
-      )
-    );
-
-  pattern patt(detail::msg_new_actor);
-  sire.recv(
-    boost::bind(
-      &handle_spawn, _1, _2, _3,
-      type, spawn_handler_t(h)
-      ),
-    patt
-    );
-}
-
-#ifdef GCE_LUA
-/// spawn lua_actor using coroutine_stackless_actor
-template <typename SpawnHandler>
-inline void spawn(
-  luaed,
-  actor<stackless>& sire, SpawnHandler h, 
-  std::string const& script, cache_pool* user, link_type type
-  )
-{
-  user->get_strand().post(
-    boost::bind(
-    &cache_pool::spawn_lua_actor, user,
-      script, sire.get_aid(), type
-      )
-    );
-
-  pattern patt(detail::msg_new_actor);
-  sire.recv(
-    boost::bind(
-      &handle_spawn, _1, _2, _3,
-      type, spawn_handler_t(h)
-      ),
-    patt
-    );
-}
-#endif
-
-inline void handle_remote_spawn(
-  actor<stackless>& self, aid_t aid,
-  message msg, link_type type,
-  boost::chrono::system_clock::time_point begin_tp,
-  sid_t sid, seconds_t tmo, duration_t curr_tmo,
-  spawn_handler_t const& hdr
-  )
-{
-  boost::uint16_t err = 0;
-  sid_t ret_sid = sid_nil;
-  if (msg.get_type() == match_nil)
-  {
-    /// timeout
-    hdr(self, aid);
-    return;
-  }
-
-  msg >> err >> ret_sid;
-  do
-  {
-    if (err != 0 || (aid && sid == ret_sid))
-    {
-      break;
-    }
-
-    if (tmo != infin)
-    {
-      duration_t pass_time = boost::chrono::system_clock::now() - begin_tp;
-      curr_tmo -= pass_time;
-    }
-
-    begin_tp = boost::chrono::system_clock::now();
-    pattern patt(detail::msg_spawn_ret, curr_tmo);
-    self.recv(
-      boost::bind(
-        &handle_remote_spawn, _1, _2, _3,
-        type, begin_tp, sid, tmo, curr_tmo, hdr
-        ),
-      patt
-      );
-    return;
-  }
-  while (false);
-
-  detail::spawn_error error = (detail::spawn_error)err;
-  if (error != detail::spawn_ok)
-  {
-    aid = aid_t();
-  }
-
-  if (aid)
-  {
-    if (type == linked)
-    {
-      self.link(aid);
-    }
-    else if (type == monitored)
-    {
-      self.monitor(aid);
-    }
-  }
-
-  hdr(self, aid);
-}
-
-template <typename Sire>
-inline aid_t spawn(
-  spawn_type spw,
-  Sire& sire, std::string const& func, match_t ctxid,
-  link_type type, std::size_t stack_size, seconds_t tmo
-  )
-{
-  aid_t aid;
-  sid_t sid = sire.spawn(spw, func, ctxid, stack_size);
-  boost::uint16_t err = 0;
-  sid_t ret_sid = sid_nil;
-
-  duration_t curr_tmo = tmo;
-  typedef boost::chrono::system_clock clock_t;
-  clock_t::time_point begin_tp;
-
-  do
-  {
-    begin_tp = clock_t::now();
-    aid = recv(sire, detail::msg_spawn_ret, err, ret_sid, curr_tmo);
-    if (err != 0 || (aid && sid == ret_sid))
-    {
-      break;
-    }
-
-    if (tmo != infin)
-    {
-      duration_t pass_time = clock_t::now() - begin_tp;
-      curr_tmo -= pass_time;
-    }
-  }
-  while (true);
-
-  detail::spawn_error error = (detail::spawn_error)err;
-  if (error != detail::spawn_ok)
-  {
-    switch (error)
-    {
-    case detail::spawn_no_socket:
-      {
-        throw std::runtime_error("no router socket available");
-      }break;
-    case detail::spawn_func_not_found:
-      {
-        throw std::runtime_error("remote func not found");
-      }break;
-    default:
-      BOOST_ASSERT(false);
-      break;
-    }
-  }
-
-  if (type == linked)
-  {
-    sire.link(aid);
-  }
-  else if (type == monitored)
-  {
-    sire.monitor(aid);
-  }
-  return aid;
-}
-
-/// spawn remote coroutine_stackful_actor using NONE coroutine_stackless_actor
-template <typename Sire>
-inline aid_t spawn(
-  stackful,
-  Sire& sire, std::string const& func, match_t ctxid,
-  link_type type, std::size_t stack_size, seconds_t tmo
-  )
-{
-  return spawn(spw_stacked, sire, func, ctxid, type, stack_size, tmo);
-}
-
-/// spawn remote coroutine_stackless_actor using NONE coroutine_stackless_actor
-template <typename Sire>
-inline aid_t spawn(
-  stackless,
-  Sire& sire, std::string const& func, match_t ctxid,
-  link_type type, std::size_t stack_size, seconds_t tmo
-  )
-{
-  return spawn(spw_evented, sire, func, ctxid, type, stack_size, tmo);
-}
-
-#ifdef GCE_LUA
-/// spawn remote lua_actor using NONE coroutine_stackless_actor
-template <typename Sire>
-inline aid_t spawn(
-  luaed,
-  Sire& sire, std::string const& func, match_t ctxid,
-  link_type type, std::size_t stack_size, seconds_t tmo
-  )
-{
-  return spawn(spw_luaed, sire, func, ctxid, type, stack_size, tmo);
-}
-#endif
-
-template <typename SpawnHandler>
-inline void spawn(
-  spawn_type spw,
-  actor<stackless>& sire, std::string const& func, SpawnHandler h,
-  match_t ctxid = ctxid_nil,
-  link_type type = no_link,
-  std::size_t stack_size = default_stacksize(),
-  seconds_t tmo = seconds_t(GCE_DEFAULT_REQUEST_TIMEOUT_SEC)
-  )
-{
-  aid_t aid;
-  sid_t sid = sire.spawn(spw, func, ctxid, stack_size);
-
-  duration_t curr_tmo = tmo;
-  typedef boost::chrono::system_clock clock_t;
-  clock_t::time_point begin_tp = clock_t::now();
-  pattern patt(detail::msg_spawn_ret, curr_tmo);
-  sire.recv(
-    boost::bind(
-      &handle_remote_spawn, _1, _2, _3,
-      type, begin_tp, sid, tmo, curr_tmo, spawn_handler_t(h)
-      ),
-    patt
-    );
-}
-
-/// spawn remote coroutine_stackful_actor using coroutine_stackless_actor
-template <typename SpawnHandler>
-inline void spawn(
-  stackful,
-  actor<stackless>& sire, std::string const& func, SpawnHandler h,
-  match_t ctxid, link_type type, std::size_t stack_size, seconds_t tmo
-  )
-{
-  spawn(spw_stacked, sire, func, h, ctxid, type, stack_size, tmo);
-}
-
-/// spawn remote coroutine_stackless_actor using coroutine_stackless_actor
-template <typename SpawnHandler>
-inline aid_t spawn(
-  stackless,
-  actor<stackless>& sire, std::string const& func, SpawnHandler& h,
-  match_t ctxid, link_type type, std::size_t stack_size, seconds_t tmo
-  )
-{
-  return spawn(spw_evented, sire, func, h, ctxid, type, stack_size, tmo);
-}
-
-#ifdef GCE_LUA
-/// spawn remote lua_actor using coroutine_stackless_actor
-template <typename SpawnHandler>
-inline aid_t spawn(
-  luaed,
-  actor<stackless>& sire, std::string const& func, SpawnHandler& h,
-  match_t ctxid, link_type type, std::size_t stack_size, seconds_t tmo
-  )
-{
-  return spawn(spw_luaed, sire, func, h, ctxid, type, stack_size, tmo);
-}
-#endif
-} /// namespace detail
-
-///------------------------------------------------------------------------------
-/// Spawn a actor using given thread_mapped_actor
-///------------------------------------------------------------------------------
 template <typename F>
-inline aid_t spawn(
-  actor<threaded>& sire, F f,
-  link_type type = no_link,
-  std::size_t stack_size = default_stacksize()
+void spawn(
+  stackless, 
+  gce::stackless_actor sire, F f, aid_t& aid,
+  link_type type, bool sync_sire
   )
 {
-  detail::cache_pool* user = sire.get_context()->select_cache_pool();
-  return detail::spawn(stackful(), sire, f, user, type, stack_size);
-}
+  typedef typename context::stackless_actor_t stackless_actor_t;
+  typedef typename context::stackless_service_t service_t;
 
-template <typename Tag, typename F>
-inline aid_t spawn(
-  actor<threaded>& sire, F f,
-  link_type type = no_link,
-  std::size_t stack_size = default_stacksize()
-  )
-{
-  detail::cache_pool* user = sire.get_context()->select_cache_pool();
-  return detail::spawn(Tag(), sire, f, user, type, stack_size);
-}
-
-#ifdef GCE_LUA
-inline aid_t spawn(
-  actor<threaded>& sire, 
-  std::string const& script, 
-  link_type type = no_link
-  )
-{
-  detail::cache_pool* user = sire.get_context()->select_cache_pool();
-  return detail::spawn(luaed(), sire, script, user, type);
-}
-#endif
-///------------------------------------------------------------------------------
-/// Spawn a actor using given coroutine_stackful_actor
-///------------------------------------------------------------------------------
-template <typename F>
-inline aid_t spawn(
-  actor<stackful>& sire, F f,
-  link_type type = no_link,
-  bool sync_sire = false,
-  std::size_t stack_size = default_stacksize()
-  )
-{
-  detail::cache_pool* user = detail::select_cache_pool(sire, sync_sire);
-  return detail::spawn(stackful(), sire, f, user, type, stack_size);
-}
-
-template <typename Tag, typename F>
-inline aid_t spawn(
-  actor<stackful>& sire, F f,
-  link_type type = no_link,
-  bool sync_sire = false,
-  std::size_t stack_size = default_stacksize()
-  )
-{
-  detail::cache_pool* user = detail::select_cache_pool(sire, sync_sire);
-  return detail::spawn(Tag(), sire, f, user, type, stack_size);
-}
-
-#ifdef GCE_LUA
-inline aid_t spawn(
-  actor<stackful>& sire, 
-  std::string const& script, 
-  link_type type = no_link,
-  bool sync_sire = false
-  )
-{
-  detail::cache_pool* user = detail::select_cache_pool(sire, sync_sire);
-  return detail::spawn(luaed(), sire, script, user, type);
-}
-#endif
-///------------------------------------------------------------------------------
-/// spawn a actor using given coroutine_stackless_actor
-///------------------------------------------------------------------------------
-template <typename F>
-inline void spawn(
-  actor<stackless>& sire, F f, aid_t& aid,
-  link_type type = no_link,
-  bool sync_sire = false,
-  std::size_t stack_size = default_stacksize()
-  )
-{
-  coroutine_stackless_actor& a = sire.get_actor();
-  detail::cache_pool* user = detail::select_cache_pool(sire, sync_sire);
-  detail::spawn(
+  stackless_actor_t& a = sire.get_actor();
+  service_t& svc = select_service<service_t>(sire, sync_sire);
+  spawn(
     stackless(), sire, f, 
     boost::bind(
-      &coroutine_stackless_actor::spawn_handler, &a, 
+      &stackless_actor_t::spawn_handler, &a, 
       _1, _2, boost::ref(aid)
       ), 
-    user, type, stack_size
+    boost::ref(svc), type
     );
 }
 
 #ifdef GCE_LUA
-inline void spawn(
-  actor<stackless>& sire, 
-  std::string const& script, 
-  aid_t& aid,
+void spawn(
+  luaed, 
+  gce::stackless_actor sire, std::string const& script, aid_t& aid,
+  link_type type, bool sync_sire
+  )
+{
+  typedef context::stackless_actor_t stackless_actor_t;
+  typedef context::lua_service_t service_t;
+
+  stackless_actor_t& a = sire.get_actor();
+  service_t& svc = select_service<service_t>(sire, sync_sire);
+  spawn(
+    luaed(), sire, 
+    boost::bind(
+      &stackless_actor_t::spawn_handler, &a, 
+      _1, _2, boost::ref(aid)
+      ), 
+    script, boost::ref(svc), type
+    );
+}
+#endif
+}
+
+template <typename F>
+void spawn(
+  stackless_actor sire, F f, aid_t& aid,
   link_type type = no_link,
   bool sync_sire = false
   )
 {
-  coroutine_stackless_actor& a = sire.get_actor();
-  detail::cache_pool* user = detail::select_cache_pool(sire, sync_sire);
-  detail::spawn(
-    luaed(), sire, 
-    boost::bind(
-      &coroutine_stackless_actor::spawn_handler, &a, 
-      _1, _2, boost::ref(aid)
-      ), 
-    script, user, type
-    );
-}
+#ifdef GCE_LUA
+  typedef typename boost::remove_const<
+    typename boost::remove_reference<
+      typename boost::remove_volatile<F>::type
+      >::type
+    >::type param_t;
+  typedef typename boost::mpl::if_<
+    typename boost::is_same<param_t, char const*>::type, luaed, 
+    typename boost::mpl::if_<
+      typename boost::is_same<param_t, std::string>::type, luaed, stackless
+      >::type
+    >::type select_t;
+#else
+  typedef stackless select_t;
 #endif
-///------------------------------------------------------------------------------
-/// Spawn a thread_mapped_actor
-///------------------------------------------------------------------------------
-inline actor<threaded> spawn(context& ctx)
-{
-  return actor<threaded>(ctx.make_thread_mapped_actor());
-}
-///------------------------------------------------------------------------------
-/// Spawn a nonblocking_actor using given thread_mapped_actor
-///------------------------------------------------------------------------------
-inline actor<nonblocked> spawn(actor<threaded>& a)
-{
-  nonblocking_actor& r = a.get_context()->make_nonblocking_actor();
-  a.add_nonblocking_actor(r);
-  return actor<nonblocked>(r);
-}
-///------------------------------------------------------------------------------
-/// Spawn a actor on remote context using NONE coroutine_stackless_actor
-///------------------------------------------------------------------------------
-template <typename Sire>
-inline aid_t spawn(
-  Sire& sire, std::string const& func,
-  match_t ctxid = ctxid_nil,
-  link_type type = no_link,
-  std::size_t stack_size = default_stacksize(),
-  seconds_t tmo = seconds_t(GCE_DEFAULT_REQUEST_TIMEOUT_SEC)
-  )
-{
-  return detail::spawn(stackful(), sire, func, ctxid, type, stack_size, tmo);
+  detail::spawn(select_t(), sire, f, aid, type, sync_sire);
 }
 
-template <typename Tag, typename Sire>
-inline aid_t spawn(
-  Sire& sire, std::string const& func,
-  match_t ctxid = ctxid_nil,
-  link_type type = no_link,
-  std::size_t stack_size = default_stacksize(),
-  seconds_t tmo = seconds_t(GCE_DEFAULT_REQUEST_TIMEOUT_SEC)
-  )
+///------------------------------------------------------------------------------
+/// Spawn a threaded_actor
+///------------------------------------------------------------------------------
+threaded_actor spawn(context& ctx)
 {
-  return detail::spawn(Tag(), sire, func, ctxid, type, stack_size, tmo);
+  return threaded_actor(ctx.make_threaded_actor());
 }
 ///------------------------------------------------------------------------------
-/// Spawn a actor on remote context using coroutine_stackless_actor
+/// Spawn a nonblocked_actor using given threaded_actor
 ///------------------------------------------------------------------------------
-inline void spawn(
-  actor<stackless>& sire, std::string const& func, aid_t& aid,
-  match_t ctxid = ctxid_nil,
+nonblocked_actor spawn(threaded_actor a)
+{
+  context::nonblocked_actor_t& r = a.get_context().make_nonblocked_actor();
+  a.add_nonblocked_actor(r);
+  return nonblocked_actor(r);
+}
+///------------------------------------------------------------------------------
+/// Spawn a actor on remote context using NONE stackless_actor
+///------------------------------------------------------------------------------
+template <typename ActorRef, typename Match>
+aid_t spawn_remote(
+  ActorRef sire, std::string const& func,
+  Match ctxid,
   link_type type = no_link,
   std::size_t stack_size = default_stacksize(),
   seconds_t tmo = seconds_t(GCE_DEFAULT_REQUEST_TIMEOUT_SEC)
   )
 {
-  coroutine_stackless_actor& a = sire.get_actor();
-  detail::spawn(
+  return detail::spawn_remote(stackful(), sire, func, detail::to_match(ctxid), type, stack_size, tmo);
+}
+
+template <typename Tag, typename ActorRef, typename Match>
+aid_t spawn_remote(
+  ActorRef sire, std::string const& func,
+  Match ctxid,
+  link_type type = no_link,
+  std::size_t stack_size = default_stacksize(),
+  seconds_t tmo = seconds_t(GCE_DEFAULT_REQUEST_TIMEOUT_SEC)
+  )
+{
+  return detail::spawn_remote(Tag(), sire, func, detail::to_match(ctxid), type, stack_size, tmo);
+}
+///------------------------------------------------------------------------------
+/// Spawn a actor on remote context using stackless_actor
+///------------------------------------------------------------------------------
+template <typename Match>
+void spawn_remote(
+  stackless_actor sire, std::string const& func, aid_t& aid,
+  Match ctxid,
+  link_type type = no_link,
+  std::size_t stack_size = default_stacksize(),
+  seconds_t tmo = seconds_t(GCE_DEFAULT_REQUEST_TIMEOUT_SEC)
+  )
+{
+  typedef context::stackless_actor_t stackless_actor_t;
+
+  stackless_actor_t& a = sire.get_actor();
+  detail::spawn_remote(
     stackful(), sire, func, 
     boost::bind(
-      &coroutine_stackless_actor::spawn_handler, &a, 
+      &stackless_actor_t::spawn_handler, &a, 
       _1, _2, boost::ref(aid)
       ), 
-    ctxid, type, stack_size, tmo
+    detail::to_match(ctxid), type, stack_size, tmo
     );
 }
 
-template <typename Tag, typename SpawnHandler>
-inline void spawn(
-  actor<stackless>& sire, std::string const& func, SpawnHandler h,
-  match_t ctxid = ctxid_nil,
+template <typename Tag, typename SpawnHandler, typename Match>
+void spawn_remote(
+  stackless_actor sire, std::string const& func, SpawnHandler h,
+  Match ctxid,
   link_type type = no_link,
   std::size_t stack_size = default_stacksize(),
   seconds_t tmo = seconds_t(GCE_DEFAULT_REQUEST_TIMEOUT_SEC)
   )
 {
-  detail::spawn(Tag(), sire, func, h, ctxid, type, stack_size, tmo);
+  detail::spawn_remote(Tag(), sire, func, h, detail::to_match(ctxid), type, stack_size, tmo);
 }
 ///------------------------------------------------------------------------------
 }
