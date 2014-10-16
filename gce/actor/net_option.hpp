@@ -25,6 +25,8 @@ struct net_option
     , init_reconn_try_(2)
     , reconn_period_(seconds_t(10))
     , reconn_try_(3)
+    , rebind_period_(seconds_t(5))
+    , rebind_try_(3)
   {
   }
 
@@ -45,6 +47,12 @@ struct net_option
 
   /// how many try to reconnect before drop cache msgs
   int reconn_try_;
+
+  /// bind, between two bind' period
+  duration_type rebind_period_;
+
+  /// bind, how many try to rebind before give up
+  int rebind_try_;
 };
 }
 

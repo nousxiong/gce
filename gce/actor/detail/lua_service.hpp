@@ -222,6 +222,8 @@ public:
           .addData("init_reconn_try", &net_option::init_reconn_try_)
           .addData("reconn_period", &net_option::reconn_period_)
           .addData("reconn_try", &net_option::reconn_try_)
+          .addData("rebind_period", &net_option::rebind_period_)
+          .addData("rebind_try", &net_option::rebind_try_)
         .endClass()
         .beginClass<deserialize_result<int> >("unpack_number")
           .addData("rt", &deserialize_result<int>::r_)

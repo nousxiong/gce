@@ -127,6 +127,12 @@ private:
     gce::detail::send(*this, sire, msg_new_bind);
   }
 
+  void bind(std::string const& ep)
+  {
+    make_acceptor(ep);
+    acpr_->bind();
+  }
+
   void run(aid_t const& sire, std::string const& ep, yield_t yield)
   {
     exit_code_t exc = exit_normal;
@@ -141,9 +147,15 @@ private:
         stat_ = on;
         {
           scope scp(boost::bind(&self_t::send_ret, this, sire));
-          make_acceptor(ep);
-          acpr_->bind();
+          bind(ep);
         }
+
+        typedef boost::chrono::system_clock system_clock_t;
+        typedef system_clock_t::time_point time_point_t;
+        boost::asio::system_timer tmr(base_t::get_context().get_io_service());
+        time_point_t const min_tp = time_point_t::min();
+        time_point_t last_tp = min_tp;
+        int curr_rebind_num = 0;
 
         while (stat_ == on)
         {
@@ -151,8 +163,42 @@ private:
           socket_ptr prot = acpr_->accept(yield[ec]);
           if (ec)
           {
-            close();
-            break;
+            if (stat_ == off)
+            {
+              close();
+              break;
+            }
+            else
+            {
+              BOOST_ASSERT(stat_ == on);
+              ++curr_rebind_num;
+              if (curr_rebind_num <= opt_.rebind_try_)
+              {
+                if (last_tp != min_tp)
+                {
+                  duration_t diff = system_clock_t::now() - last_tp;
+                  if (diff < opt_.rebind_period_.dur_)
+                  {
+                    errcode_t ignored_ec;
+                    tmr.expires_from_now(opt_.rebind_period_.dur_ - diff);
+                    tmr.async_wait(yield[ignored_ec]);
+                  }
+                }
+                bind(ep);
+                last_tp = system_clock_t::now();
+                continue;
+              }
+              else
+              {
+                close();
+                break;
+              }
+            }
+          }
+          else if (curr_rebind_num > 0)
+          {
+            curr_rebind_num = 0;
+            last_tp = min_tp;
           }
 
           socket_service_t& svc = 
