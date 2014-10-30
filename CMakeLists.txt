@@ -93,6 +93,12 @@ include_directories (${PROJECT_SOURCE_DIR})
 include_directories (${PROJECT_BINARY_DIR})
 
 # Boost libraries search.
+set (GCE_BOOST_VERSION "1.56.0" CACHE STRING "Boost version, e.g. 1.56.0")
+
+if (${GCE_BOOST_VERSION} LESS 1.56.0)
+  message(FATAL_ERROR "Please using boost 1.56.0 and higher")
+endif ()
+
 set (Boost_USE_STATIC_LIBS ON)
 set (Boost_USE_MULTITHREADED ON)
 if (GCE_STATIC)
@@ -104,7 +110,7 @@ if (BOOST_ROOT)
   set (Boost_NO_SYSTEM_PATHS ON)
 endif ()
 
-find_package (Boost 1.55.0 REQUIRED atomic coroutine context system regex date_time timer chrono thread)
+find_package (Boost ${GCE_BOOST_VERSION} REQUIRED atomic coroutine context system regex date_time timer chrono thread)
 
 mark_as_advanced (Boost_DIR)
 if (WIN32)
@@ -119,7 +125,7 @@ find_package (Threads)
 set (CMAKE_VERBOSE_MAKEFILE true)
 
 # Select build sub libs.
-set (SUB_LIBRARYS "actor" CACHE STRING "Select build sub libs")
+set (SUB_LIBRARYS "actor log" CACHE STRING "Select build sub libs")
 string (TOLOWER ${SUB_LIBRARYS} SUB_LIBRARYS_TOLOWER)
 string (REGEX MATCHALL "[a-z_]+" SUB_LIB_NAME_LIST ${SUB_LIBRARYS_TOLOWER})
 

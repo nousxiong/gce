@@ -72,13 +72,11 @@ aid_t recv_impl(Tag, Recver& recver, message& msg, pattern& patt)
     exit_code_t exc;
     std::string errmsg;
     msg >> exc >> errmsg;
-    throw std::runtime_error(errmsg);
+    GCE_VERIFY(false)(exc)(msg)(patt)(sender).msg(errmsg.c_str());
   }
 
-  if (!sender)
-  {
-    throw std::runtime_error("recv timeout");
-  }
+  
+  GCE_VERIFY(sender)(msg)(patt).msg("recv timeout");
   return sender;
 }
 
@@ -97,7 +95,7 @@ aid_t recv_impl(gce::nonblocked, Recver& recver, message& msg, pattern& patt)
     exit_code_t exc;
     std::string errmsg;
     msg >> exc >> errmsg;
-    throw std::runtime_error(errmsg);
+    GCE_VERIFY(false)(exc)(msg)(patt)(sender).msg(errmsg.c_str());
   }
   return sender;
 }
@@ -111,13 +109,10 @@ aid_t respond_impl(Tag, Recver& recver, resp_t res, message& msg, duration_t tmo
     exit_code_t exc;
     std::string errmsg;
     msg >> exc >> errmsg;
-    throw std::runtime_error(errmsg);
+    GCE_VERIFY(false)(exc)(res)(msg)(sender)(tmo.count()).msg(errmsg.c_str());
   }
 
-  if (!sender)
-  {
-    throw std::runtime_error("recv response timeout");
-  }
+  GCE_VERIFY(sender)(res)(msg)(tmo.count()).msg("recv response timeout");
   return sender;
 }
 
@@ -130,7 +125,7 @@ aid_t respond_impl(gce::nonblocked, Recver& recver, resp_t res, message& msg, du
     exit_code_t exc;
     std::string errmsg;
     msg >> exc >> errmsg;
-    throw std::runtime_error(errmsg);
+    GCE_VERIFY(false)(exc)(res)(msg)(sender).msg(errmsg.c_str());
   }
   return sender;
 }

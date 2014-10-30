@@ -11,7 +11,7 @@ namespace gce
 {
 class slice_pingpong_ut
 {
-static std::size_t const msg_size = 100000;
+static std::size_t const msg_size = 10000;
 public:
   static void run()
   {

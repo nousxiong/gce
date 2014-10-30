@@ -37,7 +37,7 @@ remote_func_t make_remote_func(Match type, F f)
 /// Connect using given NONE coroutine_stackless_actor
 ///------------------------------------------------------------------------------
 template <typename Ctxid>
-void connect(
+errcode_t connect(
   threaded_actor sire,
   Ctxid target, /// connect target
   std::string const& ep, /// endpoint
@@ -54,16 +54,18 @@ void connect(
     );
 
   ctxid_pair_t ctxid_pr;
-  aid_t skt = sire->recv(detail::msg_new_conn, ctxid_pr);
+  errcode_t ec;
+  aid_t skt = sire->recv(detail::msg_new_conn, ctxid_pr, ec);
   std::vector<nonblocked_actor_t*>& actor_list = sire.get_nonblocked_actor_list();
   BOOST_FOREACH(nonblocked_actor_t* s, actor_list)
   {
     s->get_service().register_socket(ctxid_pr, skt);
   }
+  return ec;
 }
 
 template <typename Ctxid>
-void connect(
+errcode_t connect(
   stackful_actor sire,
   Ctxid target, /// connect target
   std::string const& ep, /// endpoint
@@ -79,8 +81,10 @@ void connect(
     sire.get_aid(), svc, detail::to_match(target), ep, opt, remote_func_list
     );
   ctxid_pair_t ctxid_pr;
-  aid_t skt = sire->recv(detail::msg_new_conn, ctxid_pr);
+  errcode_t ec;
+  aid_t skt = sire->recv(detail::msg_new_conn, ctxid_pr, ec);
   sire.get_service().register_socket(ctxid_pr, skt);
+  return ec;
 }
 
 ///------------------------------------------------------------------------------
@@ -91,6 +95,7 @@ void connect(
   stackless_actor sire,
   Ctxid target, /// connect target
   std::string const& ep, /// endpoint
+  errcode_t& ec,
   net_option opt = net_option(),
   remote_func_list_t const& remote_func_list = remote_func_list_t()
   )
@@ -107,7 +112,7 @@ void connect(
   sire.recv(
     boost::bind(
       &detail::handle_connect<context>, _1, _2, _3, 
-      boost::ref(sire.get_service())
+      boost::ref(sire.get_service()), boost::ref(ec)
       ), 
     patt
     );

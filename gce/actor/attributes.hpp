@@ -51,6 +51,7 @@ struct attributes
   std::vector<std::string> lua_gce_path_list_;
   lua_register_t lua_reg_;
 #endif
+  log::logger_t lg_;
 };
 }
 

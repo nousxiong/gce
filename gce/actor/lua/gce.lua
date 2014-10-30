@@ -178,6 +178,7 @@ function gce.connect(target, ep, opt)
 		assert (target:get_overloading_type() == gce.overloading_match_t)
 	end
 	self:connect(target, ep, opt)
+	return gce_conn_ret, gce_conn_errmsg
 end
 
 function gce.spawn(script, link_type, sync_sire)
@@ -280,6 +281,34 @@ function gce.default_stacksize()
 end
 
 function gce.print(fmt, ...)
+	detail.print(gce.unpack_fmt(fmt, ...))
+end
+
+function gce.debug(fmt, ...)
+	self:debug(gce.unpack_fmt(fmt, ...))
+end
+
+function gce.info(fmt, ...)
+	self:info(gce.unpack_fmt(fmt, ...))
+end
+
+function gce.warn(fmt, ...)
+	self:warn(gce.unpack_fmt(fmt, ...))
+end
+
+function gce.error(fmt, ...)
+	self:error(gce.unpack_fmt(fmt, ...))
+end
+
+function gce.fatal(fmt, ...)
+	self:fatal(gce.unpack_fmt(fmt, ...))
+end
+
+gce.exit = gce.atom("gce_exit")
+
+
+-------------------internal use-------------------
+function gce.unpack_fmt(fmt, ...)
 	local tab = {}
 	for i,v in ipairs{...} do
 		if type(v) == "userdata" then
@@ -288,13 +317,9 @@ function gce.print(fmt, ...)
 			tab[i] = v
 		end
 	end
-	detail.print(string.format(fmt, table.unpack(tab)))
+	return string.format(fmt, table.unpack(tab))
 end
 
-gce.exit = gce.atom("gce_exit")
-
-
--------------------internal use-------------------
 function gce.make_msg(arg, ...)
 	local m = detail.msg()
 	if arg ~= nil then

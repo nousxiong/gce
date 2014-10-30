@@ -35,28 +35,22 @@ public:
 public:
   messager& get_messager(std::size_t index)
   {
-    if (index >= msgr_list_.size())
-    {
-      throw std::out_of_range("get_messager index out of msgr_list");
-    }
+    GCE_VERIFY(index < msgr_list_.size())(index)(msgr_list_.size())
+      .msg("get_messager index out of msgr_list");
     return msgr_list_[index];
   }
 
   pack_list_t* get_pack_list(std::size_t index)
   {
-    if (index >= back_list_.size())
-    {
-      throw std::out_of_range("get_pack_list index out of back_list_");
-    }
+    GCE_VERIFY(index < back_list_.size())(index)(back_list_.size())
+      .msg("get_pack_list index out of back_list_");
     return back_list_[index];
   }
 
   void set_pack_list(std::size_t index, pack_list_t* back_list)
   {
-    if (index >= back_list_.size())
-    {
-      throw std::out_of_range("get_pack_list index out of back_list_");
-    }
+    GCE_VERIFY(index < back_list_.size())(index)(back_list_.size())
+      .msg("get_pack_list index out of back_list_");
     back_list_[index] = back_list;
   }
 

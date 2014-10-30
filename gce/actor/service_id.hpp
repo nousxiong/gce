@@ -101,14 +101,7 @@ public:
     return false;
   }
 
-#ifdef GCE_LUA
-  /// internal use
-  int get_overloading_type() const
-  {
-    return (int)detail::overloading_svcid;
-  }
-
-  std::string to_string()
+  std::string to_string() const
   {
     std::string rt;
     rt += "<";
@@ -119,6 +112,13 @@ public:
     rt += boost::lexical_cast<std::string>(name_);
     rt += ">";
     return rt;
+  }
+
+#ifdef GCE_LUA
+  /// internal use
+  int get_overloading_type() const
+  {
+    return (int)detail::overloading_svcid;
   }
 
   GCE_LUA_SERIALIZE_FUNC

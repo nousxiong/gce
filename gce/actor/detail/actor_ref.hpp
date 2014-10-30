@@ -407,6 +407,10 @@ public:
 
   detail::coro_t& coro() { return a_.coro(); }
   void resume() { a_.run(); }
+  void sync_resume() 
+  {
+    a_.get_strand().dispatch(boost::bind(&stackless_actor_t::run, &a_));
+  }
 
   context_t& get_context()
   {

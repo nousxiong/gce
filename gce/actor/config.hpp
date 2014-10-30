@@ -38,6 +38,8 @@
 
 #include <gce/integer.hpp>
 #include <gce/actor/atom.hpp>
+#include <gce/assert/all.hpp>
+#include <gce/log/all.hpp>
 
 /// Do not define WIN32_LEAN_AND_MEAN before include boost/atomic.hpp
 /// Or you will recv:
@@ -79,8 +81,8 @@ typedef boost::chrono::seconds seconds_t;
 typedef boost::chrono::minutes minutes_t;
 typedef boost::chrono::hours hours_t;
 
-static duration_t const zero(GCE_ZERO_TIME);
-static duration_t const infin(seconds_t(GCE_INFIN_TIME));
+static duration_t const zero(duration_t::zero());
+static duration_t const infin(duration_t::max());
 
 typedef boost::uint32_t sid_t;
 static boost::uint32_t const sid_nil = static_cast<sid_t>(-1);

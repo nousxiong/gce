@@ -91,7 +91,7 @@ public:
         tmr_.expires_from_now(millisecs_t(1));
         GCE_YIELD tmr_.async_wait(adaptor(self, ec_));
 
-        self->send(base_id_);
+        self->send(base_id_); 
       }
     }
 
@@ -131,8 +131,8 @@ public:
   {
     try
     {
-      std::size_t free_actor_num = 20;
-      std::size_t user_thr_num = 0;
+      std::size_t free_actor_num = 10;
+      std::size_t user_thr_num = 5;
       std::size_t my_actor_size = free_actor_num + user_thr_num * 2;
       attributes attrs;
       context ctx(attrs);

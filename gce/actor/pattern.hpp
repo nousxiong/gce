@@ -90,6 +90,17 @@ struct pattern
     match_list_.push_back(detail::to_match(type));
   }
 
+  std::string to_string() const
+  {
+    std::string rt;
+    rt += "<";
+    rt += boost::lexical_cast<std::string>(timeout_.count());
+    rt += ".";
+    rt += boost::lexical_cast<std::string>(match_list_.size());
+    rt += ">";
+    return rt;
+  }
+
 #ifdef GCE_LUA
   /// internal use
   int get_overloading_type() const
@@ -105,17 +116,6 @@ struct pattern
   void add_match_type(match_type type)
   {
     match_list_.push_back(type);
-  }
-
-  std::string to_string()
-  {
-    std::string rt;
-    rt += "<";
-    rt += boost::lexical_cast<std::string>(timeout_.count());
-    rt += ".";
-    rt += boost::lexical_cast<std::string>(match_list_.size());
-    rt += ">";
-    return rt;
   }
 #endif
 

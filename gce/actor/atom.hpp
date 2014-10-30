@@ -21,7 +21,7 @@ namespace gce
 /// Since lordoffox's str2val.h (http://bbs.cppfans.org/forum.php?mod=viewthread&tid=56&extra=page%3D1)
 boost::uint64_t atom(char const* str)
 {
-  std::size_t len = std::strlen(str);
+  std::size_t len = std::char_traits<char>::length(str);
   BOOST_ASSERT(len <= 13);
 
   static char const* const encoding_table =
@@ -180,19 +180,19 @@ struct match_type
     return val_ == rhs.val_;
   }
 
-#ifdef GCE_LUA
-  int get_overloading_type() const
-  {
-    return (int)detail::overloading_match_t;
-  }
-
-  std::string to_string()
+  std::string to_string() const
   {
     std::string rt;
     rt += "<";
     rt += boost::lexical_cast<std::string>(val_);
     rt += ">";
     return rt;
+  }
+
+#ifdef GCE_LUA
+  int get_overloading_type() const
+  {
+    return (int)detail::overloading_match_t;
   }
 
   GCE_LUA_SERIALIZE_FUNC

@@ -75,6 +75,7 @@ public:
     , conn_(false)
     , curr_reconn_(0)
     , is_router_(false)
+    , lg_(base_t::ctx_.get_logger())
   {
   }
 
@@ -479,9 +480,9 @@ private:
     send(message(msg_hb));
   }
 
-  void send_ret(aid_t const& sire, ctxid_pair_t ctxid_pr)
+  void send_ret(aid_t const& sire, ctxid_pair_t ctxid_pr, errcode_t& ec)
   {
-    gce::detail::send(*this, sire, msg_new_conn, ctxid_pr);
+    gce::detail::send(*this, sire, msg_new_conn, ctxid_pr, ec);
   }
 
   void run_conn(aid_t const& sire, ctxid_pair_t target, std::string const& ep, yield_t yield)
@@ -500,9 +501,10 @@ private:
       {
         stat_ = on;
         {
-          scope scp(boost::bind(&self_t::send_ret, this, sire, target));
+          errcode_t ec;
+          scope scp(boost::bind(&self_t::send_ret, this, sire, target, boost::ref(ec)));
           skt_ = make_socket(ep);
-          connect(yield, true);
+          ec = connect(yield, true);
         }
 
         if (!conn_)
@@ -548,18 +550,24 @@ private:
       {
         exc = exit_except;
         exit_msg = ex.what();
+        GCE_ERROR(lg_)(__FILE__)(__LINE__) << ex.what();
         close();
       }
       catch (...)
       {
         exc = exit_except;
-        exit_msg = "unexpected exception";
+        exit_msg = boost::current_exception_diagnostic_information();
+        GCE_ERROR(lg_)(__FILE__)(__LINE__) << exit_msg;
         close();
       }
     }
     else
     {
-      gce::detail::send(*this, sire, msg_new_conn, target);
+      errcode_t ec = 
+        boost::asio::error::make_error_code(
+          boost::asio::error::operation_aborted
+          );
+      gce::detail::send(*this, sire, msg_new_conn, target, ec);
     }
     free_self(curr_pr, exc, exit_msg, yield);
   }
@@ -629,12 +637,14 @@ private:
       {
         exc = exit_except;
         exit_msg = ex.what();
+        GCE_ERROR(lg_)(__FILE__)(__LINE__) << exit_msg;
         close();
       }
       catch (...)
       {
         exc = exit_except;
-        exit_msg = "unexpected exception";
+        exit_msg = boost::current_exception_diagnostic_information();
+        GCE_ERROR(lg_)(__FILE__)(__LINE__) << exit_msg;
         close();
       }
     }
@@ -645,10 +655,8 @@ private:
   {
     /// find protocol name
     std::size_t pos = ep.find("://");
-    if (pos == std::string::npos)
-    {
-      throw std::runtime_error("protocol name parse failed");
-    }
+    GCE_VERIFY(pos != std::string::npos)(ep)
+      .log(lg_, "protocol name parse failed");
 
     std::string prot_name = ep.substr(0, pos);
     if (prot_name == "tcp")
@@ -656,10 +664,8 @@ private:
       /// parse address
       std::size_t begin = pos + 3;
       pos = ep.find(':', begin);
-      if (pos == std::string::npos)
-      {
-        throw std::runtime_error("tcp address parse failed");
-      }
+      GCE_VERIFY(pos != std::string::npos)(ep)
+        .log(lg_, "tcp address parse failed");
 
       std::string address = ep.substr(begin, pos - begin);
 
@@ -678,8 +684,12 @@ private:
       skt->init(snd);
       return skt;
     }
-
-    throw std::runtime_error("unsupported protocol");
+    else
+    {
+      GCE_VERIFY(false)(prot_name).log(lg_, "unsupported protocol");
+      // just suppress vc's warning
+      throw 1;
+    }
   }
 
   void handle_recv(pack& pk)
@@ -839,10 +849,8 @@ private:
       return false;
     }
 
-    if (hdr.size_ > GCE_MAX_MSG_SIZE)
-    {
-      throw std::runtime_error("message overlength");
-    }
+    GCE_VERIFY(hdr.size_ <= GCE_MAX_MSG_SIZE)(hdr.size_)(remain_size)
+      .log(lg_, "message overlength");
 
     std::size_t header_size = zbuf.read_length();
     if (remain_size - header_size < hdr.size_)
@@ -866,7 +874,7 @@ private:
     return true;
   }
 
-  void connect(yield_t yield, bool init = false)
+  errcode_t connect(yield_t yield, bool init = false)
   {
     errcode_t ec;
     if (stat_ == on)
@@ -883,14 +891,15 @@ private:
           on_neterr(base_t::get_aid());
           if (init)
           {
-            return;
+            return ec;
           }
         }
 
         if (i > 0)
         {
+          errcode_t ignored_ec;
           sync_.expires_from_now(reconn_period);
-          sync_.async_wait(yield[ec]);
+          sync_.async_wait(yield[ignored_ec]);
           if (stat_ != on)
           {
             break;
@@ -906,13 +915,10 @@ private:
 
       if (stat_ != on)
       {
-        return;
+        return ec;
       }
 
-      if (ec)
-      {
-        throw std::runtime_error(ec.message());
-      }
+      GCE_VERIFY(!ec)(ec.value()).log(lg_, ec.message().c_str());
 
       conn_ = true;
       start_heartbeat(boost::bind(&self_t::reconn, this));
@@ -921,6 +927,7 @@ private:
       m << base_t::ctxid_;
       send(m);
     }
+    return ec;
   }
 
   errcode_t recv(message& msg, yield_t yield)
@@ -997,6 +1004,8 @@ private:
     }
     catch (...)
     {
+      GCE_ERROR(lg_)(__FILE__)(__LINE__) << 
+        boost::current_exception_diagnostic_information();
     }
 
     skt_.reset();
@@ -1050,6 +1059,7 @@ private:
 
   bool is_router_;
   aid_t const nil_aid_;
+  log::logger_t& lg_;
 };
 }
 }

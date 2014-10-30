@@ -51,15 +51,6 @@ private:
   };
 
   typedef boost::asio::detail::async_result_init<yield_t, void (actor_code)> async_result_init_t;
-  struct async_result_init_wrap
-  {
-    explicit async_result_init_wrap(yield_t* yld)
-      : elm_(BOOST_ASIO_MOVE_CAST(yield_t)(*yld))
-    {
-    }
-
-    async_result_init_t elm_;
-  };
 
 public:
   typedef actor_ref<stackful, context_t> self_ref_t;
@@ -74,9 +65,9 @@ public:
     , responsing_(false)
     , tmr_(base_t::ctx_.get_io_service())
     , tmr_sid_(0)
-    , yld_(0)
-    , yld_cb_(0)
+    //, yld_(0)
     , ec_(exit_normal)
+    , lg_(base_t::ctx_.get_logger())
   {
   }
 
@@ -295,7 +286,7 @@ public:
 private:
   void run(yield_t yld)
   {
-    yld_ = &yld;
+    yld_ = boost::in_place(yld);
 
     try
     {
@@ -311,11 +302,14 @@ private:
     }
     catch (std::exception& ex)
     {
+      GCE_ERROR(lg_)(__FILE__)(__LINE__) << ex.what();
       stop(exit_except, ex.what());
     }
     catch (...)
     {
-      stop(exit_except, "unexpected exception");
+      std::string errmsg = boost::current_exception_diagnostic_information();
+      GCE_ERROR(lg_)(__FILE__)(__LINE__) << errmsg;
+      stop(exit_except, errmsg);
     }
   }
 
@@ -323,7 +317,7 @@ private:
   {
     scope scp(boost::bind(&self_t::free_self, this));
     BOOST_ASSERT(yld_cb_);
-    (*yld_cb_)(ac);
+    yld_cb_(ac);
 
     if (stat_ != off)
     {
@@ -334,13 +328,10 @@ private:
   actor_code yield()
   {
     BOOST_ASSERT(yld_);
-    if (!async_result_init_)
-    {
-      async_result_init_ = boost::in_place(yld_);
-    }
+    async_result_init_t init(BOOST_ASIO_MOVE_CAST(yield_t)(*yld_));
 
-    yld_cb_ = &async_result_init_->elm_.handler;
-    return async_result_init_->elm_.result.get();
+    yld_cb_ = boost::bind<void>(init.handler, _1);
+    return init.result.get();
   }
 
   void free_self()
@@ -452,8 +443,7 @@ private:
   GCE_CACHE_ALIGNED_VAR(status, stat_)
   GCE_CACHE_ALIGNED_VAR(func_t, f_)
 
-  //typedef boost::function<void (actor_code)> yield_cb_t;
-  typedef typename boost::asio::handler_type<yield_t, void (actor_code)>::type yield_cb_t;
+  typedef boost::function<void (actor_code)> yield_cb_t;
 
   /// thread local vars
   service_t& svc_;
@@ -465,15 +455,15 @@ private:
   pattern curr_pattern_;
   timer_t tmr_;
   std::size_t tmr_sid_;
-  yield_t* yld_;
-  boost::optional<async_result_init_wrap> async_result_init_;
-  yield_cb_t* yld_cb_;
+  boost::optional<yield_t> yld_;
+  yield_cb_t yld_cb_;
   exit_code_t ec_;
   std::string exit_msg_;
 
   recv_t const nil_rcv_;
   resp_t const nil_resp_;
   message const nil_msg_;
+  log::logger_t& lg_;
 };
 }
 }

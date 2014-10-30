@@ -96,6 +96,7 @@ int main()
     gce::lua_service_ut::run();
 #endif
     //gce::batch_pingpong_ut::run();
+    //gce::actor_ut::run();
   }
   catch (std::exception& ex)
   {

@@ -157,6 +157,7 @@ public:
         base_t::ctxid_, base_t::timestamp_, (boost::uint16_t)base_t::index_,
         actor_t::get_pool_reserve_size(base_t::ctx_.get_attributes())
         )
+    , lg_(ctx.get_logger())
   {
   }
 
@@ -260,6 +261,11 @@ public:
           .addFunction("spawn_remote", &lua_actor_t::spawn_remote)
           .addFunction("register_service", &lua_actor_t::register_service)
           .addFunction("deregister_service", &lua_actor_t::deregister_service)
+          .addFunction("debug", &lua_actor_t::log_debug)
+          .addFunction("info", &lua_actor_t::log_info)
+          .addFunction("warn", &lua_actor_t::log_warn)
+          .addFunction("error", &lua_actor_t::log_error)
+          .addFunction("fatal", &lua_actor_t::log_fatal)
         .endClass()
         .addFunction("overloading_0", &lua_overloading_0)
         .addFunction("overloading_1", &lua_overloading_1)
@@ -292,7 +298,7 @@ public:
     luabridge::setGlobal(L, lua_gce_path, "gce_path");
     if (luaL_dostring(L, init_lua_script_.c_str()) != 0)
     {
-      throw std::runtime_error(lua_tostring(L, -1));
+      GCE_VERIFY(false)(lua_gce_path).log(lg_, lua_tostring(L, -1));
     }
   }
 
@@ -402,6 +408,7 @@ private:
 
   typedef std::map<std::string, luabridge::LuaRef> script_list_t;
   script_list_t script_list_;
+  log::logger_t& lg_;
 };
 }
 }

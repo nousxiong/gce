@@ -57,12 +57,8 @@ void bind_impl(
   typedef Context context_t;
   typedef typename context_t::acceptor_actor_t acceptor_actor_t;
 
-  if (svc.get_context().get_ctxid() == ctxid_nil)
-  {
-    throw std::runtime_error(
-      "ctxid haven't set, please set it before bind"
-      );
-  }
+  GCE_VERIFY(svc.get_context().get_ctxid() != ctxid_nil)
+    .msg("ctxid haven't set, please set it before bind");
 
   acceptor_actor_t* a = svc.make_actor();
   a->init(opt);
@@ -94,13 +90,13 @@ void connect(
 template <typename Context>
 void handle_connect(
   actor_ref<stackless, Context> self, aid_t skt, 
-  message msg, typename Context::stackless_service_t& sire
+  message msg, typename Context::stackless_service_t& sire, errcode_t& ec
   )
 {
   if (skt)
   {
     ctxid_pair_t ctxid_pr;
-    msg >> ctxid_pr;
+    msg >> ctxid_pr >> ec;
     sire.register_socket(ctxid_pr, skt);
   }
 

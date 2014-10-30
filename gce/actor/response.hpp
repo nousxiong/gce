@@ -33,9 +33,7 @@ public:
   aid_t get_recver() const { return recver_; }
   svcid_t get_svcid() const { return svc_; }
 
-#ifdef GCE_LUA
-  /// internal use
-  std::string to_string()
+  std::string to_string() const
   {
     std::string rt;
     rt += "<";
@@ -45,8 +43,6 @@ public:
     rt += ">";
     return rt;
   }
-
-#endif
 
 private:
   sid_t id_;

@@ -56,13 +56,14 @@ private:
         );
 
     message m(1);
-    for (std::size_t i=0, size=msg_size/100; i<size; ++i)
+    std::size_t const scale = 100;
+    for (std::size_t i=0, size=msg_size/scale; i<size; ++i)
     {
-      for (std::size_t j=0; j<100; ++j)
+      for (std::size_t j=0; j<scale; ++j)
       {
         self.send(aid, m);
       }
-      for (std::size_t j=0; j<100; ++j)
+      for (std::size_t j=0; j<scale; ++j)
       {
         self.recv(m);
       }

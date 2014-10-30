@@ -46,6 +46,7 @@ public:
     , svc_(svc)
     , tmr_(base_t::ctx_.get_io_service())
     , tmr_sid_(0)
+    , lg_(base_t::ctx_.get_logger())
   {
   }
 
@@ -316,6 +317,7 @@ public:
     }
     catch (std::exception& ex)
     {
+      GCE_ERROR(lg_)(__FILE__)(__LINE__) << ex.what();
       quit(exit_except, ex.what());
     }
   }
@@ -382,6 +384,7 @@ private:
       }
       catch (std::exception& ex)
       {
+        GCE_ERROR(lg_)(__FILE__)(__LINE__) << ex.what();
         quit(exit_except, ex.what());
       }
     }
@@ -403,6 +406,7 @@ private:
       }
       catch (std::exception& ex)
       {
+        GCE_ERROR(lg_)(__FILE__)(__LINE__) << ex.what();
         quit(exit_except, ex.what());
       }
     }
@@ -423,6 +427,7 @@ private:
       }
       catch (std::exception& ex)
       {
+        GCE_ERROR(lg_)(__FILE__)(__LINE__) << ex.what();
         quit(exit_except, ex.what());
       }
     }
@@ -506,6 +511,7 @@ private:
         }
         catch (std::exception& ex)
         {
+          GCE_ERROR(lg_)(__FILE__)(__LINE__) << ex.what();
           quit(exit_except, ex.what());
         }
       }
@@ -567,6 +573,7 @@ private:
   pattern curr_pattern_;
   timer_t tmr_;
   std::size_t tmr_sid_;
+  log::logger_t& lg_;
 };
 }
 }

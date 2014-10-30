@@ -7,10 +7,10 @@
 /// See https://github.com/nousxiong/gce for latest version.
 ///
 
-#ifndef GCE_ACTOR_DETAIL_BUFFER_HPP
-#define GCE_ACTOR_DETAIL_BUFFER_HPP
+#ifndef GCE_DETAIL_BUFFER_HPP
+#define GCE_DETAIL_BUFFER_HPP
 
-#include <gce/actor/config.hpp>
+#include <gce/config.hpp>
 #include <gce/detail/ref_count.hpp>
 #include <boost/bind.hpp>
 #include <new>
@@ -82,4 +82,4 @@ typedef boost::intrusive_ptr<buffer> buffer_ptr;
 }
 }
 
-#endif /// GCE_ACTOR_DETAIL_BUFFER_HPP
+#endif /// GCE_DETAIL_BUFFER_HPP

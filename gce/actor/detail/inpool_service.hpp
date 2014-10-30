@@ -35,6 +35,7 @@ public:
   inpool_service(context_t& ctx, strand_t& snd, std::size_t index)
     : base_t(ctx, snd, index, actor_t::get_type())
     , bs_(base_t::ctx_.get_service_size())
+    , lg_(ctx.get_logger())
   {
   }
 
@@ -144,7 +145,7 @@ private:
       }
       catch (std::exception& ex)
       {
-        std::cerr << ex.what() << std::endl;
+        GCE_ERROR(lg_)(__FILE__)(__LINE__) << ex.what();
       }
     }
   }
@@ -186,7 +187,7 @@ private:
       }
       catch (std::exception& ex)
       {
-        std::cerr << ex.what() << std::endl;
+        GCE_ERROR(lg_)(__FILE__)(__LINE__) << ex.what();
       }
     }
   }
@@ -199,7 +200,7 @@ private:
     }
     catch (std::exception& ex)
     {
-      std::cerr << ex.what() << std::endl;
+      GCE_ERROR(lg_)(__FILE__)(__LINE__) << ex.what();
     }
   }
 
@@ -226,6 +227,7 @@ private:
   /// thread local vars
   pack pk_;
   pack const nil_pk_;
+  log::logger_t& lg_;
 };
 }
 }

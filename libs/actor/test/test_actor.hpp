@@ -18,6 +18,7 @@ public:
     for (std::size_t i=0; i<test_count; ++i)
     {
       test_common();
+      //test_spawn();
       if (test_count > 1) std::cout << "\r" << i;
     }
     if (test_count > 1) std::cout << std::endl;
@@ -81,7 +82,7 @@ private:
     try
     {
       std::size_t free_actor_num = 10;
-      std::size_t user_thr_num = 2;
+      std::size_t user_thr_num = 5;
       std::size_t my_actor_size = free_actor_num + user_thr_num * 2;
       attributes attrs;
       context ctx(attrs);
@@ -121,6 +122,37 @@ private:
     {
       std::cerr << ex.what() << std::endl;
     }
+  }
+
+  static void test_spawn()
+  {
+    try
+    {
+      io_service_t ios;
+      strand_t snd(ios);
+      for (std::size_t i=0; i<20000; ++i)
+      {
+        boost::asio::spawn(
+          snd,
+          boost::bind(
+            &actor_ut::echo, _1, boost::ref(ios)
+            ),
+          boost::coroutines::attributes(minimum_stacksize())
+          );
+      }
+      ios.run();
+    }
+    catch (std::exception& ex)
+    {
+      std::cerr << ex.what() << std::endl;
+    }
+  }
+
+  static void echo(yield_t yld, io_service_t& ios)
+  {
+    timer_t tmr(ios);
+    tmr.expires_from_now(seconds_t(30));
+    tmr.async_wait(yld);
   }
 };
 }

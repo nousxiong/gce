@@ -47,6 +47,7 @@ public:
     , type_(type)
     , aid_(aid)
     , req_id_(0)
+    , lg_(ctx_.get_logger())
   {
   }
   
@@ -78,6 +79,11 @@ public:
   actor_type get_type() const
   {
     return type_;
+  }
+
+  log::logger_t& get_logger()
+  {
+    return lg_;
   }
 
 public:
@@ -275,10 +281,7 @@ public:
   {
     ctxid_t target;
     aid_t skt = basic_svc_.select_socket(ctxid, &target);
-    if (!skt)
-    {
-      throw std::runtime_error("no socket available");
-    }
+    GCE_VERIFY(skt)(ctxid)(target).log(lg_, "no socket available");
 
     if (ctxid == ctxid_nil)
     {
@@ -393,6 +396,7 @@ private:
   typedef std::set<aid_t> monitor_list_t;
   link_list_t link_list_;
   monitor_list_t monitor_list_;
+  log::logger_t& lg_;
 };
 }
 }

@@ -236,18 +236,7 @@ public:
     svc_ = svc;
   }
 
-#ifdef GCE_LUA
-  int get_overloading_type() const
-  {
-    return (int)detail::overloading_aid;
-  }
-
-  bool is_nil() const
-  {
-    return !(*this);
-  }
-
-  std::string to_string()
+  std::string to_string() const
   {
     std::string rt;
     rt += "<";
@@ -270,6 +259,17 @@ public:
     rt += ">";
 
     return rt;
+  }
+
+#ifdef GCE_LUA
+  int get_overloading_type() const
+  {
+    return (int)detail::overloading_aid;
+  }
+
+  bool is_nil() const
+  {
+    return !(*this);
   }
 
   GCE_LUA_SERIALIZE_FUNC

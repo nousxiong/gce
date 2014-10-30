@@ -48,6 +48,7 @@ public:
     , responsing_(false)
     , tmr_(base_t::ctx_.get_io_service())
     , tmr_sid_(0)
+    , lg_(base_t::ctx_.get_logger())
   {
   }
 
@@ -250,6 +251,36 @@ public:
     gce::detail::deregister_service(base_t::get_aid(), svc_, name);
   }
 
+  void log_debug(std::string const& str)
+  {
+    std::string s = unpack_file_line();
+    GCE_DEBUG(lg_)(s) << str;
+  }
+
+  void log_info(std::string const& str)
+  {
+    std::string s = unpack_file_line();
+    GCE_INFO(lg_)(s) << str;
+  }
+
+  void log_warn(std::string const& str)
+  {
+    std::string s = unpack_file_line();
+    GCE_WARN(lg_)(s) << str;
+  }
+
+  void log_error(std::string const& str)
+  {
+    std::string s = unpack_file_line();
+    GCE_ERROR(lg_)(s) << str;
+  }
+
+  void log_fatal(std::string const& str)
+  {
+    std::string s = unpack_file_line();
+    GCE_FATAL(lg_)(s) << str;
+  }
+
 public:
   /// internal use
   typedef gce::luaed type;
@@ -297,14 +328,14 @@ public:
       {
         std::string errmsg;
         errmsg += lua_tostring(L_, -1);
-        throw std::runtime_error(errmsg);
+        GCE_VERIFY(false)(script_).log(lg_, errmsg.c_str());
       }
       f_();
       quit();
     }
     catch (std::exception& ex)
     {
-      std::printf("%s\n", ex.what());
+      GCE_ERROR(lg_)(__FILE__)(__LINE__) << ex.what();
       quit(exit_except, ex.what());
     }
   }
@@ -382,6 +413,7 @@ private:
       }
       catch (std::exception& ex)
       {
+        GCE_ERROR(lg_)(__FILE__)(__LINE__) << ex.what();
         quit(exit_except, ex.what());
       }
     }
@@ -509,8 +541,9 @@ private:
       {
         need_resume = false;
         ctxid_pair_t ctxid_pr;
-        msg >> ctxid_pr;
-        handle_connect(sender, ctxid_pr);
+        errcode_t ec;
+        msg >> ctxid_pr >> ec;
+        handle_connect(sender, ctxid_pr, ec);
       }
 
       if (need_resume)
@@ -524,6 +557,7 @@ private:
         }
         catch (std::exception& ex)
         {
+          GCE_ERROR(lg_)(__FILE__)(__LINE__) << ex.what();
           quit(exit_except, ex.what());
         }
       }
@@ -540,11 +574,12 @@ private:
     }
     catch (std::exception& ex)
     {
+      GCE_ERROR(lg_)(__FILE__)(__LINE__) << ex.what();
       quit(exit_except, ex.what());
     }
   }
 
-  void handle_connect(aid_t skt, ctxid_pair_t ctxid_pr)
+  void handle_connect(aid_t skt, ctxid_pair_t ctxid_pr, errcode_t ec)
   {
     try
     {
@@ -553,11 +588,14 @@ private:
         svc_.register_socket(ctxid_pr, skt);
       }
       resume();
+      luabridge::setGlobal(L_, ec.value(), "gce_conn_ret");
+      luabridge::setGlobal(L_, ec.message(), "gce_conn_errmsg");
       f_();
       quit();
     }
     catch (std::exception& ex)
     {
+      GCE_ERROR(lg_)(__FILE__)(__LINE__) << ex.what();
       quit(exit_except, ex.what());
     }
   }
@@ -584,6 +622,7 @@ private:
     }
     catch (std::exception& ex)
     {
+      GCE_ERROR(lg_)(__FILE__)(__LINE__) << ex.what();
       quit(exit_except, ex.what());
     }
   }
@@ -652,6 +691,7 @@ private:
     }
     catch (std::exception& ex)
     {
+      GCE_ERROR(lg_)(__FILE__)(__LINE__) << ex.what();
       quit(exit_except, ex.what());
     }
   }
@@ -660,6 +700,14 @@ private:
   {
     luabridge::setGlobal(L_, sender, "gce_recv_sender");
     luabridge::setGlobal(L_, msg, "gce_recv_msg");
+  }
+
+  std::string unpack_file_line()
+  {
+    luaL_where(L_, 2);
+    luabridge::LuaRef file_line(L_);
+    file_line.pop(L_);
+    return file_line.cast<std::string>();
   }
 
 private:
@@ -688,6 +736,7 @@ private:
   recv_t const nil_rcv_;
   resp_t const nil_resp_;
   message const nil_msg_;
+  log::logger_t& lg_;
 };
 }
 }

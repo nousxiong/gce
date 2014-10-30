@@ -14,6 +14,7 @@
 
 # Provide user options to customise the build process.
 option (GCE_ACTOR_DEV "GCE.Actor dev mode" OFF)
+option (GCE_ACTOR_LOG "Allow GCE.Actor output log" ON)
 option (GCE_ACTOR_BUILD_EXAMPLE "Build GCE.Actor examples" ON)
 option (GCE_ACTOR_BUILD_TEST "Build GCE.Actor tests" ON)
 
@@ -31,6 +32,10 @@ endif ()
 # Not only x64 linux need this, but all linux gcc, we need this.
 if (CMAKE_COMPILER_IS_GNUCXX AND NOT MINGW)
   add_definitions (-fPIC)
+endif ()
+
+if (GCE_ACTOR_LOG)
+  add_definitions (-DGCE_ACTOR_LOG)
 endif ()
 
 if (GCE_ACTOR_DEV)

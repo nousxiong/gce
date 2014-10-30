@@ -79,10 +79,7 @@ aid_t end_spawn(ActorRef sire, link_type type)
   pattern patt(msg_new_actor);
   message msg;
   aid_t aid = sire.recv(msg, patt);
-  if (!aid)
-  {
-    throw std::runtime_error("spawn actor failed!");
-  }
+  GCE_VERIFY(aid)(msg).msg("spawn actor failed!");
 
   if (type == linked)
   {
@@ -349,20 +346,21 @@ aid_t spawn_remote(
   detail::spawn_error error = (detail::spawn_error)err;
   if (error != detail::spawn_ok)
   {
+    char const* errmsg = 0;
     switch (error)
     {
     case detail::spawn_no_socket:
       {
-        throw std::runtime_error("no router socket available");
+        errmsg = "no router socket available";
       }break;
     case detail::spawn_func_not_found:
       {
-        throw std::runtime_error("remote func not found");
+        errmsg = "remote func not found";
       }break;
     default:
-      BOOST_ASSERT(false);
       break;
     }
+    GCE_VERIFY(false)(spw)(ctxid).msg(errmsg);
   }
 
   if (type == linked)

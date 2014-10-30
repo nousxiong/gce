@@ -7,10 +7,10 @@
 /// See https://github.com/nousxiong/gce for latest version.
 ///
 
-#ifndef GCE_ACTOR_DETAIL_BUFFER_REF_HPP
-#define GCE_ACTOR_DETAIL_BUFFER_REF_HPP
+#ifndef GCE_DETAIL_BUFFER_REF_HPP
+#define GCE_DETAIL_BUFFER_REF_HPP
 
-#include <gce/actor/config.hpp>
+#include <gce/config.hpp>
 
 namespace gce
 {
@@ -75,12 +75,12 @@ public:
 
     if (read_size_ > size_)
     {
-      throw std::runtime_error("read buffer overflow");
+      throw std::out_of_range("read buffer overflow");
     }
 
     if (write_size_ > size_)
     {
-      throw std::runtime_error("write buffer overflow");
+      throw std::out_of_range("write buffer overflow");
     }
   }
 
@@ -88,7 +88,7 @@ public:
   {
     if (read_size_ + size > write_size_)
     {
-      throw std::runtime_error("read buffer overflow");
+      throw std::out_of_range("read buffer overflow");
     }
 
     read_size_ += size;
@@ -98,7 +98,7 @@ public:
   {
     if (write_size_ + size > size_)
     {
-      throw std::runtime_error("write buffer overflow");
+      throw std::out_of_range("write buffer overflow");
     }
 
     write_size_ += size;
@@ -113,4 +113,4 @@ private:
 }
 }
 
-#endif /// GCE_ACTOR_DETAIL_BUFFER_REF_HPP
+#endif /// GCE_DETAIL_BUFFER_REF_HPP

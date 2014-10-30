@@ -56,6 +56,7 @@ public:
     : base_t(svc.get_context(), svc, actor_acceptor, aid)
     , stat_(ready)
     , svc_(svc)
+    , lg_(base_t::ctx_.get_logger())
   {
   }
 
@@ -215,12 +216,14 @@ private:
       {
         exc = exit_except;
         exit_msg = ex.what();
+        GCE_ERROR(lg_)(__FILE__)(__LINE__) << ex.what();
         close();
       }
       catch (...)
       {
         exc = exit_except;
-        exit_msg = "unexpected exception";
+        exit_msg = boost::current_exception_diagnostic_information();
+        GCE_ERROR(lg_)(__FILE__)(__LINE__) << exit_msg;
         close();
       }
     }
@@ -246,10 +249,8 @@ private:
   {
     /// Find protocol name
     std::size_t pos = ep.find("://");
-    if (pos == std::string::npos)
-    {
-      throw std::runtime_error("protocol name parse failed");
-    }
+    GCE_VERIFY(pos != std::string::npos)(ep)
+      .log(lg_, "protocol name parse failed");
 
     std::string prot_name = ep.substr(0, pos);
     if (prot_name == "tcp")
@@ -257,10 +258,8 @@ private:
       /// Parse address
       std::size_t begin = pos + 3;
       pos = ep.find(':', begin);
-      if (pos == std::string::npos)
-      {
-        throw std::runtime_error("tcp address parse failed");
-      }
+      GCE_VERIFY(pos != std::string::npos)(ep)
+        .log(lg_, "tcp address parse failed");
 
       std::string address = ep.substr(begin, pos - begin);
 
@@ -276,7 +275,9 @@ private:
     }
     else
     {
-      throw std::runtime_error("acceptor_actor unsupported protocol");
+      GCE_VERIFY(false)(prot_name).log(lg_, "unsupported protocol");
+      // just suppress vc's warning
+      throw 1;
     }
   }
 
@@ -319,6 +320,7 @@ private:
   service_t& svc_;
   boost::optional<tcp::acceptor> acpr_;
   remote_func_list_t remote_func_list_;
+  log::logger_t& lg_;
 };
 }
 }

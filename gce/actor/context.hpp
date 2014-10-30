@@ -85,6 +85,9 @@ public:
     , acceptor_service_list_(service_size_)
     , curr_acceptor_svc_(0)
     , threaded_actor_list_(service_size_)
+#ifdef GCE_ACTOR_LOG
+    , lg_(attrs.lg_)
+#endif
   {
     if (attrs_.ios_)
     {
@@ -157,6 +160,8 @@ public:
     }
     catch (...)
     {
+      GCE_ERROR(lg_)(__FILE__)(__LINE__) << 
+        boost::current_exception_diagnostic_information();
       stop();
       throw;
     }
@@ -191,6 +196,11 @@ public:
     return timestamp_; 
   }
 
+  log::logger_t& get_logger()
+  {
+    return lg_;
+  }
+
   std::size_t get_service_size() const
   {
     return service_size_;
@@ -218,7 +228,10 @@ public:
     case detail::actor_acceptor:
       return (service_t&)acceptor_service_list_[ai.svc_id_];
     default:
-      throw std::out_of_range("out of actor type");
+      GCE_ASSERT(false)(ai.type_)(ai.svc_id_)
+        .log(lg_, "out of actor type").except();
+      // just suppress vc's warning
+      throw 1;
     }
   }
 
@@ -247,10 +260,8 @@ public:
   nonblocked_actor_t& make_nonblocked_actor()
   {
     std::size_t i = curr_nonblocked_actor_.fetch_add(1, boost::memory_order_relaxed);
-    if (i >= nonblocked_actor_list_.size())
-    {
-      throw std::out_of_range("out of nonblocked actor list size");
-    }
+    GCE_VERIFY(i < nonblocked_actor_list_.size())(i)(nonblocked_actor_list_.size())
+      .log(lg_, "out of nonblocked actor list size");
     return nonblocked_actor_list_[i];
   }
 
@@ -375,7 +386,7 @@ private:
       }
       catch (...)
       {
-        std::cerr << "Unexpected exception: " <<
+        GCE_ERROR(lg_)(__FILE__)(__LINE__) <<
           boost::current_exception_diagnostic_information();
       }
     }
@@ -613,6 +624,9 @@ private:
 
   /// threaded actors
   GCE_CACHE_ALIGNED_VAR(boost::lockfree::queue<threaded_actor_t*>, threaded_actor_list_)
+
+  /// logger
+  GCE_CACHE_ALIGNED_VAR(log::logger_t, lg_);
 };
 }
 

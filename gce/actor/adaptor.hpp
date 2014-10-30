@@ -61,7 +61,7 @@ public:
     BOOST_ASSERT(bytes_transferred_);
     ec_ = ec;
     *bytes_transferred_ = bytes_transferred;
-    a_.resume();
+    a_.sync_resume();
   }
 
   void operator()(errcode_t const& ec, boost::asio::ip::tcp::resolver::iterator itr)
@@ -69,13 +69,13 @@ public:
     BOOST_ASSERT(itr_);
     ec_ = ec;
     *itr_ = itr;
-    a_.resume();
+    a_.sync_resume();
   }
 
   void operator()(errcode_t const& ec)
   {
     ec_ = ec;
-    a_.resume();
+    a_.sync_resume();
   }
 
   void operator()(errcode_t const& ec, int signal_number)
@@ -83,7 +83,7 @@ public:
     BOOST_ASSERT(signal_number_);
     ec_ = ec;
     *signal_number_ = signal_number;
-    a_.resume();
+    a_.sync_resume();
   }
 
 private:

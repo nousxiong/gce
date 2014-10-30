@@ -32,7 +32,7 @@
 
 /// Suppress some vc warnings.
 #ifdef BOOST_COMP_MSVC
-# pragma warning(disable : 4251 4231 4660 4275 4355 4244 4307)
+# pragma warning(disable : 4251 4231 4660 4275 4355 4244 4307 4996)
 #endif
 
 /// Ensure occupy entire cache(s) line.

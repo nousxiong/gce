@@ -98,8 +98,7 @@ struct duration_type
     return *this;
   }
 
-#ifdef GCE_LUA
-  std::string to_string()
+  std::string to_string() const
   {
     std::string rt;
     rt += "<";
@@ -125,6 +124,7 @@ struct duration_type
     return rt;
   }
 
+#ifdef GCE_LUA
   int get_overloading_type() const
   {
     return (int)detail::overloading_duration;

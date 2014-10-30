@@ -43,7 +43,10 @@ private:
       std::size_t free_actor_num = 20;
       std::size_t user_thr_num = 0;
       std::size_t my_actor_size = free_actor_num + user_thr_num * 2;
-      context ctx;
+      gce::log::asio_logger my_lg;
+      attributes attrs;
+      attrs.lg_ = boost::bind(&gce::log::asio_logger::output, &my_lg, _1, "");
+      context ctx(attrs);
       threaded_actor base = spawn(ctx);
 
       aid_t base_aid = base.get_aid();
