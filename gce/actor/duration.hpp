@@ -11,6 +11,7 @@
 #define GCE_ACTOR_DURATION_HPP
 
 #include <gce/actor/config.hpp>
+#include <boost/array.hpp>
 #include <boost/lexical_cast.hpp>
 #include <string>
 
@@ -100,24 +101,33 @@ struct duration_type
 
   std::string to_string() const
   {
+    typedef boost::array<char, 32> strbuf_t;
     std::string rt;
     rt += "<";
     switch (ty_)
     {
     case millisec:
-      rt += boost::lexical_cast<std::string>(boost::chrono::duration_cast<millisecs_t>(dur_).count());
+      rt += boost::lexical_cast<strbuf_t>(
+        boost::chrono::duration_cast<millisecs_t>(dur_).count()
+        ).cbegin();
       break;
     case second:
-      rt += boost::lexical_cast<std::string>(boost::chrono::duration_cast<seconds_t>(dur_).count());
+      rt += boost::lexical_cast<strbuf_t>(
+        boost::chrono::duration_cast<seconds_t>(dur_).count()
+        ).cbegin();
       break;
     case minute:
-      rt += boost::lexical_cast<std::string>(boost::chrono::duration_cast<minutes_t>(dur_).count());
+      rt += boost::lexical_cast<strbuf_t>(
+        boost::chrono::duration_cast<minutes_t>(dur_).count()
+        ).cbegin();
       break;
     case hour:
-      rt += boost::lexical_cast<std::string>(boost::chrono::duration_cast<hours_t>(dur_).count());
+      rt += boost::lexical_cast<strbuf_t>(
+        boost::chrono::duration_cast<hours_t>(dur_).count()
+        ).cbegin();
       break;
     default:
-      rt += boost::lexical_cast<std::string>(dur_.count());
+      rt += boost::lexical_cast<strbuf_t>(dur_.count()).cbegin();
       break;
     }
     rt += ">";

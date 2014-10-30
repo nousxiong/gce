@@ -12,6 +12,7 @@
 
 #include <gce/actor/config.hpp>
 #include <gce/actor/actor_id.hpp>
+#include <boost/array.hpp>
 
 namespace gce
 {
@@ -35,9 +36,10 @@ public:
 
   std::string to_string() const
   {
+    typedef boost::array<char, 32> strbuf_t;
     std::string rt;
     rt += "<";
-    rt += boost::lexical_cast<std::string>(id_);
+    rt += boost::lexical_cast<strbuf_t>(id_).cbegin();
     rt += ".";
     rt += aid_.to_string();
     rt += ">";

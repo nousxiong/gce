@@ -222,7 +222,7 @@ public:
 
   yield_t get_yield()
   {
-    BOOST_ASSERT(yld_);
+    GCE_ASSERT(yld_);
     return *yld_;
   }
 
@@ -267,7 +267,7 @@ public:
 
   void init(func_t const& f)
   {
-    BOOST_ASSERT_MSG(stat_ == ready, "stackful_actor status error");
+    GCE_ASSERT(stat_ == ready)(stat_).log(lg_, "stackful_actor status error");
     f_ = f;
   }
 
@@ -316,7 +316,7 @@ private:
   void resume(actor_code ac = actor_normal)
   {
     scope scp(boost::bind(&self_t::free_self, this));
-    BOOST_ASSERT(yld_cb_);
+    GCE_ASSERT(yld_cb_);
     yld_cb_(ac);
 
     if (stat_ != off)
@@ -327,7 +327,7 @@ private:
 
   actor_code yield()
   {
-    BOOST_ASSERT(yld_);
+    GCE_ASSERT(yld_);
     async_result_init_t init(BOOST_ASIO_MOVE_CAST(yield_t)(*yld_));
 
     yld_cb_ = boost::bind<void>(init.handler, _1);
@@ -421,7 +421,7 @@ private:
 
       if (responsing_ && is_response)
       {
-        BOOST_ASSERT(recving_res_.valid());
+        GCE_ASSERT(recving_res_.valid());
         bool ret = base_t::mb_.pop(recving_res_, recving_msg_);
         if (!ret)
         {

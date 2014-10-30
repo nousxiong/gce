@@ -200,7 +200,7 @@ struct sender
 
   inline actor_ref_t& get_actor_ref()
   {
-    BOOST_ASSERT(a_);
+    GCE_ASSERT(a_);
     return *a_;
   }
 

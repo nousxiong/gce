@@ -374,7 +374,7 @@ private:
   {
     if (!ec && tmr_sid == tmr_sid_)
     {
-      BOOST_ASSERT(recv_h_);
+      GCE_ASSERT(recv_h_);
       recv_h_.clear();
       curr_pattern_.clear();
       try
@@ -396,7 +396,7 @@ private:
   {
     if (!ec && tmr_sid == tmr_sid_)
     {
-      BOOST_ASSERT(res_h_);
+      GCE_ASSERT(res_h_);
       res_h_.clear();
       curr_pattern_.clear();
       try
@@ -418,7 +418,7 @@ private:
   {
     if (!ec && tmr_sid == tmr_sid_)
     {
-      BOOST_ASSERT(wait_h_);
+      GCE_ASSERT(wait_h_);
       wait_h_.clear();
       try
       {
@@ -486,7 +486,7 @@ private:
 
       if (res_h_ && is_response)
       {
-        BOOST_ASSERT(recving_res_.valid());
+        GCE_ASSERT(recving_res_.valid());
         bool ret = base_t::mb_.pop(recving_res_, msg);
         if (!ret)
         {

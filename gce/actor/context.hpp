@@ -175,7 +175,7 @@ public:
 public:
   io_service_t& get_io_service()
   {
-    BOOST_ASSERT(ios_);
+    GCE_ASSERT(ios_);
     return *ios_;
   }
 

@@ -12,6 +12,7 @@
 
 #include <gce/actor/config.hpp>
 #include <gce/actor/detail/to_match.hpp>
+#include <boost/array.hpp>
 
 namespace gce
 {
@@ -92,11 +93,12 @@ struct pattern
 
   std::string to_string() const
   {
+    typedef boost::array<char, 32> strbuf_t;
     std::string rt;
     rt += "<";
-    rt += boost::lexical_cast<std::string>(timeout_.count());
+    rt += boost::lexical_cast<strbuf_t>(timeout_.count()).cbegin();
     rt += ".";
-    rt += boost::lexical_cast<std::string>(match_list_.size());
+    rt += boost::lexical_cast<strbuf_t>(match_list_.size()).cbegin();
     rt += ">";
     return rt;
   }

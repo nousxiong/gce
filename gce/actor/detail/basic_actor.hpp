@@ -131,13 +131,13 @@ public:
       pack& pk = basic_svc_.alloc_pack(target);
       if (req)
       {
-        BOOST_ASSERT(req->valid());
+        GCE_ASSERT(req->valid())(recver);
         pk.tag_ = *req;
         m.clear_relay();
       }
       else if (aid_t const* aid = m.get_relay<aid_t>())
       {
-        BOOST_ASSERT(*aid);
+        GCE_ASSERT(*aid)(recver);
         pk.tag_ = *aid;
         m.clear_relay();
       }
@@ -167,13 +167,13 @@ public:
       pack& pk = basic_svc_.alloc_pack(target);
       if (request_t const* req = m.get_relay<request_t>())
       {
-        BOOST_ASSERT(req->valid());
+        GCE_ASSERT(req->valid())(recver);
         pk.tag_ = *req;
         m.clear_relay();
       }
       else if (aid_t const* aid = m.get_relay<aid_t>())
       {
-        BOOST_ASSERT(*aid);
+        GCE_ASSERT(*aid)(recver);
         pk.tag_ = *aid;
         m.clear_relay();
       }
@@ -315,7 +315,7 @@ protected:
     bool is_local = check_local(recver, ctxid_);
     if (!is_local)
     {
-      BOOST_ASSERT(svc);
+      GCE_ASSERT(svc)(recver);
       skt = svc->select_socket(recver.ctxid_);
       if (!skt)
       {
@@ -336,7 +336,7 @@ protected:
     if (svc)
     {
       aid_t target = is_local ? recver : skt;
-      BOOST_ASSERT(target);
+      GCE_ASSERT(target)(recver);
 
       pack& pk = svc->alloc_pack(target);
       pk.tag_ = link_t(l.get_type(), get_aid());
@@ -356,7 +356,7 @@ protected:
     BOOST_FOREACH(link_list_t::value_type& pr, link_list_)
     {
       aid_t const& target = pr.second ? pr.second : pr.first;
-      BOOST_ASSERT(target);
+      GCE_ASSERT(target)(pr.first);
 
       pack& pk = basic_svc_.alloc_pack(target);
       pk.tag_ = exit_t(ec, self_aid);

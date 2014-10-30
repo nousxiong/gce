@@ -103,13 +103,14 @@ public:
 
   std::string to_string() const
   {
+    typedef boost::array<char, 32> strbuf_t;
     std::string rt;
     rt += "<";
-    rt += boost::lexical_cast<std::string>(nil_);
+    rt += boost::lexical_cast<strbuf_t>(nil_).cbegin();
     rt += ".";
-    rt += boost::lexical_cast<std::string>(ctxid_);
+    rt += boost::lexical_cast<strbuf_t>(ctxid_).cbegin();
     rt += ".";
-    rt += boost::lexical_cast<std::string>(name_);
+    rt += boost::lexical_cast<strbuf_t>(name_).cbegin();
     rt += ">";
     return rt;
   }

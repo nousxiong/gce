@@ -86,7 +86,7 @@ public:
 public:
   void init(net_option opt)
   {
-    BOOST_ASSERT_MSG(stat_ == ready, "socket_actor status error");
+    GCE_ASSERT(stat_ == ready)(stat_).log(lg_, "socket_actor status error");
     opt_ = opt;
     curr_reconn_ = u32_nil;
   }
@@ -187,7 +187,7 @@ private:
         pk.tag_, pk.recver_, pk.svc_,
         pk.skt_, pk.is_err_ret_
         );
-    BOOST_ASSERT(has_tag);
+    GCE_ASSERT(has_tag);
     pk.msg_ = msg;
 
     if (link_t* link = boost::get<link_t>(&pk.tag_))
@@ -226,7 +226,7 @@ private:
       if (is_router_)
       {
         sktaid_t skt = remove_router_link(pk.recver_, ex->get_aid());
-        BOOST_ASSERT(skt);
+        GCE_ASSERT(skt)(pk.recver_)(ex->get_aid());
         pk.tag_ = fwd_exit_t(ex->get_code(), ex->get_aid(), base_t::get_aid());
         pk.skt_ = skt;
         send_pack(pk.skt_, pk);
@@ -375,7 +375,7 @@ private:
     )
   {
     spawn_type type = spw.get_type();
-    BOOST_ASSERT(type == spw_stackful);
+    GCE_ASSERT(type == spw_stackful)(type);
     aid_t aid = make_stackful_actor<context_t>(nil_aid_, svc, f.af_, spw.get_stack_size());
     base_t::snd_.post(
       boost::bind(
@@ -389,7 +389,7 @@ private:
     )
   {
     spawn_type type = spw.get_type();
-    BOOST_ASSERT (type == spw_stackless);
+    GCE_ASSERT(type == spw_stackless)(type);
     aid_t aid = make_stackless_actor<context_t>(nil_aid_, svc, f.ef_);
     base_t::snd_.post(
       boost::bind(
@@ -443,7 +443,7 @@ private:
     std::size_t size = m.size();
     if (conn_)
     {
-      BOOST_ASSERT(skt_);
+      GCE_ASSERT(skt_)(m);
       while (!conn_cache_.empty())
       {
         message const& m = conn_cache_.front();
@@ -460,7 +460,7 @@ private:
 
   void send_msg(message const& m)
   {
-    BOOST_ASSERT(skt_);
+    GCE_ASSERT(skt_)(m);
     msg_header hdr;
     hdr.size_ = (boost::uint32_t)m.size();
     hdr.type_ = m.get_type();
@@ -694,7 +694,7 @@ private:
 
   void handle_recv(pack& pk)
   {
-    BOOST_ASSERT(!check_local(pk.recver_, base_t::ctxid_));
+    GCE_ASSERT(!check_local(pk.recver_, base_t::ctxid_))(pk.recver_)(base_t::ctxid_);
     if (link_t* link = boost::get<link_t>(&pk.tag_))
     {
       add_straight_link(link->get_aid(), pk.recver_);
@@ -864,7 +864,8 @@ private:
     /// reset read_cache
     if (recv_cache_.read_size() > GCE_SOCKET_RECV_MAX_SIZE)
     {
-      BOOST_ASSERT(recv_cache_.write_size() >= recv_cache_.read_size());
+      GCE_ASSERT(recv_cache_.write_size() >= recv_cache_.read_size())
+        (recv_cache_.write_size())(recv_cache_.read_size())(msg);
       std::size_t copy_size =
         recv_cache_.write_size() - recv_cache_.read_size();
       std::memmove(recv_buffer_, recv_cache_.get_read_data(), copy_size);

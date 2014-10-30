@@ -58,7 +58,7 @@ public:
 public:
   void operator()(errcode_t const& ec, std::size_t bytes_transferred)
   {
-    BOOST_ASSERT(bytes_transferred_);
+    GCE_ASSERT(bytes_transferred_ != 0)(bytes_transferred);
     ec_ = ec;
     *bytes_transferred_ = bytes_transferred;
     a_.sync_resume();
@@ -66,7 +66,7 @@ public:
 
   void operator()(errcode_t const& ec, boost::asio::ip::tcp::resolver::iterator itr)
   {
-    BOOST_ASSERT(itr_);
+    GCE_ASSERT(itr_ != 0);
     ec_ = ec;
     *itr_ = itr;
     a_.sync_resume();
@@ -80,7 +80,7 @@ public:
 
   void operator()(errcode_t const& ec, int signal_number)
   {
-    BOOST_ASSERT(signal_number_);
+    GCE_ASSERT(signal_number_ != 0);
     ec_ = ec;
     *signal_number_ = signal_number;
     a_.sync_resume();

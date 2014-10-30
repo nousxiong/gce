@@ -156,7 +156,7 @@ public:
       );
 
     boost::amsg::write(writer, t);
-    BOOST_ASSERT(!writer.bad());
+    GCE_ASSERT(!writer.bad())(size);
 
     buf.write(writer.write_length());
     return *this;
@@ -203,11 +203,11 @@ public:
       );
 
     boost::amsg::write(writer, msg_size);
-    BOOST_ASSERT(!writer.bad());
+    GCE_ASSERT(!writer.bad())(msg_size);
     boost::amsg::write(writer, msg_type);
-    BOOST_ASSERT(!writer.bad());
+    GCE_ASSERT(!writer.bad())(msg_type);
     boost::amsg::write(writer, tag_offset);
-    BOOST_ASSERT(!writer.bad());
+    GCE_ASSERT(!writer.bad())(tag_offset);
 
     buf.write(writer.write_length());
     byte_t* write_data = buf.get_write_data();
@@ -381,11 +381,12 @@ public:
 
   std::string to_string() const
   {
+    typedef boost::array<char, 32> strbuf_t;
     std::string rt;
     rt += "<";
     rt += gce::atom(get_type());
     rt += ".";
-    rt += boost::lexical_cast<std::string>(size());
+    rt += boost::lexical_cast<strbuf_t>(size()).cbegin();
     rt += ">";
     return rt;
   }
@@ -442,7 +443,7 @@ public:
     }
     else
     {
-      BOOST_ASSERT(false);
+      GCE_ASSERT(false);
     }
     *this << recver << svc << skt << is_err_ret;
   }
@@ -456,7 +457,7 @@ public:
     if (tag_offset_ != u32_nil)
     {
       detail::buffer_ref& buf = cow_.data();
-      BOOST_ASSERT(tag_offset_ < buf.write_size());
+      GCE_ASSERT(tag_offset_ < buf.write_size())(tag_offset_)(buf.write_size());
       buf.read(tag_offset_);
       match_t tag_type;
       has_tag = true;
@@ -518,7 +519,7 @@ public:
       }
       else
       {
-        BOOST_ASSERT(false);
+        GCE_ASSERT(false);
       }
       *this >> recver >> svc >> skt >> is_err_ret;
 

@@ -67,7 +67,7 @@ public:
 public:
   void init(net_option opt)
   {
-    BOOST_ASSERT_MSG(stat_ == ready, "acceptor_actor status error");
+    GCE_ASSERT(stat_ == ready)(stat_).log(lg_, "acceptor_actor status error");
     opt_ = opt;
   }
 
@@ -171,7 +171,7 @@ private:
             }
             else
             {
-              BOOST_ASSERT(stat_ == on);
+              GCE_ASSERT(stat_ == on)(stat_);
               ++curr_rebind_num;
               if (curr_rebind_num <= opt_.rebind_try_)
               {

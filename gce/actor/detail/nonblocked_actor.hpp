@@ -214,8 +214,8 @@ public:
 
   void on_recv(pack& pk)
   {
-    BOOST_ASSERT(pk.concurrency_index_ != size_nil);
-    BOOST_ASSERT(pk.type_ != actor_nil);
+    GCE_ASSERT(pk.concurrency_index_ != size_nil);
+    GCE_ASSERT(pk.type_ != actor_nil);
 
     cache_queue& cac_que = cache_queue_list_arr_[pk.type_][pk.concurrency_index_];
     boost::uint64_t garbage_tail =
@@ -224,7 +224,7 @@ public:
     if (garbage_tail != u64_nil && garbage_tail >= cac_que.head_)
     {
       std::size_t size = garbage_tail - cac_que.head_ + 1;
-      BOOST_ASSERT(cac_que.que_.size() >= size);
+      GCE_ASSERT(cac_que.que_.size() >= size)(cac_que.que_.size())(size);
       for (std::size_t i=0; i<size; ++i)
       {
         cac_que.que_.pop_front();

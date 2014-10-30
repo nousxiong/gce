@@ -14,6 +14,7 @@
 #include <gce/actor/actor_fwd.hpp>
 #include <gce/actor/service_id.hpp>
 #include <gce/actor/detail/listener.hpp>
+#include <boost/array.hpp>
 #include <iostream>
 
 namespace gce
@@ -188,7 +189,7 @@ public:
 
   detail::listener* get_actor_ptr(ctxid_t ctxid, timestamp_t timestamp) const
   {
-    BOOST_ASSERT(!in_pool());
+    GCE_ASSERT(!in_pool())(to_string());
     detail::listener* ret = 0;
     if (
       ctxid == ctxid_ && timestamp == timestamp_ && uintptr_ != 0
@@ -202,7 +203,7 @@ public:
   detail::actor_index get_actor_index(ctxid_t ctxid, timestamp_t timestamp) const
   {
     detail::actor_index ret;
-    BOOST_ASSERT(in_pool());
+    GCE_ASSERT(in_pool())(to_string());
     if (ctxid == ctxid_ && timestamp == timestamp_)
     {
       ret.id_ = uintptr_;
@@ -238,22 +239,23 @@ public:
 
   std::string to_string() const
   {
+    typedef boost::array<char, 32> strbuf_t;
     std::string rt;
     rt += "<";
-    rt += boost::lexical_cast<std::string>(ctxid_);
+    rt += boost::lexical_cast<strbuf_t>(ctxid_).cbegin();
     rt += ".";
-    rt += boost::lexical_cast<std::string>(timestamp_);
+    rt += boost::lexical_cast<strbuf_t>(timestamp_).cbegin();
     rt += ".";
-    rt += boost::lexical_cast<std::string>(uintptr_);
+    rt += boost::lexical_cast<strbuf_t>(uintptr_).cbegin();
     rt += ".";
     if (in_pool())
     {
-      rt += boost::lexical_cast<std::string>(svc_id_);
+      rt += boost::lexical_cast<strbuf_t>(svc_id_).cbegin();
       rt += ".";
-      rt += boost::lexical_cast<std::string>((int)type_);
+      rt += boost::lexical_cast<strbuf_t>((int)type_).cbegin();
       rt += ".";
     }
-    rt += boost::lexical_cast<std::string>(sid_);
+    rt += boost::lexical_cast<strbuf_t>(sid_).cbegin();
     rt += ".";
     rt += svc_.to_string();
     rt += ">";
@@ -297,7 +299,7 @@ bool check_local(aid_t const& id, ctxid_t ctxid)
 
 bool check_local_valid(aid_t const& id, ctxid_t ctxid, timestamp_t timestamp)
 {
-  BOOST_ASSERT(id.ctxid_ == ctxid);
+  GCE_ASSERT(id.ctxid_ == ctxid)(ctxid)(id);
   return id.timestamp_ == timestamp;
 }
 }

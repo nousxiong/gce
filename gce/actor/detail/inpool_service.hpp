@@ -126,8 +126,8 @@ private:
   void handle_recv_forth(base_t& sender_svc, send_pair& sp)
   {
     std::size_t svc_index = sender_svc.get_index();
-    BOOST_ASSERT(sp);
-    BOOST_ASSERT(bs_.get_pack_list(svc_index) == 0);
+    GCE_ASSERT(sp)(svc_index);
+    GCE_ASSERT(bs_.get_pack_list(svc_index) == 0)(svc_index);
 
     scope scp(
       boost::bind(
@@ -163,7 +163,7 @@ private:
   void handle_recv_back(base_t& sender_svc, send_pair& ret)
   {
     std::size_t svc_index = sender_svc.get_index();
-    BOOST_ASSERT(ret);
+    GCE_ASSERT(ret)(svc_index);
     scope scp(
       boost::bind(
         &self_t::end_handle_recv_back, this,
@@ -211,7 +211,8 @@ private:
       actor_t* a = find_actor(pk.ai_, pk.sid_);
       if (a)
       {
-        BOOST_ASSERT(&a->get_basic_service() == this);
+        GCE_ASSERT(&a->get_basic_service() == this)
+          (pk.ai_.id_)(pk.ai_.svc_id_)(pk.ai_.type_)(pk.sid_);
         a->on_recv(pk);
       }
       else

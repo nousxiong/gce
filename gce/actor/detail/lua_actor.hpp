@@ -366,7 +366,7 @@ private:
 
   void resume()
   {
-    BOOST_ASSERT(yielding_);
+    GCE_ASSERT(yielding_);
     yielding_ = false;
     luabridge::setGlobal(L_, this, "self");
     luabridge::setGlobal(L_, co_, "gce_curr_co"); 
@@ -497,7 +497,7 @@ private:
 
       if (responsing_ && is_response)
       {
-        BOOST_ASSERT(recving_res_.valid());
+        GCE_ASSERT(recving_res_.valid());
         bool ret = base_t::mb_.pop(recving_res_, msg);
         if (!ret)
         {

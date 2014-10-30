@@ -13,7 +13,6 @@
 #include <gce/actor/config.hpp>
 #include <gce/actor/actor_id.hpp>
 #include <gce/actor/detail/pack.hpp>
-#include <boost/assert.hpp>
 #include <set>
 #include <map>
 
@@ -232,7 +231,7 @@ public:
 
     if (skt_list && !skt_list->empty())
     {
-      BOOST_ASSERT(curr_skt);
+      GCE_ASSERT(curr_skt);
       skt_list_t::iterator& itr = *curr_skt;
       if (itr != skt_list->end())
       {
@@ -287,7 +286,7 @@ public:
 
     if (skt_list && !skt_list->empty())
     {
-      BOOST_ASSERT(curr_skt);
+      GCE_ASSERT(curr_skt);
       skt_list_t::iterator& itr = *curr_skt;
       if (itr != skt_list->end())
       {

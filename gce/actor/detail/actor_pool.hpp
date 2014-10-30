@@ -39,7 +39,7 @@ class actor_pool
 
     ~object()
     {
-      BOOST_ASSERT(sid_ == sid_nil);
+      GCE_ASSERT(sid_ == sid_nil)(sid_);
     }
 
     operator bool() const
@@ -168,8 +168,8 @@ private:
     {
       boost::uint32_t id = free_list_.back();
       free_list_.pop_back();
-      BOOST_ASSERT(id < pool_.size());
-      BOOST_ASSERT(!pool_[id]);
+      GCE_ASSERT(id < pool_.size())(id)(pool_.size());
+      GCE_ASSERT(!pool_[id])(id);
       i.id_ = id;
     }
 
@@ -186,8 +186,8 @@ private:
       actor_index i = aid.get_actor_index(ctxid_, timestamp_);
       if (i)
       {
-        BOOST_ASSERT(i.id_ < pool_.size());
-        BOOST_ASSERT(pool_[i.id_]);
+        GCE_ASSERT(i.id_ < pool_.size())(i.id_)(pool_.size());
+        GCE_ASSERT(pool_[i.id_])(i.id_);
         if (i.id_ + 1 == pool_.size())
         {
           pool_.back().unuse();

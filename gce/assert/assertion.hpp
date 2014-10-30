@@ -368,6 +368,17 @@ public:
   {
     return pri_set_var(v, name);
   }
+
+  template <typename T>
+  assertion& set_var(T const* v, char const* name)
+  {
+    str_.append("  ");
+    str_.append(name);
+    str_.append(" = ");
+    str_.append(boost::lexical_cast<strbuf_t>(v).cbegin());
+    str_.append("\n");
+    return *this;
+  }
   
   template <typename T>
   assertion& set_var(T const& v, char const* name)

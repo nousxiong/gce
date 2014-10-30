@@ -11,6 +11,8 @@
 #define GCE_ACTOR_ATOM_HPP
 
 #include <gce/config.hpp>
+#include <gce/assert/all.hpp>
+#include <boost/array.hpp>
 #include <boost/lexical_cast.hpp>
 #include <boost/integer.hpp>
 #include <string>
@@ -22,7 +24,7 @@ namespace gce
 boost::uint64_t atom(char const* str)
 {
   std::size_t len = std::char_traits<char>::length(str);
-  BOOST_ASSERT(len <= 13);
+  GCE_ASSERT(len <= 13)(len)(str);
 
   static char const* const encoding_table =
     "\x0\x0\x0\x0\x0\x0\x0\x0\x0\x0\x0\x0\x0\x0\x0\x0"
@@ -135,8 +137,8 @@ int lua_overloading_2()
   }
 
 # define GCE_LUA_REG_SERIALIZE_FUNC(class_name) \
-  .addFunction("serialize", &class_name::serialize<message>) \
-  .addFunction("deserialize", &class_name::deserialize<message>) \
+  .addFunction("serialize", &class_name::serialize<gce::message>) \
+  .addFunction("deserialize", &class_name::deserialize<gce::message>) \
   .addFunction("make", &class_name::make<class_name>)
 
 #endif /// GCE_LUA
@@ -182,9 +184,10 @@ struct match_type
 
   std::string to_string() const
   {
+    typedef boost::array<char, 32> strbuf_t;
     std::string rt;
     rt += "<";
-    rt += boost::lexical_cast<std::string>(val_);
+    rt += boost::lexical_cast<strbuf_t>(val_).cbegin();
     rt += ">";
     return rt;
   }

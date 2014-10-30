@@ -31,11 +31,9 @@ void connect_impl(
   typedef Context context_t;
   typedef typename context_t::socket_actor_t socket_actor_t;
 
-  BOOST_ASSERT(target != ctxid_nil);
-  BOOST_ASSERT_MSG(
-    svc.get_context().get_ctxid() != ctxid_nil, 
-    "ctxid haven't set, please set it before connect"
-    );
+  GCE_VERIFY(target != ctxid_nil);
+  GCE_VERIFY(svc.get_context().get_ctxid() != ctxid_nil)
+    .msg("ctxid haven't set, please set it before connect");
 
   socket_actor_t* s = svc.make_actor();
   s->init(opt);

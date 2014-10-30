@@ -342,7 +342,7 @@ private:
     if (!ec && tmr_sid == tmr_sid_)
     {
       /// timed out
-      BOOST_ASSERT(&p == recv_p_);
+      GCE_ASSERT(&p == recv_p_);
       recv_p_ = 0;
       curr_pattern_.clear();
       std::pair<recv_t, message> rcv;
@@ -355,7 +355,7 @@ private:
     if (!ec && tmr_sid == tmr_sid_)
     {
       /// timed out
-      BOOST_ASSERT(&p == res_p_);
+      GCE_ASSERT(&p == res_p_);
       res_p_ = 0;
       recving_res_ = resp_t();
       std::pair<resp_t, message> res_pr;
@@ -413,7 +413,7 @@ private:
 
       if (res_p_ && is_response)
       {
-        BOOST_ASSERT(recving_res_.valid());
+        GCE_ASSERT(recving_res_.valid());
         bool ret = base_t::mb_.pop(recving_res_, msg);
         if (!ret)
         {

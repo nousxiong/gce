@@ -94,14 +94,14 @@ public:
 
   send_pair on_back(send_pair sp)
   {
-    BOOST_ASSERT(sp);
+    GCE_ASSERT(sp);
     send_pair ret;
     on_back_ = true;
     sp.forth()->clear();
 
     if (sp.back() == &primary_ret_)
     {
-      BOOST_ASSERT(primary_sending_);
+      GCE_ASSERT(primary_sending_);
       primary_sending_ = false;
     }
     return ret;
@@ -109,7 +109,7 @@ public:
 
   send_pair on_handle_back(send_pair sp)
   {
-    BOOST_ASSERT(sp);
+    GCE_ASSERT(sp);
     on_back_ = false;
     sp.back()->clear();
     send_pair ret;
