@@ -48,9 +48,12 @@ private:
         log::scope scp(lg);
         GCE_INFO(scp)(__FILE__)(__LINE__) << 
           "hello! scope begin, arg: " << i;
+        boost::this_thread::sleep_for(boost::chrono::milliseconds(1));
         GCE_INFO(scp)(__FILE__) << 
           "in scope, arg: " << ++i << ", " << 3.1f;
+        boost::this_thread::sleep_for(boost::chrono::milliseconds(1));
         GCE_ERROR(scp) << "error: " << ++i;
+        boost::this_thread::sleep_for(boost::chrono::milliseconds(1));
         GCE_INFO(scp) << "scope end";
       }
     }
