@@ -12,6 +12,7 @@
 
 #include <gce/log/config.hpp>
 #include <gce/log/asio_logger.hpp>
+#include <gce/log/scope.hpp>
 #include <gce/log/record.hpp>
 
 #endif /// GCE_LOG_ALL_HPP

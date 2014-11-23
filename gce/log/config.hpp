@@ -21,7 +21,9 @@
 
 #include <gce/amsg/amsg.hpp>
 #include <gce/amsg/zerocopy.hpp>
+#include <boost/chrono.hpp>
 #include <boost/function.hpp>
+#include <vector>
 
 #ifndef GCE_SMALL_LOG_META_SIZE
 # define GCE_SMALL_LOG_META_SIZE 32
@@ -67,7 +69,10 @@ const char* const to_string(level lv)
 }
 
 class record;
-typedef boost::function<void (record&)> logger_t;
+typedef boost::function<void (std::vector<record>&)> logger_t;
+
+typedef boost::chrono::system_clock system_clock_t;
+typedef system_clock_t::time_point time_point_t;
 } /// namespace log
 } /// namespace gce
 

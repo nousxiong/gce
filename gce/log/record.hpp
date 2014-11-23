@@ -25,10 +25,21 @@ class record
   typedef boost::array<char, 32> strbuf_t;
 
 public:
-  explicit record(logger_t& lg, level lv)
+  record(logger_t& lg, level lv, time_point_t nw = time_point_t())
     : lg_(lg)
     , lv_(lv)
     , flushed_(false)
+    , rec_(0)
+    , ts_(nw)
+  {
+  }
+
+  template <typename Scope>
+  record(Scope& scp, level lv)
+    : lg_(scp.get_logger())
+    , lv_(lv)
+    , flushed_(false)
+    , rec_(&scp.add_record(lv))
   {
   }
 
@@ -44,116 +55,263 @@ public:
 
   boost::string_ref get_log_string() const
   {
-    return boost::string_ref(str_.data(), str_.size());
+    if (rec_)
+    {
+      return rec_->get_log_string();
+    }
+    else
+    {
+      return boost::string_ref(str_.data(), str_.size());
+    }
   }
 
   record& operator<<(char c)
   {
-    str_ += c;
+    if (rec_)
+    {
+      (*rec_) << c;
+    }
+    else
+    {
+      str_ += c;
+    }
     return *this;
   }
 
   record& operator<<(char const* p)
   {
-    str_.append(p);
+    if (rec_)
+    {
+      (*rec_) << p;
+    }
+    else
+    {
+      str_.append(p);
+    }
     return *this;
   }
 
   record& operator<<(std::string const& str)
   {
-    str_.append(str);
+    if (rec_)
+    {
+      (*rec_) << str;
+    }
+    else
+    {
+      str_.append(str);
+    }
     return *this;
   }
 
   record& operator<<(boost::string_ref str)
   {
-    str_.append(str.data(), str.size());
+    if (rec_)
+    {
+      (*rec_) << str;
+    }
+    else
+    {
+      str_.append(str.data(), str.size());
+    }
     return *this;
   }
 
   record& operator<<(bool v)
   {
-    str_.append(boost::lexical_cast<strbuf_t>(v).cbegin());
+    if (rec_)
+    {
+      (*rec_) << v;
+    }
+    else
+    {
+      str_.append(boost::lexical_cast<strbuf_t>(v).cbegin());
+    }
     return *this;
   }
 
   record& operator<<(signed char v)
   {
-    str_.append(boost::lexical_cast<strbuf_t>(v).cbegin());
+    if (rec_)
+    {
+      (*rec_) << v;
+    }
+    else
+    {
+      str_.append(boost::lexical_cast<strbuf_t>(v).cbegin());
+    }
     return *this;
   }
 
   record& operator<<(unsigned char v)
   {
-    str_.append(boost::lexical_cast<strbuf_t>(v).cbegin());
+    if (rec_)
+    {
+      (*rec_) << v;
+    }
+    else
+    {
+      str_.append(boost::lexical_cast<strbuf_t>(v).cbegin());
+    }
     return *this;
   }
 
   record& operator<<(short v)
   {
-    str_.append(boost::lexical_cast<strbuf_t>(v).cbegin());
+    if (rec_)
+    {
+      (*rec_) << v;
+    }
+    else
+    {
+      str_.append(boost::lexical_cast<strbuf_t>(v).cbegin());
+    }
     return *this;
   }
 
   record& operator<<(unsigned short v)
   {
-    str_.append(boost::lexical_cast<strbuf_t>(v).cbegin());
+    if (rec_)
+    {
+      (*rec_) << v;
+    }
+    else
+    {
+      str_.append(boost::lexical_cast<strbuf_t>(v).cbegin());
+    }
     return *this;
   }
 
   record& operator<<(int v)
   {
-    str_.append(boost::lexical_cast<strbuf_t>(v).cbegin());
+    if (rec_)
+    {
+      (*rec_) << v;
+    }
+    else
+    {
+      str_.append(boost::lexical_cast<strbuf_t>(v).cbegin());
+    }
     return *this;
   }
 
   record& operator<<(unsigned int v)
   {
-    str_.append(boost::lexical_cast<strbuf_t>(v).cbegin());
+    if (rec_)
+    {
+      (*rec_) << v;
+    }
+    else
+    {
+      str_.append(boost::lexical_cast<strbuf_t>(v).cbegin());
+    }
     return *this;
   }
 
   record& operator<<(long v)
   {
-    str_.append(boost::lexical_cast<strbuf_t>(v).cbegin());
+    if (rec_)
+    {
+      (*rec_) << v;
+    }
+    else
+    {
+      str_.append(boost::lexical_cast<strbuf_t>(v).cbegin());
+    }
     return *this;
   }
 
   record& operator<<(unsigned long v)
   {
-    str_.append(boost::lexical_cast<strbuf_t>(v).cbegin());
+    if (rec_)
+    {
+      (*rec_) << v;
+    }
+    else
+    {
+      str_.append(boost::lexical_cast<strbuf_t>(v).cbegin());
+    }
     return *this;
   }
 
 #if !defined(BOOST_NO_LONG_LONG)
   record& operator<<(long long v)
   {
-    str_.append(boost::lexical_cast<strbuf_t>(v).cbegin());
+    if (rec_)
+    {
+      (*rec_) << v;
+    }
+    else
+    {
+      str_.append(boost::lexical_cast<strbuf_t>(v).cbegin());
+    }
     return *this;
   }
 
   record& operator<<(unsigned long long v)
   {
-    str_.append(boost::lexical_cast<strbuf_t>(v).cbegin());
+    if (rec_)
+    {
+      (*rec_) << v;
+    }
+    else
+    {
+      str_.append(boost::lexical_cast<strbuf_t>(v).cbegin());
+    }
     return *this;
   }
 #endif
 
   record& operator<<(float v)
   {
-    str_.append(boost::lexical_cast<strbuf_t>(v).cbegin());
+    if (rec_)
+    {
+      (*rec_) << v;
+    }
+    else
+    {
+      str_.append(boost::lexical_cast<strbuf_t>(v).cbegin());
+    }
     return *this;
   }
 
   record& operator<<(double v)
   {
-    str_.append(boost::lexical_cast<strbuf_t>(v).cbegin());
+    if (rec_)
+    {
+      (*rec_) << v;
+    }
+    else
+    {
+      str_.append(boost::lexical_cast<strbuf_t>(v).cbegin());
+    }
     return *this;
   }
 
   record& operator<<(long double v)
   {
-    str_.append(boost::lexical_cast<strbuf_t>(v).cbegin());
+    if (rec_)
+    {
+      (*rec_) << v;
+    }
+    else
+    {
+      str_.append(boost::lexical_cast<strbuf_t>(v).cbegin());
+    }
+    return *this;
+  }
+
+  template <typename T>
+  record& operator<<(T const* v)
+  {
+    if (rec_)
+    {
+      (*rec_) << v;
+    }
+    else
+    {
+      str_.append(boost::lexical_cast<strbuf_t>(v).cbegin());
+    }
     return *this;
   }
 
@@ -161,26 +319,33 @@ public:
   template <typename T>
   record& operator()(T const& t)
   {
-    boost::amsg::error_code_t ec = boost::amsg::success;
-    std::size_t size = boost::amsg::size_of(t, ec);
-    if (ec != boost::amsg::success)
+    if (rec_)
     {
-      boost::amsg::base_store bs;
-      bs.set_error_code(ec);
-      throw std::runtime_error(bs.message());
+      (*rec_)(t);
     }
+    else
+    {
+      boost::amsg::error_code_t ec = boost::amsg::success;
+      std::size_t size = boost::amsg::size_of(t, ec);
+      if (ec != boost::amsg::success)
+      {
+        boost::amsg::base_store bs;
+        bs.set_error_code(ec);
+        throw std::runtime_error(bs.message());
+      }
 
-    meta_.reserve(size);
-    gce::detail::buffer_ref& buf = meta_.data();
+      meta_.reserve(size);
+      gce::detail::buffer_ref& buf = meta_.data();
 
-    boost::amsg::zero_copy_buffer writer(
-      buf.get_write_data(), buf.remain_write_size()
-      );
+      boost::amsg::zero_copy_buffer writer(
+        buf.get_write_data(), buf.remain_write_size()
+        );
 
-    boost::amsg::write(writer, t);
-    BOOST_ASSERT(!writer.bad());
+      boost::amsg::write(writer, t);
+      BOOST_ASSERT(!writer.bad());
 
-    buf.write(writer.write_length());
+      buf.write(writer.write_length());
+    }
     return *this;
   }
 
@@ -204,9 +369,16 @@ public:
 
   record& operator()(char const* str)
   {
-    boost::uint32_t size = (boost::uint32_t)std::char_traits<char>::length(str);
-    (*this)(size);
-    meta_.append(str, size);
+    if (rec_)
+    {
+      (*rec_)(str);
+    }
+    else
+    {
+      boost::uint32_t size = (boost::uint32_t)std::char_traits<char>::length(str);
+      (*this)(size);
+      meta_.append(str, size);
+    }
     return *this;
   }
 
@@ -228,8 +400,15 @@ public:
 
   record& operator()(bool flag)
   {
-    boost::uint16_t f = flag ? 1 : 0;
-    (*this)(f);
+    if (rec_)
+    {
+      (*rec_)(flag);
+    }
+    else
+    {
+      boost::uint16_t f = flag ? 1 : 0;
+      (*this)(f);
+    }
     return *this;
   }
 
@@ -252,7 +431,17 @@ public:
   void flush()
   {
     flushed_ = true;
-    lg_(*this);
+    if (!rec_)
+    {
+      std::vector<record> rec_list;
+      rec_list.push_back(*this);
+      lg_(rec_list);
+    }
+  }
+
+  time_point_t get_timestamp() const
+  {
+    return ts_;
   }
 
   bool operator!() const
@@ -277,6 +466,12 @@ private:
 
   /// buffer
   std::string str_;
+
+  /// timestamp
+  time_point_t ts_;
+
+  /// scope's record
+  record* rec_;
 };
 
 namespace detail

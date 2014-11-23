@@ -42,6 +42,17 @@ private:
         "user logout, arg: " << ++i << ", " << 3.1f;
       GCE_ERROR(lg) << "error: " << ++i;
       GCE_INFO(empty_lg) << "this shouldn't been printed\n";
+
+      {
+        // test scope log
+        log::scope scp(lg);
+        GCE_INFO(scp)(__FILE__)(__LINE__) << 
+          "hello! scope begin, arg: " << i;
+        GCE_INFO(scp)(__FILE__) << 
+          "in scope, arg: " << ++i << ", " << 3.1f;
+        GCE_ERROR(scp) << "error: " << ++i;
+        GCE_INFO(scp) << "scope end";
+      }
     }
     catch (std::exception& ex)
     {
