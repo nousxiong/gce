@@ -61,7 +61,7 @@ public:
     }
     else
     {
-      return boost::string_ref(str_.data(), str_.size());
+      return boost::string_ref((char*)str_.data(), str_.size());
     }
   }
 
@@ -73,7 +73,7 @@ public:
     }
     else
     {
-      str_ += c;
+      str_.append(&c, 1);
     }
     return *this;
   }
@@ -335,7 +335,7 @@ public:
       }
 
       meta_.reserve(size);
-      gce::detail::buffer_ref& buf = meta_.data();
+      gce::detail::buffer_ref& buf = meta_.get_buffer_ref();
 
       boost::amsg::zero_copy_buffer writer(
         buf.get_write_data(), buf.remain_write_size()
@@ -352,7 +352,7 @@ public:
   template <typename T>
   bool get_meta(T& t)
   {
-    gce::detail::buffer_ref& buf = meta_.data();
+    gce::detail::buffer_ref& buf = meta_.get_buffer_ref();
     boost::amsg::zero_copy_buffer reader(
       buf.get_read_data(), buf.remain_read_size()
       );
@@ -387,7 +387,7 @@ public:
     boost::uint32_t size;
     if (get_meta(size))
     {
-      gce::detail::buffer_ref& buf = meta_.data();
+      gce::detail::buffer_ref& buf = meta_.get_buffer_ref();
       str = boost::string_ref((char const*)buf.get_read_data(), size);
       buf.read(size);
       return true;
@@ -464,8 +464,8 @@ private:
   /// meta data
   gce::detail::cow_buffer<GCE_SMALL_LOG_META_SIZE, GCE_LOG_META_MIN_GROW_SIZE> meta_;
 
-  /// buffer
-  std::string str_;
+  /// string buffer
+  gce::detail::cow_buffer<GCE_SMALL_LOG_SIZE, GCE_LOG_MIN_GROW_SIZE> str_;
 
   /// timestamp
   time_point_t ts_;

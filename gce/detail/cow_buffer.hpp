@@ -94,12 +94,22 @@ public:
   }
 
 public:
-  buffer_ref& data()
+  byte_t const* data() const
+  { 
+    return buf_.data();
+  }
+
+  std::size_t size() const
+  {
+    return buf_.write_size();
+  }
+
+  buffer_ref& get_buffer_ref()
   { 
     return buf_;
   }
 
-  buffer_ref const& data() const
+  buffer_ref const& get_buffer_ref() const
   { 
     return buf_;
   }
