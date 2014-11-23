@@ -61,7 +61,7 @@ public:
     }
     else
     {
-      return boost::string_ref((char*)str_.data(), str_.size());
+      return boost::string_ref((char const*)str_.data(), str_.size());
     }
   }
 
