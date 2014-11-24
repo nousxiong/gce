@@ -7,7 +7,7 @@
 -- See https://github.com/nousxiong/gce for latest version.
 --
 
-require("gce")
+local gce = require("gce")
 
 gce.run_actor(
   function ()

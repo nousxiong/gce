@@ -7,7 +7,7 @@
 -- See https://github.com/nousxiong/gce for latest version.
 --
 
-gce = {}
+local gce = {}
 
 gce.overloading_0 = detail.overloading_0()
 gce.overloading_1 = detail.overloading_1()
@@ -35,17 +35,20 @@ gce.infin = detail.infin()
 gce.zero = detail.zero()
 
 function gce.run_actor(f)
-	if not gce_curr_co then
-	  gce_curr_co = coroutine.create(
-	  	function ()
-	  		self:set_coro(gce_curr_co);
-	  		f()
-	  	end
-	  	)
-	end
-  local rt, err = coroutine.resume(gce_curr_co)
+  gce_curr_co = coroutine.create(
+  	function ()
+  		self:set_coro(gce_curr_co);
+  		f()
+  	end
+  	)
+	self:set_resume(gce.resume)
+  gce.resume()
+end
+
+function gce.resume()
+	local rt, err = coroutine.resume(gce_curr_co)
   if not rt then
-  	gce.print("actor error: %s", err)
+  	gce.error("%s", err)
   end
 end
 
@@ -440,3 +443,5 @@ function gce.unpack(m, ...)
 	m:disable_copy_read_size()
 	return res, m
 end
+
+return gce

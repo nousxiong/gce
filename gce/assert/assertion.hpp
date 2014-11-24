@@ -87,6 +87,7 @@ class assertion
   };
 
   struct enum_t {};
+  struct ptr_t {};
   struct other_t {};
 
 public:
@@ -167,8 +168,8 @@ public:
       break;
     }
 
-    byte_t const* str = str_.data().data();
-    boost::string_ref str_ref((char const*)str, str_.data().write_size());
+    byte_t const* str = str_.data();
+    boost::string_ref str_ref((char const*)str, str_.get_buffer_ref().write_size());
     switch (lg_type_)
     {
     case log_std: std::cerr << str_ref << std::endl; break;
@@ -249,8 +250,8 @@ public:
     boost::string_ref str_ref;
     if (lg_type_ == log_default)
     {
-      byte_t const* str = str_.data().data();
-      str_ref = boost::string_ref((char const*)str, str_.data().write_size());
+      byte_t const* str = str_.data();
+      str_ref = boost::string_ref((char const*)str, str_.get_buffer_ref().write_size());
     }
     throw gce::assert_except(ex_, msg_, str_ref);
   }
@@ -369,8 +370,8 @@ public:
     return pri_set_var(v, name);
   }
 
-  template <typename T>
-  assertion& set_var(T const* v, char const* name)
+  /*template <typename T>
+  assertion& set_var(T const* const v, char const* name)
   {
     str_.append("  ");
     str_.append(name);
@@ -378,7 +379,7 @@ public:
     str_.append(boost::lexical_cast<strbuf_t>(v).cbegin());
     str_.append("\n");
     return *this;
-  }
+  }*/
   
   template <typename T>
   assertion& set_var(T const& v, char const* name)
@@ -391,9 +392,13 @@ public:
 
     typedef typename boost::mpl::if_<
       typename boost::is_enum<param_t>::type, enum_t, other_t
-      >::type select_t;
+      >::type select_enum_t;
 
-    pri_set_var(select_t(), v, name);
+    typedef typename boost::mpl::if_<
+      typename boost::is_pointer<param_t>::type, ptr_t, select_enum_t
+    >::type select_ptr_t;
+
+    pri_set_var(select_ptr_t(), v, name);
     return *this;
   }
 
@@ -431,10 +436,21 @@ private:
     return *this;
   }
 
+  template <typename T>
+  assertion& pri_set_var(ptr_t, T const& v, char const* name)
+  {
+    str_.append("  ");
+    str_.append(name);
+    str_.append(" = ");
+    str_.append(boost::lexical_cast<strbuf_t>(v).cbegin());
+    str_.append("\n");
+    return *this;
+  }
+
   void pri_abort()
   {
-    byte_t const* str = str_.data().data();
-    boost::string_ref str_ref((char const*)str, str_.data().write_size());
+    byte_t const* str = str_.data();
+    boost::string_ref str_ref((char const*)str, str_.get_buffer_ref().write_size());
     switch (lg_type_)
     {
     case log_gce: 

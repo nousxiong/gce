@@ -7,7 +7,7 @@
 -- See https://github.com/nousxiong/gce for latest version.
 --
 
-require("gce")
+local gce = require("gce")
 
 local test = function (name)
 	local path = "test_lua_actor/" .. name .. ".lua"
