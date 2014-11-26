@@ -41,7 +41,7 @@
   byte_t pad_##var[(sizeof(type_name)/GCE_CACHE_LINE_SIZE + 1)*GCE_CACHE_LINE_SIZE - sizeof(type_name)];
 
 #if defined(GCE_LUA)
-# define GCE_HAS_SCRIPT
+# define GCE_SCRIPT
 #endif
 
 #endif /// GCE_CONFIG_HPP

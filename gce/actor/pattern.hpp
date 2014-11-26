@@ -103,7 +103,7 @@ struct pattern
     return rt;
   }
 
-#ifdef GCE_LUA
+#ifdef GCE_SCRIPT
   /// internal use
   int get_overloading_type() const
   {

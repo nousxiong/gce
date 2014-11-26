@@ -353,7 +353,7 @@ public:
     }
   }
 
-#ifdef GCE_HAS_SCRIPT
+#ifdef GCE_SCRIPT
   template <typename Type>
   void register_script(std::string const& name, std::string const& script)
   {

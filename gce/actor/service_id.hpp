@@ -115,14 +115,14 @@ public:
     return rt;
   }
 
-#ifdef GCE_LUA
+#ifdef GCE_SCRIPT
   /// internal use
   int get_overloading_type() const
   {
     return (int)detail::overloading_svcid;
   }
 
-  GCE_LUA_SERIALIZE_FUNC
+  GCE_SCRIPT_SERIALIZE_FUNC
 #endif
 
   boost::uint16_t nil_;

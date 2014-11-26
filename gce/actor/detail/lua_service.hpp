@@ -241,6 +241,7 @@ public:
         .beginClass<lua_actor_t>("actor")
           .addFunction("get_aid", &lua_actor_t::get_aid)
           .addFunction("set_coro", &lua_actor_t::set_coro)
+          .addFunction("set_resume", &lua_actor_t::set_resume)
           .addFunction("send", &lua_actor_t::send)
           .addFunction("send2svc", &lua_actor_t::send2svc)
           .addFunction("relay", &lua_actor_t::relay)

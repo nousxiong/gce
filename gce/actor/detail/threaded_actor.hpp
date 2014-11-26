@@ -279,7 +279,7 @@ private:
       {
         if (tmo < infin)
         {
-          start_recv_timer(tmo, p);
+          start_timer(tmo, p);
         }
         recv_p_ = &p;
         curr_pattern_ = patt;
@@ -300,7 +300,7 @@ private:
       {
         if (tmo < infin)
         {
-          start_recv_timer(tmo, p);
+          start_timer(tmo, p);
         }
         res_p_ = &p;
         recving_res_ = res;
@@ -311,7 +311,7 @@ private:
     p.set_value(res_pr);
   }
 
-  void start_recv_timer(duration_t dur, recv_promise_t& p)
+  void start_timer(duration_t dur, recv_promise_t& p)
   {
     tmr_.expires_from_now(dur);
     tmr_.async_wait(
@@ -324,7 +324,7 @@ private:
       );
   }
 
-  void start_recv_timer(duration_t dur, res_promise_t& p)
+  void start_timer(duration_t dur, res_promise_t& p)
   {
     tmr_.expires_from_now(dur);
     tmr_.async_wait(

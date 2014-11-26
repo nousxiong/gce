@@ -95,7 +95,7 @@ public:
   {
     if (is_copy_read_size_)
     {
-      cow_.data().read(other.cow_.data().read_size());
+      cow_.get_buffer_ref().read(other.cow_.get_buffer_ref().read_size());
     }
   }
 
@@ -110,7 +110,7 @@ public:
       cow_ = rhs.cow_;
       if (is_copy_read_size_)
       {
-        cow_.data().read(rhs.cow_.data().read_size());
+        cow_.get_buffer_ref().read(rhs.cow_.get_buffer_ref().read_size());
       }
     }
     return *this;
@@ -118,23 +118,23 @@ public:
 
   byte_t const* data() const
   {
-    return cow_.data().data();
+    return cow_.get_buffer_ref().data();
   }
 
-  std::size_t size() const { return cow_.data().write_size(); }
+  std::size_t size() const { return cow_.get_buffer_ref().write_size(); }
   match_t get_type() const { return type_; }
-#ifdef GCE_LUA
+#ifdef GCE_SCRIPT
   match_type get_match_type() const { return match_type(type_); }
 #endif
   boost::uint32_t get_tag_offset() const { return tag_offset_; }
 
   template <typename Match>
   void set_type(Match type) { type_ = detail::to_match(type); }
-#ifdef GCE_LUA
+#ifdef GCE_SCRIPT
   void set_match_type(match_type type) { type_ = type; }
 #endif
-  void reset_write() { cow_.data().clear_write(); }
-  void reset_read() { cow_.data().clear_read(); }
+  void reset_write() { cow_.get_buffer_ref().clear_write(); }
+  void reset_read() { cow_.get_buffer_ref().clear_read(); }
 
   template <typename T>
   message& operator<<(T const& t)
@@ -149,7 +149,7 @@ public:
     }
 
     cow_.reserve(size);
-    detail::buffer_ref& buf = cow_.data();
+    detail::buffer_ref& buf = cow_.get_buffer_ref();
 
     boost::amsg::zero_copy_buffer writer(
       buf.get_write_data(), buf.remain_write_size()
@@ -165,7 +165,7 @@ public:
   template <typename T>
   message& operator>>(T& t)
   {
-    detail::buffer_ref& buf = cow_.data();
+    detail::buffer_ref& buf = cow_.get_buffer_ref();
     boost::amsg::zero_copy_buffer reader(
       buf.get_read_data(), buf.remain_read_size()
       );
@@ -182,7 +182,7 @@ public:
     boost::uint32_t msg_size = (boost::uint32_t)m.size();
     match_t msg_type = m.get_type();
     boost::uint32_t tag_offset = m.tag_offset_;
-    detail::buffer_ref& buf = cow_.data();
+    detail::buffer_ref& buf = cow_.get_buffer_ref();
 
     boost::amsg::error_code_t ec = boost::amsg::success;
     std::size_t size = boost::amsg::size_of(msg_size, ec);
@@ -221,7 +221,7 @@ public:
     boost::uint32_t msg_size;
     match_t msg_type;
     boost::uint32_t tag_offset;
-    detail::buffer_ref& buf = cow_.data();
+    detail::buffer_ref& buf = cow_.get_buffer_ref();
     boost::amsg::zero_copy_buffer reader(
       buf.get_read_data(), buf.remain_read_size()
       );
@@ -262,7 +262,7 @@ public:
   {
     boost::uint32_t size;
     *this >> size;
-    detail::buffer_ref& buf = cow_.data();
+    detail::buffer_ref& buf = cow_.get_buffer_ref();
     str = boost::string_ref((char const*)buf.get_read_data(), size);
     buf.read(size);
     return *this;
@@ -304,7 +304,7 @@ public:
     return *this;
   }
 
-#ifdef GCE_LUA
+#ifdef GCE_SCRIPT
   message& operator<<(duration_type const& dur)
   {
     *this << dur.dur_.count();
@@ -391,13 +391,13 @@ public:
     return rt;
   }
 
-#ifdef GCE_LUA
+#ifdef GCE_SCRIPT
   int get_overloading_type() const
   {
     return (int)detail::overloading_msg;
   }
 
-  GCE_LUA_SERIALIZE_FUNC
+  GCE_SCRIPT_SERIALIZE_FUNC
 #endif
 
 public:
@@ -406,7 +406,7 @@ public:
     svcid_t svc, aid_t skt, bool is_err_ret
     )
   {
-    tag_offset_ = (boost::uint32_t)cow_.data().write_size();
+    tag_offset_ = (boost::uint32_t)cow_.get_buffer_ref().write_size();
     if (aid_t* aid = boost::get<aid_t>(&tag))
     {
       *this << detail::tag_aid_t << *aid;
@@ -456,7 +456,7 @@ public:
     bool has_tag = false;
     if (tag_offset_ != u32_nil)
     {
-      detail::buffer_ref& buf = cow_.data();
+      detail::buffer_ref& buf = cow_.get_buffer_ref();
       GCE_ASSERT(tag_offset_ < buf.write_size())(tag_offset_)(buf.write_size());
       buf.read(tag_offset_);
       match_t tag_type;

@@ -138,7 +138,7 @@ public:
         scoped_bool<bool> scp(recving_);
         if (tmo < infin)
         {
-          start_recv_timer(tmo);
+          start_timer(tmo);
         }
         curr_pattern_ = patt;
         actor_code ac = yield();
@@ -191,7 +191,7 @@ public:
         scoped_bool<bool> scp(responsing_);
         if (tmo < infin)
         {
-          start_recv_timer(tmo);
+          start_timer(tmo);
         }
         actor_code ac = yield();
         if (ac == actor_timeout)
@@ -216,7 +216,7 @@ public:
 
   void sleep_for(duration_t dur)
   {
-    start_recv_timer(dur);
+    start_timer(dur);
     yield();
   }
 
@@ -353,9 +353,14 @@ private:
     stat_ = off;
     ec_ = ec;
     exit_msg_ = exit_msg;
+
+    if (ec != exit_normal)
+    {
+      free_self();
+    }
   }
 
-  void start_recv_timer(duration_t dur)
+  void start_timer(duration_t dur)
   {
     tmr_.expires_from_now(dur);
     tmr_.async_wait(

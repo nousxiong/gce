@@ -67,6 +67,7 @@ private:
           );
       }
 
+      boost::timer::auto_cpu_timer t;
       thrs.join_all();
 
       for (std::size_t i=0; i<my_actor_size; ++i)

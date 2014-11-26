@@ -197,7 +197,7 @@ public:
       {
         if (tmo < infin)
         {
-          start_recv_timer(tmo, f);
+          start_timer(tmo, f);
         }
         recv_h_ = f;
         curr_pattern_ = patt;
@@ -329,7 +329,7 @@ private:
     svc_.free_actor(this);
   }
 
-  void start_recv_timer(duration_t dur, recv_handler_t const& hdr)
+  void start_timer(duration_t dur, recv_handler_t const& hdr)
   {
     tmr_.expires_from_now(dur);
     tmr_.async_wait(

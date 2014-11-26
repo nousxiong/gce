@@ -17,7 +17,7 @@
 #include <gce/actor/spawn.hpp>
 #include <gce/actor/pattern.hpp>
 #include <gce/actor/service.hpp>
-#ifdef GCE_HAS_SCRIPT
+#ifdef GCE_SCRIPT
 # include <gce/actor/script.hpp>
 #endif
 #include <gce/actor/response.hpp>

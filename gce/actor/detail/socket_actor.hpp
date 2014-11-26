@@ -461,6 +461,8 @@ private:
   void send_msg(message const& m)
   {
     GCE_ASSERT(skt_)(m);
+    GCE_ASSERT(m.size() <= GCE_MAX_MSG_SIZE)(m);
+
     msg_header hdr;
     hdr.size_ = (boost::uint32_t)m.size();
     hdr.type_ = m.get_type();
@@ -849,7 +851,7 @@ private:
       return false;
     }
 
-    GCE_VERIFY(hdr.size_ <= GCE_MAX_MSG_SIZE)(hdr.size_)(remain_size)
+    GCE_VERIFY(hdr.size_ <= GCE_MAX_MSG_SIZE)(hdr.size_)(remain_size)(hdr.type_)
       .log(lg_, "message overlength");
 
     std::size_t header_size = zbuf.read_length();
@@ -910,6 +912,7 @@ private:
         skt_->connect(yield[ec]);
         if (!ec || stat_ != on)
         {
+          recv_cache_.clear();
           break;
         }
       }

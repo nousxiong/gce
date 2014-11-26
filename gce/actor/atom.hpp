@@ -116,8 +116,8 @@ int lua_overloading_2()
 } /// namespace detail
 } /// namespace gce
 
-#ifdef GCE_LUA
-# define GCE_LUA_SERIALIZE_FUNC \
+#ifdef GCE_SCRIPT
+# define GCE_SCRIPT_SERIALIZE_FUNC \
   template <typename Strm> \
   Strm serialize(Strm& s) \
   { \
@@ -135,7 +135,9 @@ int lua_overloading_2()
   { \
     return Self(); \
   }
+#endif /// GCE_SCRIPT
 
+#ifdef GCE_LUA
 # define GCE_LUA_REG_SERIALIZE_FUNC(class_name) \
   .addFunction("serialize", &class_name::serialize<gce::message>) \
   .addFunction("deserialize", &class_name::deserialize<gce::message>) \
@@ -192,13 +194,13 @@ struct match_type
     return rt;
   }
 
-#ifdef GCE_LUA
+#ifdef GCE_SCRIPT
   int get_overloading_type() const
   {
     return (int)detail::overloading_match_t;
   }
 
-  GCE_LUA_SERIALIZE_FUNC
+  GCE_SCRIPT_SERIALIZE_FUNC
 #endif
 
   boost::uint64_t val_;

@@ -263,7 +263,7 @@ public:
     return rt;
   }
 
-#ifdef GCE_LUA
+#ifdef GCE_SCRIPT
   int get_overloading_type() const
   {
     return (int)detail::overloading_aid;
@@ -274,7 +274,7 @@ public:
     return !(*this);
   }
 
-  GCE_LUA_SERIALIZE_FUNC
+  GCE_SCRIPT_SERIALIZE_FUNC
 #endif
 
   svcid_t svc_;

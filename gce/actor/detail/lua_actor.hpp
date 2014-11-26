@@ -42,6 +42,7 @@ public:
     , L_(svc.get_lua_state())
     , f_(L_)
     , co_(L_)
+    , rf_(L_)
     , svc_(svc)
     , yielding_(false)
     , recving_(false)
@@ -253,32 +254,27 @@ public:
 
   void log_debug(std::string const& str)
   {
-    std::string s = unpack_file_line();
-    GCE_DEBUG(lg_)(s) << str;
+    GCE_DEBUG(lg_) << str;
   }
 
   void log_info(std::string const& str)
   {
-    std::string s = unpack_file_line();
-    GCE_INFO(lg_)(s) << str;
+    GCE_INFO(lg_) << str;
   }
 
   void log_warn(std::string const& str)
   {
-    std::string s = unpack_file_line();
-    GCE_WARN(lg_)(s) << str;
+    GCE_WARN(lg_) << str;
   }
 
   void log_error(std::string const& str)
   {
-    std::string s = unpack_file_line();
-    GCE_ERROR(lg_)(s) << str;
+    GCE_ERROR(lg_) << str;
   }
 
   void log_fatal(std::string const& str)
   {
-    std::string s = unpack_file_line();
-    GCE_FATAL(lg_)(s) << str;
+    GCE_FATAL(lg_) << str;
   }
 
 public:
@@ -308,6 +304,11 @@ public:
   void set_coro(luabridge::LuaRef co)
   {
     co_ = co;
+  }
+
+  void set_resume(luabridge::LuaRef rf)
+  {
+    rf_ = rf;
   }
 
   void init(std::string const& script)
@@ -408,7 +409,7 @@ private:
         }
         resume();
         set_recv_global(nil_aid_, nil_msg_);
-        f_();
+        rf_();
         quit();
       }
       catch (std::exception& ex)
@@ -552,7 +553,7 @@ private:
         {
           resume();
           set_recv_global(sender, msg);
-          f_();
+          rf_();
           quit();
         }
         catch (std::exception& ex)
@@ -569,7 +570,7 @@ private:
     try
     {
       resume();
-      f_();
+      rf_();
       quit();
     }
     catch (std::exception& ex)
@@ -590,7 +591,7 @@ private:
       resume();
       luabridge::setGlobal(L_, ec.value(), "gce_conn_ret");
       luabridge::setGlobal(L_, ec.message(), "gce_conn_errmsg");
-      f_();
+      rf_();
       quit();
     }
     catch (std::exception& ex)
@@ -617,7 +618,7 @@ private:
       }
       resume();
       luabridge::setGlobal(L_, aid, "gce_spawn_aid");
-      f_();
+      rf_();
       quit();
     }
     catch (std::exception& ex)
@@ -686,7 +687,7 @@ private:
     {
       resume();
       luabridge::setGlobal(L_, aid, "gce_spawn_aid");
-      f_();
+      rf_();
       quit();
     }
     catch (std::exception& ex)
@@ -702,14 +703,6 @@ private:
     luabridge::setGlobal(L_, msg, "gce_recv_msg");
   }
 
-  std::string unpack_file_line()
-  {
-    luaL_where(L_, 2);
-    luabridge::LuaRef file_line(L_);
-    file_line.pop(L_);
-    return file_line.cast<std::string>();
-  }
-
 private:
   /// Ensure start from a new cache line.
   byte_t pad0_[GCE_CACHE_LINE_SIZE];
@@ -718,6 +711,7 @@ private:
   GCE_CACHE_ALIGNED_VAR(std::string, script_)
   GCE_CACHE_ALIGNED_VAR(luabridge::LuaRef, f_)
   GCE_CACHE_ALIGNED_VAR(luabridge::LuaRef, co_)
+  GCE_CACHE_ALIGNED_VAR(luabridge::LuaRef, rf_)
 
   /// thread local
   service_t& svc_;
