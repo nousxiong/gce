@@ -40,6 +40,11 @@ public:
     make_description(what_, "Assert exception, timestamp <", tp, msg);
   }
 
+  
+  ~assert_except() throw() 
+  {
+  }
+
   char const* what() const throw()
   {
     return what_.c_str();

@@ -90,6 +90,7 @@ int main()
     gce::remote_common_relay_ut::run();
     gce::service_ut::run();
     //gce::test_partial_ut::run();
+    //gce::socket_ut::run();
 #ifdef GCE_LUA
     gce::lua_actor_ut::run();
     gce::lua_socket_ut::run();

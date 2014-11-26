@@ -26,7 +26,7 @@ class record
 
 public:
   record(logger_t& lg, level lv, time_point_t nw = time_point_t())
-    : lg_(lg)
+    : lg_(&lg)
     , lv_(lv)
     , flushed_(false)
     , rec_(0)
@@ -36,7 +36,7 @@ public:
 
   template <typename Scope>
   record(Scope& scp, level lv)
-    : lg_(scp.get_logger())
+    : lg_(&scp.get_logger())
     , lv_(lv)
     , flushed_(false)
     , rec_(&scp.add_record(lv))
@@ -435,7 +435,7 @@ public:
     {
       std::vector<record> rec_list;
       rec_list.push_back(*this);
-      lg_(rec_list);
+      (*lg_)(rec_list);
     }
   }
 
@@ -446,7 +446,7 @@ public:
 
   bool operator!() const
   {
-    if (lg_)
+    if (*lg_)
     {
       return flushed_;
     }
@@ -457,7 +457,7 @@ public:
   }
 
 private:
-  logger_t& lg_;
+  logger_t* lg_;
   level lv_;
   bool flushed_;
 
