@@ -482,7 +482,7 @@ private:
   handle_type hdl_type_;
 };
 
-assertion make_assert(char const* expr, char const* file, int line, gce::log::level lv)
+inline assertion make_assert(char const* expr, char const* file, int line, gce::log::level lv)
 {
   return assertion(expr, file, line, lv);
 }

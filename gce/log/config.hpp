@@ -63,7 +63,7 @@ static const char* const level_string[] =
   "FATAL"
 };
 
-const char* const to_string(level lv)
+inline const char* const to_string(level lv)
 {
   return level_string[lv];
 }
