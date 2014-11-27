@@ -47,13 +47,13 @@ struct actor_func
 };
 
 template <typename Tag, typename Context, typename F>
-actor_func<Tag, Context> make_actor_func(F f)
+inline actor_func<Tag, Context> make_actor_func(F f)
 {
   return actor_func<Tag, Context>(f);
 }
 
 template <typename Tag, typename Context, typename F, typename A>
-actor_func<Tag, Context> make_actor_func(F f, A a)
+inline actor_func<Tag, Context> make_actor_func(F f, A a)
 {
   return actor_func<Tag, Context>(f, a);
 }

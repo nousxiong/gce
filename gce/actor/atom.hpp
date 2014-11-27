@@ -21,7 +21,7 @@
 namespace gce
 {
 /// Since lordoffox's str2val.h (http://bbs.cppfans.org/forum.php?mod=viewthread&tid=56&extra=page%3D1)
-boost::uint64_t atom(char const* str)
+inline boost::uint64_t atom(char const* str)
 {
   std::size_t len = std::char_traits<char>::length(str);
   GCE_ASSERT(len <= 13)(len)(str);
@@ -63,7 +63,7 @@ boost::uint64_t atom(char const* str)
 }
 
 /// Since lordoffox's str2val.h (http://bbs.cppfans.org/forum.php?mod=viewthread&tid=56&extra=page%3D1)
-std::string atom(boost::uint64_t what)
+inline std::string atom(boost::uint64_t what)
 {
   std::string ret;
   static std::string::const_pointer const decoding_table = "\0abcdefghijklmnopqrstuvwxyz_";
@@ -99,15 +99,15 @@ enum overloading_type
   overloading_msg = overloading_0,
 };
 
-int lua_overloading_0()
+inline int lua_overloading_0()
 {
   return (int)overloading_0;
 }
-int lua_overloading_1()
+inline int lua_overloading_1()
 {
   return (int)overloading_1;
 }
-int lua_overloading_2()
+inline int lua_overloading_2()
 {
   return (int)overloading_2;
 }
@@ -207,17 +207,17 @@ struct match_type
 };
 
 #ifdef GCE_LUA
-match_type make_match(int i)
+inline match_type make_match(int i)
 {
   return match_type(i);
 }
 
-match_type s2i(char const* str)
+inline match_type s2i(char const* str)
 {
   return atom(str);
 }
 
-std::string i2s(match_type what)
+inline std::string i2s(match_type what)
 {
   return atom(what);
 }

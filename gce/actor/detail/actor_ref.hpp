@@ -476,7 +476,7 @@ public:
   template <typename Recver>
   resp_t request(Recver const& recver, message const& m)
   {
-    a_.request(recver, m);
+    return a_.request(recver, m);
   }
 
   void reply(aid_t const& recver, message const& m)

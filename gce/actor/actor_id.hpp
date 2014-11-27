@@ -284,7 +284,7 @@ typedef actor_id aid_t;
 typedef actor_id sktaid_t;
 
 #ifdef GCE_LUA
-aid_t lua_aid()
+inline aid_t lua_aid()
 {
   return aid_t();
 }
@@ -292,12 +292,12 @@ aid_t lua_aid()
 
 namespace detail
 {
-bool check_local(aid_t const& id, ctxid_t ctxid)
+inline bool check_local(aid_t const& id, ctxid_t ctxid)
 {
   return id.ctxid_ == ctxid;
 }
 
-bool check_local_valid(aid_t const& id, ctxid_t ctxid, timestamp_t timestamp)
+inline bool check_local_valid(aid_t const& id, ctxid_t ctxid, timestamp_t timestamp)
 {
   GCE_ASSERT(id.ctxid_ == ctxid)(ctxid)(id);
   return id.timestamp_ == timestamp;

@@ -29,8 +29,8 @@ public:
     : lg_(&lg)
     , lv_(lv)
     , flushed_(false)
-    , rec_(0)
     , ts_(nw)
+    , rec_(0)
   {
   }
 

@@ -23,49 +23,49 @@ struct enum_t {};
 struct other_t {};
 
 template <typename Match>
-match_t to_match_impl(enum_t, Match match)
+inline match_t to_match_impl(enum_t, Match match)
 {
   return (match_t)match;
 }
 
-match_t to_match_impl(char const* match)
+inline match_t to_match_impl(char const* match)
 {
   return atom(match);
 }
 
-match_t to_match_impl(std::string const& match)
+inline match_t to_match_impl(std::string const& match)
 {
   return atom(match.c_str());
 }
 
-match_t to_match_impl(int match)
+inline match_t to_match_impl(int match)
 {
   return (match_t)match;
 }
 
-match_t to_match_impl(match_t match)
+inline match_t to_match_impl(match_t match)
 {
   return match;
 }
 
-match_t to_match_impl(boost::uint32_t match)
+inline match_t to_match_impl(boost::uint32_t match)
 {
   return match;
 }
 
-match_t to_match_impl(boost::uint16_t match)
+inline match_t to_match_impl(boost::uint16_t match)
 {
   return match;
 }
 
 template <typename Match>
-match_t to_match_impl(other_t, Match match)
+inline match_t to_match_impl(other_t, Match match)
 {
   return to_match_impl(match);
 }
 
 template <typename Match>
-match_t to_match(Match match)
+inline match_t to_match(Match match)
 {
   typedef typename boost::remove_const<
     typename boost::remove_reference<

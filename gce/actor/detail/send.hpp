@@ -19,19 +19,19 @@ namespace gce
 namespace detail
 {
 template <typename Sender, typename Recver>
-void send_impl(Sender& sender, Recver const& recver, message& m)
+inline void send_impl(Sender& sender, Recver const& recver, message& m)
 {
   sender.send(recver, m);
 }
 
 template <typename Sender, typename Recver>
-resp_t request_impl(Sender& sender, Recver const& recver, message& m)
+inline resp_t request_impl(Sender& sender, Recver const& recver, message& m)
 {
   return sender.request(recver, m);
 }
 
 template <typename Sender>
-void reply_impl(Sender& sender, aid_t recver, message& m)
+inline void reply_impl(Sender& sender, aid_t recver, message& m)
 {
   sender.reply(recver, m);
 }
@@ -40,21 +40,21 @@ void reply_impl(Sender& sender, aid_t recver, message& m)
 /// Send
 ///----------------------------------------------------------------------------
 template <typename Sender, typename Recver>
-void send(Sender& sender, Recver const& recver)
+inline void send(Sender& sender, Recver const& recver)
 {
   message m;
   send_impl(sender, recver, m);
 }
 ///----------------------------------------------------------------------------
 template <typename Sender, typename Recver>
-void send(Sender& sender, Recver const& recver, match_t type)
+inline void send(Sender& sender, Recver const& recver, match_t type)
 {
   message m(type);
   send_impl(sender, recver, m);
 }
 ///----------------------------------------------------------------------------
 template <typename Sender, typename Recver, typename A1>
-void send(Sender& sender, Recver const& recver, match_t type, A1 const& a1)
+inline void send(Sender& sender, Recver const& recver, match_t type, A1 const& a1)
 {
   message m(type);
   m << a1;
@@ -62,7 +62,7 @@ void send(Sender& sender, Recver const& recver, match_t type, A1 const& a1)
 }
 ///----------------------------------------------------------------------------
 template <typename Sender, typename Recver, typename A1, typename A2>
-void send(
+inline void send(
   Sender& sender, Recver const& recver, match_t type,
   A1 const& a1, A2 const& a2
   )
@@ -73,7 +73,7 @@ void send(
 }
 ///----------------------------------------------------------------------------
 template <typename Sender, typename Recver, typename A1, typename A2, typename A3>
-void send(
+inline void send(
   Sender& sender, Recver const& recver, match_t type,
   A1 const& a1, A2 const& a2, A3 const& a3
   )
@@ -84,7 +84,7 @@ void send(
 }
 ///----------------------------------------------------------------------------
 template <typename Sender, typename Recver, typename A1, typename A2, typename A3, typename A4>
-void send(
+inline void send(
   Sender& sender, Recver const& recver, match_t type,
   A1 const& a1, A2 const& a2, A3 const& a3, A4 const& a4
   )
@@ -98,7 +98,7 @@ template <
   typename Sender, typename Recver, typename A1, typename A2,
   typename A3, typename A4, typename A5
   >
-void send(
+inline void send(
   Sender& sender, Recver const& recver, match_t type,
   A1 const& a1, A2 const& a2, A3 const& a3, A4 const& a4, A5 const& a5
   )
@@ -111,21 +111,21 @@ void send(
 /// Request
 ///----------------------------------------------------------------------------
 template <typename Sender, typename Recver>
-resp_t request(Sender& sender, Recver const& recver)
+inline resp_t request(Sender& sender, Recver const& recver)
 {
   message m;
   return request_impl(sender, recver, m);
 }
 ///----------------------------------------------------------------------------
 template <typename Sender, typename Recver>
-resp_t request(Sender& sender, Recver const& recver, match_t type)
+inline resp_t request(Sender& sender, Recver const& recver, match_t type)
 {
   message m(type);
   return request_impl(sender, recver, m);
 }
 ///----------------------------------------------------------------------------
 template <typename Sender, typename Recver, typename A1>
-resp_t request(Sender& sender, Recver const& recver, match_t type, A1 const& a1)
+inline resp_t request(Sender& sender, Recver const& recver, match_t type, A1 const& a1)
 {
   message m(type);
   m << a1;
@@ -133,7 +133,7 @@ resp_t request(Sender& sender, Recver const& recver, match_t type, A1 const& a1)
 }
 ///----------------------------------------------------------------------------
 template <typename Sender, typename Recver, typename A1, typename A2>
-resp_t request(
+inline resp_t request(
   Sender& sender, Recver const& recver, match_t type,
   A1 const& a1, A2 const& a2
   )
@@ -144,7 +144,7 @@ resp_t request(
 }
 ///----------------------------------------------------------------------------
 template <typename Sender, typename Recver, typename A1, typename A2, typename A3>
-resp_t request(
+inline resp_t request(
   Sender& sender, Recver const& recver, match_t type,
   A1 const& a1, A2 const& a2, A3 const& a3
   )
@@ -155,7 +155,7 @@ resp_t request(
 }
 ///----------------------------------------------------------------------------
 template <typename Sender, typename Recver, typename A1, typename A2, typename A3, typename A4>
-resp_t request(
+inline resp_t request(
   Sender& sender, Recver const& recver, match_t type,
   A1 const& a1, A2 const& a2, A3 const& a3, A4 const& a4
   )
@@ -168,7 +168,7 @@ resp_t request(
 template <
   typename Sender, typename Recver, typename A1, typename A2,
   typename A3, typename A4, typename A5>
-resp_t request(
+inline resp_t request(
   Sender& sender, Recver const& recver, match_t type,
   A1 const& a1, A2 const& a2, A3 const& a3, A4 const& a4, A5 const& a5
   )
@@ -181,21 +181,21 @@ resp_t request(
 /// Reply
 ///----------------------------------------------------------------------------
 template <typename Sender>
-void reply(Sender& sender, aid_t recver)
+inline void reply(Sender& sender, aid_t recver)
 {
   message m;
   reply_impl(sender, recver, m);
 }
 ///----------------------------------------------------------------------------
 template <typename Sender>
-void reply(Sender& sender, aid_t recver, match_t type)
+inline void reply(Sender& sender, aid_t recver, match_t type)
 {
   message m(type);
   reply_impl(sender, recver, m);
 }
 ///----------------------------------------------------------------------------
 template <typename Sender, typename A1>
-void reply(Sender& sender, aid_t recver, match_t type, A1 const& a1)
+inline void reply(Sender& sender, aid_t recver, match_t type, A1 const& a1)
 {
   message m(type);
   m << a1;
@@ -203,7 +203,7 @@ void reply(Sender& sender, aid_t recver, match_t type, A1 const& a1)
 }
 ///----------------------------------------------------------------------------
 template <typename Sender, typename A1, typename A2>
-void reply(
+inline void reply(
   Sender& sender, aid_t recver, match_t type,
   A1 const& a1, A2 const& a2
   )
@@ -214,7 +214,7 @@ void reply(
 }
 ///----------------------------------------------------------------------------
 template <typename Sender, typename A1, typename A2, typename A3>
-void reply(
+inline void reply(
   Sender& sender, aid_t recver, match_t type,
   A1 const& a1, A2 const& a2, A3 const& a3
   )
@@ -225,7 +225,7 @@ void reply(
 }
 ///----------------------------------------------------------------------------
 template <typename Sender, typename A1, typename A2, typename A3, typename A4>
-void reply(
+inline void reply(
   Sender& sender, aid_t recver, match_t type,
   A1 const& a1, A2 const& a2, A3 const& a3, A4 const& a4
   )
@@ -239,7 +239,7 @@ template <
   typename Sender, typename A1, typename A2,
   typename A3, typename A4, typename A5
   >
-void reply(
+inline void reply(
   Sender& sender, aid_t recver, match_t type,
   A1 const& a1, A2 const& a2, A3 const& a3, A4 const& a4, A5 const& a5
   )

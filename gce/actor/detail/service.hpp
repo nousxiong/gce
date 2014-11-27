@@ -18,7 +18,7 @@ namespace gce
 namespace detail
 {
 template <typename Service>
-void register_service(aid_t aid, Service& svc, match_t name)
+inline void register_service(aid_t aid, Service& svc, match_t name)
 {
   typedef typename Service::context_t context_t;
   context_t& ctx = svc.get_context();
@@ -27,7 +27,7 @@ void register_service(aid_t aid, Service& svc, match_t name)
 }
 
 template <typename Service>
-void deregister_service(aid_t aid, Service& svc, match_t name)
+inline void deregister_service(aid_t aid, Service& svc, match_t name)
 {
   typedef typename Service::context_t context_t;
   context_t& ctx = svc.get_context();

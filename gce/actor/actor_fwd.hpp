@@ -14,12 +14,12 @@
 
 namespace gce
 {
-std::size_t default_stacksize()
+inline std::size_t default_stacksize()
 {
   return boost::coroutines::stack_traits::default_size();
 }
 
-std::size_t minimum_stacksize()
+inline std::size_t minimum_stacksize()
 {
   return boost::coroutines::stack_traits::minimum_size();
 }

@@ -19,7 +19,7 @@ namespace gce
 namespace detail
 {
 template <typename Context>
-void connect_impl(
+inline void connect_impl(
   aid_t sire,
   typename Context::socket_service_t& svc,
   ctxid_t target,
@@ -44,7 +44,7 @@ void connect_impl(
 }
 
 template <typename Context>
-void bind_impl(
+inline void bind_impl(
   aid_t sire,
   typename Context::acceptor_service_t& svc,
   std::string const& ep,
@@ -65,7 +65,7 @@ void bind_impl(
 
 /// connect
 template <typename Context>
-void connect(
+inline void connect(
   aid_t sire,
   typename Context::socket_service_t& svc,
   ctxid_t target, /// connect target
@@ -86,7 +86,7 @@ void connect(
 }
 
 template <typename Context>
-void handle_connect(
+inline void handle_connect(
   actor_ref<stackless, Context> self, aid_t skt, 
   message msg, typename Context::stackless_service_t& sire, errcode_t& ec
   )
@@ -102,14 +102,14 @@ void handle_connect(
 }
 
 template <typename Context>
-void handle_bind(actor_ref<stackless, Context> self, aid_t acpr, message)
+inline void handle_bind(actor_ref<stackless, Context> self, aid_t acpr, message)
 {
   self.resume();
 }
 
 // bind
 template <typename Context>
-void bind(
+inline void bind(
   aid_t sire,
   typename Context::acceptor_service_t& svc,
   std::string const& ep, /// endpoint

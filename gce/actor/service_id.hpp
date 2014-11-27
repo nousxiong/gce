@@ -133,7 +133,7 @@ public:
 typedef service_id svcid_t;
 
 #ifdef GCE_LUA
-svcid_t lua_svcid()
+inline svcid_t lua_svcid()
 {
   return svcid_t();
 }
@@ -141,7 +141,7 @@ svcid_t lua_svcid()
 }
 
 template<typename CharT, typename TraitsT>
-std::basic_ostream<CharT, TraitsT>& operator<<(
+inline std::basic_ostream<CharT, TraitsT>& operator<<(
   std::basic_ostream<CharT, TraitsT>& strm, gce::svcid_t const& svc
   )
 {

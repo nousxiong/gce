@@ -24,7 +24,7 @@ namespace gce
 /// Spawn a actor using given threaded_actor
 ///------------------------------------------------------------------------------
 template <typename F>
-aid_t spawn(
+inline aid_t spawn(
   threaded_actor sire, F f,
   link_type type = no_link,
   std::size_t stack_size = default_stacksize()
@@ -49,7 +49,7 @@ aid_t spawn(
 }
 
 template <typename Tag, typename F>
-aid_t spawn(
+inline aid_t spawn(
   threaded_actor sire, F f,
   link_type type = no_link,
   std::size_t stack_size = default_stacksize()
@@ -62,7 +62,7 @@ aid_t spawn(
 /// Spawn a actor using given stackful_actor
 ///------------------------------------------------------------------------------
 template <typename F>
-aid_t spawn(
+inline aid_t spawn(
   stackful_actor sire, F f,
   link_type type = no_link,
   bool sync_sire = false,
@@ -88,7 +88,7 @@ aid_t spawn(
 }
 
 template <typename Tag, typename F>
-aid_t spawn(
+inline aid_t spawn(
   stackful_actor sire, F f,
   link_type type = no_link,
   bool sync_sire = false,
@@ -104,7 +104,7 @@ aid_t spawn(
 namespace detail
 {
 template <typename F>
-void spawn(
+inline void spawn(
   stackless, 
   gce::stackless_actor sire, F f, aid_t& aid,
   link_type type, bool sync_sire
@@ -126,7 +126,7 @@ void spawn(
 }
 
 #ifdef GCE_LUA
-void spawn(
+inline void spawn(
   luaed, 
   gce::stackless_actor sire, std::string const& script, aid_t& aid,
   link_type type, bool sync_sire
@@ -150,7 +150,7 @@ void spawn(
 }
 
 template <typename F>
-void spawn(
+inline void spawn(
   stackless_actor sire, F f, aid_t& aid,
   link_type type = no_link,
   bool sync_sire = false
@@ -177,14 +177,14 @@ void spawn(
 ///------------------------------------------------------------------------------
 /// Spawn a threaded_actor
 ///------------------------------------------------------------------------------
-threaded_actor spawn(context& ctx)
+inline threaded_actor spawn(context& ctx)
 {
   return threaded_actor(ctx.make_threaded_actor());
 }
 ///------------------------------------------------------------------------------
 /// Spawn a nonblocked_actor using given threaded_actor
 ///------------------------------------------------------------------------------
-nonblocked_actor spawn(threaded_actor a)
+inline nonblocked_actor spawn(threaded_actor a)
 {
   context::nonblocked_actor_t& r = a.get_context().make_nonblocked_actor();
   a.add_nonblocked_actor(r);
@@ -194,7 +194,7 @@ nonblocked_actor spawn(threaded_actor a)
 /// Spawn a actor on remote context using NONE stackless_actor
 ///------------------------------------------------------------------------------
 template <typename ActorRef, typename Match>
-aid_t spawn_remote(
+inline aid_t spawn_remote(
   ActorRef sire, std::string const& func,
   Match ctxid,
   link_type type = no_link,
@@ -206,7 +206,7 @@ aid_t spawn_remote(
 }
 
 template <typename Tag, typename ActorRef, typename Match>
-aid_t spawn_remote(
+inline aid_t spawn_remote(
   ActorRef sire, std::string const& func,
   Match ctxid,
   link_type type = no_link,
@@ -220,7 +220,7 @@ aid_t spawn_remote(
 /// Spawn a actor on remote context using stackless_actor
 ///------------------------------------------------------------------------------
 template <typename Match>
-void spawn_remote(
+inline void spawn_remote(
   stackless_actor sire, std::string const& func, aid_t& aid,
   Match ctxid,
   link_type type = no_link,
@@ -242,7 +242,7 @@ void spawn_remote(
 }
 
 template <typename Tag, typename SpawnHandler, typename Match>
-void spawn_remote(
+inline void spawn_remote(
   stackless_actor sire, std::string const& func, SpawnHandler h,
   Match ctxid,
   link_type type = no_link,

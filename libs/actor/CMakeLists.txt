@@ -53,6 +53,7 @@ install (
   PATTERN "impl" EXCLUDE
   PATTERN "CVS" EXCLUDE
   PATTERN ".svn" EXCLUDE
+  PATTERN "lua" EXCLUDE
   )
 
 install (
@@ -78,5 +79,5 @@ if (GCE_ACTOR_BUILD_TEST)
 endif ()
 
 if (GCE_LUA)
-  install (FILES ${PROJECT_SOURCE_DIR}/gce/actor/lua/*.lua DESTINATION bin)
+  install (FILES ${PROJECT_SOURCE_DIR}/gce/actor/lua/gce.lua DESTINATION bin)
 endif ()

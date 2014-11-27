@@ -126,7 +126,7 @@ struct pattern
 };
 
 #ifdef GCE_LUA
-pattern lua_pattern()
+inline pattern lua_pattern()
 {
   return pattern();
 }

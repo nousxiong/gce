@@ -221,6 +221,19 @@ int main()
 
 Changelog
 ---------------
+v1.2
+* GCE.Actor change to header only
+* add lua, now user can use lua to write gce code
+* gce::actor<gce::threaded> change to gce::threaded_actor
+* gce::actor<gce::stackful> change to gce::stackful_actor
+* gce::actor<gce::nonblocked> change to gce::nonblocked_actor
+* gce::actor<gce::stackless> change to gce::stackless_actor
+* global send/recv removed, move to gce::actor<T>, using operator ->
+* none request message can relay now
+* atom can optionally be omited, user can use enum, string(limit 13 bytes) or old-atom-style
+* api recv (recv response) change to respond
+* gce::connect and gce::bind remove "is_router_", move to net_option
+
 v1.1 
 * gce::mixin_t change to gce::actor<gce::threaded>
 * gce::self_t change to gce::actor<gce::stackful>

@@ -21,14 +21,13 @@ namespace gce
 namespace detail
 {
 template <typename Context>
-aid_t make_stackful_actor(
+inline aid_t make_stackful_actor(
   aid_t const& sire, typename Context::stackful_service_t& svc,
   actor_func<stackful, Context> const& f, std::size_t stack_size
   )
 {
   typedef Context context_t;
-  context_t& ctx = svc.get_context();
-  stackful_actor<Context>* a = svc.make_actor();
+  stackful_actor<context_t>* a = svc.make_actor();
   a->init(f.f_);
   if (sire)
   {
@@ -40,14 +39,13 @@ aid_t make_stackful_actor(
 }
 
 template <typename Context>
-aid_t make_stackless_actor(
+inline aid_t make_stackless_actor(
   aid_t const& sire, typename Context::stackless_service_t& svc,
   actor_func<stackless, Context> const& f
   )
 {
   typedef Context context_t;
-  context_t& ctx = svc.get_context();
-  stackless_actor<Context>* a = svc.make_actor();
+  stackless_actor<context_t>* a = svc.make_actor();
   a->init(f.f_);
   if (sire)
   {
@@ -59,7 +57,7 @@ aid_t make_stackless_actor(
 }
 
 template <typename Service, typename ActorRef>
-Service& select_service(ActorRef sire, bool sync_sire)
+inline Service& select_service(ActorRef sire, bool sync_sire)
 {
   typedef typename ActorRef::context_t context_t;
   context_t& ctx = sire.get_context();
@@ -74,7 +72,7 @@ Service& select_service(ActorRef sire, bool sync_sire)
 }
 
 template <typename ActorRef>
-aid_t end_spawn(ActorRef sire, link_type type)
+inline aid_t end_spawn(ActorRef sire, link_type type)
 {
   pattern patt(msg_new_actor);
   message msg;
@@ -93,7 +91,7 @@ aid_t end_spawn(ActorRef sire, link_type type)
 }
 
 template <typename Context>
-void handle_spawn(
+inline void handle_spawn(
   actor_ref<stackless, Context> self, aid_t aid, message msg, 
   link_type type, boost::function<void (actor_ref<stackless, Context>, aid_t)> const& hdr
   )
@@ -115,7 +113,7 @@ void handle_spawn(
 
 /// spawn stackful_actor using NONE stackless_actor
 template <typename ActorRef, typename F>
-aid_t spawn(
+inline aid_t spawn(
   stackful,
   ActorRef sire, F f, bool sync_sire,
   link_type type, std::size_t stack_size
@@ -137,7 +135,7 @@ aid_t spawn(
 
 /// spawn stackless_actor using NONE stackless_actor
 template <typename ActorRef, typename F>
-aid_t spawn(
+inline aid_t spawn(
   stackless,
   ActorRef sire, F f, bool sync_sire,
   link_type type, std::size_t
@@ -160,7 +158,7 @@ aid_t spawn(
 #ifdef GCE_LUA
 /// spawn lua_actor using NONE stackless_actor
 template <typename ActorRef>
-aid_t spawn(
+inline aid_t spawn(
   luaed,
   ActorRef sire, std::string const& script, 
   bool sync_sire, link_type type, std::size_t
@@ -182,7 +180,7 @@ aid_t spawn(
 
 /// spawn stackless_actor using stackless_actor
 template <typename Context, typename F, typename SpawnHandler>
-void spawn(
+inline void spawn(
   stackless,
   actor_ref<stackless, Context> sire, F f, SpawnHandler h,
   typename Context::stackless_service_t& svc,
@@ -213,7 +211,7 @@ void spawn(
 #ifdef GCE_LUA
 /// spawn lua_actor using stackless_actor
 template <typename Context, typename SpawnHandler>
-void spawn(
+inline void spawn(
   luaed,
   actor_ref<stackless, Context> sire, SpawnHandler h, 
   std::string const& script, typename Context::lua_service_t& svc, 
@@ -243,7 +241,7 @@ void spawn(
 #endif
 
 template <typename Context>
-void handle_remote_spawn(
+inline void handle_remote_spawn(
   actor_ref<stackless, Context> self, aid_t aid,
   message msg, link_type type,
   boost::chrono::system_clock::time_point begin_tp,
@@ -311,7 +309,7 @@ void handle_remote_spawn(
 }
 
 template <typename ActorRef>
-aid_t spawn_remote(
+inline aid_t spawn_remote(
   spawn_type spw,
   ActorRef sire, std::string const& func, match_t ctxid,
   link_type type, std::size_t stack_size, seconds_t tmo
@@ -376,7 +374,7 @@ aid_t spawn_remote(
 
 /// spawn remote stackful_actor using NONE stackless_actor
 template <typename ActorRef>
-aid_t spawn_remote(
+inline aid_t spawn_remote(
   stackful,
   ActorRef sire, std::string const& func, match_t ctxid,
   link_type type, std::size_t stack_size, seconds_t tmo
@@ -387,7 +385,7 @@ aid_t spawn_remote(
 
 /// spawn remote stackless_actor using NONE stackless_actor
 template <typename ActorRef>
-aid_t spawn_remote(
+inline aid_t spawn_remote(
   stackless,
   ActorRef sire, std::string const& func, match_t ctxid,
   link_type type, std::size_t stack_size, seconds_t tmo
@@ -399,7 +397,7 @@ aid_t spawn_remote(
 #ifdef GCE_LUA
 /// spawn remote lua_actor using NONE stackless_actor
 template <typename ActorRef>
-aid_t spawn_remote(
+inline aid_t spawn_remote(
   luaed,
   ActorRef sire, std::string const& func, match_t ctxid,
   link_type type, std::size_t stack_size, seconds_t tmo
@@ -410,7 +408,7 @@ aid_t spawn_remote(
 #endif
 
 template <typename Context, typename SpawnHandler>
-void spawn_remote(
+inline void spawn_remote(
   spawn_type spw,
   actor_ref<stackless, Context> sire, std::string const& func, SpawnHandler h,
   match_t ctxid = ctxid_nil,
@@ -440,7 +438,7 @@ void spawn_remote(
 
 /// spawn remote stackful_actor using stackless_actor
 template <typename Context, typename SpawnHandler>
-void spawn_remote(
+inline void spawn_remote(
   stackful,
   actor_ref<stackless, Context>& sire, std::string const& func, SpawnHandler h,
   match_t ctxid, link_type type, std::size_t stack_size, seconds_t tmo
@@ -451,7 +449,7 @@ void spawn_remote(
 
 /// spawn remote stackless_actor using stackless_actor
 template <typename Context, typename SpawnHandler>
-aid_t spawn_remote(
+inline aid_t spawn_remote(
   stackless,
   actor_ref<stackless, Context> sire, std::string const& func, SpawnHandler h,
   match_t ctxid, link_type type, std::size_t stack_size, seconds_t tmo
@@ -463,7 +461,7 @@ aid_t spawn_remote(
 #ifdef GCE_LUA
 /// spawn remote lua_actor using stackless_actor
 template <typename Context, typename SpawnHandler>
-aid_t spawn_remote(
+inline aid_t spawn_remote(
   luaed,
   actor_ref<stackless, Context> sire, std::string const& func, SpawnHandler h,
   match_t ctxid, link_type type, std::size_t stack_size, seconds_t tmo

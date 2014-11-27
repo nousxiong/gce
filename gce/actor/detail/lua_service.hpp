@@ -37,17 +37,17 @@ struct lua_state_deletor
   }
 };
 ///------------------------------------------------------------------------------
-msg_t serialize_number(msg_t& msg, int src)
+inline msg_t serialize_number(msg_t& msg, int src)
 {
   msg << (boost::int32_t)src;
   return msg;
 }
-msg_t serialize_string(msg_t& msg, std::string const& src)
+inline msg_t serialize_string(msg_t& msg, std::string const& src)
 {
   msg << src;
   return msg;
 }
-msg_t serialize_boolean(msg_t& msg, bool src)
+inline msg_t serialize_boolean(msg_t& msg, bool src)
 {
   msg << src;
   return msg;
@@ -60,7 +60,7 @@ struct deserialize_result
   msg_t m_;
 };
 ///------------------------------------------------------------------------------
-deserialize_result<int> deserialize_number(msg_t& m)
+inline deserialize_result<int> deserialize_number(msg_t& m)
 {
   deserialize_result<int> res;
   boost::int32_t des;
@@ -69,14 +69,14 @@ deserialize_result<int> deserialize_number(msg_t& m)
   res.m_ = m;
   return res;
 }
-deserialize_result<std::string> deserialize_string(msg_t& m)
+inline deserialize_result<std::string> deserialize_string(msg_t& m)
 {
   deserialize_result<std::string> res;
   m >> res.r_;
   res.m_ = m;
   return res;
 }
-deserialize_result<bool> deserialize_boolean(msg_t& m)
+inline deserialize_result<bool> deserialize_boolean(msg_t& m)
 {
   deserialize_result<bool> res;
   m >> res.r_;
@@ -84,7 +84,7 @@ deserialize_result<bool> deserialize_boolean(msg_t& m)
   return res;
 }
 ///------------------------------------------------------------------------------
-void print(std::string const& str)
+inline void print(std::string const& str)
 {
   if (!str.empty())
   {
@@ -96,37 +96,37 @@ void print(std::string const& str)
   }
 }
 ///------------------------------------------------------------------------------
-duration_type lua_millisecs(int val)
+inline duration_type lua_millisecs(int val)
 {
   return millisecs_t(val);
 }
 
-duration_type lua_seconds(int val)
+inline duration_type lua_seconds(int val)
 {
   return seconds_t(val);
 }
 
-duration_type lua_minutes(int val)
+inline duration_type lua_minutes(int val)
 {
   return minutes_t(val);
 }
 
-duration_type lua_hours(int val)
+inline duration_type lua_hours(int val)
 {
   return hours_t(val);
 }
 
-duration_type make_zero()
+inline duration_type make_zero()
 {
   return duration_t(GCE_ZERO_TIME);
 }
 
-duration_type make_infin()
+inline duration_type make_infin()
 {
   return seconds_t(GCE_INFIN_TIME);
 }
 
-net_option make_net_option()
+inline net_option make_net_option()
 {
   return net_option();
 }
@@ -267,6 +267,7 @@ public:
           .addFunction("warn", &lua_actor_t::log_warn)
           .addFunction("error", &lua_actor_t::log_error)
           .addFunction("fatal", &lua_actor_t::log_fatal)
+          //.addFunction("run_actor", &lua_actor_t::run_actor)
         .endClass()
         .addFunction("overloading_0", &lua_overloading_0)
         .addFunction("overloading_1", &lua_overloading_1)

@@ -439,8 +439,6 @@ private:
 
   void send(message const& m)
   {
-    match_t type = m.get_type();
-    std::size_t size = m.size();
     if (conn_)
     {
       GCE_ASSERT(skt_)(m);
@@ -586,7 +584,6 @@ private:
 
     if (!svc_.stopped())
     {
-      context_t& ctx = svc_.get_context();
       svc_.add_actor(this);
 
       try

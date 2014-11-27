@@ -24,22 +24,22 @@ namespace gce
 namespace detail
 {
 template <typename Match>
-void make_pattern(pattern& rt, Match type)
+inline void make_pattern(pattern& rt, Match type)
 {
   rt.match_list_.push_back(to_match(type));
 }
 
-void make_pattern(pattern& rt, pattern const& type)
+inline void make_pattern(pattern& rt, pattern const& type)
 {
   rt.match_list_ = type.match_list_;
 }
 
-bool find_exit(match_t type)
+inline bool find_exit(match_t type)
 {
   return type == exit;
 }
 
-bool check_exit(std::vector<match_t>& match_list)
+inline bool check_exit(std::vector<match_t>& match_list)
 {
   if (match_list.empty())
   {
@@ -58,7 +58,7 @@ bool check_exit(std::vector<match_t>& match_list)
 }
 
 template <typename Tag, typename Recver>
-aid_t recv_impl(Tag, Recver& recver, message& msg, pattern& patt)
+inline aid_t recv_impl(Tag, Recver& recver, message& msg, pattern& patt)
 {
   bool add_exit = check_exit(patt.match_list_);
   if (add_exit)
@@ -81,7 +81,7 @@ aid_t recv_impl(Tag, Recver& recver, message& msg, pattern& patt)
 }
 
 template <typename Recver>
-aid_t recv_impl(gce::nonblocked, Recver& recver, message& msg, pattern& patt)
+inline aid_t recv_impl(gce::nonblocked, Recver& recver, message& msg, pattern& patt)
 {
   bool has_exit = check_exit(patt.match_list_);
   if (!has_exit)
@@ -101,7 +101,7 @@ aid_t recv_impl(gce::nonblocked, Recver& recver, message& msg, pattern& patt)
 }
 
 template <typename Tag, typename Recver>
-aid_t respond_impl(Tag, Recver& recver, resp_t res, message& msg, duration_t tmo)
+inline aid_t respond_impl(Tag, Recver& recver, resp_t res, message& msg, duration_t tmo)
 {
   aid_t sender = recver.respond(res, msg, tmo);
   if (msg.get_type() == exit)
@@ -117,7 +117,7 @@ aid_t respond_impl(Tag, Recver& recver, resp_t res, message& msg, duration_t tmo
 }
 
 template <typename Recver>
-aid_t respond_impl(gce::nonblocked, Recver& recver, resp_t res, message& msg, duration_t)
+inline aid_t respond_impl(gce::nonblocked, Recver& recver, resp_t res, message& msg, duration_t)
 {
   aid_t sender = recver.respond(res, msg);
   if (msg.get_type() == exit)
@@ -132,7 +132,7 @@ aid_t respond_impl(gce::nonblocked, Recver& recver, resp_t res, message& msg, du
 ///------------------------------------------------------------------------------
 /// recv stackless
 ///------------------------------------------------------------------------------
-bool begin_recv(pattern& patt)
+inline bool begin_recv(pattern& patt)
 {
   bool add_exit = check_exit(patt.match_list_);
   if (add_exit)
@@ -143,7 +143,7 @@ bool begin_recv(pattern& patt)
 }
 
 template <typename Stackless>
-bool end_recv(
+inline bool end_recv(
   Stackless recver, aid_t sender, message msg,
   aid_t& osender, bool has_exit
   )
@@ -169,7 +169,7 @@ bool end_recv(
 }
 
 template <typename Stackless>
-void handle_recv0(
+inline void handle_recv0(
   Stackless recver, aid_t sender, message msg,
   aid_t& osender, bool has_exit
   )
@@ -181,7 +181,7 @@ void handle_recv0(
 }
 
 template <typename Stackless, typename A1>
-void handle_recv1(
+inline void handle_recv1(
   Stackless recver, aid_t sender, message msg,
   aid_t& osender, bool has_exit, A1& a1
   )
@@ -194,7 +194,7 @@ void handle_recv1(
 }
 
 template <typename Stackless, typename A1, typename A2>
-void handle_recv2(
+inline void handle_recv2(
   Stackless recver, aid_t sender, message msg,
   aid_t& osender, bool has_exit, A1& a1, A2& a2
   )
@@ -207,7 +207,7 @@ void handle_recv2(
 }
 
 template <typename Stackless, typename A1, typename A2, typename A3>
-void handle_recv3(
+inline void handle_recv3(
   Stackless recver, aid_t sender, message msg,
   aid_t& osender, bool has_exit, A1& a1, A2& a2, A3& a3
   )
@@ -220,7 +220,7 @@ void handle_recv3(
 }
 
 template <typename Stackless, typename A1, typename A2, typename A3, typename A4>
-void handle_recv4(
+inline void handle_recv4(
   Stackless recver, aid_t sender, message msg,
   aid_t& osender, bool has_exit, A1& a1, A2& a2, A3& a3, A4& a4
   )
@@ -233,7 +233,7 @@ void handle_recv4(
 }
 
 template <typename Stackless, typename A1, typename A2, typename A3, typename A4, typename A5>
-void handle_recv5(
+inline void handle_recv5(
   Stackless recver, aid_t sender, message msg,
   aid_t& osender, bool has_exit, A1& a1, A2& a2, A3& a3, A4& a4, A5& a5
   )

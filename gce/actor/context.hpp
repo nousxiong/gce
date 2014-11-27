@@ -22,11 +22,11 @@
 #endif
 #include <gce/actor/detail/socket_actor.hpp>
 #include <gce/actor/detail/acceptor_actor.hpp>
-#include <gce/detail/dynarray.hpp>
 #include <gce/detail/unique_ptr.hpp>
 #include <boost/atomic.hpp>
 #include <boost/optional.hpp>
 #include <boost/lockfree/queue.hpp>
+#include <boost/container/deque.hpp>
 #include <boost/ref.hpp>
 #include <boost/bind.hpp>
 #include <vector>
@@ -66,23 +66,14 @@ public:
           attrs_.thread_num_ * attrs_.per_thread_service_num_
         )
     , concurrency_size_(service_size_ + attrs_.nonblocked_num_)
-    , strand_list_(concurrency_size_)
-    , threaded_service_list_(service_size_)
     , curr_threaded_svc_(0)
-    , stackful_service_list_(service_size_)
     , curr_stackful_svc_(0)
-    , stackless_service_list_(service_size_)
     , curr_stackless_svc_(0)
 #ifdef GCE_LUA
-    , lua_service_list_(service_size_)
     , curr_lua_svc_(0)
 #endif
-    , nonblocked_service_list_(attrs_.nonblocked_num_)
-    , nonblocked_actor_list_(attrs_.nonblocked_num_)
     , curr_nonblocked_actor_(0)
-    , socket_service_list_(service_size_)
     , curr_socket_svc_(0)
-    , acceptor_service_list_(service_size_)
     , curr_acceptor_svc_(0)
     , threaded_actor_list_(service_size_)
 #ifdef GCE_ACTOR_LOG
@@ -104,22 +95,24 @@ public:
       std::size_t index = 0;
       for (std::size_t i=0; i<service_size_; ++i, ++index)
       {
-        strand_t& snd = strand_list_.make_back(boost::ref(*ios_));
-        threaded_service_list_.make_back(boost::ref(*this), boost::ref(snd), index);
-        stackful_service_list_.make_back(boost::ref(*this), boost::ref(snd), index);
-        stackless_service_list_.make_back(boost::ref(*this), boost::ref(snd), index);
+        strand_list_.emplace_back(boost::ref(*ios_));
+        strand_t& snd = strand_list_.back();
+        threaded_service_list_.emplace_back(boost::ref(*this), boost::ref(snd), index);
+        stackful_service_list_.emplace_back(boost::ref(*this), boost::ref(snd), index);
+        stackless_service_list_.emplace_back(boost::ref(*this), boost::ref(snd), index);
 #ifdef GCE_LUA
-        lua_service_list_.make_back(boost::ref(*this), boost::ref(snd), index);
+        lua_service_list_.emplace_back(boost::ref(*this), boost::ref(snd), index);
 #endif
-        socket_service_list_.make_back(boost::ref(*this), boost::ref(snd), index);
-        acceptor_service_list_.make_back(boost::ref(*this), boost::ref(snd), index);
+        socket_service_list_.emplace_back(boost::ref(*this), boost::ref(snd), index);
+        acceptor_service_list_.emplace_back(boost::ref(*this), boost::ref(snd), index);
       }
 
       for (std::size_t i=0; i<attrs_.nonblocked_num_; ++i, ++index)
       {
-        strand_t& snd = strand_list_.make_back(boost::ref(*ios_));
-        nonblocked_service_list_.make_back(boost::ref(*this), boost::ref(snd), index);
-        nonblocked_actor_list_.make_back(boost::ref(*this), boost::ref(nonblocked_service_list_[i]), index);
+        strand_list_.emplace_back(boost::ref(*ios_));
+        strand_t& snd = strand_list_.back();
+        nonblocked_service_list_.emplace_back(boost::ref(*this), boost::ref(snd), index);
+        nonblocked_actor_list_.emplace_back(boost::ref(*this), boost::ref(nonblocked_service_list_[i]), index);
       }
 
 #ifdef GCE_LUA
@@ -589,37 +582,37 @@ private:
   GCE_CACHE_ALIGNED_VAR(boost::thread_group, thread_group_)
 
   /// strand list
-  GCE_CACHE_ALIGNED_VAR(detail::dynarray<strand_t>, strand_list_)
+  GCE_CACHE_ALIGNED_VAR(boost::container::deque<strand_t>, strand_list_)
 
   /// threaded actor services
-  GCE_CACHE_ALIGNED_VAR(detail::dynarray<threaded_service_t>, threaded_service_list_)
+  GCE_CACHE_ALIGNED_VAR(boost::container::deque<threaded_service_t>, threaded_service_list_)
   GCE_CACHE_ALIGNED_VAR(std::size_t, curr_threaded_svc_)
 
   /// stackful actor services
-  GCE_CACHE_ALIGNED_VAR(detail::dynarray<stackful_service_t>, stackful_service_list_)
+  GCE_CACHE_ALIGNED_VAR(boost::container::deque<stackful_service_t>, stackful_service_list_)
   GCE_CACHE_ALIGNED_VAR(std::size_t, curr_stackful_svc_)
 
   /// stackless actor services
-  GCE_CACHE_ALIGNED_VAR(detail::dynarray<stackless_service_t>, stackless_service_list_)
+  GCE_CACHE_ALIGNED_VAR(boost::container::deque<stackless_service_t>, stackless_service_list_)
   GCE_CACHE_ALIGNED_VAR(std::size_t, curr_stackless_svc_)
 
 #ifdef GCE_LUA
   /// lua actor services
-  GCE_CACHE_ALIGNED_VAR(detail::dynarray<lua_service_t>, lua_service_list_)
+  GCE_CACHE_ALIGNED_VAR(boost::container::deque<lua_service_t>, lua_service_list_)
   GCE_CACHE_ALIGNED_VAR(std::size_t, curr_lua_svc_)
 #endif
 
   /// nonblocked actors
-  GCE_CACHE_ALIGNED_VAR(detail::dynarray<nonblocked_service_t>, nonblocked_service_list_)
-  GCE_CACHE_ALIGNED_VAR(detail::dynarray<nonblocked_actor_t>, nonblocked_actor_list_)
+  GCE_CACHE_ALIGNED_VAR(boost::container::deque<nonblocked_service_t>, nonblocked_service_list_)
+  GCE_CACHE_ALIGNED_VAR(boost::container::deque<nonblocked_actor_t>, nonblocked_actor_list_)
   GCE_CACHE_ALIGNED_VAR(boost::atomic_size_t, curr_nonblocked_actor_)
 
   /// socket actors
-  GCE_CACHE_ALIGNED_VAR(detail::dynarray<socket_service_t>, socket_service_list_)
+  GCE_CACHE_ALIGNED_VAR(boost::container::deque<socket_service_t>, socket_service_list_)
   GCE_CACHE_ALIGNED_VAR(std::size_t, curr_socket_svc_)
 
   /// acceptor actors
-  GCE_CACHE_ALIGNED_VAR(detail::dynarray<acceptor_service_t>, acceptor_service_list_)
+  GCE_CACHE_ALIGNED_VAR(boost::container::deque<acceptor_service_t>, acceptor_service_list_)
   GCE_CACHE_ALIGNED_VAR(std::size_t, curr_acceptor_svc_)
 
   /// threaded actors

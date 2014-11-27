@@ -12,7 +12,7 @@
 
 #include <gce/actor/config.hpp>
 #include <gce/actor/detail/messager.hpp>
-#include <gce/detail/dynarray.hpp>
+#include <boost/container/deque.hpp>
 #include <vector>
 
 namespace gce
@@ -23,12 +23,11 @@ class batch_sender
 {
 public:
   explicit batch_sender(std::size_t service_size)
-    : msgr_list_(service_size)
-    , back_list_(service_size, 0)
+    : back_list_(service_size, 0)
   {
-    for (std::size_t i=0; i<msgr_list_.capacity(); ++i)
+    for (std::size_t i=0; i<service_size; ++i)
     {
-      msgr_list_.make_back();
+      msgr_list_.emplace_back();
     }
   }
 
@@ -58,7 +57,7 @@ private:
   /// Ensure start from a new cache line.
   byte_t pad0_[GCE_CACHE_LINE_SIZE];
   
-  GCE_CACHE_ALIGNED_VAR(dynarray<messager>, msgr_list_)
+  GCE_CACHE_ALIGNED_VAR(boost::container::deque<messager>, msgr_list_)
   GCE_CACHE_ALIGNED_VAR(std::vector<pack_list_t*>, back_list_)
 };
 }

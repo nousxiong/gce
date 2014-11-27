@@ -89,8 +89,8 @@ public:
   message(message const& other)
     : type_(other.type_)
     , tag_offset_(other.tag_offset_)
-    , relay_(other.relay_)
     , cow_(other.cow_)
+    , relay_(other.relay_)
     , is_copy_read_size_(other.is_copy_read_size_)
   {
     if (is_copy_read_size_)
@@ -567,7 +567,7 @@ private:
 
 typedef message msg_t;
 #ifdef GCE_LUA
-msg_t lua_msg()
+inline msg_t lua_msg()
 {
   return msg_t();
 }
@@ -575,7 +575,7 @@ msg_t lua_msg()
 }
 
 template<typename CharT, typename TraitsT>
-std::basic_ostream<CharT, TraitsT>& operator<<(
+inline std::basic_ostream<CharT, TraitsT>& operator<<(
   std::basic_ostream<CharT, TraitsT>& strm, gce::message const& msg
   )
 {

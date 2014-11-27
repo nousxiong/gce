@@ -16,7 +16,7 @@
 namespace gce
 {
 template <typename Type, typename ActorRef>
-void register_script(
+inline void register_script(
   ActorRef self, 
   std::string const& name, 
   std::string const& script = std::string()

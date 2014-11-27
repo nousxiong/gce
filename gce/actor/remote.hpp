@@ -25,7 +25,7 @@ typedef std::pair<match_t, detail::remote_func<context> > remote_func_t;
 typedef std::vector<remote_func_t> remote_func_list_t;
 
 template <typename Tag, typename Match, typename F>
-remote_func_t make_remote_func(Match type, F f)
+inline remote_func_t make_remote_func(Match type, F f)
 {
   return 
     std::make_pair(
@@ -37,7 +37,7 @@ remote_func_t make_remote_func(Match type, F f)
 /// Connect using given NONE coroutine_stackless_actor
 ///------------------------------------------------------------------------------
 template <typename Ctxid>
-errcode_t connect(
+inline errcode_t connect(
   threaded_actor sire,
   Ctxid target, /// connect target
   std::string const& ep, /// endpoint
@@ -65,7 +65,7 @@ errcode_t connect(
 }
 
 template <typename Ctxid>
-errcode_t connect(
+inline errcode_t connect(
   stackful_actor sire,
   Ctxid target, /// connect target
   std::string const& ep, /// endpoint
@@ -91,7 +91,7 @@ errcode_t connect(
 /// Connect using given coroutine_stackless_actor
 ///------------------------------------------------------------------------------
 template <typename Ctxid>
-void connect(
+inline void connect(
   stackless_actor sire,
   Ctxid target, /// connect target
   std::string const& ep, /// endpoint
@@ -122,7 +122,7 @@ void connect(
 /// Bind using given NONE coroutine_stackless_actor
 ///------------------------------------------------------------------------------
 template <typename ActorRef>
-void bind(
+inline void bind(
   ActorRef sire,
   std::string const& ep, /// endpoint
   remote_func_list_t const& remote_func_list = remote_func_list_t(),
@@ -139,7 +139,7 @@ void bind(
 ///------------------------------------------------------------------------------
 /// Bind using given coroutine_stackless_actor
 ///------------------------------------------------------------------------------
-void bind(
+inline void bind(
   stackless_actor sire,
   std::string const& ep, /// endpoint
   remote_func_list_t const& remote_func_list = remote_func_list_t(),
