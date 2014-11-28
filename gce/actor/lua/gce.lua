@@ -102,8 +102,9 @@ end
 
 function gce.recv(cfg, ...)
 	cfg = cfg or nil
+	local is_yield = false
 	if cfg == nil then
-  	self:recv()
+  	is_yield = self:recv()
 	else
 		local ty = type(cfg)
 		local patt
@@ -127,7 +128,10 @@ function gce.recv(cfg, ...)
 				patt:set_timeout(cfg)
 			end
 		end
-		self:recv_match(patt)
+		is_yield = self:recv_match(patt)
+	end
+	if is_yield then
+		coroutine.yield(gce_curr_co)
 	end
 	local args, m = gce.unpack(gce_recv_msg, ...)
   return gce_recv_sender, args, m
@@ -146,10 +150,14 @@ function gce.respond(cfg, ...)
 		tmo = nil
 	end
 
+	local is_yield = false
 	if tmo == nil then
-		self:recv_response(res)
+		is_yield = self:recv_response(res)
 	else
-		self:recv_response_timeout(res, tmo)
+		is_yield = self:recv_response_timeout(res, tmo)
+	end
+	if is_yield then
+		coroutine.yield(gce_curr_co)
 	end
 	local args, m = gce.unpack(gce_recv_msg, ...)
   return gce_recv_sender, args, m
@@ -157,6 +165,7 @@ end
 
 function gce.sleep_for(dur)
 	self:sleep_for(dur)
+	coroutine.yield(gce_curr_co)
 end
 
 function gce.bind(ep, opt)
@@ -164,7 +173,10 @@ function gce.bind(ep, opt)
 	if opt == nil then
 		opt = gce.net_option()
 	end
-	self:bind(ep, opt)
+	local is_yield = self:bind(ep, opt)
+	if is_yield then
+		coroutine.yield(gce_curr_co)
+	end
 end
 
 function gce.connect(target, ep, opt)
@@ -180,14 +192,20 @@ function gce.connect(target, ep, opt)
 		assert (ty == "userdata")
 		assert (target:get_overloading_type() == gce.overloading_match_t)
 	end
-	self:connect(target, ep, opt)
+	local is_yield = self:connect(target, ep, opt)
+	if is_yield then
+		coroutine.yield(gce_curr_co)
+	end
 	return gce_conn_ret, gce_conn_errmsg
 end
 
 function gce.spawn(script, link_type, sync_sire)
 	link_type = link_type or gce.no_link;
 	sync_sire = sync_sire or false;
-	self:spawn(script, sync_sire, link_type)
+	local is_yield = self:spawn(script, sync_sire, link_type)
+	if is_yield then
+		coroutine.yield(gce_curr_co)
+	end
 	return gce_spawn_aid
 end
 
@@ -195,7 +213,10 @@ function gce.spawn_remote(spw_type, func, ctxid, link_type, stack_size, tmo)
 	link_type = link_type or gce.no_link;
 	stack_size = stack_size or detail.default_stacksize()
 	tmo = tmo or gce.seconds(180)
-	self:spawn_remote(spw_type, func, ctxid, link_type, stack_size, tmo)
+	local is_yield = self:spawn_remote(spw_type, func, ctxid, link_type, stack_size, tmo)
+	if is_yield then
+		coroutine.yield(gce_curr_co)
+	end
 	return gce_spawn_aid
 end
 

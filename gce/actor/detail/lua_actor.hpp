@@ -40,9 +40,8 @@ public:
   lua_actor(aid_t aid, service_t& svc)
     : base_t(svc.get_context(), svc, actor_luaed, aid)
     , L_(svc.get_lua_state())
-    , f_(L_)
-    , co_(L_)
-    , rf_(L_)
+    , coro_(L_)
+    , func_(L_)
     , svc_(svc)
     , yielding_(false)
     , recving_(false)
@@ -108,46 +107,24 @@ public:
   }
 
 public:
-  void recv()
+  bool recv()
   {
-    recv_match(pattern());
+    return recv_match(pattern());
   }
 
-  void recv_match(pattern const& patt)
+  bool recv_match(pattern const& patt)
   {
     aid_t sender;
-    recv_t rcv;
     message msg;
-
-    if (!base_t::mb_.pop(rcv, msg, patt.match_list_))
-    {
-      duration_t tmo = patt.timeout_;
-      if (tmo > zero)
-      {
-        if (tmo < infin)
-        {
-          start_timer(tmo);
-        }
-        recving_ = true;
-        curr_pattern_ = patt;
-        yield();
-        return;
-      }
-    }
-    else
-    {
-      sender = end_recv(rcv, msg);
-    }
-  
-    set_recv_global(sender, msg);
+    return pri_recv_match(patt, sender, msg);
   }
 
-  void recv_response(resp_t res)
+  bool recv_response(resp_t res)
   {
-    recv_response_timeout(res, seconds_t(GCE_DEFAULT_REQUEST_TIMEOUT_SEC));
+    return recv_response_timeout(res, seconds_t(GCE_DEFAULT_REQUEST_TIMEOUT_SEC));
   }
 
-  void recv_response_timeout(resp_t res, duration_type tmo)
+  bool recv_response_timeout(resp_t res, duration_type tmo)
   {
     aid_t sender;
     message msg;
@@ -164,7 +141,7 @@ public:
         responsing_ = true;
         recving_res_ = res;
         yield();
-        return;
+        return true;
       }
     }
     else
@@ -173,6 +150,7 @@ public:
     }
 
     set_recv_global(sender, msg);
+    return false;
   }
 
   void sleep_for(duration_type dur)
@@ -181,27 +159,39 @@ public:
     yield();
   }
 
-  void bind(std::string const& ep, net_option opt)
+  bool bind(std::string const& ep, net_option opt)
   {
     typedef typename context_t::acceptor_service_t acceptor_service_t;
     context_t& ctx = base_t::get_context();
     acceptor_service_t& svc = ctx.select_service<acceptor_service_t>();
 
     gce::detail::bind<context_t>(base_t::get_aid(), svc, ep, opt);
-    recv_match(pattern(msg_new_bind));
+    bool is_yield = recv_match(pattern(msg_new_bind));
+    if (!is_yield)
+    {
+      handle_bind();
+    }
+    return is_yield;
   }
 
-  void connect(match_type target, std::string const& ep, net_option opt)
+  bool connect(match_type target, std::string const& ep, net_option opt)
   {
     typedef typename context_t::socket_service_t socket_service_t;
     context_t& ctx = base_t::get_context();
     socket_service_t& svc = ctx.select_service<socket_service_t>();
 
     gce::detail::connect<context_t>(base_t::get_aid(), svc, target, ep, opt);
-    recv_match(pattern(msg_new_conn));
+    message msg;
+    aid_t sender;
+    bool is_yield =  pri_recv_match(pattern(msg_new_conn), sender, msg);
+    if (!is_yield)
+    {
+      handle_connect(sender, msg);
+    }
+    return is_yield;
   }
 
-  void spawn(std::string const& script, bool sync_sire, int type)
+  bool spawn(std::string const& script, bool sync_sire, int type)
   {
     service_t* svc = 0;
     if (sync_sire)
@@ -219,10 +209,18 @@ public:
         script, base_t::get_aid(), (link_type)type
         )
       );
-    recv_match(pattern(msg_new_actor));
+
+    message msg;
+    aid_t sender;
+    bool is_yield =  pri_recv_match(pattern(msg_new_actor), sender, msg);
+    if (!is_yield)
+    {
+      handle_spawn(sender, msg);
+    }
+    return is_yield;
   }
 
-  void spawn_remote(
+  bool spawn_remote(
     spawn_type sty, std::string const& func, match_type ctxid, 
     int type, std::size_t stack_size, seconds_t tmo
     )
@@ -239,7 +237,15 @@ public:
         &self_t::handle_remote_spawn, this, _1, _2,
         (link_type)type, begin_tp, sid, tmo, curr_tmo
         );
-    recv_match(pattern(msg_spawn_ret, curr_tmo));
+
+    aid_t sender;
+    message msg;
+    bool is_yield =  pri_recv_match(pattern(msg_spawn_ret, curr_tmo), sender, msg);
+    if (!is_yield)
+    {
+      is_yield = pri_handle_remote_spawn(sender, msg);
+    }
+    return is_yield;
   }
 
   void register_service(match_type name)
@@ -303,12 +309,12 @@ public:
 
   void set_coro(luabridge::LuaRef co)
   {
-    co_ = co;
+    coro_ = co;
   }
 
-  void set_resume(luabridge::LuaRef rf)
+  void set_resume(luabridge::LuaRef func)
   {
-    rf_ = rf;
+    func_ = func;
   }
 
   void init(std::string const& script)
@@ -324,14 +330,14 @@ public:
       luabridge::LuaRef nil(L_);
       luabridge::setGlobal(L_, nil, "gce_curr_co");
 
-      f_ = svc_.get_script(script_);
-      if (f_.isNil())
+      luabridge::LuaRef scr = svc_.get_script(script_);
+      if (scr.isNil())
       {
         std::string errmsg;
         errmsg += lua_tostring(L_, -1);
         GCE_VERIFY(false)(script_).log(lg_, errmsg.c_str());
       }
-      f_();
+      scr();
       quit();
     }
     catch (std::exception& ex)
@@ -356,12 +362,39 @@ public:
   }
 
 private:
+  bool pri_recv_match(pattern const& patt, aid_t& sender, message& msg)
+  {
+    recv_t rcv;
+
+    if (!base_t::mb_.pop(rcv, msg, patt.match_list_))
+    {
+      duration_t tmo = patt.timeout_;
+      if (tmo > zero)
+      {
+        if (tmo < infin)
+        {
+          start_timer(tmo);
+        }
+        recving_ = true;
+        curr_pattern_ = patt;
+        yield();
+        return true;
+      }
+    }
+    else
+    {
+      sender = end_recv(rcv, msg);
+    }
+  
+    set_recv_global(sender, msg);
+    return false;
+  }
+
   void yield()
   {
     if (!yielding_)
     {
       yielding_ = true;
-      lua_yield(co_.state(), 0);
     }
   }
 
@@ -370,7 +403,8 @@ private:
     GCE_ASSERT(yielding_);
     yielding_ = false;
     luabridge::setGlobal(L_, this, "self");
-    luabridge::setGlobal(L_, co_, "gce_curr_co"); 
+    luabridge::setGlobal(L_, coro_, "gce_curr_co");
+    func_();
   }
 
   void stop(aid_t self_aid, exit_code_t ec, std::string const& exit_msg)
@@ -403,14 +437,14 @@ private:
       {
         if (spw_hdr_)
         {
-          spawn_handler_t hdr(spw_hdr_);
-          spw_hdr_.clear();
-          hdr(nil_aid_, nil_msg_);
+          pri_handle_remote_spawn(nil_aid_, nil_msg_);
         }
-        resume();
-        set_recv_global(nil_aid_, nil_msg_);
-        rf_();
-        quit();
+        else
+        {
+          set_recv_global(nil_aid_, nil_msg_);
+          resume();
+          quit();
+        }
       }
       catch (std::exception& ex)
       {
@@ -518,20 +552,12 @@ private:
       if (msg_type == msg_new_actor)
       {
         need_resume = false;
-        boost::uint16_t ty = u16_nil;
-        msg >> ty;
-        link_type type = (link_type)ty;
-        handle_spawn(sender, type);
+        handle_spawn(sender, msg);
       }
       else if (msg_type == msg_spawn_ret)
       {
         need_resume = false;
-        if (spw_hdr_)
-        {
-          spawn_handler_t hdr(spw_hdr_);
-          spw_hdr_.clear();
-          hdr(sender, msg);
-        }
+        pri_handle_remote_spawn(sender, msg);
       }
       else if (msg_type == msg_new_bind)
       {
@@ -541,19 +567,16 @@ private:
       else if (msg_type == msg_new_conn)
       {
         need_resume = false;
-        ctxid_pair_t ctxid_pr;
-        errcode_t ec;
-        msg >> ctxid_pr >> ec;
-        handle_connect(sender, ctxid_pr, ec);
+        handle_connect(sender, msg);
       }
 
       if (need_resume)
       {
         try
         {
-          resume();
+          
           set_recv_global(sender, msg);
-          rf_();
+          resume();
           quit();
         }
         catch (std::exception& ex)
@@ -569,9 +592,11 @@ private:
   {
     try
     {
-      resume();
-      rf_();
-      quit();
+      if (yielding_)
+      {
+        resume();
+        quit();
+      }
     }
     catch (std::exception& ex)
     {
@@ -580,19 +605,26 @@ private:
     }
   }
 
-  void handle_connect(aid_t skt, ctxid_pair_t ctxid_pr, errcode_t ec)
+  void handle_connect(aid_t skt, message& msg)
   {
     try
     {
+      ctxid_pair_t ctxid_pr;
+      errcode_t ec;
+      msg >> ctxid_pr >> ec;
+
       if (skt)
       {
         svc_.register_socket(ctxid_pr, skt);
       }
-      resume();
+      
       luabridge::setGlobal(L_, ec.value(), "gce_conn_ret");
       luabridge::setGlobal(L_, ec.message(), "gce_conn_errmsg");
-      rf_();
-      quit();
+      if (yielding_)
+      {
+        resume();
+        quit();
+      }
     }
     catch (std::exception& ex)
     {
@@ -601,10 +633,14 @@ private:
     }
   }
 
-  void handle_spawn(aid_t aid, link_type type)
+  void handle_spawn(aid_t aid, message& msg)
   {
     try
     {
+      boost::uint16_t ty = u16_nil;
+      msg >> ty;
+      link_type type = (link_type)ty;
+
       if (aid)
       {
         if (type == linked)
@@ -616,10 +652,13 @@ private:
           monitor(aid);
         }
       }
-      resume();
+      
       luabridge::setGlobal(L_, aid, "gce_spawn_aid");
-      rf_();
-      quit();
+      if (yielding_)
+      {
+        resume();
+        quit();
+      }
     }
     catch (std::exception& ex)
     {
@@ -628,7 +667,7 @@ private:
     }
   }
 
-  void handle_remote_spawn(
+  bool handle_remote_spawn(
     aid_t aid,
     message msg, link_type type,
     boost::chrono::system_clock::time_point begin_tp,
@@ -639,9 +678,10 @@ private:
     sid_t ret_sid = sid_nil;
     if (msg.get_type() != match_nil)
     {
-      msg >> err >> ret_sid;
-      do
+      aid_t sender;
+      while (true)
       {
+        msg >> err >> ret_sid;
         if (err != 0 || (aid && sid == ret_sid))
         {
           break;
@@ -654,15 +694,17 @@ private:
         }
 
         begin_tp = boost::chrono::system_clock::now();
-        spw_hdr_ = 
-          boost::bind(
-            &self_t::handle_remote_spawn, this, _1, _2,
-            type, begin_tp, sid, tmo, curr_tmo
-            );
-        recv_match(pattern(msg_spawn_ret, curr_tmo));
-        return;
+        bool is_yield = pri_recv_match(pattern(msg_spawn_ret, curr_tmo), sender, msg);
+        if (is_yield)
+        {
+          spw_hdr_ = 
+            boost::bind(
+              &self_t::handle_remote_spawn, this, _1, _2,
+              type, begin_tp, sid, tmo, curr_tmo
+              );
+          return true;
+        }
       }
-      while (false);
 
       spawn_error error = (spawn_error)err;
       if (error != spawn_ok)
@@ -683,18 +725,32 @@ private:
       }
     }
 
-    try
+    if (yielding_)
     {
-      resume();
-      luabridge::setGlobal(L_, aid, "gce_spawn_aid");
-      rf_();
-      quit();
+      try
+      {
+        luabridge::setGlobal(L_, aid, "gce_spawn_aid");
+        resume();
+        quit();
+      }
+      catch (std::exception& ex)
+      {
+        GCE_ERROR(lg_)(__FILE__)(__LINE__) << ex.what();
+        quit(exit_except, ex.what());
+      }
     }
-    catch (std::exception& ex)
+    return false;
+  }
+
+  bool pri_handle_remote_spawn(aid_t const& sender, message const& msg)
+  {
+    if (spw_hdr_)
     {
-      GCE_ERROR(lg_)(__FILE__)(__LINE__) << ex.what();
-      quit(exit_except, ex.what());
+      spawn_handler_t hdr(spw_hdr_);
+      spw_hdr_.clear();
+      return hdr(sender, msg);
     }
+    return false;
   }
 
   void set_recv_global(aid_t const& sender, message const& msg)
@@ -709,9 +765,8 @@ private:
 
   GCE_CACHE_ALIGNED_VAR(lua_State*, L_)
   GCE_CACHE_ALIGNED_VAR(std::string, script_)
-  GCE_CACHE_ALIGNED_VAR(luabridge::LuaRef, f_)
-  GCE_CACHE_ALIGNED_VAR(luabridge::LuaRef, co_)
-  GCE_CACHE_ALIGNED_VAR(luabridge::LuaRef, rf_)
+  GCE_CACHE_ALIGNED_VAR(luabridge::LuaRef, coro_)
+  GCE_CACHE_ALIGNED_VAR(luabridge::LuaRef, func_)
 
   /// thread local
   service_t& svc_;
@@ -723,7 +778,7 @@ private:
   timer_t tmr_;
   std::size_t tmr_sid_;
 
-  typedef boost::function<void (aid_t, message)> spawn_handler_t;
+  typedef boost::function<bool (aid_t, message)> spawn_handler_t;
   spawn_handler_t spw_hdr_;
 
   aid_t const nil_aid_;

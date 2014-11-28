@@ -93,10 +93,10 @@ include_directories (${PROJECT_SOURCE_DIR})
 include_directories (${PROJECT_BINARY_DIR})
 
 # Boost libraries search.
-set (GCE_BOOST_VERSION "1.56.0" CACHE STRING "Boost version, e.g. 1.56.0")
+set (GCE_BOOST_VERSION "1.57.0" CACHE STRING "Boost version, e.g. 1.57.0")
 
-if (${GCE_BOOST_VERSION} LESS 1.56.0)
-  message(FATAL_ERROR "Please using boost 1.56.0 and higher")
+if (${GCE_BOOST_VERSION} LESS 1.57.0)
+  message(FATAL_ERROR "Please using boost 1.57.0 and higher")
 endif ()
 
 set (Boost_USE_STATIC_LIBS ON)

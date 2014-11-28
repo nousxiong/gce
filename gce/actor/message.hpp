@@ -352,13 +352,13 @@ public:
 
   message& operator<<(ctxid_pair_t const& pr)
   {
-    *this << pr.first << (boost::uint16_t)pr.second;
+    *this << pr.first << (byte_t)pr.second;
     return *this;
   }
 
   message& operator>>(ctxid_pair_t& pr)
   {
-    boost::uint16_t type;
+    byte_t type;
     *this >> pr.first >> type;
     pr.second = (detail::socket_type)type;
     return *this;
@@ -366,14 +366,14 @@ public:
 
   message& operator<<(bool flag)
   {
-    boost::uint16_t f = flag ? 1 : 0;
+    byte_t f = flag ? 1 : 0;
     *this << f;
     return *this;
   }
 
   message& operator>>(bool& flag)
   {
-    boost::uint16_t f;
+    byte_t f;
     *this >> f;
     flag = f != 0;
     return *this;
@@ -418,7 +418,7 @@ public:
     else if (detail::link_t* link = boost::get<detail::link_t>(&tag))
     {
       *this << detail::tag_link_t <<
-        (boost::uint16_t)link->get_type() << link->get_aid();
+        (byte_t)link->get_type() << link->get_aid();
     }
     else if (detail::exit_t* ex = boost::get<detail::exit_t>(&tag))
     {
@@ -432,13 +432,13 @@ public:
     }
     else if (detail::spawn_t* spw = boost::get<detail::spawn_t>(&tag))
     {
-      *this << detail::tag_spawn_t << (boost::uint16_t)spw->get_type() << 
+      *this << detail::tag_spawn_t << (byte_t)spw->get_type() << 
         spw->get_func() << spw->get_ctxid() << spw->get_stack_size() <<
         spw->get_id() << spw->get_aid();
     }
     else if (detail::spawn_ret_t* spr = boost::get<detail::spawn_ret_t>(&tag))
     {
-      *this << detail::tag_spawn_ret_t << (boost::uint16_t)spr->get_error() <<
+      *this << detail::tag_spawn_ret_t << (byte_t)spr->get_error() <<
         spr->get_id() << spr->get_aid();
     }
     else
@@ -477,7 +477,7 @@ public:
       }
       else if (tag_type == detail::tag_link_t)
       {
-        boost::uint16_t type;
+        byte_t type;
         aid_t aid;
         *this >> type >> aid;
         tag = detail::link_t((link_type)type, aid);
@@ -498,7 +498,7 @@ public:
       }
       else if (tag_type == detail::tag_spawn_t)
       {
-        boost::uint16_t type;
+        byte_t type;
         std::string func;
         match_t ctxid;
         std::size_t stack_size;
@@ -511,7 +511,7 @@ public:
       }
       else if (tag_type == detail::tag_spawn_ret_t)
       {
-        boost::uint16_t err;
+        byte_t err;
         sid_t sid;
         aid_t aid;
         *this >> err >> sid >> aid;

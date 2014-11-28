@@ -36,6 +36,7 @@ public:
     , snd_(snd)
     , ctxid_(ctx_.get_ctxid())
     , timestamp_(ctx_.get_timestamp())
+    , stopped_(false)
   {
   }
 

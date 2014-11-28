@@ -12,6 +12,7 @@
 #include <boost/shared_ptr.hpp>
 #include <boost/make_shared.hpp>
 #include <boost/lexical_cast.hpp>
+#include <boost/container/deque.hpp>
 #include <boost/foreach.hpp>
 #include <boost/bind.hpp>
 #include <boost/function.hpp>
@@ -57,7 +58,6 @@ static std::size_t const test_count = 1;
 # include "test_lua_service.hpp"
 #endif
 #include "test_batch_pingpong.hpp"
-//#include "test_partial.hpp"
 
 int main()
 {
@@ -89,15 +89,11 @@ int main()
     gce::remote_relay_ut::run();
     gce::remote_common_relay_ut::run();
     gce::service_ut::run();
-    //gce::test_partial_ut::run();
-    //gce::socket_ut::run();
 #ifdef GCE_LUA
     gce::lua_actor_ut::run();
     gce::lua_socket_ut::run();
     gce::lua_service_ut::run();
 #endif
-    //gce::batch_pingpong_ut::run();
-    //gce::actor_ut::run();
   }
   catch (std::exception& ex)
   {

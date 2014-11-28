@@ -267,7 +267,6 @@ public:
           .addFunction("warn", &lua_actor_t::log_warn)
           .addFunction("error", &lua_actor_t::log_error)
           .addFunction("fatal", &lua_actor_t::log_fatal)
-          //.addFunction("run_actor", &lua_actor_t::run_actor)
         .endClass()
         .addFunction("overloading_0", &lua_overloading_0)
         .addFunction("overloading_1", &lua_overloading_1)

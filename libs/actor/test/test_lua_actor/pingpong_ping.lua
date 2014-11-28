@@ -11,8 +11,7 @@ local gce = require("gce")
 
 gce.run_actor(
   function ()
-  	local base_aid, args = 
-			gce.recv("init")
+  	local base_aid, args = gce.recv("init")
 		local pong_aid = gce.spawn("test_lua_actor/pingpong_pong.lua")
 		gce.send(pong_aid, "init", base_aid)
 
