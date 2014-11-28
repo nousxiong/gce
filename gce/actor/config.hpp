@@ -82,7 +82,7 @@ typedef boost::chrono::minutes minutes_t;
 typedef boost::chrono::hours hours_t;
 
 static duration_t const zero(duration_t::zero());
-static duration_t const infin(duration_t::max());
+static duration_t const infin((duration_t::max)());
 
 typedef boost::uint32_t sid_t;
 static boost::uint32_t const sid_nil = static_cast<sid_t>(-1);

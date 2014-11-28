@@ -154,7 +154,7 @@ private:
         typedef boost::chrono::system_clock system_clock_t;
         typedef system_clock_t::time_point time_point_t;
         boost::asio::system_timer tmr(base_t::get_context().get_io_service());
-        time_point_t const min_tp = time_point_t::min();
+        time_point_t const min_tp = (time_point_t::min)();
         time_point_t last_tp = min_tp;
         int curr_rebind_num = 0;
 

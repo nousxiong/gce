@@ -100,7 +100,7 @@ public:
     : GCE_ASSERT_A(*this)
     , GCE_ASSERT_B(*this)
     , lv_(lv)
-    , ex_(time_point_t::min())
+    , ex_((time_point_t::min)())
     , msg_(0)
     , lg_type_(log_default)
     , hdl_type_(handle_default)
@@ -135,7 +135,7 @@ public:
       str_.append("\n");
     }
 
-    if (ex_ != time_point_t::min())
+    if (ex_ != (time_point_t::min)())
     {
       gce::assert_except::make_description(str_, "exception timestamp <", ex_, msg_);
     }
