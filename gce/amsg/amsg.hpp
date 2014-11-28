@@ -1,4 +1,4 @@
-// (C) Copyright Ning Ding 2012.
+﻿// (C) Copyright Ning Ding 2012.
 // lordoffox@gmail.com
 // Distributed under the boost Software License, Version 1.0. (See accompany-
 // ing file LICENSE_1_0.txt or copy at http://www.boost.org/LICENSE_1_0.txt)
@@ -286,7 +286,6 @@ namespace boost{ namespace amsg{	namespace detail
 	template<int tag>
 	struct byte_size_of<char,tag>
 	{
-
 		typedef char value_type;
 		typedef typename ::boost::mpl::if_<
 			::boost::is_signed<value_type>,
@@ -585,7 +584,7 @@ namespace boost{ namespace amsg{	namespace detail
 			for( typename value_type::const_iterator i = value.begin() ; i != value.end(); ++i )
 			{
 				const typename value_type::value_type& elem_value = *i;
-				size += byte_size_of_impl<typename value_type::value_type,tag>::size(elem_value,error_code);
+				size += byte_size_of<typename value_type::value_type,tag>::impl_type::size(elem_value,error_code);
 			}
 			return size;
 		}
@@ -612,7 +611,7 @@ namespace boost{ namespace amsg{	namespace detail
 		typedef byte_size_of_seq_container_impl<value_type,tag> impl_type;
 	};
 
-	template<typename ty ,int array_size ,int tag>
+	template<typename ty ,std::size_t array_size ,int tag>
 	struct byte_size_of< ::boost::array<ty,array_size> , tag>
 	{
 		typedef typename ::boost::array<ty,array_size> value_type;
@@ -620,7 +619,7 @@ namespace boost{ namespace amsg{	namespace detail
 	};
 
 #if defined(AMSG_SUPPORT_CXX11)||defined(AMSG_SUPPORT_STD_ARRAY)
-	template<typename ty ,int array_size ,int tag>
+	template<typename ty ,::std::size_t array_size ,int tag>
 	struct byte_size_of< ::std::array<ty,array_size> , tag>
 	{
 		typedef typename ::std::array<ty,array_size> value_type;
@@ -646,8 +645,8 @@ namespace boost{ namespace amsg{	namespace detail
 			{
 				typedef typename ::boost::remove_const<typename value_type::value_type::first_type>::type first_type;
 				typedef typename ::boost::remove_const<typename value_type::value_type::second_type>::type second_type;
-				size += byte_size_of_impl<first_type,tag>::size(i->first,error_code);
-				size += byte_size_of_impl<second_type,tag>::size(i->second,error_code);
+				size += byte_size_of<first_type,tag>::impl_type::size(i->first,error_code);
+				size += byte_size_of<second_type,tag>::impl_type::size(i->second,error_code);
 			}
 			return size;
 		}
@@ -1646,13 +1645,23 @@ namespace boost{ namespace amsg{	namespace detail
 	template<typename store_ty,int tag>
 	struct value_read_support_impl<store_ty, char, tag>
 	{
-		typedef value_default_read_char_like_support_impl<store_ty,char> impl_type;
+		typedef char value_type;
+		typedef typename ::boost::mpl::if_ <
+			::boost::is_signed<value_type>,
+			value_default_read_char_like_support_impl<store_ty,int8_t>,
+			value_read_support_impl<store_ty,uint8_t, tag>
+		> ::type impl_type;
 	};
 
 	template<typename store_ty ,int tag>
 	struct value_write_support_impl<store_ty, char, tag>
 	{
-		typedef value_default_write_char_like_support_impl<store_ty,char> impl_type;
+		typedef char value_type;
+		typedef typename ::boost::mpl::if_ <
+			::boost::is_signed<value_type>,
+			value_default_write_char_like_support_impl<store_ty, int8_t>,
+			value_write_support_impl<store_ty, uint8_t, tag>
+		> ::type impl_type;
 	};
 
 	template<typename store_ty,int tag>
@@ -2138,14 +2147,14 @@ namespace boost{ namespace amsg{	namespace detail
 		}
 	};
 
-	template<typename store_ty , typename ty,int array_size , int tag>
+	template<typename store_ty , typename ty,std::size_t array_size , int tag>
 	struct value_read_support_impl<store_ty, ::boost::array<ty, array_size>, tag>
 	{
 		typedef typename ::boost::array<ty,array_size> value_type;
 		typedef value_support_read_array_impl<store_ty,value_type,tag> impl_type;
 	};
 
-	template<typename store_ty , typename ty,int array_size , int tag>
+	template<typename store_ty , typename ty,std::size_t array_size , int tag>
 	struct value_write_support_impl<store_ty, ::boost::array<ty, array_size>, tag>
 	{
 		typedef typename ::boost::array<ty,array_size> value_type;
@@ -2153,14 +2162,14 @@ namespace boost{ namespace amsg{	namespace detail
 	};
 
 #if defined(AMSG_SUPPORT_CXX11)||defined(AMSG_SUPPORT_STD_ARRAY)
-	template<typename store_ty , typename ty,int array_size , int tag>
+	template<typename store_ty , typename ty,::std::size_t array_size , int tag>
 	struct value_read_support_impl<store_ty, ::std::array<ty, array_size>, tag>
 	{
 		typedef typename ::std::array<ty,array_size> value_type;
 		typedef value_support_read_array_impl<store_ty,value_type,tag> impl_type;
 	};
 
-	template<typename store_ty , typename ty,int array_size , int tag>
+	template<typename store_ty , typename ty,::std::size_t array_size , int tag>
 	struct value_write_support_impl<store_ty, ::std::array<ty, array_size>, tag>
 	{
 		typedef typename ::std::array<ty,array_size> value_type;
