@@ -23,7 +23,8 @@ struct pattern
   {
   }
 
-  explicit pattern(duration_t tmo)
+  template <typename Rep, typename Period>
+  explicit pattern(boost::chrono::duration<Rep, Period> tmo)
     : timeout_(tmo)
   {
   }
