@@ -420,7 +420,7 @@ private:
       io_service_t ios;
       typedef service<actor> service_t;
       std::size_t svc_size = 3;
-      boost::container::deque<service_t> svc_list;
+      detail::dynarray<service_t> svc_list(svc_size);
       for (std::size_t i=0; i<svc_size; ++i)
       {
         svc_list.emplace_back(boost::ref(ios), i, svc_size);

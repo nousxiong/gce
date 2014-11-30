@@ -12,7 +12,7 @@
 #include <boost/shared_ptr.hpp>
 #include <boost/make_shared.hpp>
 #include <boost/lexical_cast.hpp>
-#include <boost/container/deque.hpp>
+#include <gce/detail/dynarray.hpp>
 #include <boost/foreach.hpp>
 #include <boost/bind.hpp>
 #include <boost/function.hpp>
