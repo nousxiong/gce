@@ -1,4 +1,4 @@
-// (C) Copyright Ning Ding 2012.
+﻿// (C) Copyright Ning Ding 2012.
 // lordoffox@gmail.com
 // Distributed under the boost Software License, Version 1.0. (See accompany-
 // ing file LICENSE_1_0.txt or copy at http://www.boost.org/LICENSE_1_0.txt)
@@ -350,7 +350,7 @@ namespace boost{ namespace amsg
 			{
 				value_type temp = host_to_little_endian16(value);
 				::boost::uint8_t * ptr = (uint8_t *)(&temp);
-				if(value < 0100)
+				if(value < 0x100)
 				{
 					::boost::uint8_t * wptr = store_data.append_write(2);
 					wptr[0] = 0x80;
@@ -521,7 +521,7 @@ namespace boost{ namespace amsg
 			{
 				value_type temp = host_to_little_endian32(value);
 				::boost::uint8_t * ptr = (uint8_t *)(&temp);
-				if(value < 0100)
+				if(value < 0x100)
 				{
 					::boost::uint8_t * wptr = store_data.append_write(2);
 					wptr[0] = 0x80;
@@ -726,7 +726,7 @@ namespace boost{ namespace amsg
 			{
 				value_type temp = host_to_little_endian64(value);
 				::boost::uint8_t * ptr = (uint8_t *)(&temp);
-				if(value < 0100)
+				if(value < 0x100)
 				{
 					::boost::uint8_t * wptr = store_data.append_write(2);
 					wptr[0] = 0x80;
