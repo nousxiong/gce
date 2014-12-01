@@ -76,7 +76,7 @@ public:
       actor_index ai = target.get_actor_index(base_t::ctxid_, base_t::timestamp_);
       if (ai)
       {
-        pack_list_t* back_list = bs_.get_pack_list(ai.svc_id_);
+        pack_list_t* back_list = bs_.get_pack_list(ai.type_, ai.svc_id_);
         if (back_list)
         {
           back_list->push_back(nil_pk_);
@@ -84,7 +84,7 @@ public:
         }
         else
         {
-          messager& msgr = bs_.get_messager(ai.svc_id_);
+          messager& msgr = bs_.get_messager(ai.type_, ai.svc_id_);
           return msgr.alloc_pack();
         }
       }
@@ -102,10 +102,10 @@ protected:
   void pri_send(actor_index ai, pack& pk)
   {
     base_t& svc = base_t::ctx_.get_service(ai);
-    pack_list_t* back_list = bs_.get_pack_list(ai.svc_id_);
+    pack_list_t* back_list = bs_.get_pack_list(ai.type_, ai.svc_id_);
     if (!back_list)
     {
-      messager& msgr = bs_.get_messager(ai.svc_id_);
+      messager& msgr = bs_.get_messager(ai.type_, ai.svc_id_);
       send_pair sp = msgr.try_forth();
       if (sp)
       {
@@ -119,15 +119,16 @@ protected:
 private:
   void end_handle_recv_forth(base_t& sender_svc, send_pair& sp)
   {
-    bs_.set_pack_list(sender_svc.get_index(), 0);
+    bs_.set_pack_list(sender_svc.get_type(), sender_svc.get_index(), 0);
     sender_svc.on_recv_back(*this, sp);
   }
 
   void handle_recv_forth(base_t& sender_svc, send_pair& sp)
   {
+    actor_type svc_type = sender_svc.get_type();
     std::size_t svc_index = sender_svc.get_index();
     GCE_ASSERT(sp)(svc_index);
-    GCE_ASSERT(bs_.get_pack_list(svc_index) == 0)(svc_index);
+    GCE_ASSERT(bs_.get_pack_list(svc_type, svc_index) == 0)((int)svc_type)(svc_index);
 
     scope scp(
       boost::bind(
@@ -136,7 +137,7 @@ private:
         )
       );
     pack_list_t* forth_list = sp.forth();
-    bs_.set_pack_list(svc_index, sp.back());
+    bs_.set_pack_list(svc_type, svc_index, sp.back());
     BOOST_FOREACH(pack& pk, *forth_list)
     {
       try
@@ -152,7 +153,7 @@ private:
 
   void end_handle_recv_back(base_t& sender_svc, send_pair& ret)
   {
-    messager& msgr = bs_.get_messager(sender_svc.get_index());
+    messager& msgr = bs_.get_messager(sender_svc.get_type(), sender_svc.get_index());
     send_pair sp = msgr.on_handle_back(ret);
     if (sp)
     {
@@ -162,6 +163,7 @@ private:
 
   void handle_recv_back(base_t& sender_svc, send_pair& ret)
   {
+    actor_type svc_type = sender_svc.get_type();
     std::size_t svc_index = sender_svc.get_index();
     GCE_ASSERT(ret)(svc_index);
     scope scp(
@@ -171,7 +173,7 @@ private:
         )
       );
 
-    messager& msgr = bs_.get_messager(svc_index);
+    messager& msgr = bs_.get_messager(svc_type, svc_index);
     send_pair sp = msgr.on_back(ret);
     if (sp)
     {
