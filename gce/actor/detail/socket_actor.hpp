@@ -459,7 +459,7 @@ private:
   void send_msg(message const& m)
   {
     GCE_ASSERT(skt_)(m);
-    GCE_ASSERT(m.size() <= GCE_MAX_MSG_SIZE)(m);
+    GCE_VERIFY(m.size() <= GCE_MAX_MSG_SIZE)(m);
 
     msg_header hdr;
     hdr.size_ = (boost::uint32_t)m.size();
