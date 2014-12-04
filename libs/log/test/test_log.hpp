@@ -17,7 +17,9 @@ public:
     std::cout << "log_ut begin." << std::endl;
     for (std::size_t i=0; i<test_count; ++i)
     {
-      test_common();
+      test_common<log::std_logger_st>();
+      test_common<log::std_logger_mt>();
+      test_common<log::asio_logger>();
       if (test_count > 1) std::cout << "\r" << i;
     }
     if (test_count > 1) std::cout << std::endl;
@@ -25,14 +27,15 @@ public:
   }
 
 private:
+  template <typename Logger>
   static void test_common()
   {
     try
     {
-      log::asio_logger my_lg;
-      log::logger_t login = boost::bind(&log::asio_logger::output, &my_lg, _1, "login");
-      log::logger_t logout = boost::bind(&log::asio_logger::output, &my_lg, _1, "logout");
-      log::logger_t lg = boost::bind(&log::asio_logger::output, &my_lg, _1, "");
+      Logger my_lg;
+      log::logger_t login = boost::bind(&Logger::output, &my_lg, _1, "login");
+      log::logger_t logout = boost::bind(&Logger::output, &my_lg, _1, "logout");
+      log::logger_t lg = boost::bind(&Logger::output, &my_lg, _1, "");
       log::logger_t empty_lg;
 
       int i = 1;
@@ -45,16 +48,13 @@ private:
 
       {
         // test scope log
-        log::scope scp(lg);
-        GCE_INFO(scp)(__FILE__)(__LINE__) << 
-          "hello! scope begin, arg: " << i;
-        boost::this_thread::sleep_for(boost::chrono::milliseconds(1));
-        GCE_INFO(scp)(__FILE__) << 
-          "in scope, arg: " << ++i << ", " << 3.1f;
-        boost::this_thread::sleep_for(boost::chrono::milliseconds(1));
-        GCE_ERROR(scp) << "error: " << ++i;
-        boost::this_thread::sleep_for(boost::chrono::milliseconds(1));
-        GCE_INFO(scp) << "scope end";
+        log::record scp(lg, log::info);
+        scp(__FILE__)(__LINE__) << 
+          "\nhello! scope begin, arg: " << i << "\n";
+        scp << 
+          "in scope, arg: " << ++i << ", " << 3.1f << "\n";
+        scp << "error: " << ++i << "\n";
+        scp << "scope end";
       }
     }
     catch (std::exception& ex)
