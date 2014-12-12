@@ -104,7 +104,7 @@ void client::command(std::string cmd, gce::aid_t cln_aid)
     }
     else if (tok_list[0] == "logout")
     {
-      gce::send(base_, cln_aid, gce::atom("cln_logout"), tok_list[1]);
+      gce::send(base_, cln_aid, gce::atom("cln_logout"));
     }
   }
 }

@@ -148,11 +148,11 @@ private:
     hdr.size_ = msg.size();
     hdr.type_ = msg.get_type();
     hdr.tag_offset_ = msg.get_tag_offset();
-    gce::byte_t buf[sizeof(msg_header)];
-    boost::amsg::zero_copy_buffer zbuf(buf, sizeof(msg_header));
+    
+    boost::amsg::zero_copy_buffer zbuf(send_buf_, sizeof(msg_header));
     boost::amsg::write(zbuf, hdr);
 
-    bufs[0] = boost::asio::buffer(buf, zbuf.write_length());
+    bufs[0] = boost::asio::buffer(send_buf_, zbuf.write_length());
     bufs[1] = boost::asio::buffer(msg.data(), msg.size());
   }
 
@@ -234,6 +234,7 @@ private:
   gce::byte_t buf_[MaxMsgSize];
   std::size_t header_size_;
   msg_header hdr_;
+  gce::byte_t send_buf_[sizeof(msg_header)];
 };
 
 typedef basic_socket<boost::asio::ip::tcp::socket> tcp_socket;

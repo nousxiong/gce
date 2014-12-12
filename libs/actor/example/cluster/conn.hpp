@@ -78,6 +78,7 @@ private:
 
     gce::message msg_;
     gce::errcode_t ec_;
+    std::size_t bytes_transferred_;
     std::string errmsg_;
     std::string username_;
     gce::match_t type_;
@@ -94,11 +95,14 @@ private:
   /// local stack
   gce::message msg_;
   gce::aid_t tmo_aid_;
+  gce::aid_t rcv_aid_;
   bool running_;
   gce::aid_t sender_;
   gce::errcode_t ec_;
+  std::size_t bytes_transferred_;
   gce::match_t type_;
   gce::aid_t tmp_aid_;
+  int exit_num_;
 };
 
 #endif /// GCE_ACTOR_EXAMPLE_CLUSTER_CONN_HPP

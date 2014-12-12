@@ -57,7 +57,7 @@ void conn::run(gce::actor<gce::stackless>& self)
             gce::atom("add_conn")
             );
 
-        self.recv(res, msg_);
+        self.recv(res, sender_, msg_);
       }
 
       if (msg_.get_type() != gce::atom("ok"))
@@ -71,7 +71,7 @@ void conn::run(gce::actor<gce::stackless>& self)
           self,
           boost::bind(&conn::timeout::run, &tmo_, _1),
           tmo_aid_,
-          gce::linked
+          gce::monitored
           );
       }
 
@@ -83,22 +83,37 @@ void conn::run(gce::actor<gce::stackless>& self)
             &conn::recv::run, &rcv_, _1, 
             tmo_aid_, self.get_aid()
             ),
-          tmp_aid_,
-          gce::linked,
+          rcv_aid_,
+          gce::monitored,
           true
           );
       }
 
       running_ = true;
+      exit_num_ = 0;
       while (running_)
       {
         msg_ = gce::message();
         sender_ = gce::aid_t();
         GCE_YIELD self.recv(sender_, msg_);
         type_ = msg_.get_type();
-        if (type_ == gce::exit || type_ == gce::atom("stop"))
+        if (type_ == gce::exit)
         {
-          running_ = false;
+          ++exit_num_;
+          if (exit_num_ < 2)
+          {
+            gce::send(self, tmo_aid_, gce::exit);
+          skt_->close();
+          }
+          else
+          {
+            running_ = false;
+          }
+        }
+        else if (type_ == gce::atom("stop"))
+        {
+          gce::send(self, tmo_aid_, gce::exit);
+          skt_->close();
         }
         else if (type_ == gce::atom("fwd_msg"))
         {
@@ -106,8 +121,9 @@ void conn::run(gce::actor<gce::stackless>& self)
           {
             gce::message m;
             msg_ >> m;
+            std::printf("fwd msg to client: %s\n", gce::atom(m.get_type()).c_str());
             ec_.clear();
-            skt_->send(m, gce::adaptor(self, ec_));
+            skt_->send(m, gce::adaptor(self, ec_, bytes_transferred_));
           }
 
           if (ec_)
@@ -210,7 +226,7 @@ void conn::recv::run(
       {
         ec_.clear();
         msg_ = gce::message();
-        GCE_YIELD skt_->recv(msg_, gce::adaptor(self, ec_));
+        GCE_YIELD skt_->recv(msg_, gce::adaptor(self, ec_, bytes_transferred_));
 
         if (!ec_)
         {
@@ -251,6 +267,7 @@ void conn::recv::run(
 
             stat_ = online;
             gce::message m(gce::atom("cln_login_ret"));
+            std::printf("fwd msg: %s\n", gce::atom(m.get_type()).c_str());
             m << std::string();
             gce::send(self, conn_aid_, gce::atom("fwd_msg"), m);
             gce::send(self, tmo_aid_, gce::atom("online"));
