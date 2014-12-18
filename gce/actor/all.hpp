@@ -16,6 +16,7 @@
 #include <gce/actor/remote.hpp>
 #include <gce/actor/spawn.hpp>
 #include <gce/actor/pattern.hpp>
+#include <gce/actor/match.hpp>
 #include <gce/actor/service.hpp>
 #ifdef GCE_SCRIPT
 # include <gce/actor/script.hpp>

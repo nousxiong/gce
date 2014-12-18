@@ -155,13 +155,13 @@ public:
     base_t::pri_monitor(target);
   }
 
-  aid_t recv(message& msg, match_list_t const& match_list = match_list_t())
+  aid_t recv(message& msg, match_list_t const& match_list = match_list_t(), recver_t const& recver = recver_t())
   {
     aid_t sender;
     recv_t rcv;
 
     move_pack();
-    if (!base_t::mb_.pop(rcv, msg, match_list))
+    if (!base_t::mb_.pop(rcv, msg, match_list, recver))
     {
       return sender;
     }

@@ -115,12 +115,12 @@ public:
       );
   }
 
-  aid_t recv(message& msg, match_list_t const& match_list = match_list_t())
+  aid_t recv(message& msg, match_list_t const& match_list = match_list_t(), recver_t const& recver = recver_t())
   {
     aid_t sender;
     recv_t rcv;
 
-    if (base_t::mb_.pop(rcv, msg, match_list))
+    if (base_t::mb_.pop(rcv, msg, match_list, recver))
     {
       sender = end_recv(rcv, msg);
     }
@@ -190,7 +190,7 @@ public:
     recv_t rcv;
     message msg;
 
-    if (!base_t::mb_.pop(rcv, msg, patt.match_list_))
+    if (!base_t::mb_.pop(rcv, msg, patt.match_list_, patt.recver_))
     {
       duration_t tmo = patt.timeout_;
       if (tmo > zero)
@@ -473,7 +473,7 @@ private:
     {
       if (recv_h_ && !is_response)
       {
-        bool ret = base_t::mb_.pop(rcv, msg, curr_pattern_.match_list_);
+        bool ret = base_t::mb_.pop(rcv, msg, curr_pattern_.match_list_, curr_pattern_.recver_);
         if (!ret)
         {
           return;

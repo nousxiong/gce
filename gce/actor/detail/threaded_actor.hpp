@@ -272,7 +272,7 @@ private:
   void try_recv(recv_promise_t& p, pattern const& patt)
   {
     std::pair<recv_t, message> rcv;
-    if (!base_t::mb_.pop(rcv.first, rcv.second, patt.match_list_))
+    if (!base_t::mb_.pop(rcv.first, rcv.second, patt.match_list_, patt.recver_))
     {
       duration_t tmo = patt.timeout_;
       if (tmo > zero)
@@ -401,7 +401,7 @@ private:
     {
       if (recv_p_ && !is_response)
       {
-        bool ret = base_t::mb_.pop(rcv, msg, curr_pattern_.match_list_);
+        bool ret = base_t::mb_.pop(rcv, msg, curr_pattern_.match_list_, curr_pattern_.recver_);
         if (!ret)
         {
           return;

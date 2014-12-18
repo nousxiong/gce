@@ -494,9 +494,9 @@ public:
     a_.monitor(target);
   }
 
-  aid_t recv(message& msg, match_list_t const& match_list = match_list_t())
+  aid_t recv(message& msg, match_list_t const& match_list = match_list_t(), recver_t const& recver = recver_t())
   {
-    return a_.recv(msg, match_list);
+    return a_.recv(msg, match_list, recver);
   }
 
   aid_t respond(resp_t const& res, message& msg)

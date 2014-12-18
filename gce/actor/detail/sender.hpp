@@ -140,49 +140,42 @@ struct sender
     reply_impl(get_actor_ref(), recver, m);
   }
 
-  template <typename Match>
-  void reply(aid_t recver, Match type)
+  template <typename A1>
+  void reply(aid_t recver, A1 const& a1)
   {
-    message m(to_match(type));
-    reply_impl(get_actor_ref(), recver, m);
-  }
-
-  template <typename Match, typename A1>
-  void reply(aid_t recver, Match type, A1 const& a1)
-  {
-    message m(to_match(type));
+    message m;
     m << a1;
     reply_impl(get_actor_ref(), recver, m);
   }
 
-  template <typename Match, typename A1, typename A2>
-  void reply(aid_t recver, Match type, A1 const& a1, A2 const& a2)
+  template <typename A1, typename A2>
+  void reply(aid_t recver, A1 const& a1, A2 const& a2)
   {
-    message m(to_match(type));
+    message m;
     m << a1 << a2;
     reply_impl(get_actor_ref(), recver, m);
   }
 
-  template <typename Match, typename A1, typename A2, typename A3>
-  void reply(aid_t recver, Match type, A1 const& a1, A2 const& a2, A3 const& a3)
+  template <typename A1, typename A2, typename A3>
+  void reply(aid_t recver, A1 const& a1, A2 const& a2, A3 const& a3)
   {
-    message m(to_match(type));
+    message m;
     m << a1 << a2 << a3;
     reply_impl(get_actor_ref(), recver, m);
   }
 
-  template <typename Match, typename A1, typename A2, typename A3, typename A4>
-  void reply(aid_t recver, Match type, A1 const& a1, A2 const& a2, A3 const& a3, A4 const& a4)
+  template <typename A1, typename A2, typename A3, typename A4>
+  void reply(aid_t recver, A1 const& a1, A2 const& a2, A3 const& a3, A4 const& a4)
   {
-    message m(to_match(type));
+    message m;
     m << a1 << a2 << a3 << a4;
     reply_impl(get_actor_ref(), recver, m);
   }
 
-  template <typename Match, typename A1, typename A2, typename A3, typename A4, typename A5>
-  void reply(aid_t recver, Match type, A1 const& a1, A2 const& a2, A3 const& a3, A4 const& a4, A5 const& a5)
+  template <typename A1, typename A2, typename A3, typename A4, typename A5>
+  void reply(aid_t recver, A1 const& a1, A2 const& a2, A3 const& a3, A4 const& a4, A5 const& a5)
   {
-    message m(to_match(type));
+    message m;
     m << a1 << a2 << a3 << a4 << a5;
     reply_impl(get_actor_ref(), recver, m);
   }

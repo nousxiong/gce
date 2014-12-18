@@ -11,8 +11,10 @@
 #define GCE_ACTOR_PATTERN_HPP
 
 #include <gce/actor/config.hpp>
+#include <gce/actor/detail/recver.hpp>
 #include <gce/actor/detail/to_match.hpp>
 #include <boost/array.hpp>
+#include <boost/variant/get.hpp>
 
 namespace gce
 {
@@ -124,6 +126,7 @@ struct pattern
 
   duration_t timeout_;
   match_list_t match_list_;
+  detail::recver_t recver_;
 };
 
 #ifdef GCE_LUA

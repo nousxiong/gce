@@ -62,8 +62,7 @@ public:
     {
       std::size_t user_thr_num = 5;
       std::size_t my_actor_size = 10;
-      attributes attrs;
-      context ctx(attrs);
+      context ctx;
       threaded_actor base = spawn(ctx);
 
       aid_t base_id = base.get_aid();

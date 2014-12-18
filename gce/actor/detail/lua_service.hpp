@@ -118,12 +118,12 @@ inline duration_type lua_hours(int val)
 
 inline duration_type make_zero()
 {
-  return duration_t(GCE_ZERO_TIME);
+  return duration_t(zero);
 }
 
 inline duration_type make_infin()
 {
-  return seconds_t(GCE_INFIN_TIME);
+  return duration_t(infin);
 }
 
 inline net_option make_net_option()

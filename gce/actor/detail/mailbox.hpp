@@ -61,7 +61,7 @@ public:
   }
 
 public:
-  bool pop(recv_t& src, message& msg, match_list_t const& match_list)
+  bool pop(recv_t& src, message& msg, match_list_t const& match_list, recver_t const& recver)
   {
     if (recv_que_.empty())
     {
@@ -71,12 +71,12 @@ public:
     if (match_list.empty())
     {
       recv_pair_t& rp = recv_que_.front();
-      return fetch_match_msg(rp.second.get_type(), src, msg);
+      return fetch_match_msg(rp.second.get_type(), recver, src, msg);
     }
 
     BOOST_FOREACH(match_t type, match_list)
     {
-      if (fetch_match_msg(type, src, msg))
+      if (fetch_match_msg(type, recver, src, msg))
       {
         return true;
       }
@@ -97,10 +97,9 @@ public:
     }
     else
     {
-      aid_t recver = res.get_recver();
-      svcid_t svc = res.get_svcid();
-      if (recver)
+      if (aid_t const* aid = res.get_recver<aid_t>())
       {
+        aid_t const& recver = *aid;
         exit_list_t::iterator itr(exit_list_.find(recver));
         if (itr != exit_list_.end())
         {
@@ -110,9 +109,10 @@ public:
           return true;
         }
       }
-      else
+      else if (svcid_t const* svc = res.get_recver<svcid_t>())
       {
-        svc_exit_list_t::iterator itr(svc_exit_list_.find(svc));
+        svcid_t const& recver = *svc;
+        svc_exit_list_t::iterator itr(svc_exit_list_.find(recver));
         if (itr != svc_exit_list_.end())
         {
           recv_itr rtr = *itr->second.second;
@@ -220,6 +220,41 @@ private:
           pr.first->second = mtr;
         }
       }
+    }
+  }
+
+  
+  bool fetch_match_msg(match_t type, recver_t const& recver, recv_t& src, message& msg)
+  {
+    if (fetch_match_msg(type, src, msg))
+    {
+      return true;
+    }
+    else
+    {
+      if (aid_t const* aid = boost::get<aid_t>(&recver))
+      {
+        exit_list_t::iterator itr(exit_list_.find(*aid));
+        if (itr != exit_list_.end())
+        {
+          recv_itr rtr = *itr->second;
+          src = rtr->first;
+          msg = rtr->second;
+          return true;
+        }
+      }
+      else if (svcid_t const* svc = boost::get<svcid_t>(&recver))
+      {
+        svc_exit_list_t::iterator itr(svc_exit_list_.find(*svc));
+        if (itr != svc_exit_list_.end())
+        {
+          recv_itr rtr = *itr->second.second;
+          src = rtr->first;
+          msg = rtr->second;
+          return true;
+        }
+      }
+      return false;
     }
   }
 

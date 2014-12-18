@@ -15,6 +15,7 @@
 #include <gce/actor/actor_id.hpp>
 #include <gce/actor/message.hpp>
 #include <gce/actor/pattern.hpp>
+#include <gce/actor/match.hpp>
 #include <gce/actor/detail/to_match.hpp>
 #include <boost/bind.hpp>
 #include <algorithm>
@@ -29,9 +30,10 @@ inline void make_pattern(pattern& rt, Match type)
   rt.match_list_.push_back(to_match(type));
 }
 
-inline void make_pattern(pattern& rt, pattern const& type)
+inline void make_pattern(pattern& rt, match type)
 {
-  rt.match_list_ = type.match_list_;
+  rt.match_list_.push_back(type.type_);
+  rt.recver_ = type.recver_;
 }
 
 inline bool find_exit(match_t type)
@@ -43,7 +45,7 @@ inline bool check_exit(std::vector<match_t>& match_list)
 {
   if (match_list.empty())
   {
-    return false;
+    return true;
   }
   else
   {
@@ -53,21 +55,16 @@ inline bool check_exit(std::vector<match_t>& match_list)
         match_list.end(),
         boost::bind(&find_exit, _1)
         );
-    return itr == match_list.end();
+    return itr != match_list.end();
   }
 }
 
 template <typename Tag, typename Recver>
 inline aid_t recv_impl(Tag, Recver& recver, message& msg, pattern& patt)
 {
-  bool add_exit = check_exit(patt.match_list_);
-  if (add_exit)
-  {
-    patt.match_list_.push_back(exit);
-  }
-
+  bool has_exit = check_exit(patt.match_list_);
   aid_t sender = recver.recv(msg, patt);
-  if (add_exit && msg.get_type() == exit)
+  if (!has_exit && msg.get_type() == exit)
   {
     exit_code_t exc;
     std::string errmsg;
@@ -75,7 +72,6 @@ inline aid_t recv_impl(Tag, Recver& recver, message& msg, pattern& patt)
     GCE_VERIFY(false)(exc)(msg)(patt)(sender).msg(errmsg.c_str());
   }
 
-  
   GCE_VERIFY(sender)(msg)(patt).msg("recv timeout");
   return sender;
 }
@@ -84,12 +80,7 @@ template <typename Recver>
 inline aid_t recv_impl(gce::nonblocked, Recver& recver, message& msg, pattern& patt)
 {
   bool has_exit = check_exit(patt.match_list_);
-  if (!has_exit)
-  {
-    patt.match_list_.push_back(exit);
-  }
-
-  aid_t sender = recver.recv(msg, patt.match_list_);
+  aid_t sender = recver.recv(msg, patt.match_list_, patt.recver_);
   if (!has_exit && msg.get_type() == exit)
   {
     exit_code_t exc;
@@ -134,12 +125,7 @@ inline aid_t respond_impl(gce::nonblocked, Recver& recver, resp_t res, message& 
 ///------------------------------------------------------------------------------
 inline bool begin_recv(pattern& patt)
 {
-  bool add_exit = check_exit(patt.match_list_);
-  if (add_exit)
-  {
-    patt.match_list_.push_back(exit);
-  }
-  return add_exit;
+  return check_exit(patt.match_list_);
 }
 
 template <typename Stackless>
@@ -150,7 +136,7 @@ inline bool end_recv(
 {
   osender = sender;
   bool ret = false;
-  if (msg.get_type() == exit && !has_exit)
+  if (!has_exit && msg.get_type() == exit)
   {
     exit_code_t exc;
     std::string errmsg;

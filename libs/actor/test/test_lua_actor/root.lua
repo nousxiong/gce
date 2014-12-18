@@ -22,8 +22,9 @@ gce.run_actor(
 		local sender, args = gce.recv("init", gce.aid())
 		local base_aid = args[1]
 
-		test("pingpong_ut")
-		test("relay_ut")
+		test("match_ut")
+		--test("pingpong_ut")
+		--test("relay_ut")
 
 		gce.send(base_aid)
   end)

@@ -12,7 +12,9 @@
 
 #include <gce/actor/config.hpp>
 #include <gce/actor/actor_id.hpp>
+#include <gce/actor/detail/recver.hpp>
 #include <boost/array.hpp>
+#include <boost/variant/get.hpp>
 
 namespace gce
 {
@@ -22,7 +24,7 @@ public:
   response() : id_(sid_nil) {}
   response(sid_t id, aid_t aid) : id_(id), aid_(aid){}
   response(sid_t id, aid_t aid, aid_t recver) : id_(id), aid_(aid), recver_(recver) {}
-  response(sid_t id, aid_t aid, svcid_t svc) : id_(id), aid_(aid), svc_(svc) {}
+  response(sid_t id, aid_t aid, svcid_t recver) : id_(id), aid_(aid), recver_(recver) {}
   ~response() {}
 
 public:
@@ -31,8 +33,11 @@ public:
   aid_t get_aid() const { return aid_; }
 
   /// for local use
-  aid_t get_recver() const { return recver_; }
-  svcid_t get_svcid() const { return svc_; }
+  template <typename T>
+  T const* get_recver() const
+  {
+    return boost::get<T>(&recver_);
+  }
 
   std::string to_string() const
   {
@@ -51,8 +56,7 @@ private:
   aid_t aid_;
 
   /// for local use
-  aid_t recver_;
-  svcid_t svc_;
+  detail::recver_t recver_;
 };
 
 typedef response resp_t;

@@ -37,6 +37,7 @@ static std::size_t const test_count = 1;
 #include "test_mixin_pingpong.hpp"
 #include "test_slice_pingpong.hpp"
 #include "test_match.hpp"
+#include "test_match_recver.hpp"
 #include "test_link.hpp"
 #include "test_message.hpp"
 #include "test_relay.hpp"
@@ -57,7 +58,6 @@ static std::size_t const test_count = 1;
 # include "test_lua_socket.hpp"
 # include "test_lua_service.hpp"
 #endif
-#include "test_batch_pingpong.hpp"
 
 int main()
 {
@@ -75,6 +75,7 @@ int main()
     gce::mixin_pingpong_ut::run();
     gce::slice_pingpong_ut::run();
     gce::match_ut::run();
+    gce::match_recver_ut::run();
     gce::link_ut::run();
     gce::relay_ut::run();
     gce::common_relay_ut::run();

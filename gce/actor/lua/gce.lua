@@ -109,11 +109,37 @@ function gce.recv(cfg, ...)
 		local ty = type(cfg)
 		local patt
 		if ty == "table" then
-			-- match_t*N + timeout (N >= 1)
-			local tmo = cfg[#cfg]
-			cfg[#cfg] = nil
+			-- match_t*N + [aid/svcid] + [timeout] (N >= 0)
+			local tmo, recver
+			local last_idx = #cfg
+			assert (last_idx >= 1)
+			local last = cfg[last_idx]
+			local last_ty = last:get_overloading_type()
+			if last_ty ~= gce.overloading_match_t then
+				if last_ty == gce.overloading_duration then
+					tmo = last
+					cfg[last_idx] = nil
+					if last_idx - 1 >= 1 then
+						local last_sec = cfg[last_idx - 1]
+						local last_sec_ty = last_sec:get_overloading_type()
+						if last_sec_ty == gce.overloading_aid or last_sec_ty == gce.overloading_svcid then
+							recver = last_sec
+							cfg[last_idx - 1] = nil
+						end
+					end
+				else
+					recver = last
+					cfg[last_idx] = nil
+				end
+			end
+
 		  patt = gce.pattern(cfg)
-		  patt:set_timeout(tmo)
+		  if tmo ~= nil then
+		  	patt:set_timeout(tmo)
+		  end
+		  if recver ~= nil then
+		  	gce.set_match_recver(patt, recver)
+		  end
 		elseif ty == "string" or ty == "number" then
 			patt = gce.pattern(gce.atom(cfg))
 		else
@@ -242,6 +268,17 @@ function gce.deregister_service(name)
 		assert (name:get_overloading_type() == gce.overloading_match_t)
 	end
 	self:deregister_service(name)
+end
+
+function gce.set_match_recver(patt, recver)
+	assert (patt:get_overloading_type() == gce.overloading_pattern)
+	local ty = recver:get_overloading_type()
+	assert (ty == gce.overloading_aid or ty == gce.overloading_svcid)
+	if ty == gce.overloading_aid then
+		patt:set_match_aid(recver)
+	else
+		patt:set_match_svcid(recver)
+	end
 end
 
 function gce.get_aid()

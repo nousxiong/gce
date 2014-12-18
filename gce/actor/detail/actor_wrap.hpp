@@ -32,11 +32,30 @@ struct actor_wrap<ActorRef, false>
 
   aid_t recv(duration_t tmo = infin)
   {
+    return pri_recv(0, tmo);
+  }
+
+  aid_t recv(aid_t const& aid, duration_t tmo = infin)
+  {
+    return pri_recv(aid, tmo);
+  }
+
+  aid_t recv(svcid_t const& svc, duration_t tmo = infin)
+  {
+    return pri_recv(svc, tmo);
+  }
+
+private:
+  template <typename Recver>
+  aid_t pri_recv(Recver const& recver, duration_t tmo)
+  {
     message msg;
     pattern patt(tmo);
+    patt.recver_ = recver;
     return recv_impl(typename actor_ref_t::type(), base_t::get_actor_ref(), msg, patt);
   }
 
+public:
   template <typename Match>
   aid_t recv(Match type, duration_t tmo = infin)
   {
@@ -193,6 +212,26 @@ struct actor_wrap<ActorRef, true>
   void recv(aid_t& sender, duration_t tmo = infin)
   {
     pattern patt(tmo);
+    pri_recv(sender, patt);
+  }
+
+  void recv(aid_t& sender, aid_t const& aid, duration_t tmo = infin)
+  {
+    pattern patt(tmo);
+    patt.set_recver(aid);
+    pri_recv(sender, patt);
+  }
+
+  void recv(aid_t& sender, svcid_t const& svc, duration_t tmo = infin)
+  {
+    pattern patt(tmo);
+    patt.set_recver(svc);
+    pri_recv(sender, patt);
+  }
+
+private:
+  void pri_recv(aid_t& sender, pattern& patt)
+  {
     bool has_exit = begin_recv(patt);
     actor_ref_t& a = base_t::get_actor_ref();
     a.recv(
@@ -204,6 +243,7 @@ struct actor_wrap<ActorRef, true>
       );
   }
 
+public:
   template <typename Match, typename A1>
   void recv(aid_t& sender, Match type, A1& a1, duration_t tmo = infin)
   {

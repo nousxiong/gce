@@ -64,8 +64,6 @@
 #include <utility>
 
 #define GCE_MAX_MSG_SIZE (GCE_SOCKET_RECV_CACHE_SIZE - GCE_SOCKET_RECV_MAX_SIZE)
-#define GCE_ZERO_TIME 0
-#define GCE_INFIN_TIME 199999999
 
 namespace gce
 {
@@ -83,6 +81,26 @@ typedef boost::chrono::hours hours_t;
 
 static duration_t const zero(duration_t::zero());
 static duration_t const infin((duration_t::max)());
+
+inline duration_t millisecs(millisecs_t::rep val)
+{
+  return millisecs_t(val);
+}
+
+inline duration_t seconds(seconds_t::rep val)
+{
+  return seconds_t(val);
+}
+
+inline duration_t minutes(minutes_t::rep val)
+{
+  return minutes_t(val);
+}
+
+inline duration_t hours(hours_t::rep val)
+{
+  return hours_t(val);
+}
 
 typedef boost::uint32_t sid_t;
 static boost::uint32_t const sid_nil = static_cast<sid_t>(-1);

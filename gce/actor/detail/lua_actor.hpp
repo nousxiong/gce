@@ -366,7 +366,7 @@ private:
   {
     recv_t rcv;
 
-    if (!base_t::mb_.pop(rcv, msg, patt.match_list_))
+    if (!base_t::mb_.pop(rcv, msg, patt.match_list_, patt.recver_))
     {
       duration_t tmo = patt.timeout_;
       if (tmo > zero)
@@ -519,7 +519,7 @@ private:
     {
       if (recving_ && !is_response)
       {
-        bool ret = base_t::mb_.pop(rcv, msg, curr_pattern_.match_list_);
+        bool ret = base_t::mb_.pop(rcv, msg, curr_pattern_.match_list_, curr_pattern_.recver_);
         if (!ret)
         {
           return;

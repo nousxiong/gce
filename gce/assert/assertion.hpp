@@ -31,13 +31,13 @@ class assert_except
   typedef boost::array<char, 32> strbuf_t;
 
 public:
-  assert_except(time_point_t tp, char const* msg, boost::string_ref err = boost::string_ref())
+  assert_except(time_point_t tp, char const* msg, boost::string_ref err, bool is_verify)
   {
     if (!err.empty())
     {
       what_.append(err.data(), err.size());
     }
-    make_description(what_, "Assert exception, timestamp <", tp, msg);
+    make_description(what_, is_verify ? "Verify exception, timestamp <" : "Assert exception, timestamp <", tp, msg);
   }
 
   
@@ -96,7 +96,7 @@ class assertion
   struct other_t {};
 
 public:
-  assertion(char const* expr, char const* file, int line, gce::log::level lv)
+  assertion(char const* expr, char const* file, int line, gce::log::level lv, bool is_verify = false)
     : GCE_ASSERT_A(*this)
     , GCE_ASSERT_B(*this)
     , lv_(lv)
@@ -104,8 +104,9 @@ public:
     , msg_(0)
     , lg_type_(log_default)
     , hdl_type_(handle_default)
+    , is_verify_(is_verify)
   {
-    str_.append("Assertion failed in ");
+    str_.append(is_verify_ ? "Verify failed in " : "Assertion failed in ");
     str_.append(file);
     str_.append(": ");
     str_.append(boost::lexical_cast<strbuf_t>(line).cbegin());
@@ -124,6 +125,7 @@ public:
     , msg_(other.msg_)
     , lg_type_(other.lg_type_)
     , hdl_type_(other.hdl_type_)
+    , is_verify_(other.is_verify_)
   {
   }
 
@@ -188,7 +190,7 @@ public:
       {
         str_ref = boost::string_ref();
       }
-      throw gce::assert_except(ex_, msg_, str_ref);
+      throw gce::assert_except(ex_, msg_, str_ref, is_verify_);
     }
   }
 
@@ -258,7 +260,7 @@ public:
       byte_t const* str = str_.data();
       str_ref = boost::string_ref((char const*)str, str_.get_buffer_ref().write_size());
     }
-    throw gce::assert_except(ex_, msg_, str_ref);
+    throw gce::assert_except(ex_, msg_, str_ref, is_verify_);
   }
 
   void abort()
@@ -480,11 +482,12 @@ private:
   char const* msg_;
   log_type lg_type_;
   handle_type hdl_type_;
+  bool is_verify_;
 };
 
-inline assertion make_assert(char const* expr, char const* file, int line, gce::log::level lv)
+inline assertion make_assert(char const* expr, char const* file, int line, gce::log::level lv, bool is_verify = false)
 {
-  return assertion(expr, file, line, lv);
+  return assertion(expr, file, line, lv, is_verify);
 }
 } /// namespace detail
 } /// namespace gce
@@ -509,6 +512,6 @@ inline assertion make_assert(char const* expr, char const* file, int line, gce::
 
 # define GCE_VERIFY(expr) \
   if ( (expr) ) ; \
-  else gce::detail::make_assert(#expr, __FILE__, __LINE__, gce::log::error).GCE_ASSERT_A
+  else gce::detail::make_assert(#expr, __FILE__, __LINE__, gce::log::error, true).GCE_ASSERT_A
 
 #endif /// GCE_ASSERT_ASSERTION_HPP
