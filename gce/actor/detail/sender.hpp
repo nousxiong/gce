@@ -186,7 +186,8 @@ struct sender
   {
   }
 
-  void set_actor_ref(actor_ref_t& a)
+protected:
+  inline void set_actor_ref(actor_ref_t& a)
   {
     a_ = &a;
   }

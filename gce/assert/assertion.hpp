@@ -19,6 +19,7 @@
 #include <boost/utility/string_ref.hpp>
 #include <boost/mpl/if.hpp>
 #include <boost/type_traits.hpp>
+#include <boost/static_assert.hpp>
 #include <exception>
 #include <string>
 
@@ -41,7 +42,7 @@ public:
   }
 
   
-  ~assert_except() throw() 
+  virtual ~assert_except() throw() 
   {
   }
 
@@ -252,6 +253,26 @@ public:
 
   void except()
   {
+    boost::string_ref str_ref = pri_except();
+    throw gce::assert_except(ex_, msg_, str_ref, is_verify_);
+  }
+
+  template <typename Except>
+  void except()
+  {
+    boost::string_ref str_ref = pri_except();
+    gce::assert_except ex(ex_, msg_, str_ref, is_verify_);
+    throw Except(ex.what());
+  }
+
+  void abort()
+  {
+    hdl_type_ = handle_aborted;
+  }
+
+private:
+  boost::string_ref pri_except()
+  {
     ex_ = system_clock_t::now();
     hdl_type_ = handle_excepted;
     boost::string_ref str_ref;
@@ -260,12 +281,7 @@ public:
       byte_t const* str = str_.data();
       str_ref = boost::string_ref((char const*)str, str_.get_buffer_ref().write_size());
     }
-    throw gce::assert_except(ex_, msg_, str_ref, is_verify_);
-  }
-
-  void abort()
-  {
-    hdl_type_ = handle_aborted;
+    return str_ref;
   }
 
 public:

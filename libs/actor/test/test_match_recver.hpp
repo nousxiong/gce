@@ -29,7 +29,12 @@ private:
   {
     if (base_id)
     {
-      self->send(base_id);
+      int i = 0;
+      self->send(base_id, "catch", i);
+      ++i;
+      self->send(base_id, "catch", i);
+      ++i;
+      self->send(base_id, "catch", i);
     }
   }
 
@@ -48,7 +53,14 @@ private:
       aid_t sender = base.recv(msg, pattern("timeout", millisecs(1)));
       GCE_VERIFY(!sender);
 
-      base->recv(match("not_catch", aid1));
+      int i = -1;
+      base->recv("catch", guard(aid1), i);
+      GCE_VERIFY(i == 0);
+      std::cout << "catch " << i << std::endl;
+      base->match("catch").guard(aid1).recv(i);
+      GCE_VERIFY(i == 1);
+      std::cout << "catch " << i << std::endl;
+      base->match("not_catch").guard(aid1).recv(i);
       GCE_VERIFY(false);
     }
     catch (std::exception& ex)

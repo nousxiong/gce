@@ -51,10 +51,10 @@ private:
       {
         int i = 0;
         std::string str("verify");
-        GCE_VERIFY(i == 0 && str == "hi")(i)(str);
+        GCE_VERIFY(i == 0 && str == "hi")(i)(str).except<std::runtime_error>();
         BOOST_ASSERT_MSG(false, "shoudn't be here");
       }
-      catch (std::exception& ex)
+      catch (std::runtime_error& ex)
       {
         std::cerr << ex.what() << std::endl;
       }

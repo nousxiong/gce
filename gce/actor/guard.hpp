@@ -7,38 +7,33 @@
 /// See https://github.com/nousxiong/gce for latest version.
 ///
 
-#ifndef GCE_ACTOR_MATCH_HPP
-#define GCE_ACTOR_MATCH_HPP
+#ifndef GCE_ACTOR_GUARD_HPP
+#define GCE_ACTOR_GUARD_HPP
 
 #include <gce/actor/config.hpp>
+#include <gce/actor/actor_id.hpp>
 #include <gce/actor/detail/recver.hpp>
-#include <gce/actor/detail/to_match.hpp>
 
 namespace gce
 {
-struct match
+struct guard
 {
-  template <typename Match>
-  match(Match type, aid_t const& aid)
-    : type_(detail::to_match(type))
-    , recver_(aid)
+  guard()
   {
   }
 
-  template <typename Match>
-  match(Match type, svcid_t const& svc)
-    : type_(detail::to_match(type))
-    , recver_(svc)
+  explicit guard(aid_t const& aid)
+    : recver_(aid)
   {
   }
 
-  ~match()
+  explicit guard(svcid_t const& svc)
+    : recver_(svc)
   {
   }
 
-  match_t type_;
   detail::recver_t recver_;
 };
 }
 
-#endif /// GCE_ACTOR_MATCH_HPP
+#endif /// GCE_ACTOR_GUARD_HPP

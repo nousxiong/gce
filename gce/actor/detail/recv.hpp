@@ -15,7 +15,6 @@
 #include <gce/actor/actor_id.hpp>
 #include <gce/actor/message.hpp>
 #include <gce/actor/pattern.hpp>
-#include <gce/actor/match.hpp>
 #include <gce/actor/detail/to_match.hpp>
 #include <boost/bind.hpp>
 #include <algorithm>
@@ -28,12 +27,6 @@ template <typename Match>
 inline void make_pattern(pattern& rt, Match type)
 {
   rt.match_list_.push_back(to_match(type));
-}
-
-inline void make_pattern(pattern& rt, match type)
-{
-  rt.match_list_.push_back(type.type_);
-  rt.recver_ = type.recver_;
 }
 
 inline bool find_exit(match_t type)
