@@ -106,14 +106,29 @@ public:
     , lg_type_(log_default)
     , hdl_type_(handle_default)
     , is_verify_(is_verify)
+    , is_throw_(expr == "false" || expr == "0" || expr == "NULL")
   {
-    str_.append(is_verify_ ? "Verify failed in " : "Assertion failed in ");
+    if (is_throw_)
+    {
+      str_.append("Throw exception in ");
+    }
+    else
+    {
+      str_.append(is_verify_ ? "Verify failed in " : "Assert failed in ");
+    }
     str_.append(file);
     str_.append(": ");
     str_.append(boost::lexical_cast<strbuf_t>(line).cbegin());
-    str_.append("\nExpression: '");
-    str_.append(expr);
-    str_.append("'\n");
+    if (is_throw_)
+    {
+      str_.append("\n");
+    }
+    else
+    {
+      str_.append("\nExpression: '");
+      str_.append(expr);
+      str_.append("'\n");
+    }
   }
 
   assertion(assertion const& other)
@@ -127,6 +142,7 @@ public:
     , lg_type_(other.lg_type_)
     , hdl_type_(other.hdl_type_)
     , is_verify_(other.is_verify_)
+    , is_throw_(other.is_throw_)
   {
   }
 
@@ -140,7 +156,7 @@ public:
 
     if (ex_ != (time_point_t::min)())
     {
-      gce::assert_except::make_description(str_, "exception timestamp <", ex_, msg_);
+      gce::assert_except::make_description(str_, "Exception timestamp <", ex_, msg_);
     }
 
     bool throw_except = false;
@@ -499,6 +515,7 @@ private:
   log_type lg_type_;
   handle_type hdl_type_;
   bool is_verify_;
+  bool is_throw_;
 };
 
 inline assertion make_assert(char const* expr, char const* file, int line, gce::log::level lv, bool is_verify = false)

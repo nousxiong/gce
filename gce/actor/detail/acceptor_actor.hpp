@@ -14,6 +14,7 @@
 #include <gce/actor/message.hpp>
 #include <gce/actor/pattern.hpp>
 #include <gce/actor/net_option.hpp>
+#include <gce/actor/exception.hpp>
 #include <gce/actor/detail/socket_actor.hpp>
 #include <gce/actor/detail/network_service.hpp>
 #include <gce/actor/detail/basic_actor.hpp>
@@ -275,7 +276,9 @@ private:
     }
     else
     {
-      GCE_VERIFY(false)(prot_name).log(lg_, "unsupported protocol");
+      GCE_VERIFY(false)(prot_name)
+        .log(lg_, "gce::unsupported_protocol_exception")
+        .except<unsupported_protocol_exception>();
       // just suppress vc's warning
       throw 1;
     }

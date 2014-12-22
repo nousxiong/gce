@@ -15,6 +15,7 @@
 #include <gce/actor/actor_id.hpp>
 #include <gce/actor/message.hpp>
 #include <gce/actor/pattern.hpp>
+#include <gce/actor/exception.hpp>
 #include <gce/actor/detail/to_match.hpp>
 #include <boost/bind.hpp>
 #include <algorithm>
@@ -62,10 +63,39 @@ inline aid_t recv_impl(Tag, Recver& recver, message& msg, pattern& patt)
     exit_code_t exc;
     std::string errmsg;
     msg >> exc >> errmsg;
-    GCE_VERIFY(false)(exc)(msg)(patt)(sender).msg(errmsg.c_str());
+    if (exc == exit_normal)
+    {
+      GCE_VERIFY(false)(exc)(msg)(patt)(sender)
+        .msg("gce::normal_exception").except<normal_exception>();
+    }
+    else if (exc == exit_except)
+    {
+      GCE_VERIFY(false)(exc)(msg)(patt)(sender)
+        .msg("gce::runtime_exception").except<runtime_exception>();
+    }
+    else if (exc == exit_remote)
+    {
+      GCE_VERIFY(false)(exc)(msg)(patt)(sender)
+        .msg("gce::remote_exception").except<remote_exception>();
+    }
+    else if (exc == exit_already)
+    {
+      GCE_VERIFY(false)(exc)(msg)(patt)(sender)
+        .msg("gce::already_exit_exception").except<already_exit_exception>();
+    }
+    else if (exc == exit_neterr)
+    {
+      GCE_VERIFY(false)(exc)(msg)(patt)(sender)
+        .msg("gce::neterr_exception").except<neterr_exception>();
+    }
+    else
+    {
+      GCE_ASSERT(false)(exc)(errmsg);
+    }
   }
 
-  GCE_VERIFY(sender)(msg)(patt).msg("recv timeout");
+  GCE_VERIFY(sender)(msg)(patt)
+    .msg("gce::recv_timeout_exception").except<recv_timeout_exception>();
   return sender;
 }
 
@@ -79,7 +109,35 @@ inline aid_t recv_impl(gce::nonblocked, Recver& recver, message& msg, pattern& p
     exit_code_t exc;
     std::string errmsg;
     msg >> exc >> errmsg;
-    GCE_VERIFY(false)(exc)(msg)(patt)(sender).msg(errmsg.c_str());
+    if (exc == exit_normal)
+    {
+      GCE_VERIFY(false)(exc)(msg)(patt)(sender)
+        .msg("gce::normal_exception").except<normal_exception>();
+    }
+    else if (exc == exit_except)
+    {
+      GCE_VERIFY(false)(exc)(msg)(patt)(sender)
+        .msg("gce::runtime_exception").except<runtime_exception>();
+    }
+    else if (exc == exit_remote)
+    {
+      GCE_VERIFY(false)(exc)(msg)(patt)(sender)
+        .msg("gce::remote_exception").except<remote_exception>();
+    }
+    else if (exc == exit_already)
+    {
+      GCE_VERIFY(false)(exc)(msg)(patt)(sender)
+        .msg("gce::already_exit_exception").except<already_exit_exception>();
+    }
+    else if (exc == exit_neterr)
+    {
+      GCE_VERIFY(false)(exc)(msg)(patt)(sender)
+        .msg("gce::neterr_exception").except<neterr_exception>();
+    }
+    else
+    {
+      GCE_ASSERT(false)(exc)(errmsg);
+    }
   }
   return sender;
 }
@@ -93,10 +151,39 @@ inline aid_t respond_impl(Tag, Recver& recver, resp_t res, message& msg, duratio
     exit_code_t exc;
     std::string errmsg;
     msg >> exc >> errmsg;
-    GCE_VERIFY(false)(exc)(res)(msg)(sender)(tmo.count()).msg(errmsg.c_str());
+    if (exc == exit_normal)
+    {
+      GCE_VERIFY(false)(exc)(res)(msg)(sender)(tmo.count())
+        .msg("gce::normal_exception").except<normal_exception>();
+    }
+    else if (exc == exit_except)
+    {
+      GCE_VERIFY(false)(exc)(res)(msg)(sender)(tmo.count())
+        .msg("gce::runtime_exception").except<runtime_exception>();
+    }
+    else if (exc == exit_remote)
+    {
+      GCE_VERIFY(false)(exc)(res)(msg)(sender)(tmo.count())
+        .msg("gce::remote_exception").except<remote_exception>();
+    }
+    else if (exc == exit_already)
+    {
+      GCE_VERIFY(false)(exc)(res)(msg)(sender)(tmo.count())
+        .msg("gce::already_exit_exception").except<already_exit_exception>();
+    }
+    else if (exc == exit_neterr)
+    {
+      GCE_VERIFY(false)(exc)(res)(msg)(sender)(tmo.count())
+        .msg("gce::neterr_exception").except<neterr_exception>();
+    }
+    else
+    {
+      GCE_ASSERT(false)(exc)(errmsg);
+    }
   }
 
-  GCE_VERIFY(sender)(res)(msg)(tmo.count()).msg("recv response timeout");
+  GCE_VERIFY(sender)(res)(msg)(tmo.count())
+    .msg("gce::respond_timeout_exception").except<respond_timeout_exception>();
   return sender;
 }
 
@@ -109,7 +196,35 @@ inline aid_t respond_impl(gce::nonblocked, Recver& recver, resp_t res, message& 
     exit_code_t exc;
     std::string errmsg;
     msg >> exc >> errmsg;
-    GCE_VERIFY(false)(exc)(res)(msg)(sender).msg(errmsg.c_str());
+    if (exc == exit_normal)
+    {
+      GCE_VERIFY(false)(exc)(res)(msg)(sender)(tmo.count())
+        .msg("gce::normal_exception").except<normal_exception>();
+    }
+    else if (exc == exit_except)
+    {
+      GCE_VERIFY(false)(exc)(res)(msg)(sender)(tmo.count())
+        .msg("gce::runtime_exception").except<runtime_exception>();
+    }
+    else if (exc == exit_remote)
+    {
+      GCE_VERIFY(false)(exc)(res)(msg)(sender)(tmo.count())
+        .msg("gce::remote_exception").except<remote_exception>();
+    }
+    else if (exc == exit_already)
+    {
+      GCE_VERIFY(false)(exc)(res)(msg)(sender)(tmo.count())
+        .msg("gce::already_exit_exception").except<already_exit_exception>();
+    }
+    else if (exc == exit_neterr)
+    {
+      GCE_VERIFY(false)(exc)(res)(msg)(sender)(tmo.count())
+        .msg("gce::neterr_exception").except<neterr_exception>();
+    }
+    else
+    {
+      GCE_ASSERT(false)(exc)(errmsg);
+    }
   }
   return sender;
 }

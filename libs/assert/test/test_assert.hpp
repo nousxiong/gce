@@ -28,8 +28,8 @@ private:
   static void test_common()
   {
     {
-      log::asio_logger my_lg;
-      log::logger_t lg = boost::bind(&log::asio_logger::output, &my_lg, _1, "");
+      log::std_logger_st my_lg;
+      log::logger_t lg = boost::bind(&log::std_logger_st::output, &my_lg, _1, "");
 
       try
       {
@@ -37,7 +37,7 @@ private:
         std::string str("std::cerr");
         GCE_ASSERT(i == 0 && str == "hi")(i)(str).log().except();
 #ifdef GCE_ENABLE_ASSERT
-        BOOST_ASSERT_MSG(false, "shoudn't be here");
+        BOOST_ASSERT_MSG(false, "shouldn't be here");
 #endif
       }
       catch (std::exception& ex)
@@ -52,7 +52,19 @@ private:
         int i = 0;
         std::string str("verify");
         GCE_VERIFY(i == 0 && str == "hi")(i)(str).except<std::runtime_error>();
-        BOOST_ASSERT_MSG(false, "shoudn't be here");
+        BOOST_ASSERT_MSG(false, "shouldn't be here");
+      }
+      catch (std::runtime_error& ex)
+      {
+        std::cerr << ex.what() << std::endl;
+      }
+
+      std::cout << "------------------" << std::endl;
+
+      try
+      {
+        GCE_VERIFY(false).msg("std::runtime_error").except<std::runtime_error>();
+        BOOST_ASSERT_MSG(false, "shouldn't be here");
       }
       catch (std::runtime_error& ex)
       {
@@ -64,11 +76,11 @@ private:
       try
       {
         int i = 0;
-        std::string str("asio_logger");
+        std::string str("std_logger");
         GCE_ASSERT(i == 0 && str == "hi")(i)(str)
           .log(lg).except();
 #ifdef GCE_ENABLE_ASSERT
-        BOOST_ASSERT_MSG(false, "shoudn't be here");
+        BOOST_ASSERT_MSG(false, "shouldn't be here");
 #endif
       }
       catch (std::exception& ex)

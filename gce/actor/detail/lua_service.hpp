@@ -299,7 +299,10 @@ public:
     luabridge::setGlobal(L, lua_gce_path, "gce_path");
     if (luaL_dostring(L, init_lua_script_.c_str()) != 0)
     {
-      GCE_VERIFY(false)(lua_gce_path).log(lg_, lua_tostring(L, -1));
+      std::string errmsg("gce::lua_exception: ");
+      errmsg += lua_tostring(L, -1);
+      GCE_VERIFY(false)(lua_gce_path)
+        .log(lg_, errmsg.c_str()).except<lua_exception>();
     }
   }
 

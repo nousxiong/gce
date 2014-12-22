@@ -11,6 +11,7 @@
 #define GCE_ACTOR_DETAIL_SPAWN_ACTOR_HPP
 
 #include <gce/actor/config.hpp>
+#include <gce/actor/exception.hpp>
 #include <gce/actor/detail/stackful_actor.hpp>
 #include <gce/actor/detail/stackless_actor.hpp>
 #include <gce/actor/detail/actor_function.hpp>
@@ -77,7 +78,7 @@ inline aid_t end_spawn(ActorRef sire, link_type type)
   pattern patt(msg_new_actor);
   message msg;
   aid_t aid = sire.recv(msg, patt);
-  GCE_VERIFY(aid)(msg).msg("spawn actor failed!");
+  GCE_VERIFY(aid)(msg).msg("gce::spawn_exception").except<spawn_exception>();
 
   if (type == linked)
   {
@@ -344,21 +345,24 @@ inline aid_t spawn_remote(
   detail::spawn_error error = (detail::spawn_error)err;
   if (error != detail::spawn_ok)
   {
-    char const* errmsg = 0;
     switch (error)
     {
     case detail::spawn_no_socket:
       {
-        errmsg = "no router socket available";
+        GCE_VERIFY(false)(spw)(ctxid)
+          .msg("gce::no_socket_exception").except<no_socket_exception>();
       }break;
     case detail::spawn_func_not_found:
       {
-        errmsg = "remote func not found";
+        GCE_VERIFY(false)(spw)(ctxid)
+          .msg("gce::func_not_found_exception").except<func_not_found_exception>();
       }break;
     default:
-      break;
+      {
+        GCE_VERIFY(false)(spw)(ctxid)
+          .msg("gce::spawn_exception").except<spawn_exception>();
+      }break;
     }
-    GCE_VERIFY(false)(spw)(ctxid).msg(errmsg);
   }
 
   if (type == linked)

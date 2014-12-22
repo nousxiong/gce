@@ -13,6 +13,7 @@
 #include <gce/actor/config.hpp>
 #include <gce/actor/message.hpp>
 #include <gce/actor/net_option.hpp>
+#include <gce/actor/exception.hpp>
 #include <gce/actor/detail/remote.hpp>
 #include <gce/actor/detail/service.hpp>
 #include <gce/actor/detail/lua_service.hpp>
@@ -334,8 +335,10 @@ public:
       if (scr.isNil())
       {
         std::string errmsg;
+        errmsg += "gce::lua_exception: ";
         errmsg += lua_tostring(L_, -1);
-        GCE_VERIFY(false)(script_).log(lg_, errmsg.c_str());
+        GCE_VERIFY(false)(script_)
+          .log(lg_, errmsg.c_str()).except<lua_exception>();
       }
       scr();
       quit();

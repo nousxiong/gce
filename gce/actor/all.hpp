@@ -25,5 +25,6 @@
 #include <gce/actor/actor_id.hpp>
 #include <gce/actor/net_option.hpp>
 #include <gce/actor/adaptor.hpp>
+#include <gce/actor/exception.hpp>
 
 #endif /// GCE_ACTOR_ALL_HPP
