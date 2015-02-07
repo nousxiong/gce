@@ -15,10 +15,6 @@
 # Build examples.
 set (EXAMPLES_LINK_LIBS ${LINK_LIBS})
 
-if (GCE_STATIC)
-  set (GCE_LINK_PROP "${GCE_LINK_PROP} -static -static-libgcc -static-libstdc++")
-endif ()
-
 # GCE work with asio.
 add_subdirectory (asio)
 

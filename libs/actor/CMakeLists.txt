@@ -63,6 +63,10 @@ install (
   FILES ${GCE_ACTOR_GLOB_DEPEN_FILES} DESTINATION include/gce
   )
 
+if (GCE_STATIC)
+  set (GCE_LINK_PROP "${GCE_LINK_PROP} -static -static-libgcc -static-libstdc++")
+endif ()
+
 # Build examples.
 if (GCE_ACTOR_BUILD_EXAMPLE)
   add_subdirectory (example)

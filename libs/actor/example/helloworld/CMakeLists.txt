@@ -12,12 +12,6 @@
 # See https://github.com/nousxiong/gce for latest version.
 #
 
-if (WIN32)
-  if (${CMAKE_GENERATOR} MATCHES "Visual Studio 11 *" OR ${CMAKE_GENERATOR} MATCHES "Visual Studio 12 *")
-    set (CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} /SAFESEH:NO")
-  endif ()
-endif ()
-
 file (GLOB_RECURSE GCE_ACTOR_EXAMPLE_FILES "${CMAKE_CURRENT_SOURCE_DIR}/*.cpp")
 file (GLOB_RECURSE GCE_ACTOR_EXAMPLE_FILES ${GCE_ACTOR_EXAMPLE_FILES} "${CMAKE_CURRENT_SOURCE_DIR}/*.hpp")
 add_executable (gce_actor_helloworld ${GCE_ACTOR_EXAMPLE_FILES})
@@ -26,6 +20,8 @@ if (GCE_LINK_PROP)
   set_target_properties (gce_actor_helloworld PROPERTIES LINK_FLAGS "${GCE_LINK_PROP}")
 endif ()
 
-target_link_libraries (gce_actor_helloworld ${EXAMPLES_LINK_LIBS})
+if (EXAMPLES_LINK_LIBS)
+  target_link_libraries (gce_actor_helloworld ${EXAMPLES_LINK_LIBS})
+endif ()
 install (TARGETS gce_actor_helloworld RUNTIME DESTINATION bin)
 
