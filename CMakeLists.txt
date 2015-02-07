@@ -70,7 +70,6 @@ endif ()
 add_definitions (-DBOOST_ASIO_DISABLE_STD_CHRONO)
 
 # Set glibc.
-set (BOOST_ROOT "" CACHE PATH "Path to glibc include directory")
 if (GCE_STATIC)
   set (GLIBC_INCLUDEDIR "" CACHE PATH "Path to glibc include directory")
   set (GLIBC_LIBRARYDIR "" CACHE PATH "Path to glibc libraries directory")
@@ -93,6 +92,7 @@ include_directories (${PROJECT_SOURCE_DIR})
 include_directories (${PROJECT_BINARY_DIR})
 
 # Boost libraries search.
+set (BOOST_ROOT "" CACHE PATH "Path to glibc include directory")
 set (GCE_BOOST_VERSION "1.57.0" CACHE STRING "Boost version, e.g. 1.57.0")
 
 if (${GCE_BOOST_VERSION} LESS 1.57.0)
@@ -123,6 +123,13 @@ include_directories (${Boost_INCLUDE_DIRS})
 find_package (Threads)
 
 set (CMAKE_VERBOSE_MAKEFILE true)
+
+# Set >= vc11 SAFESEH to NO
+if (WIN32)
+  if (${CMAKE_GENERATOR} MATCHES "Visual Studio 11 *" OR ${CMAKE_GENERATOR} MATCHES "Visual Studio 12 *")
+    set (CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} /SAFESEH:NO")
+  endif ()
+endif ()
 
 # Select build sub libs.
 set (SUB_LIBRARYS "actor log" CACHE STRING "Select build sub libs")
