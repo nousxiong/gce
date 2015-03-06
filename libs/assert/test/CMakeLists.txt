@@ -12,12 +12,6 @@
 # See https://github.com/nousxiong/gce for latest version.
 #
 
-if (WIN32)
-  if (${CMAKE_GENERATOR} MATCHES "Visual Studio 11 *" OR ${CMAKE_GENERATOR} MATCHES "Visual Studio 12 *")
-    set (CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} /SAFESEH:NO")
-  endif ()
-endif ()
-
 # Build tests.
 set (TESTS_LINK_LIBS ${LINK_LIBS})
 file (GLOB_RECURSE GCE_ASSERT_UNIT_TEST_FILES "${CMAKE_CURRENT_SOURCE_DIR}/*.cpp")

@@ -122,6 +122,16 @@ struct pattern
   {
     match_list_.push_back(type);
   }
+
+  void set_match_aid(aid_t recver)
+  {
+    recver_ = recver;
+  }
+
+  void set_match_svcid(svcid_t recver)
+  {
+    recver_ = recver;
+  }
 #endif
 
   duration_t timeout_;

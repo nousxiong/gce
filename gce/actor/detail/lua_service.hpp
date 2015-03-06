@@ -208,6 +208,8 @@ public:
           .addFunction("get_overloading_type", &pattern::get_overloading_type)
           .addFunction("set_timeout", &pattern::set_timeout)
           .addFunction("add_match", &pattern::add_match_type)
+          .addFunction("set_match_aid", &pattern::set_match_aid)
+          .addFunction("set_match_svcid", &pattern::set_match_svcid)
           .addFunction("to_string", &pattern::to_string)
         .endClass()
         .beginClass<duration_type>("duration_t")

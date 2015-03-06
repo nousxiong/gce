@@ -382,18 +382,25 @@ function gce.unpack_fmt(fmt, ...)
 end
 
 function gce.make_msg(arg, ...)
-	local m = detail.msg()
+	local m = nil
 	if arg ~= nil then
 		local ty = type(arg)
+		if ty == "userdata" then
+			if arg:get_overloading_type() == gce.overloading_msg then
+				m = arg
+			end
+		end
+
+		if m == nil then
+			m = detail.msg()
+		end
+
 		if ty == "string" or ty == "number" then
 			local match = gce.atom(arg)
 			m:set_type(match)
 		else
 			assert (ty == "userdata")
-			if arg:get_overloading_type() == gce.overloading_msg then
-				m = arg
-			else
-				assert (arg:get_overloading_type() == gce.overloading_match_t)
+			if arg:get_overloading_type() == gce.overloading_match_t then
 				m:set_type(arg)
 			end
 		end
