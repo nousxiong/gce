@@ -42,7 +42,7 @@ public:
   threaded_actor(service_t& svc)
     : base_t(
         svc.get_context(), svc, actor_threaded,
-        aid_t(
+        make_aid(
           svc.get_context().get_ctxid(),
           svc.get_context().get_timestamp(),
           this, sid_t(0)
@@ -186,7 +186,7 @@ public:
 
   aid_t respond(
     resp_t res, message& msg, 
-    duration_t tmo = seconds_t(GCE_DEFAULT_REQUEST_TIMEOUT_SEC)
+    duration_t tmo = seconds(GCE_DEFAULT_REQUEST_TIMEOUT_SEC)
     )
   {
     res_promise_t p;
@@ -213,7 +213,7 @@ public:
 
   void sleep_for(duration_t dur)
   {
-    boost::this_thread::sleep_for(dur);
+    boost::this_thread::sleep_for(to_chrono(dur));
   }
 
 public:
@@ -249,7 +249,7 @@ public:
       );
   }
 
-  sid_t spawn(spawn_type type, std::string const& func, match_t ctxid, std::size_t stack_size)
+  sid_t spawn(spawn_type type, std::string const& func, match_t ctxid, size_t stack_size)
   {
     sid_t sid = base_t::new_request();
     base_t::snd_.post(
@@ -313,7 +313,7 @@ private:
 
   void start_timer(duration_t dur, recv_promise_t& p)
   {
-    tmr_.expires_from_now(dur);
+    tmr_.expires_from_now(to_chrono(dur));
     tmr_.async_wait(
       base_t::snd_.wrap(
         boost::bind(
@@ -326,7 +326,7 @@ private:
 
   void start_timer(duration_t dur, res_promise_t& p)
   {
-    tmr_.expires_from_now(dur);
+    tmr_.expires_from_now(to_chrono(dur));
     tmr_.async_wait(
       base_t::snd_.wrap(
         boost::bind(
@@ -337,7 +337,7 @@ private:
       );
   }
 
-  void handle_recv_timeout(errcode_t const& ec, recv_promise_t& p, std::size_t tmr_sid)
+  void handle_recv_timeout(errcode_t const& ec, recv_promise_t& p, size_t tmr_sid)
   {
     if (!ec && tmr_sid == tmr_sid_)
     {
@@ -350,7 +350,7 @@ private:
     }
   }
 
-  void handle_res_timeout(errcode_t const& ec, res_promise_t& p, std::size_t tmr_sid)
+  void handle_res_timeout(errcode_t const& ec, res_promise_t& p, size_t tmr_sid)
   {
     if (!ec && tmr_sid == tmr_sid_)
     {
@@ -442,7 +442,7 @@ private:
   resp_t recving_res_;
   pattern curr_pattern_;
   timer_t tmr_;
-  std::size_t tmr_sid_;
+  size_t tmr_sid_;
 };
 }
 }

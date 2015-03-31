@@ -11,145 +11,100 @@
 #define GCE_ACTOR_SERVICE_ID_HPP
 
 #include <gce/actor/config.hpp>
-#include <gce/actor/detail/to_match.hpp>
+#include <gce/actor/service_id.adl.h>
+#include <gce/actor/match.adl.h>
+#include <gce/actor/to_match.hpp>
 
 namespace gce
 {
-class service_id
+inline std::string to_string(adl::service_id const& o)
 {
-public:
-  service_id()
-    : nil_(0)
-    , ctxid_(0)
-    , name_(0)
+  std::string str;
+  str += "svcid<";
+  str += boost::lexical_cast<intbuf_t>((int)o.valid_).cbegin();
+  str += ".";
+  str += to_string(o.ctxid_);
+  str += ".";
+  str += to_string(o.name_);
+  str += ">";
+  return str;
+}
+
+namespace adl
+{
+inline bool operator==(service_id const& lhs, service_id const& rhs)
+{
+  return
+    lhs.valid_ == rhs.valid_ &&
+    lhs.ctxid_ == rhs.ctxid_ &&
+    lhs.name_ == rhs.name_
+    ;
+}
+
+inline bool operator!=(service_id const& lhs, service_id const& rhs)
+{
+  return !(lhs == rhs);
+}
+
+bool operator<(service_id const& lhs, service_id const& rhs)
+{
+  if (lhs.valid_ < rhs.valid_)
   {
+    return true;
   }
-
-  template <typename Match>
-  explicit service_id(Match name)
-    : nil_(0)
-    , ctxid_(0)
-    , name_(detail::to_match(name))
+  else if (rhs.valid_ < lhs.valid_)
   {
-  }
-
-  template <typename Ctxid, typename Match>
-  service_id(Ctxid ctxid, Match name)
-    : nil_(1)
-    , ctxid_(detail::to_match(ctxid))
-    , name_(detail::to_match(name))
-  {
-  }
-
-  ~service_id()
-  {
-  }
-
-public:
-  operator bool() const
-  {
-    return nil_ != 0;
-  }
-
-  bool operator!() const
-  {
-    return nil_ == 0;
-  }
-
-  bool operator==(service_id const& rhs) const
-  {
-    return
-      nil_ == rhs.nil_ && 
-      ctxid_ == rhs.ctxid_ &&
-      name_ == rhs.name_;
-  }
-
-  bool operator!=(service_id const& rhs) const
-  {
-    return !(*this == rhs);
-  }
-
-  bool operator<(service_id const& rhs) const
-  {
-    if (nil_ < rhs.nil_)
-    {
-      return true;
-    }
-    else if (ctxid_ > rhs.ctxid_)
-    {
-      return false;
-    }
-
-    if (ctxid_ < rhs.ctxid_)
-    {
-      return true;
-    }
-    else if (ctxid_ > rhs.ctxid_)
-    {
-      return false;
-    }
-
-    if (name_ < rhs.name_)
-    {
-      return true;
-    }
-    else if (name_ > rhs.name_)
-    {
-      return false;
-    }
-
     return false;
   }
 
-  std::string to_string() const
+  if (lhs.ctxid_ < rhs.ctxid_)
   {
-    typedef boost::array<char, 32> strbuf_t;
-    std::string rt;
-    rt += "<";
-    rt += boost::lexical_cast<strbuf_t>(nil_).cbegin();
-    rt += ".";
-    rt += boost::lexical_cast<strbuf_t>(ctxid_).cbegin();
-    rt += ".";
-    rt += boost::lexical_cast<strbuf_t>(name_).cbegin();
-    rt += ">";
-    return rt;
+    return true;
+  }
+  else if (rhs.ctxid_ < lhs.ctxid_)
+  {
+    return false;
   }
 
-#ifdef GCE_SCRIPT
-  /// internal use
-  int get_overloading_type() const
+  if (lhs.name_ < rhs.name_)
   {
-    return (int)detail::overloading_svcid;
+    return true;
+  }
+  else if (rhs.name_ < lhs.name_)
+  {
+    return false;
   }
 
-  GCE_SCRIPT_SERIALIZE_FUNC
-#endif
+  return false;
+}
+} /// namespace adl
 
-  boost::uint16_t nil_;
-  ctxid_t ctxid_;
-  match_t name_;
-};
+/// service_id nil value
+static adl::service_id const svcid_nil = adl::service_id();
 
-typedef service_id svcid_t;
+typedef adl::service_id svcid_t;
 
-#ifdef GCE_LUA
-inline svcid_t lua_svcid()
+template <typename Ctxid, typename Match>
+inline svcid_t make_svcid(Ctxid ctxid, Match name)
 {
-  return svcid_t();
+  svcid_t svcid;
+  svcid.ctxid_ = to_match(ctxid);
+  svcid.name_ = to_match(name);
+  svcid.valid_ = 1;
+  return svcid;
 }
-#endif
-}
+} /// namespace gce
 
 template<typename CharT, typename TraitsT>
 inline std::basic_ostream<CharT, TraitsT>& operator<<(
-  std::basic_ostream<CharT, TraitsT>& strm, gce::svcid_t const& svc
+  std::basic_ostream<CharT, TraitsT>& strm, gce::svcid_t const& svcid
   )
 {
-  strm << "<" << svc.nil_ << "." << svc.ctxid_ << "." << svc.name_ << ">";
+  strm << gce::to_string(svcid);
   return strm;
 }
 
-GCE_PACK(gce::svcid_t, (nil_)(ctxid_)(name_));
+GCE_PACK(gce::svcid_t, (valid_)(ctxid_)(name_));
 
 #endif /// GCE_ACTOR_SERVICE_ID_HPP
 

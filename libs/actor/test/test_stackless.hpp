@@ -77,18 +77,18 @@ public:
           res_list_[i_] = self->request(aid_);
         }
 
-        GCE_YIELD self.sleep_for(millisecs_t(1));
+        GCE_YIELD self.sleep_for(millisecs(1));
 
         for (i_=0; i_<size_; ++i_)
         {
           do
           {
-            GCE_YIELD self.respond(res_list_[i_], aid_, msg_, seconds_t(1));
+            GCE_YIELD self.respond(res_list_[i_], aid_, msg_, seconds(1));
           }
-          while (!aid_);
+          while (aid_ == aid_nil);
         }
 
-        tmr_.expires_from_now(millisecs_t(1));
+        tmr_.expires_from_now(boost::chrono::milliseconds(1));
         GCE_YIELD tmr_.async_wait(adaptor(self, ec_));
 
         self->send(base_id_); 

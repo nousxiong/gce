@@ -20,7 +20,7 @@ namespace gce
 {
 namespace detail
 {
-template <std::size_t SmallSize, std::size_t MinGrowSize = 64>
+template <size_t SmallSize, size_t MinGrowSize = 64>
 class cow_buffer
 {
 public:
@@ -29,7 +29,7 @@ public:
   {
   }
 
-  cow_buffer(byte_t const* data, std::size_t size)
+  cow_buffer(byte_t const* data, size_t size)
   {
     if (size <= small_.size())
     {
@@ -99,7 +99,7 @@ public:
     return buf_.data();
   }
 
-  std::size_t size() const
+  size_t size() const
   {
     return buf_.write_size();
   }
@@ -129,7 +129,7 @@ public:
     append(str.data(), str.size());
   }
 
-  void append(char const* data, std::size_t size = size_nil)
+  void append(char const* data, size_t size = size_nil)
   {
     if (size == size_nil)
     {
@@ -142,15 +142,15 @@ public:
     std::memcpy(write_data, data, size);
   }
 
-  void reserve(std::size_t size)
+  void reserve(size_t size)
   {
-    std::size_t old_buf_capacity = buf_.size();
-    std::size_t old_buf_size = buf_.write_size();
-    std::size_t new_buf_size = old_buf_size + size;
-    std::size_t new_buf_capacity = old_buf_capacity;
+    size_t old_buf_capacity = buf_.size();
+    size_t old_buf_size = buf_.write_size();
+    size_t new_buf_size = old_buf_size + size;
+    size_t new_buf_capacity = old_buf_capacity;
     if (new_buf_size > old_buf_capacity)
     {
-      std::size_t diff = new_buf_size - old_buf_capacity;
+      size_t diff = new_buf_size - old_buf_capacity;
       if (diff < MinGrowSize)
       {
         diff = MinGrowSize;
@@ -186,7 +186,7 @@ public:
   }
 
 private:
-  void make_large(std::size_t size)
+  void make_large(size_t size)
   {
     large_.reset(new buffer(size));
   }

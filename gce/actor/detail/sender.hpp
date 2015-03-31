@@ -15,7 +15,7 @@
 #include <gce/actor/actor_id.hpp>
 #include <gce/actor/message.hpp>
 #include <gce/actor/detail/send.hpp>
-#include <gce/actor/detail/to_match.hpp>
+#include <gce/actor/to_match.hpp>
 
 namespace gce
 {

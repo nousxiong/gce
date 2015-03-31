@@ -16,7 +16,7 @@
 #include <gce/actor/message.hpp>
 #include <gce/actor/pattern.hpp>
 #include <gce/actor/exception.hpp>
-#include <gce/actor/detail/to_match.hpp>
+#include <gce/actor/to_match.hpp>
 #include <boost/bind.hpp>
 #include <algorithm>
 
@@ -94,7 +94,7 @@ inline aid_t recv_impl(Tag, Recver& recver, message& msg, pattern& patt)
     }
   }
 
-  GCE_VERIFY(sender)(msg)(patt)
+  GCE_VERIFY(sender != aid_nil)(msg)(patt)
     .msg("gce::recv_timeout_exception").except<recv_timeout_exception>();
   return sender;
 }
@@ -153,27 +153,27 @@ inline aid_t respond_impl(Tag, Recver& recver, resp_t res, message& msg, duratio
     msg >> exc >> errmsg;
     if (exc == exit_normal)
     {
-      GCE_VERIFY(false)(exc)(res)(msg)(sender)(tmo.count())
+      GCE_VERIFY(false)(exc)(res)(msg)(sender)(tmo)
         .msg("gce::normal_exception").except<normal_exception>();
     }
     else if (exc == exit_except)
     {
-      GCE_VERIFY(false)(exc)(res)(msg)(sender)(tmo.count())
+      GCE_VERIFY(false)(exc)(res)(msg)(sender)(tmo)
         .msg("gce::runtime_exception").except<runtime_exception>();
     }
     else if (exc == exit_remote)
     {
-      GCE_VERIFY(false)(exc)(res)(msg)(sender)(tmo.count())
+      GCE_VERIFY(false)(exc)(res)(msg)(sender)(tmo)
         .msg("gce::remote_exception").except<remote_exception>();
     }
     else if (exc == exit_already)
     {
-      GCE_VERIFY(false)(exc)(res)(msg)(sender)(tmo.count())
+      GCE_VERIFY(false)(exc)(res)(msg)(sender)(tmo)
         .msg("gce::already_exit_exception").except<already_exit_exception>();
     }
     else if (exc == exit_neterr)
     {
-      GCE_VERIFY(false)(exc)(res)(msg)(sender)(tmo.count())
+      GCE_VERIFY(false)(exc)(res)(msg)(sender)(tmo)
         .msg("gce::neterr_exception").except<neterr_exception>();
     }
     else
@@ -182,13 +182,13 @@ inline aid_t respond_impl(Tag, Recver& recver, resp_t res, message& msg, duratio
     }
   }
 
-  GCE_VERIFY(sender)(res)(msg)(tmo.count())
+  GCE_VERIFY(sender != aid_nil)(res)(msg)(tmo)
     .msg("gce::respond_timeout_exception").except<respond_timeout_exception>();
   return sender;
 }
 
 template <typename Recver>
-inline aid_t respond_impl(gce::nonblocked, Recver& recver, resp_t res, message& msg, duration_t)
+inline aid_t respond_impl(gce::nonblocked, Recver& recver, resp_t res, message& msg, duration_t tmo)
 {
   aid_t sender = recver.respond(res, msg);
   if (msg.get_type() == exit)
@@ -198,27 +198,27 @@ inline aid_t respond_impl(gce::nonblocked, Recver& recver, resp_t res, message& 
     msg >> exc >> errmsg;
     if (exc == exit_normal)
     {
-      GCE_VERIFY(false)(exc)(res)(msg)(sender)(tmo.count())
+      GCE_VERIFY(false)(exc)(res)(msg)(sender)(tmo)
         .msg("gce::normal_exception").except<normal_exception>();
     }
     else if (exc == exit_except)
     {
-      GCE_VERIFY(false)(exc)(res)(msg)(sender)(tmo.count())
+      GCE_VERIFY(false)(exc)(res)(msg)(sender)(tmo)
         .msg("gce::runtime_exception").except<runtime_exception>();
     }
     else if (exc == exit_remote)
     {
-      GCE_VERIFY(false)(exc)(res)(msg)(sender)(tmo.count())
+      GCE_VERIFY(false)(exc)(res)(msg)(sender)(tmo)
         .msg("gce::remote_exception").except<remote_exception>();
     }
     else if (exc == exit_already)
     {
-      GCE_VERIFY(false)(exc)(res)(msg)(sender)(tmo.count())
+      GCE_VERIFY(false)(exc)(res)(msg)(sender)(tmo)
         .msg("gce::already_exit_exception").except<already_exit_exception>();
     }
     else if (exc == exit_neterr)
     {
-      GCE_VERIFY(false)(exc)(res)(msg)(sender)(tmo.count())
+      GCE_VERIFY(false)(exc)(res)(msg)(sender)(tmo)
         .msg("gce::neterr_exception").except<neterr_exception>();
     }
     else
@@ -251,7 +251,7 @@ inline bool end_recv(
     msg >> exc >> errmsg;
     recver.get_actor().quit(exc, errmsg);
   }
-  else if (!sender)
+  else if (sender == aid_nil)
   {
     recver.get_actor().quit(exit_except, "recv timeout");
   }

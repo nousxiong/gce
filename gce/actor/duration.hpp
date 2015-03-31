@@ -11,141 +11,196 @@
 #define GCE_ACTOR_DURATION_HPP
 
 #include <gce/actor/config.hpp>
+#include <gce/actor/duration.adl.h>
+#include <gce/actor/chrono.hpp>
 #include <boost/array.hpp>
 #include <boost/lexical_cast.hpp>
 #include <string>
 
 namespace gce
 {
-struct duration_type
+enum dur_type
 {
-  enum type
-  {
-    raw = 0,
-    millisec,
-    second,
-    minute,
-    hour
-  };
-
-  duration_type()
-    : dur_(duration_t::zero())
-    , ty_(raw)
-  {
-  }
-
-  duration_type(duration_t d)
-    : dur_(d)
-    , ty_(raw)
-  {
-  }
-
-  duration_type(millisecs_t d)
-    : dur_(d)
-    , ty_(millisec)
-  {
-  }
-
-  duration_type(seconds_t d)
-    : dur_(d)
-    , ty_(second)
-  {
-  }
-
-  duration_type(minutes_t d)
-    : dur_(d)
-    , ty_(minute)
-  {
-  }
-
-  duration_type(hours_t d)
-    : dur_(d)
-    , ty_(hour)
-  {
-  }
-
-  operator duration_t() const
-  {
-    return dur_;
-  }
-
-  duration_type& operator=(duration_t d)
-  {
-    dur_ = d;
-    return *this;
-  }
-
-  duration_type& operator=(millisecs_t d)
-  {
-    dur_ = d;
-    return *this;
-  }
-
-  duration_type& operator=(seconds_t d)
-  {
-    dur_ = d;
-    return *this;
-  }
-
-  duration_type& operator=(minutes_t d)
-  {
-    dur_ = d;
-    return *this;
-  }
-
-  duration_type& operator=(hours_t d)
-  {
-    dur_ = d;
-    return *this;
-  }
-
-  std::string to_string() const
-  {
-    typedef boost::array<char, 32> strbuf_t;
-    std::string rt;
-    rt += "<";
-    switch (ty_)
-    {
-    case millisec:
-      rt += boost::lexical_cast<strbuf_t>(
-        boost::chrono::duration_cast<millisecs_t>(dur_).count()
-        ).cbegin();
-      break;
-    case second:
-      rt += boost::lexical_cast<strbuf_t>(
-        boost::chrono::duration_cast<seconds_t>(dur_).count()
-        ).cbegin();
-      break;
-    case minute:
-      rt += boost::lexical_cast<strbuf_t>(
-        boost::chrono::duration_cast<minutes_t>(dur_).count()
-        ).cbegin();
-      break;
-    case hour:
-      rt += boost::lexical_cast<strbuf_t>(
-        boost::chrono::duration_cast<hours_t>(dur_).count()
-        ).cbegin();
-      break;
-    default:
-      rt += boost::lexical_cast<strbuf_t>(dur_.count()).cbegin();
-      break;
-    }
-    rt += ">";
-    return rt;
-  }
-
-#ifdef GCE_SCRIPT
-  int get_overloading_type() const
-  {
-    return (int)detail::overloading_duration;
-  }
-
-  GCE_SCRIPT_SERIALIZE_FUNC
-#endif
-
-  duration_t dur_;
-  type ty_;
+  dur_raw = 0,
+  dur_microsec,
+  dur_millisec,
+  dur_second,
+  dur_minute,
+  dur_hour,
 };
+
+namespace detail
+{
+inline gce::adl::duration make_dur(int64_t val, dur_type ty)
+{
+  gce::adl::duration o;
+  o.val_ = val;
+  o.ty_ = ty;
+  return o;
 }
+
+inline gce::adl::duration make_zero()
+{
+  gce::adl::duration o;
+  o.val_ = boost::chrono::system_clock::duration::zero().count();
+  o.ty_ = dur_raw;
+  return o;
+}
+
+inline gce::adl::duration make_infin()
+{
+  gce::adl::duration o;
+  o.val_ = (boost::chrono::system_clock::duration::max)().count();
+  o.ty_ = dur_raw;
+  return o;
+}
+}
+
+/// duration zero value
+static adl::duration const zero = detail::make_zero();
+
+/// duration infin value
+static adl::duration const infin = detail::make_infin();
+
+inline adl::duration duration(int64_t v)
+{
+  return detail::make_dur(v, dur_raw);
+}
+
+inline adl::duration microsecs(int64_t v)
+{
+  return detail::make_dur(v, dur_microsec);
+}
+
+inline adl::duration millisecs(int64_t v)
+{
+  return detail::make_dur(v, dur_millisec);
+}
+
+inline adl::duration seconds(int64_t v)
+{
+  return detail::make_dur(v, dur_second);
+}
+
+inline adl::duration minutes(int64_t v)
+{
+  return detail::make_dur(v, dur_minute);
+}
+
+inline adl::duration hours(int64_t v)
+{
+  return detail::make_dur(v, dur_hour);
+}
+
+inline adl::duration from_chrono(boost::chrono::system_clock::duration dur)
+{
+  return duration(dur.count());
+}
+
+inline adl::duration from_chrono(boost::chrono::milliseconds dur)
+{
+  return millisecs(dur.count());
+}
+
+inline adl::duration from_chrono(boost::chrono::microseconds dur)
+{
+  return microsecs(dur.count());
+}
+
+inline adl::duration from_chrono(boost::chrono::seconds dur)
+{
+  return seconds(dur.count());
+}
+
+inline adl::duration from_chrono(boost::chrono::minutes dur)
+{
+  return minutes(dur.count());
+}
+
+inline adl::duration from_chrono(boost::chrono::hours dur)
+{
+  return hours(dur.count());
+}
+
+inline boost::chrono::system_clock::duration to_chrono(adl::duration dur)
+{
+  switch(dur.ty_)
+  {
+  case dur_microsec: return boost::chrono::microseconds(dur.val_);
+  case dur_millisec: return boost::chrono::milliseconds(dur.val_);
+  case dur_second: return boost::chrono::seconds(dur.val_);
+  case dur_minute: return boost::chrono::minutes(dur.val_);
+  case dur_hour: return boost::chrono::hours(dur.val_);
+  default: return boost::chrono::system_clock::duration(dur.val_);
+  }
+}
+
+namespace adl
+{
+inline bool operator==(duration const& lhs, duration const& rhs)
+{
+  return to_chrono(lhs) == to_chrono(rhs);
+}
+
+inline bool operator!=(duration const& lhs, duration const& rhs)
+{
+  return !(lhs == rhs);
+}
+
+inline bool operator<(duration const& lhs, duration const& rhs)
+{
+  return to_chrono(lhs) < to_chrono(rhs);
+}
+
+inline bool operator<=(duration const& lhs, duration const& rhs)
+{
+  return to_chrono(lhs) <= to_chrono(rhs);
+}
+
+inline bool operator>(duration const& lhs, duration const& rhs)
+{
+  return to_chrono(lhs) > to_chrono(rhs);
+}
+
+inline bool operator>=(duration const& lhs, duration const& rhs)
+{
+  return to_chrono(lhs) >= to_chrono(rhs);
+}
+
+inline duration operator+(duration const& lhs, duration const& rhs)
+{
+  return from_chrono(to_chrono(lhs) + to_chrono(rhs));
+}
+
+inline duration operator-(duration const& lhs, duration const& rhs)
+{
+  return from_chrono(to_chrono(lhs) - to_chrono(rhs));
+}
+}
+
+inline std::string to_string(gce::adl::duration const& o)
+{
+  std::string str;
+  str += "dur<";
+  str += boost::lexical_cast<intbuf_t>(o.val_).cbegin();
+  str += ".";
+  str += boost::lexical_cast<intbuf_t>((int)o.ty_).cbegin();
+  str += ">";
+  return str;
+}
+
+typedef adl::duration duration_t;
+} /// namespace gce
+
+template<typename CharT, typename TraitsT>
+inline std::basic_ostream<CharT, TraitsT>& operator<<(
+  std::basic_ostream<CharT, TraitsT>& strm, gce::duration_t const& dur
+  )
+{
+  strm << gce::to_string(dur);
+  return strm;
+}
+
+GCE_PACK(gce::duration_t, (val_)(ty_));
 
 #endif /// GCE_ACTOR_DURATION_HPP

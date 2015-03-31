@@ -20,6 +20,7 @@
 #include <gce/actor/detail/basic_actor.hpp>
 #include <gce/actor/detail/actor_ref.hpp>
 #include <gce/actor/pattern.hpp>
+#include <boost/utility/string_ref.hpp>
 
 namespace gce
 {
@@ -41,8 +42,9 @@ public:
   lua_actor(aid_t aid, service_t& svc)
     : base_t(svc.get_context(), svc, actor_luaed, aid)
     , L_(svc.get_lua_state())
-    , coro_(L_)
-    , func_(L_)
+    , a_(LUA_REFNIL)
+    , co_(LUA_REFNIL)
+    , rf_(LUA_REFNIL)
     , svc_(svc)
     , yielding_(false)
     , recving_(false)
@@ -58,51 +60,51 @@ public:
   }
 
 public:
-  void send(aid_t recver, message const& m)
+  void send(aid_t const& recver, message const& m)
   {
     base_t::pri_send(recver, m);
   }
 
-  void send2svc(svcid_t recver, message const& m)
+  void send(svcid_t const& recver, message const& m)
   {
     base_t::pri_send_svc(recver, m);
   }
 
-  void relay(aid_t des, message& m)
+  void relay(aid_t const& des, message& m)
   {
     base_t::pri_relay(des, m);
   }
 
-  void relay2svc(svcid_t des, message& m)
+  void relay(svcid_t const& des, message& m)
   {
     base_t::pri_relay_svc(des, m);
   }
 
-  resp_t request(aid_t recver, message const& m)
+  resp_t request(aid_t const& recver, message const& m)
   {
     resp_t res(base_t::new_request(), base_t::get_aid(), recver);
     base_t::pri_request(res, recver, m);
     return res;
   }
 
-  resp_t request2svc(svcid_t recver, message const& m)
+  resp_t request(svcid_t const& recver, message const& m)
   {
     resp_t res(base_t::new_request(), base_t::get_aid(), recver);
     base_t::pri_request_svc(res, recver, m);
     return res;
   }
 
-  void reply(aid_t recver, message const& m)
+  void reply(aid_t const& recver, message const& m)
   {
     base_t::pri_reply(recver, m);
   }
 
-  void link(aid_t target)
+  void link(aid_t const& target)
   {
     base_t::pri_link(target);
   }
 
-  void monitor(aid_t target)
+  void monitor(aid_t const& target)
   {
     base_t::pri_monitor(target);
   }
@@ -120,24 +122,23 @@ public:
     return pri_recv_match(patt, sender, msg);
   }
 
-  bool recv_response(resp_t res)
+  bool recv_response(resp_t const& res)
   {
-    return recv_response_timeout(res, seconds_t(GCE_DEFAULT_REQUEST_TIMEOUT_SEC));
+    return recv_response_timeout(res, seconds(GCE_DEFAULT_REQUEST_TIMEOUT_SEC));
   }
 
-  bool recv_response_timeout(resp_t res, duration_type tmo)
+  bool recv_response_timeout(resp_t res, duration_t tmo)
   {
     aid_t sender;
     message msg;
-    duration_t dur(tmo.dur_);
 
     if (!base_t::mb_.pop(res, msg))
     {
-      if (dur > zero)
+      if (tmo > zero)
       {
-        if (dur < infin)
+        if (tmo < infin)
         {
-          start_timer(dur);
+          start_timer(tmo);
         }
         responsing_ = true;
         recving_res_ = res;
@@ -150,17 +151,18 @@ public:
       sender = end_recv(res);
     }
 
-    set_recv_global(sender, msg);
+    set_recv_result(sender, msg);
     return false;
   }
 
-  void sleep_for(duration_type dur)
+  bool sleep_for(duration_t dur)
   {
-    start_timer(dur.dur_);
+    start_timer(dur);
     yield();
+    return true;
   }
 
-  bool bind(std::string const& ep, net_option opt)
+  bool bind(std::string const& ep, netopt_t opt)
   {
     typedef typename context_t::acceptor_service_t acceptor_service_t;
     context_t& ctx = base_t::get_context();
@@ -175,7 +177,7 @@ public:
     return is_yield;
   }
 
-  bool connect(match_type target, std::string const& ep, net_option opt)
+  bool connect(ctxid_t target, std::string const& ep, netopt_t opt)
   {
     typedef typename context_t::socket_service_t socket_service_t;
     context_t& ctx = base_t::get_context();
@@ -222,8 +224,8 @@ public:
   }
 
   bool spawn_remote(
-    spawn_type sty, std::string const& func, match_type ctxid, 
-    int type, std::size_t stack_size, seconds_t tmo
+    spawn_type sty, std::string const& func, match_t ctxid, 
+    int type, size_t stack_size, duration_t tmo
     )
   {
     aid_t aid;
@@ -249,37 +251,37 @@ public:
     return is_yield;
   }
 
-  void register_service(match_type name)
+  void register_service(match_t name)
   {
     gce::detail::register_service(base_t::get_aid(), svc_, name);
   }
 
-  void deregister_service(match_type name)
+  void deregister_service(match_t name)
   {
     gce::detail::deregister_service(base_t::get_aid(), svc_, name);
   }
 
-  void log_debug(std::string const& str)
+  void log_debug(boost::string_ref str)
   {
     GCE_DEBUG(lg_) << str;
   }
 
-  void log_info(std::string const& str)
+  void log_info(boost::string_ref str)
   {
     GCE_INFO(lg_) << str;
   }
 
-  void log_warn(std::string const& str)
+  void log_warn(boost::string_ref str)
   {
     GCE_WARN(lg_) << str;
   }
 
-  void log_error(std::string const& str)
+  void log_error(boost::string_ref str)
   {
     GCE_ERROR(lg_) << str;
   }
 
-  void log_fatal(std::string const& str)
+  void log_fatal(boost::string_ref str)
   {
     GCE_FATAL(lg_) << str;
   }
@@ -293,12 +295,12 @@ public:
     return actor_luaed;
   }
 
-  aid_t get_aid() const
+  aid_t const& get_aid() const
   {
     return base_t::get_aid();
   }
 
-  static std::size_t get_pool_reserve_size(attributes const& attr)
+  static size_t get_pool_reserve_size(attributes const& attr)
   {
     return attr.actor_pool_reserve_size_;
   }
@@ -308,14 +310,15 @@ public:
     return svc_;
   }
 
-  void set_coro(luabridge::LuaRef co)
+  void init_coro(int co, int rf)
   {
-    coro_ = co;
+    co_ = co;
+    rf_ = rf;
   }
 
-  void set_resume(luabridge::LuaRef func)
+  int get_coro() const
   {
-    func_ = func;
+    return co_;
   }
 
   void init(std::string const& script)
@@ -327,20 +330,9 @@ public:
   {
     try
     {
-      luabridge::setGlobal(L_, this, "self");
-      luabridge::LuaRef nil(L_);
-      luabridge::setGlobal(L_, nil, "gce_curr_co");
-
-      luabridge::LuaRef scr = svc_.get_script(script_);
-      if (scr.isNil())
-      {
-        std::string errmsg;
-        errmsg += "gce::lua_exception: ";
-        errmsg += lua_tostring(L_, -1);
-        GCE_VERIFY(false)(script_)
-          .log(lg_, errmsg.c_str()).except<lua_exception>();
-      }
-      scr();
+      make_self();
+      set_self();
+      svc_.run_script(script_);
       quit();
     }
     catch (std::exception& ex)
@@ -364,7 +356,39 @@ public:
     }
   }
 
+  class proxy
+  {
+  public:
+    explicit proxy(self_t* p)
+      : p_(p)
+    {
+    }
+
+    self_t* operator->() const
+    {
+      BOOST_ASSERT(p_ != 0);
+      return p_;
+    }
+
+  private:
+    self_t* p_;
+  };
+
 private:
+  void make_self()
+  {
+    a_ = lua::actor<self_t>::create(L_, this);
+    GCE_VERIFY(a_ != LUA_REFNIL).log(lg_).except<lua_exception>();
+  }
+
+  void set_self()
+  {
+    lua_getglobal(L_, "libgce");
+    GCE_VERIFY(gce::lualib::get_ref(L_, "libgce", a_) != 0).log(lg_).except<lua_exception>();
+    lua_setfield(L_, -2, "self");
+    lua_pop(L_, 1);
+  }
+
   bool pri_recv_match(pattern const& patt, aid_t& sender, message& msg)
   {
     recv_t rcv;
@@ -389,7 +413,7 @@ private:
       sender = end_recv(rcv, msg);
     }
   
-    set_recv_global(sender, msg);
+    set_recv_result(sender, msg);
     return false;
   }
 
@@ -405,20 +429,27 @@ private:
   {
     GCE_ASSERT(yielding_);
     yielding_ = false;
-    luabridge::setGlobal(L_, this, "self");
-    luabridge::setGlobal(L_, coro_, "gce_curr_co");
-    func_();
+    set_self();
+
+    GCE_VERIFY(gce::lualib::get_ref(L_, "libgce", rf_) != 0).except<lua_exception>();
+    GCE_ASSERT(lua_type(L_, -1) == LUA_TFUNCTION);
+    GCE_VERIFY(gce::lualib::get_ref(L_, "libgce", co_) != 0).except<lua_exception>();
+    GCE_VERIFY(lua_pcall(L_, 1, 0, 0) == 0).msg(lua_tostring(L_, -1)).except<lua_exception>();
   }
 
   void stop(aid_t self_aid, exit_code_t ec, std::string const& exit_msg)
   {
+    gce::lualib::rmv_ref(L_, "libgce", a_);
+    gce::lualib::rmv_ref(L_, "libgce", co_);
+    gce::lualib::rmv_ref(L_, "libgce", rf_);
+
     base_t::send_exit(self_aid, ec, exit_msg);
     svc_.free_actor(this);
   }
 
   void start_timer(duration_t dur)
   {
-    tmr_.expires_from_now(dur);
+    tmr_.expires_from_now(gce::to_chrono(dur));
     tmr_.async_wait(
       base_t::snd_.wrap(
         boost::bind(
@@ -429,7 +460,7 @@ private:
       );
   }
 
-  void handle_timeout(errcode_t const& ec, std::size_t tmr_sid)
+  void handle_timeout(errcode_t const& ec, size_t tmr_sid)
   {
     if (!ec && tmr_sid == tmr_sid_)
     {
@@ -444,7 +475,7 @@ private:
         }
         else
         {
-          set_recv_global(nil_aid_, nil_msg_);
+          set_recv_result(nil_aid_, nil_msg_);
           resume();
           quit();
         }
@@ -577,8 +608,7 @@ private:
       {
         try
         {
-          
-          set_recv_global(sender, msg);
+          set_recv_result(sender, msg);
           resume();
           quit();
         }
@@ -616,13 +646,19 @@ private:
       errcode_t ec;
       msg >> ctxid_pr >> ec;
 
-      if (skt)
+      if (skt != aid_nil)
       {
         svc_.register_socket(ctxid_pr, skt);
       }
-      
-      luabridge::setGlobal(L_, ec.value(), "gce_conn_ret");
-      luabridge::setGlobal(L_, ec.message(), "gce_conn_errmsg");
+
+      lua_getglobal(L_, "libgce");
+      lua_pushinteger(L_, ec.value());
+      lua_setfield(L_, -2, "conn_ret");
+      std::string errmsg = ec.message();
+      lua_pushlstring(L_, errmsg.c_str(), errmsg.size());
+      lua_setfield(L_, -2, "conn_errmsg");
+      lua_pop(L_, 1);
+
       if (yielding_)
       {
         resume();
@@ -640,11 +676,11 @@ private:
   {
     try
     {
-      boost::uint16_t ty = u16_nil;
+      uint16_t ty = u16_nil;
       msg >> ty;
       link_type type = (link_type)ty;
 
-      if (aid)
+      if (aid != aid_nil)
       {
         if (type == linked)
         {
@@ -655,8 +691,8 @@ private:
           monitor(aid);
         }
       }
-      
-      luabridge::setGlobal(L_, aid, "gce_spawn_aid");
+
+      set_spawn_result(aid);
       if (yielding_)
       {
         resume();
@@ -674,10 +710,10 @@ private:
     aid_t aid,
     message msg, link_type type,
     boost::chrono::system_clock::time_point begin_tp,
-    sid_t sid, seconds_t tmo, duration_t curr_tmo
+    sid_t sid, duration_t tmo, duration_t curr_tmo
     )
   {
-    boost::uint16_t err = 0;
+    uint16_t err = 0;
     sid_t ret_sid = sid_nil;
     if (msg.get_type() != match_nil)
     {
@@ -685,15 +721,15 @@ private:
       while (true)
       {
         msg >> err >> ret_sid;
-        if (err != 0 || (aid && sid == ret_sid))
+        if (err != 0 || (aid != aid_nil && sid == ret_sid))
         {
           break;
         }
 
         if (tmo != infin)
         {
-          duration_t pass_time = boost::chrono::system_clock::now() - begin_tp;
-          curr_tmo -= pass_time;
+          duration_t pass_time = from_chrono(boost::chrono::system_clock::now() - begin_tp);
+          curr_tmo = curr_tmo - pass_time;
         }
 
         begin_tp = boost::chrono::system_clock::now();
@@ -715,7 +751,7 @@ private:
         aid = nil_aid_;
       }
 
-      if (aid)
+      if (aid != aid_nil)
       {
         if (type == linked)
         {
@@ -732,7 +768,7 @@ private:
     {
       try
       {
-        luabridge::setGlobal(L_, aid, "gce_spawn_aid");
+        set_spawn_result(aid);
         resume();
         quit();
       }
@@ -756,10 +792,22 @@ private:
     return false;
   }
 
-  void set_recv_global(aid_t const& sender, message const& msg)
+  void set_recv_result(gce::aid_t const& sender, message const& msg)
   {
-    luabridge::setGlobal(L_, sender, "gce_recv_sender");
-    luabridge::setGlobal(L_, msg, "gce_recv_msg");
+    lua_getglobal(L_, "libgce");
+    lua::push(L_, sender);
+    lua_setfield(L_, -2, "recv_sender");
+    lua::message::create(L_, msg);
+    lua_setfield(L_, -2, "recv_msg");
+    lua_pop(L_, 1);
+  }
+
+  void set_spawn_result(gce::aid_t const& aid)
+  {
+    lua_getglobal(L_, "libgce");
+    lua::push(L_, aid);
+    lua_setfield(L_, -2, "spawn_aid");
+    lua_pop(L_, 1);
   }
 
 private:
@@ -768,10 +816,11 @@ private:
 
   GCE_CACHE_ALIGNED_VAR(lua_State*, L_)
   GCE_CACHE_ALIGNED_VAR(std::string, script_)
-  GCE_CACHE_ALIGNED_VAR(luabridge::LuaRef, coro_)
-  GCE_CACHE_ALIGNED_VAR(luabridge::LuaRef, func_)
+  GCE_CACHE_ALIGNED_VAR(int, a_)
+  GCE_CACHE_ALIGNED_VAR(int, co_)
+  GCE_CACHE_ALIGNED_VAR(int, rf_)
 
-  /// thread local
+  /// coro local
   service_t& svc_;
   bool yielding_;
   bool recving_;
@@ -779,7 +828,7 @@ private:
   resp_t recving_res_;
   pattern curr_pattern_;
   timer_t tmr_;
-  std::size_t tmr_sid_;
+  size_t tmr_sid_;
 
   typedef boost::function<bool (aid_t, message)> spawn_handler_t;
   spawn_handler_t spw_hdr_;

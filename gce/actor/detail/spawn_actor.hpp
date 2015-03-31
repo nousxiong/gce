@@ -24,13 +24,13 @@ namespace detail
 template <typename Context>
 inline aid_t make_stackful_actor(
   aid_t const& sire, typename Context::stackful_service_t& svc,
-  actor_func<stackful, Context> const& f, std::size_t stack_size
+  actor_func<stackful, Context> const& f, size_t stack_size
   )
 {
   typedef Context context_t;
   stackful_actor<context_t>* a = svc.make_actor();
   a->init(f.f_);
-  if (sire)
+  if (sire != aid_nil)
   {
     send(*a, sire, msg_new_actor);
   }
@@ -48,7 +48,7 @@ inline aid_t make_stackless_actor(
   typedef Context context_t;
   stackless_actor<context_t>* a = svc.make_actor();
   a->init(f.f_);
-  if (sire)
+  if (sire != aid_nil)
   {
     send(*a, sire, msg_new_actor);
   }
@@ -78,7 +78,7 @@ inline aid_t end_spawn(ActorRef sire, link_type type)
   pattern patt(msg_new_actor);
   message msg;
   aid_t aid = sire.recv(msg, patt);
-  GCE_VERIFY(aid)(msg).msg("gce::spawn_exception").except<spawn_exception>();
+  GCE_VERIFY(aid != aid_nil)(msg).msg("gce::spawn_exception").except<spawn_exception>();
 
   if (type == linked)
   {
@@ -97,7 +97,7 @@ inline void handle_spawn(
   link_type type, boost::function<void (actor_ref<stackless, Context>, aid_t)> const& hdr
   )
 {
-  if (aid)
+  if (aid != aid_nil)
   {
     if (type == linked)
     {
@@ -117,7 +117,7 @@ template <typename ActorRef, typename F>
 inline aid_t spawn(
   stackful,
   ActorRef sire, F f, bool sync_sire,
-  link_type type, std::size_t stack_size
+  link_type type, size_t stack_size
   )
 {
   typedef typename ActorRef::context_t context_t;
@@ -139,7 +139,7 @@ template <typename ActorRef, typename F>
 inline aid_t spawn(
   stackless,
   ActorRef sire, F f, bool sync_sire,
-  link_type type, std::size_t
+  link_type type, size_t
   )
 {
   typedef typename ActorRef::context_t context_t;
@@ -162,7 +162,7 @@ template <typename ActorRef>
 inline aid_t spawn(
   luaed,
   ActorRef sire, std::string const& script, 
-  bool sync_sire, link_type type, std::size_t
+  bool sync_sire, link_type type, size_t
   )
 {
   typedef typename ActorRef::context_t context_t;
@@ -246,13 +246,13 @@ inline void handle_remote_spawn(
   actor_ref<stackless, Context> self, aid_t aid,
   message msg, link_type type,
   boost::chrono::system_clock::time_point begin_tp,
-  sid_t sid, seconds_t tmo, duration_t curr_tmo,
+  sid_t sid, duration_t tmo, duration_t curr_tmo,
   boost::function<void (actor_ref<stackless, Context>, aid_t)> const& hdr
   )
 {
   typedef Context context_t;
 
-  boost::uint16_t err = 0;
+  uint16_t err = 0;
   sid_t ret_sid = sid_nil;
   if (msg.get_type() == match_nil)
   {
@@ -294,7 +294,7 @@ inline void handle_remote_spawn(
     aid = aid_t();
   }
 
-  if (aid)
+  if (aid != aid_nil)
   {
     if (type == linked)
     {
@@ -313,12 +313,12 @@ template <typename ActorRef>
 inline aid_t spawn_remote(
   spawn_type spw,
   ActorRef sire, std::string const& func, match_t ctxid,
-  link_type type, std::size_t stack_size, seconds_t tmo
+  link_type type, size_t stack_size, duration_t tmo
   )
 {
   aid_t aid;
   sid_t sid = sire.spawn(spw, func, ctxid, stack_size);
-  boost::uint16_t err = 0;
+  uint16_t err = 0;
   sid_t ret_sid = sid_nil;
 
   duration_t curr_tmo = tmo;
@@ -329,15 +329,15 @@ inline aid_t spawn_remote(
   {
     begin_tp = clock_t::now();
     aid = sire->recv(detail::msg_spawn_ret, err, ret_sid, curr_tmo);
-    if (err != 0 || (aid && sid == ret_sid))
+    if (err != 0 || (aid != aid_nil && sid == ret_sid))
     {
       break;
     }
 
     if (tmo != infin)
     {
-      duration_t pass_time = clock_t::now() - begin_tp;
-      curr_tmo -= pass_time;
+      duration_t pass_time = from_chrono(clock_t::now() - begin_tp);
+      curr_tmo = curr_tmo - pass_time;
     }
   }
   while (true);
@@ -381,7 +381,7 @@ template <typename ActorRef>
 inline aid_t spawn_remote(
   stackful,
   ActorRef sire, std::string const& func, match_t ctxid,
-  link_type type, std::size_t stack_size, seconds_t tmo
+  link_type type, size_t stack_size, duration_t tmo
   )
 {
   return spawn_remote(spw_stackful, sire, func, ctxid, type, stack_size, tmo);
@@ -392,7 +392,7 @@ template <typename ActorRef>
 inline aid_t spawn_remote(
   stackless,
   ActorRef sire, std::string const& func, match_t ctxid,
-  link_type type, std::size_t stack_size, seconds_t tmo
+  link_type type, size_t stack_size, duration_t tmo
   )
 {
   return spawn_remote(spw_stackless, sire, func, ctxid, type, stack_size, tmo);
@@ -404,7 +404,7 @@ template <typename ActorRef>
 inline aid_t spawn_remote(
   luaed,
   ActorRef sire, std::string const& func, match_t ctxid,
-  link_type type, std::size_t stack_size, seconds_t tmo
+  link_type type, size_t stack_size, duration_t tmo
   )
 {
   return spawn_remote(spw_luaed, sire, func, ctxid, type, stack_size, tmo);
@@ -417,8 +417,8 @@ inline void spawn_remote(
   actor_ref<stackless, Context> sire, std::string const& func, SpawnHandler h,
   match_t ctxid = ctxid_nil,
   link_type type = no_link,
-  std::size_t stack_size = default_stacksize(),
-  seconds_t tmo = seconds_t(GCE_DEFAULT_REQUEST_TIMEOUT_SEC)
+  size_t stack_size = default_stacksize(),
+  duration_t tmo = seconds(GCE_DEFAULT_REQUEST_TIMEOUT_SEC)
   )
 {
   typedef Context context_t;
@@ -445,7 +445,7 @@ template <typename Context, typename SpawnHandler>
 inline void spawn_remote(
   stackful,
   actor_ref<stackless, Context>& sire, std::string const& func, SpawnHandler h,
-  match_t ctxid, link_type type, std::size_t stack_size, seconds_t tmo
+  match_t ctxid, link_type type, size_t stack_size, duration_t tmo
   )
 {
   spawn_remote(spw_stackful, sire, func, h, ctxid, type, stack_size, tmo);
@@ -456,7 +456,7 @@ template <typename Context, typename SpawnHandler>
 inline aid_t spawn_remote(
   stackless,
   actor_ref<stackless, Context> sire, std::string const& func, SpawnHandler h,
-  match_t ctxid, link_type type, std::size_t stack_size, seconds_t tmo
+  match_t ctxid, link_type type, size_t stack_size, duration_t tmo
   )
 {
   return spawn_remote(spw_stackless, sire, func, h, ctxid, type, stack_size, tmo);
@@ -468,7 +468,7 @@ template <typename Context, typename SpawnHandler>
 inline aid_t spawn_remote(
   luaed,
   actor_ref<stackless, Context> sire, std::string const& func, SpawnHandler h,
-  match_t ctxid, link_type type, std::size_t stack_size, seconds_t tmo
+  match_t ctxid, link_type type, size_t stack_size, duration_t tmo
   )
 {
   return spawn_remote(spw_luaed, sire, func, h, ctxid, type, stack_size, tmo);

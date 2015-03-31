@@ -29,9 +29,11 @@ public:
   {
     try
     {
+      gce::log::asio_logger lg;
       std::size_t echo_num = 10;
 
       attributes attrs;
+      attrs.lg_ = boost::bind(&gce::log::asio_logger::output, &lg, _1, "");
       attrs.id_ = atom("one");
       context ctx1(attrs);
       attrs.id_ = atom("two");
@@ -51,8 +53,8 @@ public:
           monitored
           );
 
-      net_option opt;
-      opt.reconn_period_ = seconds_t(1);
+      netopt_t opt = make_netopt();
+      opt.reconn_period = seconds(1);
       connect(base1, "two", "tcp://127.0.0.1:14923", opt);
 
       for (std::size_t i=0; i<echo_num; ++i)

@@ -44,4 +44,20 @@
 # define GCE_SCRIPT
 #endif
 
+#ifndef GCE_AMSG
+# define GCE_AMSG 0
+#endif
+
+#ifndef GCE_ADATA
+# define GCE_ADATA 1
+#endif
+
+#ifndef GCE_PACKER
+# ifdef GCE_SCRIPT
+#   define GCE_PACKER GCE_ADATA
+# else
+#   define GCE_PACKER GCE_AMSG
+# endif
+#endif
+
 #endif /// GCE_CONFIG_HPP

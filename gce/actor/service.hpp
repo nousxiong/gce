@@ -14,7 +14,7 @@
 #include <gce/actor/actor.hpp>
 #include <gce/actor/service_id.hpp>
 #include <gce/actor/detail/service.hpp>
-#include <gce/actor/detail/to_match.hpp>
+#include <gce/actor/to_match.hpp>
 
 namespace gce
 {
@@ -22,7 +22,7 @@ template <typename Match>
 inline void register_service(stackful_actor self, Match name)
 {
   detail::register_service(
-    self.get_aid(), self.get_service(), detail::to_match(name)
+    self.get_aid(), self.get_service(), to_match(name)
     );
 }
 
@@ -30,7 +30,7 @@ template <typename Match>
 inline void deregister_service(stackful_actor self, Match name)
 {
   detail::deregister_service(
-    self.get_aid(), self.get_service(), detail::to_match(name)
+    self.get_aid(), self.get_service(), to_match(name)
     );
 }
 
@@ -38,7 +38,7 @@ template <typename Match>
 inline void register_service(stackless_actor self, Match name)
 {
   detail::register_service(
-    self.get_aid(), self.get_service(), detail::to_match(name)
+    self.get_aid(), self.get_service(), to_match(name)
     );
 }
 
@@ -46,14 +46,8 @@ template <typename Match>
 inline void deregister_service(stackless_actor self, Match name)
 {
   detail::deregister_service(
-    self.get_aid(), self.get_service(), detail::to_match(name)
+    self.get_aid(), self.get_service(), to_match(name)
     );
-}
-
-template <typename Ctxid, typename Match>
-inline svcid_t make_svcid(Ctxid ctxid, Match name)
-{
-  return svcid_t(ctxid, name);
 }
 }
 

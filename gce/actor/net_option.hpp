@@ -12,48 +12,36 @@
 
 #include <gce/actor/config.hpp>
 #include <gce/actor/duration.hpp>
+#include <gce/actor/net_option.adl.h>
 
 namespace gce
 {
-struct net_option
+typedef adl::net_option netopt_t;
+
+netopt_t make_netopt(
+  bool is_router = false, /// if is router, set it true
+  duration_t heartbeat_period = seconds(30),
+  int32_t heartbeat_count = 3,
+  duration_t init_reconn_period = seconds(3), /// init conn, between two connects' period
+  int32_t init_reconn_try = 2, /// init conn, how many try to reconnect before give up
+  duration_t reconn_period = seconds(10), /// in one reconn, between two connects' period
+  int32_t reconn_try = 3, /// how many try to reconnect before drop cache msgs
+  duration_t rebind_period = seconds(5), /// bind, between two bind' period
+  int32_t rebind_try = 3 /// bind, how many try to rebind before give up
+  )
 {
-  net_option()
-    : is_router_(false)
-    , heartbeat_period_(seconds_t(30))
-    , heartbeat_count_(3)
-    , init_reconn_period_(seconds_t(3))
-    , init_reconn_try_(2)
-    , reconn_period_(seconds_t(10))
-    , reconn_try_(3)
-    , rebind_period_(seconds_t(5))
-    , rebind_try_(3)
-  {
-  }
-
-  /// if is router, set it true
-  bool is_router_;
-
-  duration_type heartbeat_period_;
-  int heartbeat_count_;
-
-  /// init conn, between two connects' period
-  duration_type init_reconn_period_;
-
-  /// init conn, how many try to reconnect before give up
-  int init_reconn_try_;
-
-  /// in one reconn, between two connects' period
-  duration_type reconn_period_;
-
-  /// how many try to reconnect before drop cache msgs
-  int reconn_try_;
-
-  /// bind, between two bind' period
-  duration_type rebind_period_;
-
-  /// bind, how many try to rebind before give up
-  int rebind_try_;
-};
+  netopt_t opt;
+  opt.is_router = is_router ? 1 : 0;
+  opt.heartbeat_period = heartbeat_period;
+  opt.heartbeat_count = heartbeat_count;
+  opt.init_reconn_period = init_reconn_period;
+  opt.init_reconn_try = init_reconn_try;
+  opt.reconn_period = reconn_period;
+  opt.reconn_try = reconn_try;
+  opt.rebind_period = rebind_period;
+  opt.rebind_try = rebind_try;
+  return opt;
+}
 }
 
 #endif /// GCE_ACTOR_NET_OPTION_HPP

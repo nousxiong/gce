@@ -25,9 +25,9 @@ struct msg_header
   {
   }
 
-  boost::uint32_t size_;
+  uint32_t size_;
   match_t type_;
-  boost::uint32_t tag_offset_;
+  uint32_t tag_offset_;
 };
 }
 }

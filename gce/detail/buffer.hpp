@@ -15,6 +15,7 @@
 #include <boost/bind.hpp>
 #include <new>
 #include <cstdlib>
+#include <cstddef>
 
 namespace gce
 {
@@ -31,7 +32,7 @@ public:
   {
   }
 
-  explicit buffer(std::size_t size)
+  explicit buffer(size_t size)
     : ref_count(boost::bind(&buffer::free, this))
     , data_((byte_t*)std::malloc(size))
     , size_(size)
@@ -52,9 +53,9 @@ public:
 
 public:
   byte_t* data() { return data_; }
-  std::size_t size() const { return size_; }
+  size_t size() const { return size_; }
 
-  void resize(std::size_t size)
+  void resize(size_t size)
   {
     if (size > size_)
     {
@@ -75,7 +76,7 @@ public:
 
 private:
   byte_t* data_;
-  std::size_t size_;
+  size_t size_;
 };
 
 typedef boost::intrusive_ptr<buffer> buffer_ptr;

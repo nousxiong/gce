@@ -29,7 +29,7 @@ class basic_service
   typedef basic_service<context_t> self_t;
 
 public:
-  basic_service(context_t& ctx, strand_t& snd, std::size_t index, actor_type type)
+  basic_service(context_t& ctx, strand_t& snd, size_t index, actor_type type)
     : ctx_(ctx)
     , index_(index)
     , type_(type)
@@ -52,9 +52,9 @@ public:
     pk.concurrency_index_ = index_;
     pk.type_ = type_;
     bool already_exit = true;
-    if (recver.in_pool())
+    if (in_pool(recver))
     {
-      actor_index ai = recver.get_actor_index(ctxid_, timestamp_);
+      actor_index ai = get_actor_index(recver, ctxid_, timestamp_);
       if (ai)
       {
         already_exit = false;
@@ -66,7 +66,7 @@ public:
     }
     else
     {
-      listener* a = recver.get_actor_ptr(ctxid_, timestamp_);
+      listener* a = get_actor_ptr(recver, ctxid_, timestamp_);
       if (a)
       {
         already_exit = false;
@@ -90,7 +90,7 @@ public:
     return ctx_;
   }
 
-  std::size_t get_index() const
+  size_t get_index() const
   {
     return index_;
   }
@@ -186,7 +186,7 @@ public:
   aid_t select_socket(ctxid_t ctxid = ctxid_nil, ctxid_t* target = 0)
   {
     aid_t skt = select_straight_socket(ctxid, target);
-    if (!skt)
+    if (skt == aid_nil)
     {
       skt = select_router(target);
     }
@@ -377,7 +377,7 @@ public:
   void send_already_exited(aid_t recver, aid_t const& sender)
   {
     aid_t target = filter_aid(recver);
-    if (target)
+    if (target != aid_nil)
     {
       message m(exit);
       std::string exit_msg("already exited");
@@ -397,7 +397,7 @@ public:
   void send_already_exited(aid_t const& recver, resp_t const& res)
   {
     aid_t target = filter_aid(recver);
-    if (target)
+    if (target != aid_nil)
     {
       message m(exit);
       std::string exit_msg("already exited");
@@ -482,11 +482,11 @@ protected:
   byte_t pad0_[GCE_CACHE_LINE_SIZE];
 
   GCE_CACHE_ALIGNED_VAR(context_t&, ctx_)
-  GCE_CACHE_ALIGNED_VAR(std::size_t, index_)
+  GCE_CACHE_ALIGNED_VAR(size_t, index_)
   GCE_CACHE_ALIGNED_VAR(actor_type, type_)
   GCE_CACHE_ALIGNED_VAR(strand_t&, snd_)
 
-  /// thread local vars
+  /// coro local vars
   ctxid_t const ctxid_;
   timestamp_t const timestamp_;
 

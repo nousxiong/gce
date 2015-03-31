@@ -32,6 +32,16 @@
 #include <vector>
 #include <map>
 
+#ifndef GCE_SOCKET_RECV_CACHE_SIZE
+# define GCE_SOCKET_RECV_CACHE_SIZE 65535
+#endif
+
+#ifndef GCE_SOCKET_RECV_MAX_SIZE
+# define GCE_SOCKET_RECV_MAX_SIZE 60000
+#endif
+
+#define GCE_MAX_MSG_SIZE (GCE_SOCKET_RECV_CACHE_SIZE - GCE_SOCKET_RECV_MAX_SIZE)
+
 namespace gce
 {
 namespace detail
@@ -85,7 +95,7 @@ public:
   }
 
 public:
-  void init(net_option opt)
+  void init(netopt_t opt)
   {
     GCE_ASSERT(stat_ == ready)(stat_).log(lg_, "socket_actor status error");
     opt_ = opt;
@@ -135,7 +145,7 @@ public:
     return actor_socket;
   }
 
-  static std::size_t get_pool_reserve_size(attributes const& attr)
+  static size_t get_pool_reserve_size(attributes const& attr)
   {
     return attr.socket_pool_reserve_size_;
   }
@@ -196,7 +206,7 @@ private:
       if (is_router_)
       {
         sktaid_t skt = svc_.select_joint_socket(pk.recver_.ctxid_);
-        if (!skt)
+        if (skt == aid_nil)
         {
           /// no socket found, send already exit back
           svc_.send_already_exited(link->get_aid(), pk.recver_);
@@ -227,7 +237,7 @@ private:
       if (is_router_)
       {
         sktaid_t skt = remove_router_link(pk.recver_, ex->get_aid());
-        GCE_ASSERT(skt)(pk.recver_)(ex->get_aid());
+        GCE_ASSERT(skt != aid_nil)(pk.recver_)(ex->get_aid());
         pk.tag_ = fwd_exit_t(ex->get_code(), ex->get_aid(), base_t::get_aid());
         pk.skt_ = skt;
         send_pack(pk.skt_, pk);
@@ -243,7 +253,7 @@ private:
       if (is_router_)
       {
         sktaid_t skt = svc_.select_joint_socket(spw->get_ctxid());
-        if (!skt)
+        if (skt == aid_nil)
         {
           send_spawn_ret(spw, pk, spawn_no_socket, nil_aid_, true);
         }
@@ -313,7 +323,7 @@ private:
       if (is_router_)
       {
         sktaid_t skt = svc_.select_joint_socket(pk.recver_.ctxid_);
-        if (skt)
+        if (skt != aid_nil)
         {
           pk.skt_ = skt;
           send_pack(pk.skt_, pk);
@@ -323,9 +333,9 @@ private:
       {
         /// fwd to spawner
         message m(msg_spawn_ret);
-        m << (boost::uint16_t)spr->get_error() << spr->get_id();
+        m << (uint16_t)spr->get_error() << spr->get_id();
         aid_t aid = spr->get_aid();
-        if (!aid)
+        if (aid == aid_nil)
         {
           /// we should make sure no timeout miss.
           aid = base_t::get_aid();
@@ -338,14 +348,14 @@ private:
     }
     else
     {
-      bool is_svc = pk.svc_;
+      bool is_svc = pk.svc_ != svcid_nil;
       if (is_router_)
       {
         ctxid_t ctxid = is_svc ? pk.svc_.ctxid_ : pk.recver_.ctxid_;
         sktaid_t skt = svc_.select_joint_socket(ctxid);
         if (request_t* req = boost::get<request_t>(&pk.tag_))
         {
-          if (!skt && !is_svc)
+          if (skt == aid_nil && !is_svc)
           {
             /// reply actor exit msg
             resp_t res(req->get_id(), pk.recver_);
@@ -353,7 +363,7 @@ private:
           }
         }
 
-        if (skt)
+        if (skt != aid_nil)
         {
           pk.skt_ = skt;
           send_pack(pk.skt_, pk);
@@ -415,7 +425,7 @@ private:
   {
     pack pk;
     spawn_error err = spawn_ok;
-    if (!aid)
+    if (aid == aid_nil)
     {
       err = spawn_func_not_found;
     }
@@ -463,13 +473,15 @@ private:
     GCE_VERIFY(m.size() <= GCE_MAX_MSG_SIZE)(m);
 
     msg_header hdr;
-    hdr.size_ = (boost::uint32_t)m.size();
+    hdr.size_ = (uint32_t)m.size();
     hdr.type_ = m.get_type();
     hdr.tag_offset_ = m.get_tag_offset();
 
     byte_t buf[sizeof(msg_header)];
-    boost::amsg::zero_copy_buffer zbuf(buf, sizeof(msg_header));
-    boost::amsg::write(zbuf, hdr);
+    amsg::zero_copy_buffer zbuf;
+    zbuf.set_write(buf, sizeof(msg_header));
+    amsg::write(zbuf, hdr);
+
     skt_->send(
       buf, zbuf.write_length(),
       m.data(), hdr.size_
@@ -654,7 +666,7 @@ private:
   socket_ptr make_socket(std::string const& ep)
   {
     /// find protocol name
-    std::size_t pos = ep.find("://");
+    size_t pos = ep.find("://");
     GCE_VERIFY(pos != std::string::npos)(ep)
       .log(lg_, "protocol name parse failed");
 
@@ -662,7 +674,7 @@ private:
     if (prot_name == "tcp")
     {
       /// parse address
-      std::size_t begin = pos + 3;
+      size_t begin = pos + 3;
       pos = ep.find(':', begin);
       GCE_VERIFY(pos != std::string::npos)(ep)
         .log(lg_, "tcp address parse failed");
@@ -724,7 +736,7 @@ private:
 
   void add_straight_link(aid_t const& src, aid_t const& des)
   {
-    if (des)
+    if (des != aid_nil)
     {
       std::pair<straight_link_list_t::iterator, bool> pr =
         straight_link_list_.insert(std::make_pair(src, straight_dummy_));
@@ -734,7 +746,7 @@ private:
 
   void remove_straight_link(aid_t const& src, aid_t const& des)
   {
-    if (des)
+    if (des != aid_nil)
     {
       straight_link_list_t::iterator itr(
         straight_link_list_.find(src)
@@ -748,7 +760,7 @@ private:
 
   void add_router_link(aid_t const& src, aid_t const& des, sktaid_t skt)
   {
-    if (des)
+    if (des != aid_nil)
     {
       std::pair<router_link_list_t::iterator, bool> pr =
         router_link_list_.insert(std::make_pair(src, router_dummy_));
@@ -759,7 +771,7 @@ private:
   sktaid_t remove_router_link(aid_t const& src, aid_t const& des)
   {
     sktaid_t skt;
-    if (des)
+    if (des != aid_nil)
     {
       router_link_list_t::iterator itr(
         router_link_list_.find(src)
@@ -843,9 +855,11 @@ private:
   {
     msg_header hdr;
     byte_t* data = recv_cache_.get_read_data();
-    std::size_t remain_size = recv_cache_.remain_read_size();
-    boost::amsg::zero_copy_buffer zbuf(data, remain_size);
-    boost::amsg::read(zbuf, hdr);
+    size_t remain_size = recv_cache_.remain_read_size();
+
+    amsg::zero_copy_buffer zbuf;
+    zbuf.set_read(data, remain_size);
+    amsg::read(zbuf, hdr);
     if (zbuf.bad())
     {
       return false;
@@ -854,7 +868,7 @@ private:
     GCE_VERIFY(hdr.size_ <= GCE_MAX_MSG_SIZE)(hdr.size_)(remain_size)(hdr.type_)
       .log(lg_, "message overlength");
 
-    std::size_t header_size = zbuf.read_length();
+    size_t header_size = zbuf.read_length();
     if (remain_size - header_size < hdr.size_)
     {
       return false;
@@ -868,7 +882,7 @@ private:
     {
       GCE_ASSERT(recv_cache_.write_size() >= recv_cache_.read_size())
         (recv_cache_.write_size())(recv_cache_.read_size())(msg);
-      std::size_t copy_size =
+      size_t copy_size =
         recv_cache_.write_size() - recv_cache_.read_size();
       std::memmove(recv_buffer_, recv_cache_.get_read_data(), copy_size);
       recv_cache_.clear();
@@ -882,11 +896,11 @@ private:
     errcode_t ec;
     if (stat_ == on)
     {
-      duration_type reconn_period = 
-        init ? opt_.init_reconn_period_ : opt_.reconn_period_;
-      std::size_t const reconn_try = 
-        init ? (std::size_t)opt_.init_reconn_try_ : (std::size_t)opt_.reconn_try_;
-      for (std::size_t i=0, retry=0; i<u32_nil; ++i, ++retry)
+      duration_t reconn_period = 
+        init ? opt_.init_reconn_period : opt_.reconn_period;
+      size_t const reconn_try = 
+        init ? (size_t)opt_.init_reconn_try : (size_t)opt_.reconn_try;
+      for (size_t i=0, retry=0; i<u32_nil; ++i, ++retry)
       {
         if (retry > reconn_try)
         {
@@ -901,7 +915,7 @@ private:
         if (i > 0)
         {
           errcode_t ignored_ec;
-          sync_.expires_from_now(reconn_period);
+          sync_.expires_from_now(to_chrono(reconn_period));
           sync_.async_wait(yield[ignored_ec]);
           if (stat_ != on)
           {
@@ -941,7 +955,7 @@ private:
     errcode_t ec;
     while (stat_ != off && !parse_message(msg))
     {
-      std::size_t size =
+      size_t size =
         skt_->recv(
           recv_cache_.get_write_data(),
           recv_cache_.remain_write_size(),
@@ -987,7 +1001,7 @@ private:
   void start_heartbeat(F f)
   {
     hb_.init(
-      opt_.heartbeat_period_, (std::size_t)opt_.heartbeat_count_,
+      opt_.heartbeat_period, (size_t)opt_.heartbeat_count,
       f, boost::bind(&self_t::send_msg_hb, this)
       );
     hb_.start();
@@ -1033,21 +1047,21 @@ private:
   byte_t pad0_[GCE_CACHE_LINE_SIZE];
 
   GCE_CACHE_ALIGNED_VAR(status, stat_)
-  GCE_CACHE_ALIGNED_VAR(net_option, opt_)
+  GCE_CACHE_ALIGNED_VAR(netopt_t, opt_)
 
-  /// thread local vars
+  /// coro local vars
   service_t& svc_;
   socket_ptr skt_;
   heartbeat hb_;
   timer_t sync_;
-  std::size_t tmr_sid_;
+  size_t tmr_sid_;
 
   byte_t recv_buffer_[GCE_SOCKET_RECV_CACHE_SIZE];
   buffer_ref recv_cache_;
 
   bool conn_;
   std::deque<message> conn_cache_;
-  std::size_t curr_reconn_;
+  size_t curr_reconn_;
 
   /// remote links
   typedef std::map<aid_t, std::set<aid_t> > straight_link_list_t;

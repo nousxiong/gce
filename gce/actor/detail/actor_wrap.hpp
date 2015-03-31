@@ -60,7 +60,7 @@ struct actor_wrap<ActorRef, false>
   {
     message msg;
     aid_t sender = pri_recv(type, gce::guard(), tmo, msg);
-    if (sender)
+    if (sender != aid_nil)
     {
       msg >> a1;
     }
@@ -72,7 +72,7 @@ struct actor_wrap<ActorRef, false>
   {
     message msg;
     aid_t sender = pri_recv(type, g, tmo, msg);
-    if (sender)
+    if (sender != aid_nil)
     {
       msg >> a1;
     }
@@ -84,7 +84,7 @@ struct actor_wrap<ActorRef, false>
   {
     message msg;
     aid_t sender = pri_recv(type, gce::guard(), tmo, msg);
-    if (sender)
+    if (sender != aid_nil)
     {
       msg >> a1 >> a2;
     }

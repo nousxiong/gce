@@ -169,24 +169,15 @@ public:
   template <typename T>
   record& operator()(T const& t)
   {
-    boost::amsg::error_code_t ec = boost::amsg::success;
-    std::size_t size = boost::amsg::size_of(t, ec);
-    if (ec != boost::amsg::success)
-    {
-      boost::amsg::base_store bs;
-      bs.set_error_code(ec);
-      throw std::runtime_error(bs.message());
-    }
-
+    size_t size = amsg::size_of(t);
     meta_.reserve(size);
+
     gce::detail::buffer_ref& buf = meta_.get_buffer_ref();
+    amsg::zero_copy_buffer writer;
+    writer.set_write(buf.get_write_data(), buf.remain_write_size());
 
-    boost::amsg::zero_copy_buffer writer(
-      buf.get_write_data(), buf.remain_write_size()
-      );
-
-    boost::amsg::write(writer, t);
-    BOOST_ASSERT(!writer.bad());
+    amsg::write(writer, t);
+    BOOST_ASSERT_MSG(!writer.bad(), writer.message());
 
     buf.write(writer.write_length());
     return *this;
@@ -196,11 +187,10 @@ public:
   bool get_meta(T& t)
   {
     gce::detail::buffer_ref& buf = meta_.get_buffer_ref();
-    boost::amsg::zero_copy_buffer reader(
-      buf.get_read_data(), buf.remain_read_size()
-      );
+    amsg::zero_copy_buffer reader;
+    reader.set_read(buf.get_read_data(), buf.remain_read_size());
 
-    boost::amsg::read(reader, t);
+    amsg::read(reader, t);
     if (reader.bad())
     {
       return false;
@@ -212,7 +202,7 @@ public:
 
   record& operator()(char const* str)
   {
-    boost::uint32_t size = (boost::uint32_t)std::char_traits<char>::length(str);
+    uint32_t size = (uint32_t)std::char_traits<char>::length(str);
     (*this)(size);
     meta_.append(str, size);
     return *this;
@@ -220,7 +210,7 @@ public:
 
   bool get_meta(boost::string_ref& str)
   {
-    boost::uint32_t size;
+    uint32_t size;
     if (get_meta(size))
     {
       gce::detail::buffer_ref& buf = meta_.get_buffer_ref();

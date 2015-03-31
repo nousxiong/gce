@@ -70,8 +70,8 @@ public:
   explicit actor_pool(
     ctxid_t ctxid, 
     timestamp_t timestamp, 
-    boost::uint16_t owner,
-    std::size_t reserve_size = 32,
+    uint16_t owner,
+    size_t reserve_size = 32,
     allocator_t a = allocator_t()
     )
     : ctxid_(ctxid)
@@ -80,7 +80,7 @@ public:
     , sid_base_(0)
   {
     pool_.resize(reserve_size);
-    for (boost::uint32_t i=0; i<reserve_size; ++i)
+    for (uint32_t i=0; i<reserve_size; ++i)
     {
       free_list_.push_back(i);
     }
@@ -150,8 +150,9 @@ public:
   {
     if (a)
     {
+      gce::aid_t aid = a->get_aid();
       a->~T();
-      free(a->get_aid());
+      free(aid);
     }
   }
 
@@ -161,12 +162,12 @@ private:
     actor_index i;
     if (free_list_.empty())
     {
-      i.id_ = (boost::uint32_t)pool_.size();
+      i.id_ = (uint32_t)pool_.size();
       pool_.push_back(object());
     }
     else
     {
-      boost::uint32_t id = free_list_.back();
+      uint32_t id = free_list_.back();
       free_list_.pop_back();
       GCE_ASSERT(id < pool_.size())(id)(pool_.size());
       GCE_ASSERT(!pool_[id])(id);
@@ -176,14 +177,14 @@ private:
     i.svc_id_ = owner_;
     i.type_ = T::get_type();
     pool_[i.id_].use(++sid_base_);
-    return std::make_pair(gce::aid_t(ctxid_, timestamp_, i.id_, i.svc_id_, i.type_, sid_base_), i);
+    return std::make_pair(gce::make_aid(ctxid_, timestamp_, i.id_, i.svc_id_, i.type_, sid_base_), i);
   }
 
   void free(gce::aid_t const& aid)
   {
-    if (aid)
+    if (aid != gce::aid_nil)
     {
-      actor_index i = aid.get_actor_index(ctxid_, timestamp_);
+      actor_index i = get_actor_index(aid, ctxid_, timestamp_);
       if (i)
       {
         GCE_ASSERT(i.id_ < pool_.size())(i.id_)(pool_.size());
@@ -205,10 +206,10 @@ private:
 private:
   ctxid_t ctxid_;
   timestamp_t timestamp_;
-  boost::uint16_t owner_;
+  uint16_t owner_;
 
   std::deque<object> pool_;
-  std::vector<boost::uint32_t> free_list_;
+  std::vector<uint32_t> free_list_;
   sid_t sid_base_;
 };
 }

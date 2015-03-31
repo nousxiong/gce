@@ -32,7 +32,7 @@ class inpool_service
   typedef inpool_service<actor_t> self_t;
 
 public:
-  inpool_service(context_t& ctx, strand_t& snd, std::size_t index)
+  inpool_service(context_t& ctx, strand_t& snd, size_t index)
     : base_t(ctx, snd, index, actor_t::get_type())
     , bs_(base_t::ctx_.get_service_size())
     , lg_(ctx.get_logger())
@@ -71,9 +71,9 @@ public:
 
   pack& alloc_pack(aid_t const& target)
   {
-    if (target.in_pool())
+    if (in_pool(target))
     {
-      actor_index ai = target.get_actor_index(base_t::ctxid_, base_t::timestamp_);
+      actor_index ai = get_actor_index(target, base_t::ctxid_, base_t::timestamp_);
       if (ai)
       {
         pack_list_t* back_list = bs_.get_pack_list(ai.type_, ai.svc_id_);
@@ -126,7 +126,7 @@ private:
   void handle_recv_forth(base_t& sender_svc, send_pair& sp)
   {
     actor_type svc_type = sender_svc.get_type();
-    std::size_t svc_index = sender_svc.get_index();
+    size_t svc_index = sender_svc.get_index();
     GCE_ASSERT(sp)(svc_index);
     GCE_ASSERT(bs_.get_pack_list(svc_type, svc_index) == 0)((int)svc_type)(svc_index);
 
@@ -164,7 +164,7 @@ private:
   void handle_recv_back(base_t& sender_svc, send_pair& ret)
   {
     actor_type svc_type = sender_svc.get_type();
-    std::size_t svc_index = sender_svc.get_index();
+    size_t svc_index = sender_svc.get_index();
     GCE_ASSERT(ret)(svc_index);
     scope scp(
       boost::bind(
@@ -227,7 +227,7 @@ private:
 private:
   GCE_CACHE_ALIGNED_VAR(batch_sender, bs_)
 
-  /// thread local vars
+  /// coro local vars
   pack pk_;
   pack const nil_pk_;
   log::logger_t& lg_;

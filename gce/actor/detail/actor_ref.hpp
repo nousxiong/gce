@@ -99,7 +99,7 @@ public:
 
   aid_t respond(
     resp_t const& res, message& msg, 
-    duration_t tmo = seconds_t(GCE_DEFAULT_REQUEST_TIMEOUT_SEC)
+    duration_t tmo = seconds(GCE_DEFAULT_REQUEST_TIMEOUT_SEC)
     )
   {
     return a_.respond(res, msg, tmo);
@@ -119,7 +119,7 @@ public:
   /// internal use
   sid_t spawn(
     detail::spawn_type type, std::string const& func, 
-    match_t ctxid, std::size_t stack_size
+    match_t ctxid, size_t stack_size
     )
   {
     return a_.spawn(type, func, ctxid, stack_size);
@@ -224,7 +224,7 @@ public:
 
   aid_t respond(
     resp_t const& res, message& msg, 
-    duration_t tmo = seconds_t(GCE_DEFAULT_REQUEST_TIMEOUT_SEC)
+    duration_t tmo = seconds(GCE_DEFAULT_REQUEST_TIMEOUT_SEC)
     )
   {
     return a_.respond(res, msg, tmo);
@@ -249,7 +249,7 @@ public:
   /// internal use
   sid_t spawn(
     detail::spawn_type type, std::string const& func, 
-    match_t ctxid, std::size_t stack_size
+    match_t ctxid, size_t stack_size
     )
   {
     return a_.spawn(type, func, ctxid, stack_size);
@@ -351,7 +351,7 @@ public:
 
   void respond(
     resp_t const& res, aid_t& sender, message& msg, 
-    duration_t tmo = seconds_t(GCE_DEFAULT_REQUEST_TIMEOUT_SEC)
+    duration_t tmo = seconds(GCE_DEFAULT_REQUEST_TIMEOUT_SEC)
     )
   {
     a_.respond(res, sender, msg, tmo);
@@ -381,7 +381,7 @@ public:
 
   void respond(
     recv_handler_t const& h, resp_t const& res, 
-    duration_t tmo = seconds_t(GCE_DEFAULT_REQUEST_TIMEOUT_SEC)
+    duration_t tmo = seconds(GCE_DEFAULT_REQUEST_TIMEOUT_SEC)
     )
   {
     a_.respond(h, res, tmo);
@@ -394,7 +394,7 @@ public:
 
   sid_t spawn(
     detail::spawn_type type, std::string const& func, 
-    match_t ctxid, std::size_t stack_size
+    match_t ctxid, size_t stack_size
     )
   {
     return a_.spawn(type, func, ctxid, stack_size);

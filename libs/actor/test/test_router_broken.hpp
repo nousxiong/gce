@@ -50,12 +50,12 @@ public:
         );
       aid_t mix_id = base1->recv();
 
-      net_option opt;
-      opt.is_router_ = true;
-      opt.reconn_period_ = seconds_t(1);
+      netopt_t opt = make_netopt();
+      opt.is_router = 1;
+      opt.reconn_period = seconds(1);
       connect(base1, "router", "tcp://127.0.0.1:14923", opt);
       connect(base2, "router", "tcp://127.0.0.1:14923", opt);
-      base2.sleep_for(millisecs_t(100));
+      base2.sleep_for(millisecs(100));
 
       std::vector<aid_t> quiter_list(quiter_num);
       for (std::size_t i=0; i<quiter_num; ++i)
@@ -100,8 +100,8 @@ public:
       context ctx(attrs);
       threaded_actor base = spawn(ctx);
 
-      net_option opt;
-      opt.is_router_ = true;
+      netopt_t opt = make_netopt();
+      opt.is_router = 1;
       gce::bind(base, "tcp://127.0.0.1:14923", remote_func_list_t(), opt);
       mix->send(base_id);
       mix->recv();

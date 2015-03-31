@@ -13,12 +13,148 @@
 #include <gce/actor/config.hpp>
 #include <gce/actor/actor_fwd.hpp>
 #include <gce/actor/service_id.hpp>
+#include <gce/actor/actor_id.adl.h>
 #include <gce/actor/detail/listener.hpp>
 #include <boost/array.hpp>
 #include <iostream>
 
 namespace gce
 {
+typedef uint64_t timestamp_t;
+
+inline bool in_pool(adl::actor_id const& o)
+{
+  return o.in_pool_ != 0;
+}
+
+namespace adl
+{
+inline bool operator==(actor_id const& lhs, actor_id const& rhs)
+{
+  return
+    lhs.ctxid_ == rhs.ctxid_ &&
+    lhs.timestamp_ == rhs.timestamp_ &&
+    lhs.uintptr_ == rhs.uintptr_ &&
+    lhs.svc_id_ == rhs.svc_id_ &&
+    lhs.type_ == rhs.type_ &&
+    lhs.in_pool_ == rhs.in_pool_ &&
+    lhs.sid_ == rhs.sid_
+    ;
+}
+
+inline bool operator!=(actor_id const& lhs, actor_id const& rhs)
+{
+  return !(lhs == rhs);
+}
+
+inline bool operator<(actor_id const& lhs, actor_id const& rhs)
+{
+  if (lhs.ctxid_ < rhs.ctxid_)
+  {
+    return true;
+  }
+  else if (rhs.ctxid_ < lhs.ctxid_)
+  {
+    return false;
+  }
+
+  if (lhs.timestamp_ < rhs.timestamp_)
+  {
+    return true;
+  }
+  else if (rhs.timestamp_ < lhs.timestamp_)
+  {
+    return false;
+  }
+
+  if (lhs.in_pool_ < rhs.in_pool_)
+  {
+    return true;
+  }
+  else if (rhs.in_pool_ < lhs.in_pool_)
+  {
+    return false;
+  }
+
+  if (gce::in_pool(lhs))
+  {
+    if (lhs.svc_id_ < rhs.svc_id_)
+    {
+      return true;
+    }
+    else if (rhs.svc_id_ < lhs.svc_id_)
+    {
+      return false;
+    }
+
+    if (lhs.type_ < rhs.type_)
+    {
+      return true;
+    }
+    else if (rhs.type_ < lhs.type_)
+    {
+      return false;
+    }
+  }
+
+  if (lhs.uintptr_ < rhs.uintptr_)
+  {
+    return true;
+  }
+  else if (rhs.uintptr_ < lhs.uintptr_)
+  {
+    return false;
+  }
+
+  if (lhs.sid_ < rhs.sid_)
+  {
+    return true;
+  }
+  else if (rhs.sid_ < lhs.sid_)
+  {
+    return false;
+  }
+
+  return false;
+}
+}
+
+inline std::string to_string(adl::actor_id const& o)
+{
+  std::string str;
+  str += "aid<";
+  str += to_string(o.ctxid_);
+  str += ".";
+  str += boost::lexical_cast<intbuf_t>(o.timestamp_).cbegin();
+  str += ".";
+  str += boost::lexical_cast<intbuf_t>(o.uintptr_).cbegin();
+  str += ".";
+  if (in_pool(o))
+  {
+    str += boost::lexical_cast<intbuf_t>(o.svc_id_).cbegin();
+    str += ".";
+    str += boost::lexical_cast<intbuf_t>((int)o.type_).cbegin();
+    str += ".";
+  }
+  str += boost::lexical_cast<intbuf_t>(o.sid_).cbegin();
+  str += ".";
+  str += to_string(o.svc_);
+  str += ">";
+
+  return str;
+}
+
+detail::listener* get_actor_ptr(adl::actor_id const& aid, ctxid_t ctxid, timestamp_t timestamp)
+{
+  GCE_ASSERT(!in_pool(aid))(aid);
+  detail::listener* ret = 0;
+  if (ctxid == aid.ctxid_ && timestamp == aid.timestamp_ && aid.uintptr_ != 0)
+  {
+    ret = (detail::listener*)aid.uintptr_;
+  }
+  return ret;
+}
+
 namespace detail
 {
 struct actor_index
@@ -35,292 +171,79 @@ struct actor_index
     return type_ != actor_nil;
   }
 
-  boost::uint32_t id_;
-  boost::uint16_t svc_id_;
+  uint32_t id_;
+  uint16_t svc_id_;
   detail::actor_type type_;
 };
 }
 
-class actor_id
+detail::actor_index get_actor_index(adl::actor_id const& aid, ctxid_t ctxid, timestamp_t timestamp)
 {
-public:
-  actor_id()
-    : ctxid_(0)
-    , timestamp_(0)
-    , uintptr_(0)
-    , svc_id_(0)
-    , type_(0)
-    , in_pool_(0)
-    , sid_(0)
+  detail::actor_index ret;
+  GCE_ASSERT(in_pool(aid))(aid);
+  if (ctxid == aid.ctxid_ && timestamp == aid.timestamp_)
   {
+    ret.id_ = aid.uintptr_;
+    ret.svc_id_ = aid.svc_id_;
+    ret.type_ = (detail::actor_type)aid.type_;
   }
-
-  actor_id(
-    ctxid_t ctxid, timestamp_t timestamp,
-    detail::listener* ptr, sid_t sid
-    )
-    : ctxid_(ctxid)
-    , timestamp_(timestamp)
-    , uintptr_((boost::uint64_t)ptr)
-    , svc_id_(0)
-    , type_(0)
-    , in_pool_(0)
-    , sid_(sid)
-  {
-  }
-
-  actor_id(
-    ctxid_t ctxid, timestamp_t timestamp,
-    boost::uint32_t id, boost::uint16_t cac_id, 
-    detail::actor_type type, sid_t sid
-    )
-    : ctxid_(ctxid)
-    , timestamp_(timestamp)
-    , uintptr_(id)
-    , svc_id_(cac_id)
-    , type_((byte_t)type)
-    , in_pool_(1)
-    , sid_(sid)
-  {
-  }
-
-  ~actor_id()
-  {
-  }
-
-public:
-  operator bool() const
-  {
-    return timestamp_ != 0;
-  }
-
-  bool operator!() const
-  {
-    return timestamp_ == 0;
-  }
-
-  bool operator==(actor_id const& rhs) const
-  {
-    return
-      ctxid_ == rhs.ctxid_ &&
-      timestamp_ == rhs.timestamp_ &&
-      uintptr_ == rhs.uintptr_ &&
-      svc_id_ == rhs.svc_id_ &&
-      type_ == rhs.type_ &&
-      in_pool_ == rhs.in_pool_ &&
-      sid_ == rhs.sid_;
-  }
-
-  bool operator!=(actor_id const& rhs) const
-  {
-    return !(*this == rhs);
-  }
-
-  bool operator<(actor_id const& rhs) const
-  {
-    if (ctxid_ < rhs.ctxid_)
-    {
-      return true;
-    }
-    else if (ctxid_ > rhs.ctxid_)
-    {
-      return false;
-    }
-
-    if (timestamp_ < rhs.timestamp_)
-    {
-      return true;
-    }
-    else if (timestamp_ > rhs.timestamp_)
-    {
-      return false;
-    }
-
-    if (in_pool_ < rhs.in_pool_)
-    {
-      return true;
-    }
-    else if (in_pool_ > rhs.in_pool_)
-    {
-      return false;
-    }
-
-    if (in_pool())
-    {
-      if (svc_id_ < rhs.svc_id_)
-      {
-        return true;
-      }
-      else if (svc_id_ > rhs.svc_id_)
-      {
-        return false;
-      }
-
-      if (type_ < rhs.type_)
-      {
-        return true;
-      }
-      else if (type_ > rhs.type_)
-      {
-        return false;
-      }
-    }
-
-    if (uintptr_ < rhs.uintptr_)
-    {
-      return true;
-    }
-    else if (uintptr_ > rhs.uintptr_)
-    {
-      return false;
-    }
-
-    if (sid_ < rhs.sid_)
-    {
-      return true;
-    }
-    else if (sid_ > rhs.sid_)
-    {
-      return false;
-    }
-
-    return false;
-  }
-
-  detail::listener* get_actor_ptr(ctxid_t ctxid, timestamp_t timestamp) const
-  {
-    GCE_ASSERT(!in_pool())(to_string());
-    detail::listener* ret = 0;
-    if (
-      ctxid == ctxid_ && timestamp == timestamp_ && uintptr_ != 0
-      )
-    {
-      ret = (detail::listener*)uintptr_;
-    }
-    return ret;
-  }
-
-  detail::actor_index get_actor_index(ctxid_t ctxid, timestamp_t timestamp) const
-  {
-    detail::actor_index ret;
-    GCE_ASSERT(in_pool())(to_string());
-    if (ctxid == ctxid_ && timestamp == timestamp_)
-    {
-      ret.id_ = uintptr_;
-      ret.svc_id_ = svc_id_;
-      ret.type_ = (detail::actor_type)type_;
-    }
-    return ret;
-  }
-
-  bool in_pool() const
-  {
-    return in_pool_ != 0;
-  }
-
-  bool equals(actor_id const& rhs) const
-  {
-    return *this == rhs;
-  }
-
-  ctxid_t ctxid_;
-  timestamp_t timestamp_;
-  boost::uint64_t uintptr_;
-  boost::uint16_t svc_id_;
-  byte_t type_;
-  byte_t in_pool_;
-  sid_t sid_;
-
-  /// internal use
-  void set_svcid(svcid_t svc)
-  {
-    svc_ = svc;
-  }
-
-  std::string to_string() const
-  {
-    typedef boost::array<char, 32> strbuf_t;
-    std::string rt;
-    rt += "<";
-    rt += boost::lexical_cast<strbuf_t>(ctxid_).cbegin();
-    rt += ".";
-    rt += boost::lexical_cast<strbuf_t>(timestamp_).cbegin();
-    rt += ".";
-    rt += boost::lexical_cast<strbuf_t>(uintptr_).cbegin();
-    rt += ".";
-    if (in_pool())
-    {
-      rt += boost::lexical_cast<strbuf_t>(svc_id_).cbegin();
-      rt += ".";
-      rt += boost::lexical_cast<strbuf_t>((int)type_).cbegin();
-      rt += ".";
-    }
-    rt += boost::lexical_cast<strbuf_t>(sid_).cbegin();
-    rt += ".";
-    rt += svc_.to_string();
-    rt += ">";
-
-    return rt;
-  }
-
-#ifdef GCE_SCRIPT
-  int get_overloading_type() const
-  {
-    return (int)detail::overloading_aid;
-  }
-
-  bool is_nil() const
-  {
-    return !(*this);
-  }
-
-  GCE_SCRIPT_SERIALIZE_FUNC
-#endif
-
-  svcid_t svc_;
-};
-
-typedef actor_id aid_t;
-typedef actor_id sktaid_t;
-
-#ifdef GCE_LUA
-inline aid_t lua_aid()
-{
-  return aid_t();
+  return ret;
 }
-#endif
 
 namespace detail
 {
-inline bool check_local(aid_t const& id, ctxid_t ctxid)
+inline bool check_local(gce::adl::actor_id const& aid, gce::ctxid_t ctxid)
 {
-  return id.ctxid_ == ctxid;
+  return aid.ctxid_ == ctxid;
 }
 
-inline bool check_local_valid(aid_t const& id, ctxid_t ctxid, timestamp_t timestamp)
+inline bool check_local_valid(gce::adl::actor_id const& aid, gce::ctxid_t ctxid, gce::timestamp_t timestamp)
 {
-  GCE_ASSERT(id.ctxid_ == ctxid)(ctxid)(id);
-  return id.timestamp_ == timestamp;
+  GCE_ASSERT(aid.ctxid_ == ctxid)(ctxid)(aid);
+  return aid.timestamp_ == timestamp;
 }
+} /// namespace detail
+
+/// actor nil value
+static adl::actor_id const aid_nil = adl::actor_id();
+
+typedef adl::actor_id aid_t;
+typedef adl::actor_id sktaid_t;
+
+gce::aid_t make_aid(ctxid_t ctxid, timestamp_t timestamp, detail::listener* ptr, sid_t sid)
+{
+  gce::aid_t aid;
+  aid.ctxid_ = ctxid;
+  aid.timestamp_ = timestamp;
+  aid.uintptr_ = (uint64_t)ptr;
+  aid.svc_id_ = 0;
+  aid.type_ = 0;
+  aid.in_pool_ = 0;
+  aid.sid_ = sid;
+  return aid;
 }
+
+gce::aid_t make_aid(ctxid_t ctxid, timestamp_t timestamp, uint32_t id, uint16_t cac_id, detail::actor_type type, sid_t sid)
+{
+  gce::aid_t aid;
+  aid.ctxid_ = ctxid;
+  aid.timestamp_ = timestamp;
+  aid.uintptr_ = id;
+  aid.svc_id_ = cac_id;
+  aid.type_ = (byte_t)type;
+  aid.in_pool_ = 1;
+  aid.sid_ = sid;
+  return aid;
 }
+
+} /// namespace gce
 
 template<typename CharT, typename TraitsT>
 std::basic_ostream<CharT, TraitsT>& operator<<(
   std::basic_ostream<CharT, TraitsT>& strm, gce::aid_t const& aid
   )
 {
-  if (aid.in_pool())
-  {
-    strm << "<" << aid.ctxid_ << "." << aid.timestamp_ <<
-      "." << aid.uintptr_ << "." << aid.svc_id_ << "." << (int)aid.type_ << 
-      "." << aid.sid_ << "." << aid.svc_ << ">";
-  }
-  else
-  {
-    strm << "<" << aid.ctxid_ << "." << aid.timestamp_ <<
-      "." << aid.uintptr_ << "." << aid.sid_ << "." << aid.svc_ << ">";
-  }
+  strm << gce::to_string(aid);
   return strm;
 }
 

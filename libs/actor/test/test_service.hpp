@@ -45,8 +45,8 @@ private:
       threaded_actor base1 = spawn(ctx1);
       threaded_actor base2 = spawn(ctx2);
       
-      net_option opt;
-      opt.is_router_ = true;
+      netopt_t opt = make_netopt();
+      opt.is_router = 1;
       gce::bind(base, "tcp://127.0.0.1:14923", remote_func_list_t(), opt);
 
       spawn(
@@ -58,10 +58,10 @@ private:
         );
       svcid_t echo_svc = make_svcid("two", "echo_svc");
 
-      opt.reconn_period_ = seconds_t(1);
+      opt.reconn_period = seconds(1);
       connect(base1, "router", "tcp://127.0.0.1:14923", opt);
       connect(base2, "router", "tcp://127.0.0.1:14923", opt);
-      base2.sleep_for(millisecs_t(100));
+      base2.sleep_for(millisecs(100));
 
       for (std::size_t i=0; i<echo_num; ++i)
       {

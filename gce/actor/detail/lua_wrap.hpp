@@ -1,0 +1,1881 @@
+///
+/// Copyright (c) 2009-2014 Nous Xiong (348944179 at qq dot com)
+///
+/// Distributed under the Boost Software License, Version 1.0. (See accompanying
+/// file LICENSE_1_0.txt or copy at http://www.boost.org/LICENSE_1_0.txt)
+///
+/// See https://github.com/nousxiong/gce for latest version.
+///
+
+#ifndef GCE_ACTOR_DETAIL_LUA_WRAP_HPP
+#define GCE_ACTOR_DETAIL_LUA_WRAP_HPP
+
+#include <gce/actor/config.hpp>
+#include <gce/lualib/all.hpp>
+#include <gce/actor/message.hpp>
+#include <gce/actor/pattern.hpp>
+#include <gce/actor/actor_id.hpp>
+#include <gce/actor/actor_id.adl.c2l.h>
+#include <gce/actor/service_id.hpp>
+#include <gce/actor/service_id.adl.c2l.h>
+#include <gce/actor/net_option.hpp>
+#include <gce/actor/net_option.adl.c2l.h>
+#include <gce/actor/duration.hpp>
+#include <gce/actor/duration.adl.c2l.h>
+#include <boost/utility/string_ref.hpp>
+#include <cstring>
+
+namespace gce
+{
+namespace detail
+{
+namespace lua
+{
+enum
+{
+  /// both in adata and amsg means userdata
+  ty_pattern = 0,
+  ty_match,
+  ty_message,
+
+  /// in adata means adtype, in amsg means userdata
+  ty_duration,
+  ty_actor_id,
+  ty_service_id,
+  ty_userdef,
+
+  /// lua basic types
+  ty_lua,
+
+  /// none gce userdata
+  ty_other,
+};
+///------------------------------------------------------------------------------
+/// service_id
+///------------------------------------------------------------------------------
+struct service_id
+{
+#if GCE_PACKER == GCE_AMSG
+  static int make(lua_State* L)
+  {
+    create(L);
+    return 1;
+  }
+
+  static int gc(lua_State* L)
+  {
+    gce::svcid_t* o = static_cast<gce::svcid_t*>(lua_touserdata(L, 1));
+    if (o)
+    {
+      o->~service_id();
+    }
+    return 0;
+  }
+
+  static int pack(lua_State* L)
+  {
+    gce::svcid_t* o = static_cast<gce::svcid_t*>(lua_touserdata(L, 1));
+    luaL_argcheck(L, o != 0, 1, "'service_id' expected");
+
+    gce::message* msg = static_cast<gce::message*>(lua_touserdata(L, 2));
+    luaL_argcheck(L, msg != 0, 2, "'message' expected");
+
+    try
+    {
+      *msg << *o;
+    }
+    catch (std::exception& ex)
+    {
+      return luaL_error(L, ex.what());
+    }
+    return 0;
+  }
+
+  static int unpack(lua_State* L)
+  {
+    gce::svcid_t* o = static_cast<gce::svcid_t*>(lua_touserdata(L, 1));
+    luaL_argcheck(L, o != 0, 1, "'service_id' expected");
+
+    gce::message* msg = static_cast<gce::message*>(lua_touserdata(L, 2));
+    luaL_argcheck(L, msg != 0, 2, "'message' expected");
+
+    try
+    {
+      *msg >> *o;
+    }
+    catch (std::exception& ex)
+    {
+      return luaL_error(L, ex.what());
+    }
+    return 0;
+  }
+
+  static int tostring(lua_State* L)
+  {
+    gce::svcid_t* o = static_cast<gce::svcid_t*>(lua_touserdata(L, 1));
+    luaL_argcheck(L, o != 0, 1, "'service_id' expected");
+
+    std::string str = gce::to_string(*o);
+    lua_pushlstring(L, str.c_str(), str.size());
+    return 1;
+  }
+
+  static int eq(lua_State* L)
+  {
+    svcid_t* lhs = static_cast<svcid_t*>(lua_touserdata(L, 1));
+    luaL_argcheck(L, lhs != 0, 1, "'service_id' expected");
+
+    svcid_t* rhs = static_cast<svcid_t*>(lua_touserdata(L, 2));
+    luaL_argcheck(L, rhs != 0, 2, "'service_id' expected");
+
+    lua_pushboolean(L, lhs == rhs);
+    return 1;
+  }
+
+  static int gcety(lua_State* L)
+  {
+    lua_pushinteger(L, (int)ty_service_id);
+    return 1;
+  }
+
+  static gce::svcid_t* create(
+    lua_State* L, 
+    gce::svcid_t const& svcid = gce::svcid_t()
+    )
+  {
+    void* block = lua_newuserdata(L, sizeof(gce::svcid_t));
+    if (!block)
+    {
+      luaL_error(L, "lua_newuserdata for service_id failed");
+      return 0;
+    }
+
+    gce::svcid_t* o = new (block) gce::svcid_t(svcid);
+    gce::lualib::setmetatab(L, "service_id");
+    return o;
+  }
+#elif GCE_PACKER == GCE_ADATA
+  static int tostring(lua_State* L)
+  {
+    luaL_argcheck(L, lua_istable(L, 1), 1, "table expected");
+
+    /// using adata cpp2lua to load from lua
+    lua_pushvalue(L, 1);
+    gce::svcid_t o;
+    adata::lua::load(L, o);
+    lua_pop(L, 1);
+
+    std::string str = gce::to_string(o);
+    lua_pushlstring(L, str.c_str(), str.size());
+    return 1;
+  }
+#endif
+};
+
+static void load(lua_State* L, int arg, gce::svcid_t& svcid)
+{
+#if GCE_PACKER == GCE_AMSG
+  gce::svcid_t* o = static_cast<gce::svcid_t*>(lua_touserdata(L, arg));
+  luaL_argcheck(L, o != 0, arg, "'service_id' expected");
+  svcid = *o;
+#elif GCE_PACKER == GCE_ADATA
+  if (arg != -1)
+  {
+    lua_pushvalue(L, arg);
+  }
+  adata::lua::load(L, svcid);
+  if (arg != -1)
+  {
+    lua_pop(L, 1);
+  }
+#endif
+}
+
+static void push(lua_State* L, gce::svcid_t const& svcid)
+{
+#if GCE_PACKER == GCE_AMSG
+  service_id::create(L, svcid);
+#elif GCE_PACKER == GCE_ADATA
+  adata::lua::push(L, svcid);
+#endif
+}
+///------------------------------------------------------------------------------
+/// actor_id
+///------------------------------------------------------------------------------
+struct actor_id
+{
+#if GCE_PACKER == GCE_AMSG
+  static int make(lua_State* L)
+  {
+    create(L);
+    return 1;
+  }
+
+  static int gc(lua_State* L)
+  {
+    aid_t* o = static_cast<aid_t*>(lua_touserdata(L, 1));
+    if (o)
+    {
+      o->~actor_id();
+    }
+    return 0;
+  }
+
+  static int pack(lua_State* L)
+  {
+    aid_t* o = static_cast<aid_t*>(lua_touserdata(L, 1));
+    luaL_argcheck(L, o != 0, 1, "'actor_id' expected");
+
+    gce::message* msg = static_cast<gce::message*>(lua_touserdata(L, 2));
+    luaL_argcheck(L, msg != 0, 2, "'message' expected");
+
+    try
+    {
+      *msg << *o;
+    }
+    catch (std::exception& ex)
+    {
+      return luaL_error(L, ex.what());
+    }
+    return 0;
+  }
+
+  static int unpack(lua_State* L)
+  {
+    aid_t* o = static_cast<aid_t*>(lua_touserdata(L, 1));
+    luaL_argcheck(L, o != 0, 1, "'actor_id' expected");
+
+    gce::message* msg = static_cast<gce::message*>(lua_touserdata(L, 2));
+    luaL_argcheck(L, msg != 0, 2, "'message' expected");
+
+    try
+    {
+      *msg >> *o;
+    }
+    catch (std::exception& ex)
+    {
+      return luaL_error(L, ex.what());
+    }
+    return 0;
+  }
+
+  static int tostring(lua_State* L)
+  {
+    aid_t* o = static_cast<aid_t*>(lua_touserdata(L, 1));
+    luaL_argcheck(L, o != 0, 1, "'actor_id' expected");
+
+    std::string str = gce::to_string(*o);
+    lua_pushlstring(L, str.c_str(), str.size());
+    return 1;
+  }
+
+  static int eq(lua_State* L)
+  {
+    aid_t* lhs = static_cast<aid_t*>(lua_touserdata(L, 1));
+    luaL_argcheck(L, lhs != 0, 1, "'actor_id' expected");
+
+    aid_t* rhs = static_cast<aid_t*>(lua_touserdata(L, 2));
+    luaL_argcheck(L, rhs != 0, 2, "'actor_id' expected");
+
+    lua_pushboolean(L, lhs == rhs);
+    return 1;
+  }
+
+  static int gcety(lua_State* L)
+  {
+    lua_pushinteger(L, (int)ty_actor_id);
+    return 1;
+  }
+
+  static aid_t* create(
+    lua_State* L, 
+    aid_t const& aid = aid_t()
+    )
+  {
+    void* block = lua_newuserdata(L, sizeof(aid_t));
+    if (!block)
+    {
+      luaL_error(L, "lua_newuserdata for actor_id failed");
+      return 0;
+    }
+
+    aid_t* o = new (block) aid_t(aid);
+    gce::lualib::setmetatab(L, "actor_id");
+    return o;
+  }
+#elif GCE_PACKER == GCE_ADATA
+  static int tostring(lua_State* L)
+  {
+    luaL_argcheck(L, lua_istable(L, -1), 1, "table expected");
+
+    /// using adata cpp2lua to load from lua
+    aid_t o;
+    adata::lua::load(L, o);
+
+    std::string str = gce::to_string(o);
+    lua_pushlstring(L, str.c_str(), str.size());
+    return 1;
+  }
+#endif
+};
+
+static void load(lua_State* L, int arg, aid_t& aid)
+{
+#if GCE_PACKER == GCE_AMSG
+  aid_t* o = static_cast<aid_t*>(lua_touserdata(L, arg));
+  luaL_argcheck(L, o != 0, arg, "'actor_id' expected");
+  aid = *o;
+#elif GCE_PACKER == GCE_ADATA
+  if (arg != -1)
+  {
+    lua_pushvalue(L, arg);
+  }
+  adata::lua::load(L, aid);
+  if (arg != -1)
+  {
+    lua_pop(L, 1);
+  }
+#endif
+}
+
+static void push(lua_State* L, aid_t const& aid)
+{
+#if GCE_PACKER == GCE_AMSG
+  actor_id::create(L, aid);
+#elif GCE_PACKER == GCE_ADATA
+  adata::lua::push(L, aid);
+#endif
+}
+///------------------------------------------------------------------------------
+/// match
+///------------------------------------------------------------------------------
+struct match
+{
+  static int make(lua_State* L)
+  {
+    int ty = lua_type(L, 1);
+    match_t mt;
+    if (ty == LUA_TNUMBER)
+    {
+      mt.val_ = lua_tointeger(L, 1);
+    }
+    create(L, mt);
+    return 1;
+  }
+
+  static int gc(lua_State* L)
+  {
+    match_t* o = static_cast<match_t*>(lua_touserdata(L, 1));
+    if (o)
+    {
+      o->~match_t();
+    }
+    return 0;
+  }
+
+  static int tostring(lua_State* L)
+  {
+    match_t* o = static_cast<match_t*>(lua_touserdata(L, 1));
+    luaL_argcheck(L, o != 0, 1, "'match' expected");
+
+    std::string str = gce::to_string(*o);
+    lua_pushlstring(L, str.c_str(), str.size());
+    return 1;
+  }
+
+  static int eq(lua_State* L)
+  {
+    match_t* lhs = static_cast<match_t*>(lua_touserdata(L, 1));
+    luaL_argcheck(L, lhs != 0, 1, "'match' expected");
+
+    match_t* rhs = static_cast<match_t*>(lua_touserdata(L, 2));
+    luaL_argcheck(L, rhs != 0, 2, "'match' expected");
+
+    lua_pushboolean(L, lhs == rhs);
+    return 1;
+  }
+
+  static int gcety(lua_State* L)
+  {
+    lua_pushinteger(L, (int)ty_match);
+    return 1;
+  }
+
+  static match_t* create(lua_State* L, match_t const& mt = match_t())
+  {
+    void* block = lua_newuserdata(L, sizeof(match_t));
+    if (!block)
+    {
+      luaL_error(L, "lua_newuserdata for match failed");
+      return 0;
+    }
+    match_t* o = new (block) match_t(mt);
+    gce::lualib::setmetatab(L, "match");
+    return o;
+  }
+};
+///------------------------------------------------------------------------------
+/// message
+///------------------------------------------------------------------------------
+struct message
+{
+  static int make(lua_State* L)
+  {
+    create(L);
+    return 1;
+  }
+
+  static int gc(lua_State* L)
+  {
+    gce::message* o = static_cast<gce::message*>(lua_touserdata(L, 1));
+    if (o)
+    {
+      o->~message();
+    }
+    return 0;
+  }
+
+  static int setty(lua_State* L)
+  {
+    gce::message* msg = static_cast<gce::message*>(lua_touserdata(L, 1));
+    luaL_argcheck(L, msg != 0, 1, "'message' expected");
+
+    match_t* mt = static_cast<match_t*>(lua_touserdata(L, 2));
+    luaL_argcheck(L, mt != 0, 2, "'match' expected");
+
+    msg->set_type(*mt);
+    return 0;
+  }
+
+  static int getty(lua_State* L)
+  {
+    gce::message* msg = static_cast<gce::message*>(lua_touserdata(L, 1));
+    luaL_argcheck(L, msg != 0, 1, "'message' expected");
+
+    match::create(L, msg->get_type());
+    return 1;
+  }
+
+  static int pack(lua_State* L)
+  {
+    gce::message* o = static_cast<gce::message*>(lua_touserdata(L, 1));
+    luaL_argcheck(L, o != 0, 1, "'message' expected");
+
+    gce::message* msg = static_cast<gce::message*>(lua_touserdata(L, 2));
+    luaL_argcheck(L, msg != 0, 2, "'message' expected");
+
+    try
+    {
+      *msg << *o;
+    }
+    catch (std::exception& ex)
+    {
+      return luaL_error(L, ex.what());
+    }
+    return 0;
+  }
+
+  static int unpack(lua_State* L)
+  {
+    gce::message* o = static_cast<gce::message*>(lua_touserdata(L, 1));
+    luaL_argcheck(L, o != 0, 1, "'message' expected");
+
+    gce::message* msg = static_cast<gce::message*>(lua_touserdata(L, 2));
+    luaL_argcheck(L, msg != 0, 2, "'message' expected");
+
+    try
+    {
+      *msg >> *o;
+    }
+    catch (std::exception& ex)
+    {
+      return luaL_error(L, ex.what());
+    }
+    return 0;
+  }
+
+  static gce::message* create(lua_State* L, gce::message const& m = gce::message())
+  {
+    void* block = lua_newuserdata(L, sizeof(gce::message));
+    if (!block)
+    {
+      luaL_error(L, "lua_newuserdata for message failed");
+    }
+    gce::message* o = new (block) gce::message(m);
+    gce::lualib::setmetatab(L, "message");
+    return o;
+  }
+
+  static int gcety(lua_State* L)
+  {
+    lua_pushinteger(L, (int)ty_message);
+    return 1;
+  }
+
+  static int tostring(lua_State* L)
+  {
+    gce::message* o = static_cast<gce::message*>(lua_touserdata(L, 1));
+    luaL_argcheck(L, o != 0, 1, "'message' expected");
+
+    std::string str = gce::to_string(*o);
+    lua_pushlstring(L, str.c_str(), str.size());
+    return 1;
+  }
+};
+///------------------------------------------------------------------------------
+/// response
+///------------------------------------------------------------------------------
+struct response
+{
+  static int make(lua_State* L)
+  {
+    create(L);
+    return 1;
+  }
+
+  static int gc(lua_State* L)
+  {
+    gce::resp_t* o = static_cast<gce::resp_t*>(lua_touserdata(L, 1));
+    if (o)
+    {
+      o->~response();
+    }
+    return 0;
+  }
+
+  static gce::resp_t* create(lua_State* L, gce::resp_t const& resp = gce::resp_t())
+  {
+    void* block = lua_newuserdata(L, sizeof(gce::resp_t));
+    if (!block)
+    {
+      luaL_error(L, "lua_newuserdata for response failed");
+      return 0;
+    }
+    gce::resp_t* o = new (block) gce::resp_t(resp);
+    gce::lualib::setmetatab(L, "response");
+    return o;
+  }
+
+  static int tostring(lua_State* L)
+  {
+    gce::resp_t* o = static_cast<gce::resp_t*>(lua_touserdata(L, 1));
+    luaL_argcheck(L, o != 0, 1, "'response' expected");
+
+    std::string str = gce::to_string(*o);
+    lua_pushlstring(L, str.c_str(), str.size());
+    return 1;
+  }
+};
+///------------------------------------------------------------------------------
+/// duration
+///------------------------------------------------------------------------------
+static void load(lua_State* L, int arg, gce::duration_t& dur)
+{
+#if GCE_PACKER == GCE_AMSG
+  gce::duration_t* o = static_cast<gce::duration_t*>(lua_touserdata(L, arg));
+  luaL_argcheck(L, o != 0, arg, "'duration' expected");
+  dur = *o;
+#elif GCE_PACKER == GCE_ADATA
+  if (arg != -1)
+  {
+    lua_pushvalue(L, arg);
+  }
+  adata::lua::load(L, dur);
+  if (arg != -1)
+  {
+    lua_pop(L, 1);
+  }
+#endif
+}
+
+#if GCE_PACKER == GCE_AMSG
+static gce::duration_t* create_dur(lua_State* L, gce::duration_t const& dur = gce::zero)
+{
+  void* block = lua_newuserdata(L, sizeof(gce::duration_t));
+  if (!block)
+  {
+    luaL_error(L, "lua_newuserdata for duration failed");
+    return 0;
+  }
+  gce::duration_t* o = new (block) gce::duration_t(dur);
+  gce::lualib::setmetatab(L, "duration");
+  return o;
+}
+#endif
+
+static void push(lua_State* L, gce::duration_t const& dur)
+{
+#if GCE_PACKER == GCE_AMSG
+  create_dur(L, dur);
+#elif GCE_PACKER == GCE_ADATA
+  adata::lua::push(L, dur);
+#endif
+}
+
+struct duration
+{
+#if GCE_PACKER == GCE_AMSG
+  static int make_dur(lua_State* L)
+  {
+    lua_Integer val = luaL_checkinteger(L, 1);
+    create(L, gce::duration(val));
+    return 1;
+  }
+
+  static int make_millisecs(lua_State* L)
+  {
+    lua_Integer val = luaL_checkinteger(L, 1);
+    create(L, gce::millisecs(val));
+    return 1;
+  }
+
+  static int make_seconds(lua_State* L)
+  {
+    lua_Integer val = luaL_checkinteger(L, 1);
+    create(L, gce::seconds(val));
+    return 1;
+  }
+
+  static int make_minutes(lua_State* L)
+  {
+    lua_Integer val = luaL_checkinteger(L, 1);
+    create(L, gce::minutes(val));
+    return 1;
+  }
+
+  static int make_hours(lua_State* L)
+  {
+    lua_Integer val = luaL_checkinteger(L, 1);
+    create(L, gce::hours(val));
+    return 1;
+  }
+
+  static int gc(lua_State* L)
+  {
+    gce::duration_t* o = static_cast<gce::duration_t*>(lua_touserdata(L, 1));
+    if (o)
+    {
+      o->~duration();
+    }
+    return 0;
+  }
+
+  static int type(lua_State* L)
+  {
+    gce::duration_t* o = static_cast<gce::duration_t*>(lua_touserdata(L, 1));
+    luaL_argcheck(L, o != 0, 1, "'duration' expected");
+
+    lua_pushinteger(L, (lua_Integer)o->ty_);
+    return 1;
+  }
+
+  static int pack(lua_State* L)
+  {
+    gce::duration_t* o = static_cast<gce::duration_t*>(lua_touserdata(L, 1));
+    luaL_argcheck(L, o != 0, 1, "'duration' expected");
+
+    gce::message* msg = static_cast<gce::message*>(lua_touserdata(L, 2));
+    luaL_argcheck(L, msg != 0, 2, "'message' expected");
+
+    try
+    {
+      *msg << *o;
+    }
+    catch (std::exception& ex)
+    {
+      return luaL_error(L, ex.what());
+    }
+    return 0;
+  }
+
+  static int unpack(lua_State* L)
+  {
+    gce::duration_t* o = static_cast<gce::duration_t*>(lua_touserdata(L, 1));
+    luaL_argcheck(L, o != 0, 1, "'duration' expected");
+
+    gce::message* msg = static_cast<gce::message*>(lua_touserdata(L, 2));
+    luaL_argcheck(L, msg != 0, 2, "'message' expected");
+
+    try
+    {
+      *msg >> *o;
+    }
+    catch (std::exception& ex)
+    {
+      return luaL_error(L, ex.what());
+    }
+    return 0;
+  }
+
+  static int tostring(lua_State* L)
+  {
+    gce::duration_t* o = static_cast<gce::duration_t*>(lua_touserdata(L, 1));
+    luaL_argcheck(L, o != 0, 1, "'duration' expected");
+
+    std::string str = gce::to_string(*o);
+    lua_pushlstring(L, str.c_str(), str.size());
+    return 1;
+  }
+
+  static int eq(lua_State* L)
+  {
+    gce::duration_t* lhs = static_cast<gce::duration_t*>(lua_touserdata(L, 1));
+    luaL_argcheck(L, lhs != 0, 1, "'duration' expected");
+
+    gce::duration_t* rhs = static_cast<gce::duration_t*>(lua_touserdata(L, 2));
+    luaL_argcheck(L, rhs != 0, 2, "'duration' expected");
+
+    lua_pushboolean(L, lhs == rhs);
+    return 1;
+  }
+
+  static int lt(lua_State* L)
+  {
+    gce::duration_t* lhs = static_cast<gce::duration_t*>(lua_touserdata(L, 1));
+    luaL_argcheck(L, lhs != 0, 1, "'duration' expected");
+
+    gce::duration_t* rhs = static_cast<gce::duration_t*>(lua_touserdata(L, 2));
+    luaL_argcheck(L, rhs != 0, 2, "'duration' expected");
+
+    lua_pushboolean(L, lhs < rhs);
+    return 1;
+  }
+
+  static int le(lua_State* L)
+  {
+    gce::duration_t* lhs = static_cast<gce::duration_t*>(lua_touserdata(L, 1));
+    luaL_argcheck(L, lhs != 0, 1, "'duration' expected");
+
+    gce::duration_t* rhs = static_cast<gce::duration_t*>(lua_touserdata(L, 2));
+    luaL_argcheck(L, rhs != 0, 2, "'duration' expected");
+
+    lua_pushboolean(L, lhs <= rhs);
+    return 1;
+  }
+
+  static int add(lua_State* L)
+  {
+    gce::duration_t* lhs = static_cast<gce::duration_t*>(lua_touserdata(L, 1));
+    luaL_argcheck(L, lhs != 0, 1, "'duration' expected");
+
+    gce::duration_t* rhs = static_cast<gce::duration_t*>(lua_touserdata(L, 2));
+    luaL_argcheck(L, rhs != 0, 2, "'duration' expected");
+
+    gce::duration_t dur = *lhs + *rhs;
+    push(L, dur);
+    return 1;
+  }
+
+  static int sub(lua_State* L)
+  {
+    gce::duration_t* lhs = static_cast<gce::duration_t*>(lua_touserdata(L, 1));
+    luaL_argcheck(L, lhs != 0, 1, "'duration' expected");
+
+    gce::duration_t* rhs = static_cast<gce::duration_t*>(lua_touserdata(L, 2));
+    luaL_argcheck(L, rhs != 0, 2, "'duration' expected");
+
+    gce::duration_t dur = *lhs - *rhs;
+    push(L, dur);
+    return 1;
+  }
+
+  static int gcety(lua_State* L)
+  {
+    lua_pushinteger(L, (int)ty_duration);
+    return 1;
+  }
+
+  static gce::duration_t* create(lua_State* L, gce::duration_t const& dur = gce::zero)
+  {
+    return create_dur(L, dur);
+  }
+#elif GCE_PACKER == GCE_ADATA
+  static int tostring(lua_State* L)
+  {
+    luaL_argcheck(L, lua_istable(L, -1), 1, "table expected");
+
+    /// using adata cpp2lua to load from lua
+    gce::duration_t o;
+    adata::lua::load(L, o);
+
+    std::string str = gce::to_string(o);
+    lua_pushlstring(L, str.c_str(), str.size());
+    return 1;
+  }
+
+  static int eq(lua_State* L)
+  {
+    luaL_argcheck(L, lua_istable(L, 1) != 0, 1, "'duration' expected");
+    luaL_argcheck(L, lua_istable(L, 2), 2, "'duration' expected");
+
+    gce::duration_t lhs;
+    load(L, 1, lhs);
+
+    gce::duration_t rhs;
+    load(L, 2, lhs);
+
+    lua_pushboolean(L, lhs == rhs);
+    return 1;
+  }
+
+  static int lt(lua_State* L)
+  {
+    luaL_argcheck(L, lua_istable(L, 1) != 0, 1, "'duration' expected");
+    luaL_argcheck(L, lua_istable(L, 2), 2, "'duration' expected");
+
+    gce::duration_t lhs;
+    load(L, 1, lhs);
+
+    gce::duration_t rhs;
+    load(L, 2, lhs);
+
+    lua_pushboolean(L, lhs < rhs);
+    return 1;
+  }
+
+  static int le(lua_State* L)
+  {
+    luaL_argcheck(L, lua_istable(L, 1) != 0, 1, "'duration' expected");
+    luaL_argcheck(L, lua_istable(L, 2), 2, "'duration' expected");
+
+    gce::duration_t lhs;
+    load(L, 1, lhs);
+
+    gce::duration_t rhs;
+    load(L, 2, lhs);
+
+    lua_pushboolean(L, lhs <= rhs);
+    return 1;
+  }
+#endif
+};
+///------------------------------------------------------------------------------
+/// net_option
+///------------------------------------------------------------------------------
+struct net_option
+{
+  static int make(lua_State* L)
+  {
+    create(L);
+    return 1;
+  }
+
+  static void create(lua_State* L, netopt_t const& netopt = make_netopt())
+  {
+#if GCE_PACKER == GCE_AMSG
+    adata::lua::push(L, netopt, false);
+#elif GCE_PACKER == GCE_ADATA
+    adata::lua::push(L, netopt);
+#endif
+  }
+};
+
+static void load(lua_State* L, int arg, netopt_t& netopt)
+{
+#if GCE_PACKER == GCE_AMSG
+  netopt_t* o = static_cast<netopt_t*>(lua_touserdata(L, arg));
+  luaL_argcheck(L, o != 0, arg, "'net_option' expected");
+  netopt = *o;
+#elif GCE_PACKER == GCE_ADATA
+  if (arg != -1)
+  {
+    lua_pushvalue(L, arg);
+  }
+  adata::lua::load(L, netopt);
+  if (arg != -1)
+  {
+    lua_pop(L, 1);
+  }
+#endif
+}
+
+static void push(lua_State* L, netopt_t const& netopt)
+{
+  net_option::create(L, netopt);
+}
+///------------------------------------------------------------------------------
+/// pattern
+///------------------------------------------------------------------------------
+struct pattern
+{
+  static int make(lua_State* L)
+  {
+    void* block = lua_newuserdata(L, sizeof(gce::pattern));
+    if (!block)
+    {
+      return luaL_error(L, "lua_newuserdata for pattern failed");
+    }
+    new (block) gce::pattern;
+    gce::lualib::setmetatab(L, "pattern");
+    return 1;
+  }
+
+  static int gc(lua_State* L)
+  {
+    gce::pattern* o = static_cast<gce::pattern*>(lua_touserdata(L, 1));
+    if (o)
+    {
+      o->~pattern();
+    }
+    return 0;
+  }
+
+  static int set_timeout(lua_State* L)
+  {
+    gce::pattern* patt = static_cast<gce::pattern*>(lua_touserdata(L, 1));
+    luaL_argcheck(L, patt != 0, 1, "'pattern' expected");
+
+    gce::duration_t dur;
+    load(L, 2, dur);
+    patt->timeout_ = dur;
+    return 0;
+  }
+
+  static int add_match(lua_State* L)
+  {
+    gce::pattern* patt = static_cast<gce::pattern*>(lua_touserdata(L, 1));
+    luaL_argcheck(L, patt != 0, 1, "'pattern' expected");
+
+    int ty = lua_type(L, 2);
+    switch (ty)
+    {
+    case LUA_TNUMBER: 
+    {
+      lua_Integer i = luaL_checkinteger(L, 2);
+      patt->add_match(i);
+    }break;
+    case LUA_TSTRING: 
+    {
+      char const* str = luaL_checkstring(L, 2);
+      patt->add_match(str);
+    }break;
+    case LUA_TUSERDATA:
+    {
+      match_t* mt = static_cast<match_t*>(lua_touserdata(L, 2));
+      luaL_argcheck(L, mt != 0, 2, "'match' expected");
+      patt->add_match(*mt);
+    }break;
+    default: 
+      luaL_argerror(L, 2, "match type error, must be one of int string match"); 
+      break;
+    }
+
+    return 0;
+  }
+
+  static int set_match_aid(lua_State* L)
+  {
+    gce::pattern* patt = static_cast<gce::pattern*>(lua_touserdata(L, 1));
+    luaL_argcheck(L, patt != 0, 1, "'pattern' expected");
+
+    gce::aid_t aid;
+    load(L, 2, aid);
+
+    patt->recver_ = aid;
+    return 0;
+  }
+
+  static int set_match_svcid(lua_State* L)
+  {
+    gce::pattern* patt = static_cast<gce::pattern*>(lua_touserdata(L, 1));
+    luaL_argcheck(L, patt != 0, 1, "'pattern' expected");
+
+    gce::svcid_t svcid;
+    load(L, 2, svcid);
+
+    patt->recver_ = svcid;
+    return 0;
+  }
+
+  static int gcety(lua_State* L)
+  {
+    lua_pushinteger(L, (int)ty_pattern);
+    return 1;
+  }
+
+  static int tostring(lua_State* L)
+  {
+    gce::pattern* o = static_cast<gce::pattern*>(lua_touserdata(L, 1));
+    luaL_argcheck(L, o != 0, 1, "'pattern' expected");
+
+    std::string str = gce::to_string(*o);
+    lua_pushlstring(L, str.c_str(), str.size());
+    return 1;
+  }
+};
+///------------------------------------------------------------------------------
+/// atom/deatom
+///------------------------------------------------------------------------------
+inline int s2i(lua_State* L)
+{
+  char const* str = luaL_checkstring(L, 1);
+  match::create(L, gce::atom(str));
+  return 1;
+}
+///------------------------------------------------------------------------------
+inline int i2s(lua_State* L)
+{
+  match_t* mt = static_cast<match_t*>(lua_touserdata(L, 1));
+  luaL_argcheck(L, mt != 0, 1, "'match' expected");
+
+  std::string str = gce::atom(*mt);
+  lua_pushstring(L, str.c_str());
+  return 1;
+}
+///------------------------------------------------------------------------------
+/// actor
+///------------------------------------------------------------------------------
+template <typename Impl>
+struct actor
+{
+  typedef Impl impl_t;
+  typedef typename impl_t::proxy proxy_t;
+
+  static int create(lua_State* L, impl_t* impl)
+  {
+    void* block = lua_newuserdata(L, sizeof(proxy_t));
+    if (!block)
+    {
+      return luaL_error(L, "lua_newuserdata for actor failed");
+    }
+    new (block) proxy_t(impl);
+    gce::lualib::setmetatab(L, "actor");
+    return gce::lualib::make_ref(L, "libgce");
+  }
+
+  static int gc(lua_State* L)
+  {
+    proxy_t* o = static_cast<proxy_t*>(lua_touserdata(L, 1));
+    if (o)
+    {
+      o->~proxy_t();
+    }
+    return 0;
+  }
+
+  static int get_aid(lua_State* L)
+  {
+    proxy_t* o = static_cast<proxy_t*>(lua_touserdata(L, 1));
+    luaL_argcheck(L, o != 0, 1, "'actor' expected");
+
+    proxy_t& a = *o;
+
+    aid_t const& aid = a->get_aid();
+    push(L, aid);
+    return 1;
+  }
+
+  static int init_coro(lua_State* L)
+  {
+    proxy_t* o = static_cast<proxy_t*>(lua_touserdata(L, 1));
+    luaL_argcheck(L, o != 0, 1, "'actor' expected");
+    luaL_argcheck(L, lua_isthread(L, 2), 2, "'thread' expected");
+    luaL_argcheck(L, lua_isfunction(L, 3), 3, "'function' expected");
+
+    proxy_t& a = *o;
+
+    lua_pushvalue(L, 2);
+    int c = gce::lualib::make_ref(L, "libgce");
+    lua_pushvalue(L, 3);
+    int f = gce::lualib::make_ref(L, "libgce");
+    a->init_coro(c, f);
+    return 0;
+  }
+
+  template <typename TargetId>
+  static int send(lua_State* L)
+  {
+    proxy_t* o = static_cast<proxy_t*>(lua_touserdata(L, 1));
+    luaL_argcheck(L, o != 0, 1, "'actor' expected");
+
+#if GCE_PACKER == GCE_AMSG
+    int arg2check = lua_isuserdata(L, 2);
+#elif GCE_PACKER == GCE_ADATA
+    int arg2check = lua_istable(L, 2);
+#endif
+    luaL_argcheck(L, arg2check, 2, "'actor_id or service_id' expected");
+
+    gce::message* msg = static_cast<gce::message*>(lua_touserdata(L, 3));
+    luaL_argcheck(L, msg != 0, 3, "'message' expected");
+
+    TargetId tid;
+    load(L, 2, tid);
+
+    proxy_t& a = *o;
+
+    a->send(tid, *msg);
+    return 0;
+  }
+
+  template <typename TargetId>
+  static int relay(lua_State* L)
+  {
+    proxy_t* o = static_cast<proxy_t*>(lua_touserdata(L, 1));
+    luaL_argcheck(L, o != 0, 1, "'actor' expected");
+
+#if GCE_PACKER == GCE_AMSG
+    int arg2check = lua_isuserdata(L, 2);
+#elif GCE_PACKER == GCE_ADATA
+    int arg2check = lua_istable(L, 2);
+#endif
+    luaL_argcheck(L, arg2check, 2, "'actor_id or service_id' expected");
+
+    gce::message* msg = static_cast<gce::message*>(lua_touserdata(L, 3));
+    luaL_argcheck(L, msg != 0, 3, "'message' expected");
+
+    TargetId tid;
+    load(L, 2, tid);
+
+    proxy_t& a = *o;
+
+    a->send(tid, *msg);
+    return 0;
+  }
+
+  template <typename TargetId>
+  static int request(lua_State* L)
+  {
+    proxy_t* o = static_cast<proxy_t*>(lua_touserdata(L, 1));
+    luaL_argcheck(L, o != 0, 1, "'actor' expected");
+
+#if GCE_PACKER == GCE_AMSG
+    int arg2check = lua_isuserdata(L, 2);
+#elif GCE_PACKER == GCE_ADATA
+    int arg2check = lua_istable(L, 2);
+#endif
+    luaL_argcheck(L, arg2check, 2, "'actor_id or service_id' expected");
+
+    gce::message* msg = static_cast<gce::message*>(lua_touserdata(L, 3));
+    luaL_argcheck(L, msg != 0, 3, "'message' expected");
+
+    TargetId tid;
+    load(L, 2, tid);
+
+    proxy_t& a = *o;
+
+    gce::resp_t resp = a->request(tid, *msg);
+    response::create(L, resp);
+    return 1;
+  }
+
+  static int reply(lua_State* L)
+  {
+    proxy_t* o = static_cast<proxy_t*>(lua_touserdata(L, 1));
+    luaL_argcheck(L, o != 0, 1, "'actor' expected");
+
+#if GCE_PACKER == GCE_AMSG
+    int arg2check = lua_isuserdata(L, 2);
+#elif GCE_PACKER == GCE_ADATA
+    int arg2check = lua_istable(L, 2);
+#endif
+    luaL_argcheck(L, arg2check, 2, "'actor_id' expected");
+
+    gce::message* msg = static_cast<gce::message*>(lua_touserdata(L, 3));
+    luaL_argcheck(L, msg != 0, 3, "'message' expected");
+
+    aid_t aid;
+    load(L, 2, aid);
+
+    proxy_t& a = *o;
+
+    a->reply(aid, *msg);
+    return 0;
+  }
+
+  static int link(lua_State* L)
+  {
+    proxy_t* o = static_cast<proxy_t*>(lua_touserdata(L, 1));
+    luaL_argcheck(L, o != 0, 1, "'actor' expected");
+
+#if GCE_PACKER == GCE_AMSG
+    int arg2check = lua_isuserdata(L, 2);
+#elif GCE_PACKER == GCE_ADATA
+    int arg2check = lua_istable(L, 2);
+#endif
+    luaL_argcheck(L, arg2check, 2, "'actor_id' expected");
+
+    aid_t aid;
+    load(L, 2, aid);
+
+    proxy_t& a = *o;
+
+    a->link(aid);
+    return 0;
+  }
+
+  static int monitor(lua_State* L)
+  {
+    proxy_t* o = static_cast<proxy_t*>(lua_touserdata(L, 1));
+    luaL_argcheck(L, o != 0, 1, "'actor' expected");
+
+#if GCE_PACKER == GCE_AMSG
+    int arg2check = lua_isuserdata(L, 2);
+#elif GCE_PACKER == GCE_ADATA
+    int arg2check = lua_istable(L, 2);
+#endif
+    luaL_argcheck(L, arg2check, 2, "'actor_id' expected");
+
+    aid_t aid;
+    load(L, 2, aid);
+
+    proxy_t& a = *o;
+
+    a->monitor(aid);
+    return 0;
+  }
+
+  static int recv(lua_State* L)
+  {
+    proxy_t* o = static_cast<proxy_t*>(lua_touserdata(L, 1));
+    luaL_argcheck(L, o != 0, 1, "'actor' expected");
+
+    proxy_t& a = *o;
+
+    bool r = a->recv();
+    push_coro(L, a, r);
+    return 1;
+  }
+
+  static int recv_match(lua_State* L)
+  {
+    proxy_t* o = static_cast<proxy_t*>(lua_touserdata(L, 1));
+    luaL_argcheck(L, o != 0, 1, "'actor' expected");
+
+    gce::pattern* patt = static_cast<gce::pattern*>(lua_touserdata(L, 2));
+    luaL_argcheck(L, patt != 0, 2, "'pattern' expected");
+
+    proxy_t& a = *o;
+
+    bool r = a->recv_match(*patt);
+    push_coro(L, a, r);
+    return 1;
+  }
+
+  static int recv_response(lua_State* L)
+  {
+    proxy_t* o = static_cast<proxy_t*>(lua_touserdata(L, 1));
+    luaL_argcheck(L, o != 0, 1, "'actor' expected");
+
+    gce::resp_t* resp = static_cast<gce::resp_t*>(lua_touserdata(L, 2));
+    luaL_argcheck(L, resp != 0, 2, "'response' expected");
+
+    proxy_t& a = *o;
+
+    bool r = a->recv_response(*resp);
+    push_coro(L, a, r);
+    return 1;
+  }
+
+  static int recv_response_timeout(lua_State* L)
+  {
+    proxy_t* o = static_cast<proxy_t*>(lua_touserdata(L, 1));
+    luaL_argcheck(L, o != 0, 1, "'actor' expected");
+
+    gce::resp_t* resp = static_cast<gce::resp_t*>(lua_touserdata(L, 2));
+    luaL_argcheck(L, resp != 0, 2, "'response' expected");
+
+    gce::duration_t tmo;
+    load(L, 3, tmo);
+
+    proxy_t& a = *o;
+
+    bool r = a->recv_response_timeout(*resp, tmo);
+    push_coro(L, a, r);
+    return 1;
+  }
+
+  static int sleep_for(lua_State* L)
+  {
+    proxy_t* o = static_cast<proxy_t*>(lua_touserdata(L, 1));
+    luaL_argcheck(L, o != 0, 1, "'actor' expected");
+
+    gce::duration_t dur;
+    load(L, 2, dur);
+
+    proxy_t& a = *o;
+
+    bool r = a->sleep_for(dur);
+    push_coro(L, a, r);
+    return 1;
+  }
+
+  static int bind(lua_State* L)
+  {
+    proxy_t* o = static_cast<proxy_t*>(lua_touserdata(L, 1));
+    luaL_argcheck(L, o != 0, 1, "'actor' expected");
+
+    size_t len = 0;
+    char const* ep = luaL_checklstring(L, 2, &len);
+
+    netopt_t netopt;
+    load(L, 3, netopt);
+
+    proxy_t& a = *o;
+
+    bool r = a->bind(std::string(ep, len), netopt);
+    push_coro(L, a, r);
+    return 1;
+  }
+
+  static int connect(lua_State* L)
+  {
+    proxy_t* o = static_cast<proxy_t*>(lua_touserdata(L, 1));
+    luaL_argcheck(L, o != 0, 1, "'actor' expected");
+
+    match_t* target = static_cast<match_t*>(lua_touserdata(L, 2));
+    luaL_argcheck(L, target != 0, 2, "'match' expected");
+
+    size_t len = 0;
+    char const* ep = luaL_checklstring(L, 3, &len);
+
+    netopt_t netopt;
+    load(L, 4, netopt);
+
+    proxy_t& a = *o;
+
+    bool r = a->connect(*target, std::string(ep, len), netopt);
+    push_coro(L, a, r);
+    return 1;
+  }
+
+  static int spawn(lua_State* L)
+  {
+    proxy_t* o = static_cast<proxy_t*>(lua_touserdata(L, 1));
+    luaL_argcheck(L, o != 0, 1, "'actor' expected");
+
+    size_t len = 0;
+    char const* scr = luaL_checklstring(L, 2, &len);
+
+    luaL_argcheck(L, lua_isboolean(L, 3), 3, "'boolean' expected");
+    bool sync_sire = lua_toboolean(L, 3) != 0;
+
+    int type = luaL_checkint(L, 4);
+
+    proxy_t& a = *o;
+
+    bool r = a->spawn(std::string(scr, len), sync_sire, type);
+    push_coro(L, a, r);
+    return 1;
+  }
+
+  static int spawn_remote(lua_State* L)
+  {
+    proxy_t* o = static_cast<proxy_t*>(lua_touserdata(L, 1));
+    luaL_argcheck(L, o != 0, 1, "'actor' expected");
+
+    spawn_type sty = (spawn_type)luaL_checkint(L, 2);
+
+    size_t len = 0;
+    char const* func = luaL_checklstring(L, 3, &len);
+
+    match_t* ctxid = static_cast<match_t*>(lua_touserdata(L, 4));
+    luaL_argcheck(L, ctxid != 0, 4, "'match' expected");
+
+    int type = luaL_checkint(L, 5);
+
+    size_t stack_size = luaL_checkinteger(L, 6);
+
+    gce::duration_t tmo;
+    load(L, 7, tmo);
+
+    proxy_t& a = *o;
+
+    bool r = a->spawn_remote(sty, std::string(func, len), *ctxid, type, stack_size, tmo);
+    push_coro(L, a, r);
+    return 1;
+  }
+
+  static int register_service(lua_State* L)
+  {
+    proxy_t* o = static_cast<proxy_t*>(lua_touserdata(L, 1));
+    luaL_argcheck(L, o != 0, 1, "'actor' expected");
+
+    match_t* name = static_cast<match_t*>(lua_touserdata(L, 2));
+    luaL_argcheck(L, name != 0, 2, "'match' expected");
+
+    proxy_t& a = *o;
+
+    a->register_service(*name);
+    return 0;
+  }
+
+  static int deregister_service(lua_State* L)
+  {
+    proxy_t* o = static_cast<proxy_t*>(lua_touserdata(L, 1));
+    luaL_argcheck(L, o != 0, 1, "'actor' expected");
+
+    match_t* name = static_cast<match_t*>(lua_touserdata(L, 2));
+    luaL_argcheck(L, name != 0, 2, "'match' expected");
+
+    proxy_t& a = *o;
+
+    a->deregister_service(*name);
+    return 0;
+  }
+
+  static int log_debug(lua_State* L)
+  {
+    proxy_t* o = static_cast<proxy_t*>(lua_touserdata(L, 1));
+    luaL_argcheck(L, o != 0, 1, "'actor' expected");
+
+    size_t len = 0;
+    char const* str = luaL_checklstring(L, 2, &len);
+
+    proxy_t& a = *o;
+
+    a->log_debug(boost::string_ref(str, len));
+    return 0;
+  }
+
+  static int log_info(lua_State* L)
+  {
+    proxy_t* o = static_cast<proxy_t*>(lua_touserdata(L, 1));
+    luaL_argcheck(L, o != 0, 1, "'actor' expected");
+
+    size_t len = 0;
+    char const* str = luaL_checklstring(L, 2, &len);
+
+    proxy_t& a = *o;
+
+    a->log_info(boost::string_ref(str, len));
+    return 0;
+  }
+
+  static int log_warn(lua_State* L)
+  {
+    proxy_t* o = static_cast<proxy_t*>(lua_touserdata(L, 1));
+    luaL_argcheck(L, o != 0, 1, "'actor' expected");
+
+    size_t len = 0;
+    char const* str = luaL_checklstring(L, 2, &len);
+
+    proxy_t& a = *o;
+
+    a->log_warn(boost::string_ref(str, len));
+    return 0;
+  }
+
+  static int log_error(lua_State* L)
+  {
+    proxy_t* o = static_cast<proxy_t*>(lua_touserdata(L, 1));
+    luaL_argcheck(L, o != 0, 1, "'actor' expected");
+
+    size_t len = 0;
+    char const* str = luaL_checklstring(L, 2, &len);
+
+    proxy_t& a = *o;
+
+    a->log_info(boost::string_ref(str, len));
+    return 0;
+  }
+
+  static int log_fatal(lua_State* L)
+  {
+    proxy_t* o = static_cast<proxy_t*>(lua_touserdata(L, 1));
+    luaL_argcheck(L, o != 0, 1, "'actor' expected");
+
+    size_t len = 0;
+    char const* str = luaL_checklstring(L, 2, &len);
+
+    proxy_t& a = *o;
+    
+    a->log_fatal(boost::string_ref(str, len));
+    return 0;
+  }
+
+  static void push_coro(lua_State* L, proxy_t& a, bool r)
+  {
+    if (r)
+    {
+      int co = a->get_coro();
+      if (gce::lualib::get_ref(L, "libgce", co) == 0)
+      {
+        luaL_error(L, "actor coro missing");
+      }
+    }
+    else
+    {
+      lua_pushnil(L);
+    }
+  }
+};
+///------------------------------------------------------------------------------
+/// serialize
+///------------------------------------------------------------------------------
+inline int pack_number(lua_State* L)
+{
+  gce::message* msg = static_cast<gce::message*>(lua_touserdata(L, 1));
+  luaL_argcheck(L, msg != 0, 1, "'message' expected");
+
+  lua_Number num = lua_tonumber(L, 2);
+  try
+  {
+    *msg << num;
+  }
+  catch (std::exception& ex)
+  {
+    return luaL_error(L, ex.what());
+  }
+  return 0;
+}
+///------------------------------------------------------------------------------
+inline int pack_string(lua_State* L)
+{
+  gce::message* msg = static_cast<gce::message*>(lua_touserdata(L, 1));
+  luaL_argcheck(L, msg != 0, 1, "'message' expected");
+
+  size_t len = 0;
+  char const* str = luaL_checklstring(L, 2, &len);
+  try
+  {
+    *msg << boost::string_ref(str, len);
+  }
+  catch (std::exception& ex)
+  {
+    return luaL_error(L, ex.what());
+  }
+  return 0;
+}
+///------------------------------------------------------------------------------
+inline int pack_boolean(lua_State* L)
+{
+  gce::message* msg = static_cast<gce::message*>(lua_touserdata(L, 1));
+  luaL_argcheck(L, msg != 0, 1, "'message' expected");
+
+  bool b = lua_toboolean(L, 2) != 0;
+  try
+  {
+    *msg << b;
+  }
+  catch (std::exception& ex)
+  {
+    return luaL_error(L, ex.what());
+  }
+  return 0;
+}
+///------------------------------------------------------------------------------
+inline int pack_object(lua_State* L)
+{
+  gce::message* msg = static_cast<gce::message*>(lua_touserdata(L, 1));
+  luaL_argcheck(L, msg != 0, 1, "'message' expected");
+
+  int ty = lua_type(L, 2);
+#if GCE_PACKER == GCE_AMSG
+  luaL_argcheck(
+    L, (ty == LUA_TUSERDATA || ty == LUA_TLIGHTUSERDATA), 
+    2, "'userdata' or 'lightuserdata' expected"
+    );
+#elif GCE_PACKER == GCE_ADATA
+  luaL_argcheck(
+    L, (ty == LUA_TUSERDATA || ty == LUA_TLIGHTUSERDATA || ty == LUA_TTABLE), 
+    2, "'table' or 'userdata'/'lightuserdata' expected"
+    );
+#endif
+
+  if (ty == LUA_TTABLE)
+  {
+#if GCE_PACKER == GCE_ADATA
+    /// adata obj
+    /// call 'size_of' to get serilaizing size
+    if (luaL_callmeta(L, 2, "size_of") == 0)
+    {
+      return luaL_error(L, "metatable not found!");
+    }
+
+    lua_Integer len = lua_tointeger(L, -1);
+    lua_pop(L, 1);
+
+    /// get obj's metatable
+    if (lua_getmetatable(L, 2) == 0)
+    {
+      return luaL_error(L, "object must have a metatable!");
+    }
+
+    try
+    {
+      /// adata raw write
+      msg->pre_write(len);
+      lua_getfield(L, -1, "write");
+      lua_pushvalue(L, 2);
+      lua_pushlightuserdata(L, &msg->get_packer().get_stream());
+      if (lua_pcall(L, 2, 1, 0) != 0)
+      {
+        return luaL_error(L, lua_tostring(L, -1));
+      }
+
+      lua_Integer ec = lua_tointeger(L, -1);
+      lua_pop(L, 1);
+      if (ec != adata::success)
+      {
+        adata::zero_copy_buffer& stream = msg->get_packer().get_stream();
+        return luaL_error(L, stream.message());
+      }
+      msg->end_write();
+
+      /// pop obj's metatable
+      lua_pop(L, 1);
+    }
+    catch (std::exception& ex)
+    {
+      return luaL_error(L, ex.what());
+    }
+#endif
+  }
+  else
+  {
+    /// gce obj
+    /// call 'gcety' to get type
+    if (luaL_callmeta(L, 2, "gcety") == 0)
+    {
+      return luaL_error(L, "metatable not found!");
+    }
+
+    lua_Integer gcety = lua_tointeger(L, -1);
+    lua_pop(L, 1);
+
+    try
+    {
+      switch (gcety)
+      {
+#if GCE_PACKER == GCE_AMSG
+      case ty_actor_id: 
+      {
+        aid_t* o = static_cast<aid_t*>(lua_touserdata(L, 2));
+        luaL_argcheck(L, o != 0, 2, "'actor_id' expected");
+        *msg << *o;
+      }break;
+      case ty_service_id: 
+      {
+        gce::svcid_t* o = static_cast<gce::svcid_t*>(lua_touserdata(L, 2));
+        luaL_argcheck(L, o != 0, 2, "'service_id' expected");
+        *msg << *o;
+      }break;
+      case ty_duration: 
+      {
+        gce::duration_t* o = static_cast<gce::duration_t*>(lua_touserdata(L, 2));
+        luaL_argcheck(L, o != 0, 2, "'duration' expected");
+        *msg << *o;
+      }break;
+#endif
+      case ty_match: 
+      {
+        match_t* o = static_cast<match_t*>(lua_touserdata(L, 2));
+        luaL_argcheck(L, o != 0, 2, "'match' expected");
+        *msg << *o;
+      }break;
+      case ty_message: 
+      {
+        gce::message* o = static_cast<gce::message*>(lua_touserdata(L, 2));
+        luaL_argcheck(L, o != 0, 2, "'message' expected");
+        *msg << *o;
+      }break;
+      default: 
+        luaL_argerror(L, 2, "pack obj type error");
+        break;
+      }
+    }
+    catch (std::exception& ex)
+    {
+      return luaL_error(L, ex.what());
+    }
+  }
+  return 0;
+}
+///------------------------------------------------------------------------------
+/// deserialize
+///------------------------------------------------------------------------------
+inline int unpack_number(lua_State* L)
+{
+  gce::message* msg = static_cast<gce::message*>(lua_touserdata(L, 1));
+  luaL_argcheck(L, msg != 0, 1, "'message' expected");
+
+  lua_Number num;
+  try
+  {
+    *msg >> num;
+  }
+  catch (std::exception& ex)
+  {
+    return luaL_error(L, ex.what());
+  }
+  lua_pushnumber(L, num);
+  return 1;
+}
+///------------------------------------------------------------------------------
+inline int unpack_string(lua_State* L)
+{
+  gce::message* msg = static_cast<gce::message*>(lua_touserdata(L, 1));
+  luaL_argcheck(L, msg != 0, 1, "'message' expected");
+
+  boost::string_ref str;
+  try
+  {
+    *msg >> str;
+  }
+  catch (std::exception& ex)
+  {
+    return luaL_error(L, ex.what());
+  }
+  lua_pushlstring(L, str.data(), str.size());
+  return 1;
+}
+///------------------------------------------------------------------------------
+inline int unpack_boolean(lua_State* L)
+{
+  gce::message* msg = static_cast<gce::message*>(lua_touserdata(L, 1));
+  luaL_argcheck(L, msg != 0, 1, "'message' expected");
+
+  bool b;
+  try
+  {
+    *msg >> b;
+  }
+  catch (std::exception& ex)
+  {
+    return luaL_error(L, ex.what());
+  }
+  lua_pushboolean(L, b);
+  return 1;
+}
+///------------------------------------------------------------------------------
+inline int unpack_object(lua_State* L)
+{
+  gce::message* msg = static_cast<gce::message*>(lua_touserdata(L, 1));
+  luaL_argcheck(L, msg != 0, 1, "'message' expected");
+
+  int ty = lua_type(L, 2);
+#if GCE_PACKER == GCE_AMSG
+  luaL_argcheck(
+    L, (ty == LUA_TUSERDATA || ty == LUA_TLIGHTUSERDATA), 
+    2, "'userdata' or 'lightuserdata' expected"
+    );
+#elif GCE_PACKER == GCE_ADATA
+  luaL_argcheck(
+    L, (ty == LUA_TUSERDATA || ty == LUA_TLIGHTUSERDATA || ty == LUA_TTABLE), 
+    2, "'table' or 'userdata'/'lightuserdata' expected"
+    );
+#endif
+
+  if (ty == LUA_TTABLE)
+  {
+#if GCE_PACKER == GCE_ADATA
+    /// get obj's metatable
+    if (lua_getmetatable(L, 2) == 0)
+    {
+      return luaL_error(L, "object must have a metatable!");
+    }
+
+    try
+    {
+      /// adata obj
+      /// adata raw read
+      msg->pre_read();
+      lua_getfield(L, -1, "read");
+      lua_pushvalue(L, 2);
+      lua_pushlightuserdata(L, &msg->get_packer().get_stream());
+      if (lua_pcall(L, 2, 1, 0) != 0)
+      {
+        return luaL_error(L, lua_tostring(L, -1));
+      }
+
+      lua_Integer ec = lua_tointeger(L, -1);
+      lua_pop(L, 1);
+      if (ec != adata::success)
+      {
+        adata::zero_copy_buffer& stream = msg->get_packer().get_stream();
+        return luaL_error(L, stream.message());
+      }
+      msg->end_read();
+
+      /// pop obj's metatable
+      lua_pop(L, 1);
+    }
+    catch (std::exception& ex)
+    {
+      return luaL_error(L, ex.what());
+    }
+#endif
+  }
+  else
+  {
+    /// gce obj
+    /// call 'gcety' to get type
+    if (luaL_callmeta(L, 2, "gcety") == 0)
+    {
+      return luaL_error(L, "metatable not found!");
+    }
+
+    lua_Integer gcety = lua_tointeger(L, -1);
+    lua_pop(L, 1);
+
+    try
+    {
+      switch (gcety)
+      {
+#if GCE_PACKER == GCE_AMSG
+      case ty_actor_id: 
+      {
+        aid_t* o = static_cast<aid_t*>(lua_touserdata(L, 2));
+        luaL_argcheck(L, o != 0, 2, "'actor_id' expected");
+        *msg >> *o;
+      }break;
+      case ty_service_id: 
+      {
+        gce::svcid_t* o = static_cast<gce::svcid_t*>(lua_touserdata(L, 2));
+        luaL_argcheck(L, o != 0, 2, "'service_id' expected");
+        *msg >> *o;
+      }break;
+      case ty_duration: 
+      {
+        gce::duration_t* o = static_cast<gce::duration_t*>(lua_touserdata(L, 2));
+        luaL_argcheck(L, o != 0, 2, "'duration' expected");
+        *msg >> *o;
+      }break;
+#endif
+      case ty_match: 
+      {
+        match_t* o = static_cast<match_t*>(lua_touserdata(L, 2));
+        luaL_argcheck(L, o != 0, 2, "'match' expected");
+        *msg >> *o;
+      }break;
+      case ty_message: 
+      {
+        gce::message* o = static_cast<gce::message*>(lua_touserdata(L, 2));
+        luaL_argcheck(L, o != 0, 2, "'message' expected");
+        *msg >> *o;
+      }break;
+      default: 
+        luaL_argerror(L, 2, "unpack obj only 'duration' or 'match' or 'message'");
+        break;
+      }
+    }
+    catch (std::exception& ex)
+    {
+      return luaL_error(L, ex.what());
+    }
+  }
+
+  return 0;
+}
+///------------------------------------------------------------------------------
+/// print
+///------------------------------------------------------------------------------
+inline int print(lua_State* L)
+{
+  char const* str = luaL_checkstring(L, 1);
+  if (str != 0)
+  {
+    std::printf("%s\n", str);
+  }
+  else
+  {
+    std::printf("\n");
+  }
+  return 0;
+}
+///------------------------------------------------------------------------------
+} /// namespace lua
+} /// namespace detail
+} /// namespace gce
+
+#endif /// GCE_ACTOR_DETAIL_LUA_WRAP_HPP

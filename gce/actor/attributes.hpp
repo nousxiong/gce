@@ -11,12 +11,14 @@
 #define GCE_ACTOR_ATTRIBUTE_HPP
 
 #include <gce/actor/config.hpp>
+#include <gce/lualib/all.hpp>
+#include <gce/actor/asio.hpp>
 #include <boost/thread/thread.hpp>
 #include <boost/function.hpp>
 
 namespace gce
 {
-typedef std::size_t thrid_t;
+typedef size_t thrid_t;
 typedef boost::function<void (thrid_t)> thread_callback_t;
 #ifdef GCE_LUA
   typedef boost::function<void (lua_State*)> lua_register_t;
@@ -38,13 +40,13 @@ struct attributes
 
   io_service_t* ios_;
   ctxid_t id_;
-  std::size_t thread_num_;
-  std::size_t per_thread_service_num_;
-  std::size_t nonblocked_num_;
-  std::size_t actor_pool_reserve_size_;
-  std::size_t socket_pool_reserve_size_;
-  std::size_t acceptor_pool_reserve_size_;
-  std::size_t max_cache_match_size_;
+  size_t thread_num_;
+  size_t per_thread_service_num_;
+  size_t nonblocked_num_;
+  size_t actor_pool_reserve_size_;
+  size_t socket_pool_reserve_size_;
+  size_t acceptor_pool_reserve_size_;
+  size_t max_cache_match_size_;
   std::vector<thread_callback_t> thread_begin_cb_list_;
   std::vector<thread_callback_t> thread_end_cb_list_;
 #ifdef GCE_LUA

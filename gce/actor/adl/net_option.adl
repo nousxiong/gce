@@ -1,0 +1,25 @@
+//
+// Copyright (c) 2009-2015 Nous Xiong (348944179 at qq dot com)
+//
+// Distributed under the Boost Software License, Version 1.0. (See accompanying
+// file LICENSE_1_0.txt or copy at http://www.boost.org/LICENSE_1_0.txt)
+//
+// See https://github.com/nousxiong/gce for latest version.
+//
+
+include = gce.actor.duration;
+
+namespace = gce.adl;
+
+net_option
+{
+  int8 is_router;
+  gce.adl.duration heartbeat_period;
+  int32 heartbeat_count;
+  gce.adl.duration init_reconn_period;
+  int32 init_reconn_try;
+  gce.adl.duration reconn_period;
+  int32 reconn_try;
+  gce.adl.duration rebind_period;
+  int32 rebind_try;
+}

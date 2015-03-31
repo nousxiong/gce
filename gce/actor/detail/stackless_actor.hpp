@@ -130,7 +130,7 @@ public:
 
   void respond(
     resp_t res, aid_t& sender, message& msg, 
-    duration_t tmo = seconds_t(GCE_DEFAULT_REQUEST_TIMEOUT_SEC)
+    duration_t tmo = seconds(GCE_DEFAULT_REQUEST_TIMEOUT_SEC)
     )
   {
     respond(
@@ -174,7 +174,7 @@ public:
     return actor_stackless;
   }
 
-  static std::size_t get_pool_reserve_size(attributes const& attr)
+  static size_t get_pool_reserve_size(attributes const& attr)
   {
     return attr.actor_pool_reserve_size_;
   }
@@ -217,7 +217,7 @@ public:
 
   void respond(
     recv_handler_t const& f, resp_t res,
-    duration_t tmo = seconds_t(GCE_DEFAULT_REQUEST_TIMEOUT_SEC)
+    duration_t tmo = seconds(GCE_DEFAULT_REQUEST_TIMEOUT_SEC)
     )
   {
     aid_t sender;
@@ -285,7 +285,7 @@ public:
 
   sid_t spawn(
     spawn_type type, std::string const& func,
-    match_t ctxid, std::size_t stack_size
+    match_t ctxid, size_t stack_size
     )
   {
     sid_t sid = base_t::new_request();
@@ -331,7 +331,7 @@ private:
 
   void start_timer(duration_t dur, recv_handler_t const& hdr)
   {
-    tmr_.expires_from_now(dur);
+    tmr_.expires_from_now(to_chrono(dur));
     tmr_.async_wait(
       base_t::snd_.wrap(
         boost::bind(
@@ -344,7 +344,7 @@ private:
 
   void start_res_timer(duration_t dur, recv_handler_t const& hdr)
   {
-    tmr_.expires_from_now(dur);
+    tmr_.expires_from_now(to_chrono(dur));
     tmr_.async_wait(
       base_t::snd_.wrap(
         boost::bind(
@@ -357,7 +357,7 @@ private:
 
   void start_wait_timer(duration_t dur, wait_handler_t const& hdr)
   {
-    tmr_.expires_from_now(dur);
+    tmr_.expires_from_now(to_chrono(dur));
     tmr_.async_wait(
       base_t::snd_.wrap(
         boost::bind(
@@ -369,7 +369,7 @@ private:
   }
 
   void handle_recv_timeout(
-    errcode_t const& ec, std::size_t tmr_sid, recv_handler_t const& hdr
+    errcode_t const& ec, size_t tmr_sid, recv_handler_t const& hdr
     )
   {
     if (!ec && tmr_sid == tmr_sid_)
@@ -391,7 +391,7 @@ private:
   }
 
   void handle_res_timeout(
-    errcode_t const& ec, std::size_t tmr_sid, recv_handler_t const& hdr
+    errcode_t const& ec, size_t tmr_sid, recv_handler_t const& hdr
     )
   {
     if (!ec && tmr_sid == tmr_sid_)
@@ -413,7 +413,7 @@ private:
   }
 
   void handle_wait_timeout(
-    errcode_t const& ec, std::size_t tmr_sid, wait_handler_t const& hdr
+    errcode_t const& ec, size_t tmr_sid, wait_handler_t const& hdr
     )
   {
     if (!ec && tmr_sid == tmr_sid_)
@@ -564,7 +564,7 @@ private:
   GCE_CACHE_ALIGNED_VAR(func_t, f_)
   GCE_CACHE_ALIGNED_VAR(coro_t, coro_)
 
-  /// thread local vars
+  /// coro local vars
   service_t& svc_;
   recv_handler_t recv_h_;
   recv_handler_t res_h_;
@@ -572,7 +572,7 @@ private:
   resp_t recving_res_;
   pattern curr_pattern_;
   timer_t tmr_;
-  std::size_t tmr_sid_;
+  size_t tmr_sid_;
   log::logger_t& lg_;
 };
 }

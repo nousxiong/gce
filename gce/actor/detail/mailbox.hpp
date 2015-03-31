@@ -36,7 +36,7 @@ class mailbox
   typedef std::map<sid_t, res_msg_pair_t> res_msg_list_t;
 
 public:
-  explicit mailbox(std::size_t cache_match_size)
+  explicit mailbox(size_t cache_match_size)
     : cache_match_list_(cache_match_size)
   {
   }
@@ -183,9 +183,9 @@ private:
     match_itr mtr;
     match_queue_t* match_que = 0;
 
-    if (type >= 0 && type < (match_t)cache_match_list_.size())
+    if (type.val_ >= 0 && type.val_ < cache_match_list_.size())
     {
-      match_que = &cache_match_list_[type];
+      match_que = &cache_match_list_[type.val_];
     }
     else
     {
@@ -195,9 +195,9 @@ private:
     }
     mtr = match_que->insert(match_que->end(), itr);
 
-    if (sender && type == exit)
+    if (sender != aid_nil && type == exit)
     {
-      if (sender.svc_)
+      if (sender.svc_ != svcid_nil)
       {
         std::pair<aid_t, match_itr> p = std::make_pair(sender, mtr);
         std::pair<svc_exit_list_t::iterator, bool> pr = 
@@ -262,9 +262,9 @@ private:
   {
     match_queue_t* match_que = 0;
     match_queue_list_t::iterator mq_itr(match_queue_list_.end());
-    if (type >= 0 && type < (match_t)cache_match_list_.size())
+    if (type.val_ >= 0 && type.val_ < cache_match_list_.size())
     {
-      match_que = &cache_match_list_[type];
+      match_que = &cache_match_list_[type.val_];
     }
     else
     {
@@ -298,9 +298,9 @@ private:
           sender = ex->get_aid();
         }
 
-        if (sender)
+        if (sender != aid_nil)
         {
-          if (sender.svc_)
+          if (sender.svc_ != svcid_nil)
           {
             svc_exit_list_.erase(sender.svc_);
           }

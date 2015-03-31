@@ -59,8 +59,8 @@ public:
           )
         );
       gce::bind(base_cln, "tcp://127.0.0.1:14923", func_list);
-      net_option opt;
-      opt.reconn_period_ = seconds_t(1);
+      netopt_t opt = make_netopt();
+      opt.reconn_period = seconds(1);
       connect(base_svr, "client", "tcp://127.0.0.1:14923", opt);
 
       aid_t svr =

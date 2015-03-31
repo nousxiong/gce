@@ -25,7 +25,7 @@ inline void connect_impl(
   ctxid_t target,
   std::string const& ep,
   std::vector<std::pair<match_t, remote_func<Context> > > const& remote_func_list,
-  net_option opt
+  netopt_t opt
   )
 {
   typedef Context context_t;
@@ -37,10 +37,7 @@ inline void connect_impl(
 
   socket_actor_t* s = svc.make_actor();
   s->init(opt);
-  s->connect(
-    sire, remote_func_list, target,
-    ep, opt.is_router_
-    );
+  s->connect(sire, remote_func_list, target, ep, opt.is_router != 0);
 }
 
 template <typename Context>
@@ -49,7 +46,7 @@ inline void bind_impl(
   typename Context::acceptor_service_t& svc,
   std::string const& ep,
   std::vector<std::pair<match_t, remote_func<Context> > > const& remote_func_list,
-  net_option opt
+  netopt_t opt
   )
 {
   typedef Context context_t;
@@ -70,7 +67,7 @@ inline void connect(
   typename Context::socket_service_t& svc,
   ctxid_t target, /// connect target
   std::string const& ep, /// endpoint
-  net_option opt,
+  netopt_t opt,
   std::vector<std::pair<match_t, remote_func<Context> > > const& remote_func_list =
     std::vector<std::pair<match_t, remote_func<Context> > >()
   )
@@ -113,7 +110,7 @@ inline void bind(
   aid_t sire,
   typename Context::acceptor_service_t& svc,
   std::string const& ep, /// endpoint
-  net_option opt,
+  netopt_t opt,
   std::vector<std::pair<match_t, remote_func<Context> > > const& remote_func_list =
     std::vector<std::pair<match_t, remote_func<Context> > >()
   )

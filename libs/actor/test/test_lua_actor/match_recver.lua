@@ -7,13 +7,13 @@
 -- See https://github.com/nousxiong/gce for latest version.
 --
 
-local gce = require("gce")
+local gce = require('gce')
 
 gce.run_actor(
   function ()
-  	local sender, args = gce.recv("init", gce.aid())
+  	local sender, args = gce.recv('init', gce.actor_id)
   	local base_id = args[1]
-  	if not base_id:is_nil() then
+  	if base_id ~= gce.aid_nil then
   		gce.send(base_id)
   	end
   end)

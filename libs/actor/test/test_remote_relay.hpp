@@ -32,7 +32,7 @@ private:
     self->recv("init", last_id);
 
     aid_t sender = self.recv(msg);
-    if (last_id)
+    if (last_id != aid_nil)
     {
       self.relay(last_id, msg);
     }
@@ -47,16 +47,17 @@ private:
   {
     try
     {
-      std::size_t root_num = 10;
+      std::size_t root_num = 1;
       attributes attrs;
       attrs.id_ = atom("router");
       attrs.thread_num_ = 1;
       context ctx(attrs);
       threaded_actor base = spawn(ctx);
 
-      net_option opt;
-      opt.is_router_ = true;
+      netopt_t opt = make_netopt();
+      opt.is_router = 1;
       gce::bind(base, "tcp://127.0.0.1:14924", remote_func_list_t(), opt);
+      base.sleep_for(millisecs(100));
 
       boost::thread_group thrs;
       for (std::size_t i=0; i<root_num; ++i)
@@ -94,15 +95,17 @@ private:
   {
     try
     {
+      gce::log::asio_logger lg;
       attributes attrs;
-      attrs.id_ = id;
+      attrs.lg_ = boost::bind(&gce::log::asio_logger::output, &lg, _1, "");
+      attrs.id_ = to_match(id);
       attrs.thread_num_ = 1;
       context ctx(attrs);
       threaded_actor base = spawn(ctx);
 
-      net_option opt;
-      opt.is_router_ = true;
-      opt.reconn_period_ = seconds_t(1);
+      netopt_t opt = make_netopt();
+      opt.is_router = 1;
+      opt.reconn_period = seconds(1);
       remote_func_list_t func_list;
       func_list.push_back(
         make_remote_func<stackful>(
@@ -111,7 +114,7 @@ private:
           )
         );
       connect(base, "router", "tcp://127.0.0.1:14924", opt, func_list);
-      base.sleep_for(millisecs_t(1000));
+      base.sleep_for(millisecs(1000));
 
       aid_t last_id;
       aid_t first_id;

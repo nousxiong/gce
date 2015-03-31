@@ -124,7 +124,7 @@ public:
   }
 
 private:
-  send_pair send(std::size_t& index, pack_list_t& ret, bool& sending)
+  send_pair send(size_t& index, pack_list_t& ret, bool& sending)
   {
     std::swap(index, standby_);
     sending = true;
@@ -138,8 +138,8 @@ private:
   bool on_back_;
   bool primary_sending_;
   boost::array<pack_list_t, 2> pack_list_arr_;
-  std::size_t primary_;
-  std::size_t standby_;
+  size_t primary_;
+  size_t standby_;
   pack_list_t primary_ret_;
   pack nil_pk_;
 };

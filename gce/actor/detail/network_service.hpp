@@ -35,10 +35,10 @@ public:
   typedef typename actor_t::context_t context_t;
 
 public:
-  network_service(context_t& ctx, strand_t& snd, std::size_t index)
+  network_service(context_t& ctx, strand_t& snd, size_t index)
     : base_t(ctx, snd, index)
     , actor_pool_(
-        base_t::ctxid_, base_t::timestamp_, (boost::uint16_t)base_t::index_,
+        base_t::ctxid_, base_t::timestamp_, (uint16_t)base_t::index_,
         actor_t::get_pool_reserve_size(base_t::ctx_.get_attributes())
         )
   {

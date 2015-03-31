@@ -16,9 +16,9 @@ class lua_actor_ut
 public:
   static void run()
   {
-    std::cout << "lua_actor_ut test_base begin." << std::endl;
+    /*std::cout << "lua_actor_ut test_base begin." << std::endl;
     test_base();
-    std::cout << "lua_actor_ut test_base end." << std::endl;
+    std::cout << "lua_actor_ut test_base end." << std::endl;*/
 
     std::cout << "lua_actor_ut test_common begin." << std::endl;
     test_common();
@@ -40,10 +40,13 @@ private:
   {
     try
     {
-      std::size_t free_actor_num = 20;
-      std::size_t user_thr_num = 0;
+      gce::log::asio_logger lg;
+      attributes attrs;
+      attrs.lg_ = boost::bind(&gce::log::asio_logger::output, &lg, _1, "");
+      std::size_t free_actor_num = 10;
+      std::size_t user_thr_num = 5;
       std::size_t my_actor_size = free_actor_num + user_thr_num * 2;
-      context ctx;
+      context ctx(attrs);
       threaded_actor base = spawn(ctx);
 
       aid_t base_aid = base.get_aid();

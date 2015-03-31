@@ -65,7 +65,6 @@ public:
     , responsing_(false)
     , tmr_(base_t::ctx_.get_io_service())
     , tmr_sid_(0)
-    //, yld_(0)
     , ec_(exit_normal)
     , lg_(base_t::ctx_.get_logger())
   {
@@ -178,7 +177,7 @@ public:
 
   aid_t respond(
     resp_t res, message& msg, 
-    duration_t tmo = seconds_t(GCE_DEFAULT_REQUEST_TIMEOUT_SEC)
+    duration_t tmo = seconds(GCE_DEFAULT_REQUEST_TIMEOUT_SEC)
     )
   {
     aid_t sender;
@@ -235,7 +234,7 @@ public:
     return actor_stackful;
   }
 
-  static std::size_t get_pool_reserve_size(attributes const& attr)
+  static size_t get_pool_reserve_size(attributes const& attr)
   {
     return attr.actor_pool_reserve_size_;
   }
@@ -245,7 +244,7 @@ public:
     return svc_;
   }
 
-  void start(std::size_t stack_size)
+  void start(size_t stack_size)
   {
     if (stack_size < minimum_stacksize())
     {
@@ -276,7 +275,7 @@ public:
     handle_recv(pk);
   }
 
-  sid_t spawn(spawn_type type, std::string const& func, match_t ctxid, std::size_t stack_size)
+  sid_t spawn(spawn_type type, std::string const& func, match_t ctxid, size_t stack_size)
   {
     sid_t sid = base_t::new_request();
     base_t::pri_spawn(sid, type, func, ctxid, stack_size);
@@ -362,7 +361,7 @@ private:
 
   void start_timer(duration_t dur)
   {
-    tmr_.expires_from_now(dur);
+    tmr_.expires_from_now(to_chrono(dur));
     tmr_.async_wait(
       base_t::snd_.wrap(
         boost::bind(
@@ -373,7 +372,7 @@ private:
       );
   }
 
-  void handle_recv_timeout(errcode_t const& ec, std::size_t tmr_sid)
+  void handle_recv_timeout(errcode_t const& ec, size_t tmr_sid)
   {
     if (!ec && tmr_sid == tmr_sid_)
     {
@@ -450,7 +449,7 @@ private:
 
   typedef boost::function<void (actor_code)> yield_cb_t;
 
-  /// thread local vars
+  /// coro local vars
   service_t& svc_;
   bool recving_;
   bool responsing_;
@@ -459,7 +458,7 @@ private:
   message recving_msg_;
   pattern curr_pattern_;
   timer_t tmr_;
-  std::size_t tmr_sid_;
+  size_t tmr_sid_;
   boost::optional<yield_t> yld_;
   yield_cb_t yld_cb_;
   exit_code_t ec_;

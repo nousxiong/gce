@@ -18,8 +18,8 @@ public:
   public:
     typedef boost::chrono::system_clock system_clock_t;
     typedef system_clock_t::time_point time_point_t;
-    typedef millisecs_t milliseconds_t;
-    typedef millisecs_t::rep fps_rep_t;
+    typedef boost::chrono::milliseconds milliseconds_t;
+    typedef boost::chrono::milliseconds::rep fps_rep_t;
 
   public:
     my_3d_engine(context& ctx, int count_down, fps_rep_t fps = 60)
@@ -61,7 +61,7 @@ public:
     {
       int count_down;
       aid_t counter = cln_->recv("cd", count_down);
-      if (counter)
+      if (counter != aid_nil)
       {
         if (count_down > 0)
         {

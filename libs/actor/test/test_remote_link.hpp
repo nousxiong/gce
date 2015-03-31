@@ -42,8 +42,8 @@ public:
 
       gce::bind(base2, "tcp://127.0.0.1:14923");
 
-      net_option opt;
-      opt.reconn_period_ = seconds_t(1);
+      netopt_t opt = make_netopt();
+      opt.reconn_period = seconds(1);
       connect(base1, "two", "tcp://127.0.0.1:14923", opt);
 
       std::vector<aid_t> quiter_list(quiter_num);

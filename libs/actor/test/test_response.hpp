@@ -52,7 +52,7 @@ private:
 
       timer_t tmr(self.get_context().get_io_service());
       yield_t yield = self.get_yield();
-      tmr.expires_from_now(millisecs_t(1));
+      tmr.expires_from_now(boost::chrono::milliseconds(1));
       tmr.async_wait(yield);
 
       for (std::size_t i=0; i<size; ++i)
@@ -61,12 +61,12 @@ private:
         message msg;
         do
         {
-          aid = self.respond(res_list[i], msg, seconds_t(1));
+          aid = self.respond(res_list[i], msg, seconds(1));
         }
-        while (!aid);
+        while (aid == aid_nil);
       }
 
-      tmr.expires_from_now(millisecs_t(1));
+      tmr.expires_from_now(boost::chrono::milliseconds(1));
       tmr.async_wait(yield);
 
       self->send(base_id);

@@ -29,7 +29,7 @@ private:
   {
     message msg;
     aid_t sender = self.recv(msg);
-    if (last_id)
+    if (last_id != aid_nil)
     {
       self.relay(last_id, msg);
     }

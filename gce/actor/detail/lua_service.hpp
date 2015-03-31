@@ -13,10 +13,12 @@
 #include <gce/actor/config.hpp>
 #include <gce/actor/net_option.hpp>
 #include <gce/actor/duration.hpp>
+#include <gce/actor/detail/lua_wrap.hpp>
 #include <gce/actor/detail/inpool_service.hpp>
 #include <gce/actor/detail/actor_pool.hpp>
 #include <gce/actor/detail/send.hpp>
 #include <gce/detail/unique_ptr.hpp>
+#include <sstream>
 #include <map>
 
 namespace gce
@@ -37,100 +39,6 @@ struct lua_state_deletor
   }
 };
 ///------------------------------------------------------------------------------
-inline msg_t serialize_number(msg_t& msg, int src)
-{
-  msg << (boost::int32_t)src;
-  return msg;
-}
-inline msg_t serialize_string(msg_t& msg, std::string const& src)
-{
-  msg << src;
-  return msg;
-}
-inline msg_t serialize_boolean(msg_t& msg, bool src)
-{
-  msg << src;
-  return msg;
-}
-///------------------------------------------------------------------------------
-template <typename T>
-struct deserialize_result
-{
-  T r_;
-  msg_t m_;
-};
-///------------------------------------------------------------------------------
-inline deserialize_result<int> deserialize_number(msg_t& m)
-{
-  deserialize_result<int> res;
-  boost::int32_t des;
-  m >> des;
-  res.r_ = (int)des;
-  res.m_ = m;
-  return res;
-}
-inline deserialize_result<std::string> deserialize_string(msg_t& m)
-{
-  deserialize_result<std::string> res;
-  m >> res.r_;
-  res.m_ = m;
-  return res;
-}
-inline deserialize_result<bool> deserialize_boolean(msg_t& m)
-{
-  deserialize_result<bool> res;
-  m >> res.r_;
-  res.m_ = m;
-  return res;
-}
-///------------------------------------------------------------------------------
-inline void print(std::string const& str)
-{
-  if (!str.empty())
-  {
-    std::printf("%s\n", str.c_str());
-  }
-  else
-  {
-    std::printf("\n", str.c_str());
-  }
-}
-///------------------------------------------------------------------------------
-inline duration_type lua_millisecs(int val)
-{
-  return millisecs_t(val);
-}
-
-inline duration_type lua_seconds(int val)
-{
-  return seconds_t(val);
-}
-
-inline duration_type lua_minutes(int val)
-{
-  return minutes_t(val);
-}
-
-inline duration_type lua_hours(int val)
-{
-  return hours_t(val);
-}
-
-inline duration_type make_zero()
-{
-  return duration_t(zero);
-}
-
-inline duration_type make_infin()
-{
-  return duration_t(infin);
-}
-
-inline net_option make_net_option()
-{
-  return net_option();
-}
-///------------------------------------------------------------------------------
 template <typename Actor>
 class lua_service
   : public inpool_service<Actor>
@@ -145,16 +53,16 @@ public:
   typedef typename actor_t::context_t context_t;
 
 public:
-  lua_service(context_t& ctx, strand_t& snd, std::size_t index)
+  lua_service(context_t& ctx, strand_t& snd, size_t index)
     : base_t(ctx, snd, index)
-    , init_lua_script_(
-        "local p = gce_path \
+    , init_lua_script_("\
+        local p = gce_path \
         local package_path = package.path \
-        package.path = string.format(\"%s;%s\", package_path, p)"
-        )
+        package.path = string.format(\"%s;%s\", package_path, p)\
+        ")
     , L_(luaL_newstate(), lua_state_deletor())
     , actor_pool_(
-        base_t::ctxid_, base_t::timestamp_, (boost::uint16_t)base_t::index_,
+        base_t::ctxid_, base_t::timestamp_, (uint16_t)base_t::index_,
         actor_t::get_pool_reserve_size(base_t::ctx_.get_attributes())
         )
     , lg_(ctx.get_logger())
@@ -171,141 +79,207 @@ public:
     lua_State* L = L_.get();
     luaL_openlibs(L);
 
-    typedef actor_t lua_actor_t;
+    typedef lua::actor<actor_t> lua_actor_t;
 
-    luabridge::getGlobalNamespace(L)
-      .beginNamespace("detail")
-        .beginClass<aid_t>("aid_t")
-          .addFunction("get_overloading_type", &aid_t::get_overloading_type)
-          .addFunction("is_nil", &aid_t::is_nil)
-          .addFunction("equals", &aid_t::equals)
-          .addFunction("to_string", &aid_t::to_string)
-          GCE_LUA_REG_SERIALIZE_FUNC(aid_t)
-        .endClass()
-        .beginClass<svcid_t>("svcid_t")
-          .addFunction("get_overloading_type", &svcid_t::get_overloading_type)
-          .addFunction("to_string", &svcid_t::to_string)
-          GCE_LUA_REG_SERIALIZE_FUNC(svcid_t)
-        .endClass()
-        .beginClass<msg_t>("msg_t")
-          .addFunction("get_overloading_type", &msg_t::get_overloading_type)
-          .addFunction("set_type", &msg_t::set_match_type)
-          .addFunction("get_type", &msg_t::get_match_type)
-          .addFunction("to_string", &msg_t::to_string)
-          .addFunction("enable_copy_read_size", &msg_t::enable_copy_read_size)
-          .addFunction("disable_copy_read_size", &msg_t::disable_copy_read_size)
-          GCE_LUA_REG_SERIALIZE_FUNC(msg_t)
-        .endClass()
-        .beginClass<match_type>("match_t")
-          .addFunction("get_overloading_type", &match_type::get_overloading_type)
-          .addFunction("equals", &match_type::equals)
-          .addFunction("to_string", &match_type::to_string)
-        .endClass()
-        .beginClass<resp_t>("resp_t")
-          .addFunction("to_string", &resp_t::to_string)
-        .endClass()
-        .beginClass<pattern>("pattern_t")
-          .addFunction("get_overloading_type", &pattern::get_overloading_type)
-          .addFunction("set_timeout", &pattern::set_timeout)
-          .addFunction("add_match", &pattern::add_match_type)
-          .addFunction("set_match_aid", &pattern::set_match_aid)
-          .addFunction("set_match_svcid", &pattern::set_match_svcid)
-          .addFunction("to_string", &pattern::to_string)
-        .endClass()
-        .beginClass<duration_type>("duration_t")
-          .addFunction("get_overloading_type", &duration_type::get_overloading_type)
-          .addFunction("to_string", &duration_type::to_string)
-          GCE_LUA_REG_SERIALIZE_FUNC(duration_type)
-        .endClass()
-        .beginClass<net_option>("net_option_t")
-          .addData("is_router", &net_option::is_router_)
-          .addData("heartbeat_period", &net_option::heartbeat_period_)
-          .addData("heartbeat_count", &net_option::heartbeat_count_)
-          .addData("init_reconn_period", &net_option::init_reconn_period_)
-          .addData("init_reconn_try", &net_option::init_reconn_try_)
-          .addData("reconn_period", &net_option::reconn_period_)
-          .addData("reconn_try", &net_option::reconn_try_)
-          .addData("rebind_period", &net_option::rebind_period_)
-          .addData("rebind_try", &net_option::rebind_try_)
-        .endClass()
-        .beginClass<deserialize_result<int> >("unpack_number")
-          .addData("rt", &deserialize_result<int>::r_)
-          .addData("ms", &deserialize_result<int>::m_)
-        .endClass()
-        .beginClass<deserialize_result<std::string> >("unpack_string")
-          .addData("rt", &deserialize_result<std::string>::r_)
-          .addData("ms", &deserialize_result<std::string>::m_)
-        .endClass()
-        .beginClass<deserialize_result<bool> >("unpack_boolean")
-          .addData("rt", &deserialize_result<bool>::r_)
-          .addData("ms", &deserialize_result<bool>::m_)
-        .endClass()
-        .beginClass<lua_actor_t>("actor")
-          .addFunction("get_aid", &lua_actor_t::get_aid)
-          .addFunction("set_coro", &lua_actor_t::set_coro)
-          .addFunction("set_resume", &lua_actor_t::set_resume)
-          .addFunction("send", &lua_actor_t::send)
-          .addFunction("send2svc", &lua_actor_t::send2svc)
-          .addFunction("relay", &lua_actor_t::relay)
-          .addFunction("relay2svc", &lua_actor_t::relay2svc)
-          .addFunction("request", &lua_actor_t::request)
-          .addFunction("request2svc", &lua_actor_t::request2svc)
-          .addFunction("reply", &lua_actor_t::reply)
-          .addFunction("link", &lua_actor_t::link)
-          .addFunction("monitor", &lua_actor_t::monitor)
-          .addFunction("recv", &lua_actor_t::recv)
-          .addFunction("recv_match", &lua_actor_t::recv_match)
-          .addFunction("recv_response", &lua_actor_t::recv_response)
-          .addFunction("recv_response_timeout", &lua_actor_t::recv_response_timeout)
-          .addFunction("sleep_for", &lua_actor_t::sleep_for)
-          .addFunction("bind", &lua_actor_t::bind)
-          .addFunction("connect", &lua_actor_t::connect)
-          .addFunction("spawn", &lua_actor_t::spawn)
-          .addFunction("spawn_remote", &lua_actor_t::spawn_remote)
-          .addFunction("register_service", &lua_actor_t::register_service)
-          .addFunction("deregister_service", &lua_actor_t::deregister_service)
-          .addFunction("debug", &lua_actor_t::log_debug)
-          .addFunction("info", &lua_actor_t::log_info)
-          .addFunction("warn", &lua_actor_t::log_warn)
-          .addFunction("error", &lua_actor_t::log_error)
-          .addFunction("fatal", &lua_actor_t::log_fatal)
-        .endClass()
-        .addFunction("overloading_0", &lua_overloading_0)
-        .addFunction("overloading_1", &lua_overloading_1)
-        .addFunction("overloading_2", &lua_overloading_2)
-        .addFunction("infin", &make_infin)
-        .addFunction("zero", &make_zero)
-        .addFunction("millisecs", &lua_millisecs)
-        .addFunction("seconds", &lua_seconds)
-        .addFunction("minutes", &lua_minutes)
-        .addFunction("hours", &lua_hours)
-        .addFunction("msg", &lua_msg)
-        .addFunction("aid", &lua_aid)
-        .addFunction("svcid", &lua_svcid)
-        .addFunction("pattern", &lua_pattern)
-        .addFunction("make_match", &make_match)
-        .addFunction("net_option", &make_net_option)
-        .addFunction("atom", &s2i)
-        .addFunction("deatom", &i2s)
-        .addFunction("default_stacksize", &default_stacksize)
-        .addFunction("serialize_number", &serialize_number)
-        .addFunction("serialize_string", &serialize_string)
-        .addFunction("serialize_boolean", &serialize_boolean)
-        .addFunction("deserialize_number", &deserialize_number)
-        .addFunction("deserialize_string", &deserialize_string)
-        .addFunction("deserialize_boolean", &deserialize_boolean)
-        .addFunction("print", &print)
-      .endNamespace()
+    /// register libgce
+    gce::lualib::open(L)
+      .begin("libgce")
+        .add_function("make_match", lua::match::make)
+        .begin_userdata("match")
+          .add_function("gcety", lua::match::gcety)
+          .add_function("__tostring", lua::match::tostring)
+          .add_function("__gc", lua::match::gc)
+          .add_function("__eq", lua::match::eq)
+        .end_userdata()
+        .add_function("make_msg", lua::message::make)
+        .begin_userdata("message")
+          .add_function("setty", lua::message::setty)
+          .add_function("getty", lua::message::getty)
+          .add_function("pack", lua::message::pack)
+          .add_function("unpack", lua::message::unpack)
+          .add_function("gcety", lua::message::gcety)
+          .add_function("__tostring", lua::message::tostring)
+          .add_function("__gc", lua::message::gc)
+        .end_userdata()
+        .add_function("make_resp", lua::response::make)
+        .begin_userdata("response")
+          .add_function("__tostring", lua::response::tostring)
+          .add_function("__gc", lua::response::gc)
+        .end_userdata()
+        .add_function("make_patt", lua::pattern::make)
+        .begin_userdata("pattern")
+          .add_function("gcety", lua::pattern::gcety)
+          .add_function("add_match", lua::pattern::add_match)
+          .add_function("set_match_aid", lua::pattern::set_match_aid)
+          .add_function("set_match_svcid", lua::pattern::set_match_svcid)
+          .add_function("__tostring", lua::pattern::tostring)
+          .add_function("__gc", lua::pattern::gc)
+        .end_userdata()
+        .add_function("make_netopt", lua::net_option::make)
+#if GCE_PACKER == GCE_AMSG
+        .add_function("make_svcid", lua::service_id::make)
+        .begin_userdata("service_id")
+          .add_function("pack", lua::service_id::pack)
+          .add_function("unpack", lua::service_id::unpack)
+          .add_function("gcety", lua::service_id::gcety)
+          .add_function("__tostring", lua::service_id::tostring)
+          .add_function("__eq", lua::service_id::eq)
+          .add_function("__gc", lua::service_id::gc)
+        .end_userdata()
+        .add_function("make_aid", lua::actor_id::make)
+        .begin_userdata("actor_id")
+          .add_function("pack", lua::actor_id::pack)
+          .add_function("unpack", lua::actor_id::unpack)
+          .add_function("gcety", lua::actor_id::gcety)
+          .add_function("__tostring", lua::actor_id::tostring)
+          .add_function("__eq", lua::actor_id::eq)
+          .add_function("__gc", lua::actor_id::gc)
+        .end_userdata()
+        .add_function("make_dur", lua::duration::make_dur)
+        .add_function("make_millisecs", lua::duration::make_millisecs)
+        .add_function("make_seconds", lua::duration::make_seconds)
+        .add_function("make_minutes", lua::duration::make_minutes)
+        .add_function("make_hours", lua::duration::make_hours)
+        .begin_userdata("duration")
+          .add_function("type", lua::duration::type)
+          .add_function("pack", lua::duration::pack)
+          .add_function("unpack", lua::duration::unpack)
+          .add_function("gcety", lua::duration::gcety)
+          .add_function("__tostring", lua::duration::tostring)
+          .add_function("__eq", lua::duration::eq)
+          .add_function("__lt", lua::duration::lt)
+          .add_function("__le", lua::duration::le)
+          .add_function("__add", lua::duration::add)
+          .add_function("__sub", lua::duration::sub)
+          .add_function("__gc", lua::duration::gc)
+        .end_userdata()
+#elif GCE_PACKER == GCE_ADATA
+        .add_function("svcid_tostring", lua::service_id::tostring)
+        .add_function("aid_tostring", lua::actor_id::tostring)
+        .add_function("dur_tostring", lua::duration::tostring)
+        .add_function("dur_eq", lua::duration::eq)
+        .add_function("dur_lt", lua::duration::lt)
+        .add_function("dur_le", lua::duration::le)
+        .add_function("dur_add", lua::duration::add)
+        .add_function("dur_sub", lua::duration::sub)
+#endif
+        .begin_userdata("actor")
+          .add_function("get_aid", lua_actor_t::get_aid)
+          .add_function("init_coro", lua_actor_t::init_coro)
+          .add_function("send", lua_actor_t::send<gce::adl::actor_id>)
+          .add_function("send2svc", lua_actor_t::send<gce::adl::service_id>)
+          .add_function("relay", lua_actor_t::relay<gce::adl::actor_id>)
+          .add_function("relay2svc", lua_actor_t::relay<gce::adl::service_id>)
+          .add_function("request", lua_actor_t::request<gce::adl::actor_id>)
+          .add_function("request2svc", lua_actor_t::request<gce::adl::service_id>)
+          .add_function("reply", lua_actor_t::reply)
+          .add_function("link", lua_actor_t::link)
+          .add_function("monitor", lua_actor_t::monitor)
+          .add_function("recv", lua_actor_t::recv)
+          .add_function("recv_match", lua_actor_t::recv_match)
+          .add_function("recv_response", lua_actor_t::recv_response)
+          .add_function("recv_response_timeout", lua_actor_t::recv_response_timeout)
+          .add_function("sleep_for", lua_actor_t::sleep_for)
+          .add_function("bind", lua_actor_t::bind)
+          .add_function("connect", lua_actor_t::connect)
+          .add_function("spawn", lua_actor_t::spawn)
+          .add_function("spawn_remote", lua_actor_t::spawn_remote)
+          .add_function("register_service", lua_actor_t::register_service)
+          .add_function("deregister_service", lua_actor_t::deregister_service)
+          .add_function("log_debug", lua_actor_t::log_debug)
+          .add_function("log_info", lua_actor_t::log_info)
+          .add_function("log_warn", lua_actor_t::log_warn)
+          .add_function("log_error", lua_actor_t::log_error)
+          .add_function("log_fatal", lua_actor_t::log_fatal)
+          .add_function("__gc", lua_actor_t::gc)
+        .end_userdata()
+        .add_function("atom", lua::s2i)
+        .add_function("deatom", lua::i2s)
+        .add_function("pack_number", lua::pack_number)
+        .add_function("pack_string", lua::pack_string)
+        .add_function("pack_boolean", lua::pack_boolean)
+        .add_function("pack_object", lua::pack_object)
+        .add_function("unpack_number", lua::unpack_number)
+        .add_function("unpack_string", lua::unpack_string)
+        .add_function("unpack_boolean", lua::unpack_boolean)
+        .add_function("unpack_object", lua::unpack_object)
+        .add_function("print", lua::print)
+      .end()
       ;
 
-    luabridge::setGlobal(L, lua_gce_path, "gce_path");
+    lua_pushlstring(L, lua_gce_path.c_str(), lua_gce_path.size());
+    lua_setglobal(L, "gce_path");
     if (luaL_dostring(L, init_lua_script_.c_str()) != 0)
     {
       std::string errmsg("gce::lua_exception: ");
       errmsg += lua_tostring(L, -1);
       GCE_VERIFY(false)(lua_gce_path)
-        .log(lg_, errmsg.c_str()).except<lua_exception>();
+        .log(lg_, errmsg.c_str()).except<gce::lua_exception>();
     }
+
+    /// init libgce
+    std::ostringstream oss;
+    oss << "local libgce = require('libgce')" << std::endl;
+    oss << "libgce.pkr_amsg = " << GCE_AMSG << std::endl;
+    oss << "libgce.pkr_adata = " << GCE_ADATA << std::endl;
+#if GCE_PACKER == GCE_AMSG
+    oss << "libgce.packer = libgce.pkr_amsg" << std::endl;
+#elif GCE_PACKER == GCE_ADATA
+    oss << "libgce.packer = libgce.pkr_adata" << std::endl;
+#endif
+    oss << "libgce.ty_pattern = " << lua::ty_pattern << std::endl;
+    oss << "libgce.ty_match = " << lua::ty_match << std::endl;
+    oss << "libgce.ty_message = " << lua::ty_message << std::endl;
+    oss << "libgce.ty_duration = " << lua::ty_duration << std::endl;
+    oss << "libgce.ty_actor_id = " << lua::ty_actor_id << std::endl;
+    oss << "libgce.ty_service_id = " << lua::ty_service_id << std::endl;
+    oss << "libgce.ty_userdef = " << lua::ty_userdef << std::endl;
+    oss << "libgce.ty_lua = " << lua::ty_lua << std::endl;
+    oss << "libgce.ty_other = " << lua::ty_other << std::endl;
+    
+    oss << "libgce.dur_raw = " << gce::dur_raw << std::endl;
+    oss << "libgce.dur_microsec = " << gce::dur_microsec << std::endl;
+    oss << "libgce.dur_millisec = " << gce::dur_millisec << std::endl;
+    oss << "libgce.dur_second = " << gce::dur_second << std::endl;
+    oss << "libgce.dur_minute = " << gce::dur_minute << std::endl;
+    oss << "libgce.dur_hour = " << gce::dur_hour << std::endl;
+
+    oss << "libgce.no_link = " << gce::no_link << std::endl;
+    oss << "libgce.linked = " << gce::linked << std::endl;
+    oss << "libgce.monitored = " << gce::monitored << std::endl;
+
+    oss << "libgce.stacksize = " << default_stacksize() << std::endl;
+
+#if GCE_LUA_VERSION == GCE_LUA51
+    oss << "libgce.luaver = '5.1'" << std::endl;
+#elif GCE_LUA_VERSION == GCE_LUA52
+    oss << "libgce.luaver = '5.2'" << std::endl;
+#elif GCE_LUA_VERSION == GCE_LUA53
+    oss << "libgce.luaver = '5.3'" << std::endl;
+#elif GCE_LUA_VERSION == GCE_LUAJIT2
+    oss << "libgce.luaver = 'jit2'" << std::endl;
+#endif
+
+    std::string init_libgce_script = oss.str();
+    if (luaL_dostring(L, init_libgce_script.c_str()) != 0)
+    {
+      std::string errmsg("gce::lua_exception: ");
+      errmsg += lua_tostring(L, -1);
+      GCE_VERIFY(false)
+        .log(lg_, errmsg.c_str()).except<gce::lua_exception>();
+    }
+
+    /// set libgce.zero and libgce.infin
+    lua_getglobal(L, "libgce");
+    lua::push(L, gce::zero);
+    lua_setfield(L, -2, "zero");
+    lua::push(L, gce::infin);
+    lua_setfield(L, -2, "infin");
+    lua::push(L, gce::aid_nil);
+    lua_setfield(L, -2, "aid_nil");
+    lua::push(L, gce::svcid_nil);
+    lua_setfield(L, -2, "svcid_nil");
+    lua_pop(L, 1);
   }
 
   actor_t* make_actor()
@@ -318,69 +292,68 @@ public:
     actor_pool_.free(a);
   }
 
-  luabridge::LuaRef get_script(
+  void run_script(
     std::string const& name, 
     std::string const& script = std::string()
     )
   {
+    int scr = LUA_REFNIL;
     script_list_t::iterator itr(script_list_.find(name));
     if (itr != script_list_.end())
     {
-      return itr->second;
+      scr = itr->second;
     }
     else
     {
-      lua_State* L = L_.get();
-      luabridge::LuaRef sf(L);
-      if (script.empty())
-      {
-        if (luaL_loadfile(L, name.c_str()) != 0)
-        {
-          return sf;
-        }
-      }
-      else
-      {
-        if (luaL_loadstring(L, script.c_str()) != 0)
-        {
-          return sf;
-        }
-      }
-      sf.pop(L);
-      script_list_.insert(std::make_pair(name, sf));
-      return sf;
+      scr = set_script(name, script);
+    }
+    GCE_VERIFY(scr != LUA_REFNIL)(name)
+      .log(lg_).except<gce::lua_exception>();
+
+    lua_State* L = L_.get();
+    GCE_VERIFY(gce::lualib::get_ref(L, "libgce", scr) != 0)(name)
+      .log(lg_).except<gce::lua_exception>();
+
+    if (lua_pcall(L, 0, LUA_MULTRET, 0) != 0)
+    {
+      std::string errmsg("gce::lua_exception: ");
+      errmsg += lua_tostring(L, -1);
+      GCE_VERIFY(false)
+        .log(lg_, errmsg.c_str())
+        .except<gce::lua_exception>();
     }
   }
 
-  luabridge::LuaRef set_script(
+  int set_script(
     std::string const& name, 
     std::string const& script = std::string()
     )
   {
     lua_State* L = L_.get();
-    luabridge::LuaRef sf(L);
     if (script.empty())
     {
       if (luaL_loadfile(L, name.c_str()) != 0)
       {
-        return sf;
+        GCE_ERROR(lg_) << lua_tostring(L, -1);
+        return LUA_REFNIL;
       }
     }
     else
     {
       if (luaL_loadstring(L, script.c_str()) != 0)
       {
-        return sf;
+        GCE_ERROR(lg_) << lua_tostring(L, -1);
+        return LUA_REFNIL;
       }
     }
-    sf.pop(L);
+    int r = gce::lualib::make_ref(L, "libgce");
     std::pair<script_list_t::iterator, bool> pr =
-      script_list_.insert(std::make_pair(name, sf));
+      script_list_.insert(std::make_pair(name, r));
     if (!pr.second)
     {
-      pr.first->second = sf;
+      pr.first->second = r;
     }
-    return sf;
+    return r;
   }
 
   lua_State* get_lua_state()
@@ -392,9 +365,9 @@ public:
   {
     actor_t* a = make_actor();
     a->init(script);
-    if (sire)
+    if (sire != aid_nil)
     {
-      gce::detail::send(*a, sire, msg_new_actor, (boost::uint16_t)type);
+      gce::detail::send(*a, sire, msg_new_actor, (uint16_t)type);
     }
     aid_t aid = a->get_aid();
     a->start();
@@ -412,7 +385,7 @@ private:
   detail::unique_ptr<lua_State> L_;
   actor_pool_t actor_pool_;
 
-  typedef std::map<std::string, luabridge::LuaRef> script_list_t;
+  typedef std::map<std::string, int> script_list_t;
   script_list_t script_list_;
   log::logger_t& lg_;
 };

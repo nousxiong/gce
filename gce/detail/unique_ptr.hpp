@@ -13,7 +13,7 @@
 #include <gce/config.hpp>
 #include <boost/bind.hpp>
 #include <boost/function.hpp>
-#include <boost/checked_delete.hpp>
+#include <boost/core/checked_delete.hpp>
 #include <boost/assert.hpp>
 #include <utility>
 
@@ -22,7 +22,7 @@ namespace gce
 namespace detail
 {
 template <typename T>
-struct default_deleter
+struct default_unique_deleter
 {
   void operator()(T* t) const 
   {
@@ -30,7 +30,7 @@ struct default_deleter
   }
 };
 
-/// Unique pointer with deleter(like C++11 std::unique_ptr).
+/// Unique pointer with deleter.
 /// All member functions never throws.
 template <typename T>
 class unique_ptr
@@ -46,27 +46,27 @@ class unique_ptr
 
 public:
   unique_ptr()
-    : px_(0)
-    , deleter_(default_deleter<T>())
+    : p_(0)
+    , d_(default_unique_deleter<T>())
   {
   }
 
   explicit unique_ptr(T* p)
-    : px_(p)
-    , deleter_(default_deleter<T>())
+    : p_(p)
+    , d_(default_unique_deleter<T>())
   {
   }
 
   template <class D>
   unique_ptr(T* p, D d)
-    : px_(p)
-    , deleter_(d)
+    : p_(p)
+    , d_(d)
   {
   }
 
   ~unique_ptr()
   {
-    deleter_(px_);
+    d_(p_);
   }
 
 public:
@@ -77,59 +77,53 @@ public:
 
   void reset(T* p)
   {
-    BOOST_ASSERT(p == 0 || p != px_);
+    BOOST_ASSERT(p == 0 || p != p_);
     self_t(p).swap(*this);
   }
 
   template <class D>
   void reset(T* p, D d)
   {
-    BOOST_ASSERT(p == 0 || p != px_);
+    BOOST_ASSERT(p == 0 || p != p_);
     self_t(p, d).swap(*this);
   }
 
   T& operator*() const
   {
-    BOOST_ASSERT(px_ != 0);
-    return *px_;
+    BOOST_ASSERT(p_ != 0);
+    return *p_;
   }
 
   T* operator->() const
   {
-    BOOST_ASSERT(px_ != 0);
-    return px_;
+    BOOST_ASSERT(p_ != 0);
+    return p_;
   }
 
   T* get() const
   {
-    return px_;
+    return p_;
   }
 
   operator bool() const
   {
-    return px_ != 0;
+    return p_ != 0;
   }
 
   bool operator!() const
   {
-    return px_ == 0;
+    return p_ == 0;
   }
 
   void swap(unique_ptr& b)
   {
-    std::swap(px_, b.px_);
-    std::swap(deleter_, b.deleter_);
+    std::swap(p_, b.p_);
+    std::swap(d_, b.d_);
   }
 
 private:
-  T* px_;
-  deleter_t deleter_;
-};
-
-template <typename T>
-struct empty_deleter
-{
-  void operator()(T*) const {}
+  T* p_;
+  deleter_t d_;
 };
 }
 }

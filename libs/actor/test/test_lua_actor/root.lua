@@ -7,24 +7,24 @@
 -- See https://github.com/nousxiong/gce for latest version.
 --
 
-local gce = require("gce")
+local gce = require('gce')
 
 local test = function (name)
-	local path = "test_lua_actor/" .. name .. ".lua"
-	gce.print(name .. " test begin")
+	local path = 'test_lua_actor/' .. name .. '.lua'
+	gce.print(name .. ' test begin')
 	gce.spawn(path, gce.linked)
 	gce.recv(gce.exit)
-	gce.print(name .. " test end")
+	gce.print(name .. ' test end')
 end
 
 gce.run_actor(
   function ()
-		local sender, args = gce.recv("init", gce.aid())
+		local sender, args = gce.recv('init', gce.actor_id)
 		local base_aid = args[1]
 
-		test("match_ut")
-		test("pingpong_ut")
-		test("relay_ut")
+		test('match_ut')
+		--test('pingpong_ut')
+		--test('relay_ut')
 
 		gce.send(base_aid)
   end)

@@ -10,20 +10,17 @@
 #ifndef GCE_ACTOR_ATOM_HPP
 #define GCE_ACTOR_ATOM_HPP
 
-#include <gce/config.hpp>
-#include <gce/assert/all.hpp>
-#include <boost/array.hpp>
-#include <boost/lexical_cast.hpp>
-#include <boost/integer.hpp>
+#include <gce/actor/config.hpp>
+#include <gce/actor/match.hpp>
 #include <string>
-#include <cstring>
 
 namespace gce
 {
-/// Since lordoffox's str2val.h (http://bbs.cppfans.org/forum.php?mod=viewthread&tid=56&extra=page%3D1)
-inline boost::uint64_t atom(char const* str)
+/// Since lordoffox(lordoffox@gmail.com)'s str2val.h
+inline match_t atom(char const* str)
 {
-  std::size_t len = std::char_traits<char>::length(str);
+  match_t rt;
+  size_t len = std::char_traits<char>::length(str);
   GCE_ASSERT(len <= 13)(len)(str);
 
   static char const* const encoding_table =
@@ -44,9 +41,9 @@ inline boost::uint64_t atom(char const* str)
     "\x0\x0\x0\x0\x0\x0\x0\x0\x0\x0\x0\x0\x0\x0\x0\x0"
     "\x0\x0\x0\x0\x0\x0\x0\x0\x0\x0\x0\x0\x0\x0\x0\x0";
 
-  boost::uint64_t value = 0;
-  boost::uint32_t encode_value = 0;
-  for (std::size_t i=0 ; i<len; ++i)
+  uint64_t value = 0;
+  uint32_t encode_value = 0;
+  for (size_t i=0 ; i<len; ++i)
   {
     value *= 28;
     encode_value = encoding_table[(int)str[i]];
@@ -56,20 +53,21 @@ inline boost::uint64_t atom(char const* str)
     }
     else
     {
-      return 0;
+      return rt;
     }
   }
-  return value;
+  rt.val_ = value;
+  return rt;
 }
 
-/// Since lordoffox's str2val.h (http://bbs.cppfans.org/forum.php?mod=viewthread&tid=56&extra=page%3D1)
-inline std::string atom(boost::uint64_t what)
+/// Since lordoffox(lordoffox@gmail.com)'s str2val.h
+inline std::string atom(match_t what)
 {
   std::string ret;
   static std::string::const_pointer const decoding_table = "\0abcdefghijklmnopqrstuvwxyz_";
-  boost::uint64_t x = what;
+  uint64_t x = what.val_;
   std::string::value_type buf[21] = {0};
-  std::size_t pos = 19;
+  size_t pos = 19;
   while (x)
   {
     buf[pos--] = decoding_table[x % 28];
@@ -79,149 +77,6 @@ inline std::string atom(boost::uint64_t what)
   ret.assign(buf + pos, 20 - pos);
   return ret;
 }
-
-namespace detail
-{
-#ifdef GCE_LUA
-enum overloading_type
-{
-  overloading_0 = 0,
-  overloading_1,
-  overloading_2,
-
-  overloading_aid = overloading_0,
-  overloading_svcid = overloading_1,
-
-  overloading_pattern = overloading_0,
-  overloading_match_t = overloading_1,
-  overloading_duration = overloading_2,
-
-  overloading_msg = overloading_0,
-};
-
-inline int lua_overloading_0()
-{
-  return (int)overloading_0;
-}
-inline int lua_overloading_1()
-{
-  return (int)overloading_1;
-}
-inline int lua_overloading_2()
-{
-  return (int)overloading_2;
-}
-
-#endif
-} /// namespace detail
-} /// namespace gce
-
-#ifdef GCE_SCRIPT
-# define GCE_SCRIPT_SERIALIZE_FUNC \
-  template <typename Strm> \
-  Strm serialize(Strm& s) \
-  { \
-    s << *this; \
-    return s; \
-  } \
-  template <typename Strm> \
-  Strm deserialize(Strm& s) \
-  { \
-    s >> *this; \
-    return s; \
-  } \
-  template <typename Self> \
-  Self make() \
-  { \
-    return Self(); \
-  }
-#endif /// GCE_SCRIPT
-
-#ifdef GCE_LUA
-# define GCE_LUA_REG_SERIALIZE_FUNC(class_name) \
-  .addFunction("serialize", &class_name::serialize<gce::message>) \
-  .addFunction("deserialize", &class_name::deserialize<gce::message>) \
-  .addFunction("make", &class_name::make<class_name>)
-
-#endif /// GCE_LUA
-
-namespace gce
-{
-struct match_type
-{
-  match_type()
-    : val_(0)
-  {
-  }
-
-  explicit match_type(int val)
-    : val_((boost::uint64_t)val)
-  {
-  }
-
-  match_type(boost::uint64_t val)
-    : val_(val)
-  {
-  }
-
-  operator boost::uint64_t() const
-  {
-    return val_;
-  }
-
-  void operator=(boost::uint64_t val)
-  {
-    val_ = val;
-  }
-
-  void operator=(boost::uint32_t val)
-  {
-    val_ = val;
-  }
-
-  bool equals(match_type const& rhs) const
-  {
-    return val_ == rhs.val_;
-  }
-
-  std::string to_string() const
-  {
-    typedef boost::array<char, 32> strbuf_t;
-    std::string rt;
-    rt += "<";
-    rt += boost::lexical_cast<strbuf_t>(val_).cbegin();
-    rt += ">";
-    return rt;
-  }
-
-#ifdef GCE_SCRIPT
-  int get_overloading_type() const
-  {
-    return (int)detail::overloading_match_t;
-  }
-
-  GCE_SCRIPT_SERIALIZE_FUNC
-#endif
-
-  boost::uint64_t val_;
-};
-
-#ifdef GCE_LUA
-inline match_type make_match(int i)
-{
-  return match_type(i);
-}
-
-inline match_type s2i(char const* str)
-{
-  return atom(str);
-}
-
-inline std::string i2s(match_type what)
-{
-  return atom(what);
-}
-#endif
 }
 
 #endif /// GCE_ACTOR_ATOM_HPP

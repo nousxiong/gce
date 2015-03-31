@@ -27,7 +27,7 @@ public:
 private:
   static void my_actor(stackful_actor self, aid_t base_id)
   {
-    if (base_id)
+    if (base_id != aid_nil)
     {
       int i = 0;
       self->send(base_id, "catch", i);
@@ -51,7 +51,7 @@ private:
 
       message msg;
       aid_t sender = base.recv(msg, pattern("timeout", millisecs(1)));
-      GCE_VERIFY(!sender);
+      GCE_VERIFY(sender == aid_nil);
 
       int i = -1;
       base->recv("catch", guard(aid1), i);

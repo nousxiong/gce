@@ -51,9 +51,9 @@ private:
       aid_t aid;
       do
       {
-        aid = a->respond(res_list[i], seconds_t(1));
+        aid = a->respond(res_list[i], seconds(1));
       }
-      while (!aid);
+      while (aid == aid_nil);
     }
   }
 

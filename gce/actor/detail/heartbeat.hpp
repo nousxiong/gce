@@ -43,7 +43,7 @@ public:
 public:
   template <typename F>
   void init(
-    duration_type period, std::size_t max_count, 
+    gce::duration_t period, size_t max_count, 
     F f, F t = timeout_func_t()
     )
   {
@@ -88,7 +88,7 @@ public:
     if (waiting_ > 0)
     {
       errcode_t ec;
-      sync_.expires_from_now(infin);
+      sync_.expires_from_now(gce::to_chrono(infin));
       sync_.async_wait(yield[ec]);
     }
   }
@@ -103,7 +103,7 @@ private:
   void start_timer()
   {
     ++waiting_;
-    tmr_.expires_from_now(period_);
+    tmr_.expires_from_now(gce::to_chrono(period_));
     tmr_.async_wait(
       snd_.wrap(
         boost::bind(
@@ -146,14 +146,14 @@ private:
   strand_t& snd_;
   timer_t tmr_;
   timer_t sync_;
-  duration_type period_;
-  std::size_t max_count_;
-  std::size_t curr_count_;
+  gce::duration_t period_;
+  size_t max_count_;
+  size_t curr_count_;
 
   timeout_func_t timeout_;
   timeout_func_t tick_;
   bool stopped_;
-  std::size_t waiting_;
+  size_t waiting_;
 };
 }
 }

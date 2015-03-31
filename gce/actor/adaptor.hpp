@@ -19,7 +19,7 @@ namespace gce
 class adaptor
 {
 public:
-  adaptor(stackless_actor a, errcode_t& ec, std::size_t& bytes_transferred)
+  adaptor(stackless_actor a, errcode_t& ec, size_t& bytes_transferred)
     : a_(a)
     , ec_(ec)
     , bytes_transferred_(&bytes_transferred)
@@ -56,7 +56,7 @@ public:
   }
 
 public:
-  void operator()(errcode_t const& ec, std::size_t bytes_transferred)
+  void operator()(errcode_t const& ec, size_t bytes_transferred)
   {
     GCE_ASSERT(bytes_transferred_ != 0)(bytes_transferred);
     ec_ = ec;
@@ -89,7 +89,7 @@ public:
 private:
   stackless_actor a_;
   errcode_t& ec_;
-  std::size_t* bytes_transferred_;
+  size_t* bytes_transferred_;
   boost::asio::ip::tcp::resolver::iterator* itr_;
   int* signal_number_;
 };

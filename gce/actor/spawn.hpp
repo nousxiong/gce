@@ -14,7 +14,7 @@
 #include <gce/actor/actor.hpp>
 #include <gce/actor/context.hpp>
 #include <gce/actor/detail/spawn_actor.hpp>
-#include <gce/actor/detail/to_match.hpp>
+#include <gce/actor/to_match.hpp>
 #include <boost/mpl/if.hpp>
 #include <boost/type_traits.hpp>
 
@@ -27,7 +27,7 @@ template <typename F>
 inline aid_t spawn(
   threaded_actor sire, F f,
   link_type type = no_link,
-  std::size_t stack_size = default_stacksize()
+  size_t stack_size = default_stacksize()
   )
 {
 #ifdef GCE_LUA
@@ -52,7 +52,7 @@ template <typename Tag, typename F>
 inline aid_t spawn(
   threaded_actor sire, F f,
   link_type type = no_link,
-  std::size_t stack_size = default_stacksize()
+  size_t stack_size = default_stacksize()
   )
 {
   return detail::spawn(Tag(), sire, f, false, type, stack_size);
@@ -66,7 +66,7 @@ inline aid_t spawn(
   stackful_actor sire, F f,
   link_type type = no_link,
   bool sync_sire = false,
-  std::size_t stack_size = default_stacksize()
+  size_t stack_size = default_stacksize()
   )
 {
 #ifdef GCE_LUA
@@ -92,7 +92,7 @@ inline aid_t spawn(
   stackful_actor sire, F f,
   link_type type = no_link,
   bool sync_sire = false,
-  std::size_t stack_size = default_stacksize()
+  size_t stack_size = default_stacksize()
   )
 {
   return detail::spawn(Tag(), sire, f, sync_sire, type, stack_size);
@@ -198,11 +198,11 @@ inline aid_t spawn_remote(
   ActorRef sire, std::string const& func,
   Match ctxid,
   link_type type = no_link,
-  std::size_t stack_size = default_stacksize(),
-  seconds_t tmo = seconds_t(GCE_DEFAULT_REQUEST_TIMEOUT_SEC)
+  size_t stack_size = default_stacksize(),
+  duration_t tmo = seconds(GCE_DEFAULT_REQUEST_TIMEOUT_SEC)
   )
 {
-  return detail::spawn_remote(stackful(), sire, func, detail::to_match(ctxid), type, stack_size, tmo);
+  return detail::spawn_remote(stackful(), sire, func, to_match(ctxid), type, stack_size, tmo);
 }
 
 template <typename Tag, typename ActorRef, typename Match>
@@ -210,11 +210,11 @@ inline aid_t spawn_remote(
   ActorRef sire, std::string const& func,
   Match ctxid,
   link_type type = no_link,
-  std::size_t stack_size = default_stacksize(),
-  seconds_t tmo = seconds_t(GCE_DEFAULT_REQUEST_TIMEOUT_SEC)
+  size_t stack_size = default_stacksize(),
+  duration_t tmo = seconds(GCE_DEFAULT_REQUEST_TIMEOUT_SEC)
   )
 {
-  return detail::spawn_remote(Tag(), sire, func, detail::to_match(ctxid), type, stack_size, tmo);
+  return detail::spawn_remote(Tag(), sire, func, to_match(ctxid), type, stack_size, tmo);
 }
 ///------------------------------------------------------------------------------
 /// Spawn a actor on remote context using stackless_actor
@@ -224,8 +224,8 @@ inline void spawn_remote(
   stackless_actor sire, std::string const& func, aid_t& aid,
   Match ctxid,
   link_type type = no_link,
-  std::size_t stack_size = default_stacksize(),
-  seconds_t tmo = seconds_t(GCE_DEFAULT_REQUEST_TIMEOUT_SEC)
+  size_t stack_size = default_stacksize(),
+  duration_t tmo = seconds(GCE_DEFAULT_REQUEST_TIMEOUT_SEC)
   )
 {
   typedef context::stackless_actor_t stackless_actor_t;
@@ -237,7 +237,7 @@ inline void spawn_remote(
       &stackless_actor_t::spawn_handler, &a, 
       _1, _2, boost::ref(aid)
       ), 
-    detail::to_match(ctxid), type, stack_size, tmo
+    to_match(ctxid), type, stack_size, tmo
     );
 }
 
@@ -246,11 +246,11 @@ inline void spawn_remote(
   stackless_actor sire, std::string const& func, SpawnHandler h,
   Match ctxid,
   link_type type = no_link,
-  std::size_t stack_size = default_stacksize(),
-  seconds_t tmo = seconds_t(GCE_DEFAULT_REQUEST_TIMEOUT_SEC)
+  size_t stack_size = default_stacksize(),
+  duration_t tmo = seconds(GCE_DEFAULT_REQUEST_TIMEOUT_SEC)
   )
 {
-  detail::spawn_remote(Tag(), sire, func, h, detail::to_match(ctxid), type, stack_size, tmo);
+  detail::spawn_remote(Tag(), sire, func, h, to_match(ctxid), type, stack_size, tmo);
 }
 ///------------------------------------------------------------------------------
 }

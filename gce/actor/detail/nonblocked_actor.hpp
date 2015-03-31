@@ -77,9 +77,9 @@ private:
     byte_t pad0_[GCE_CACHE_LINE_SIZE];
 
     GCE_CACHE_ALIGNED_VAR(std::deque<pack>, que_)
-    GCE_CACHE_ALIGNED_VAR(boost::uint64_t, index_base_)
-    GCE_CACHE_ALIGNED_VAR(boost::uint64_t, head_)
-    GCE_CACHE_ALIGNED_VAR(boost::atomic<boost::uint64_t>, garbage_tail_)
+    GCE_CACHE_ALIGNED_VAR(uint64_t, index_base_)
+    GCE_CACHE_ALIGNED_VAR(uint64_t, head_)
+    GCE_CACHE_ALIGNED_VAR(boost::atomic<uint64_t>, garbage_tail_)
   };
   typedef std::vector<cache_queue> cache_queue_list_t;
   typedef boost::array<cache_queue_list_t, actor_num> cache_queue_list_arr_t;
@@ -87,10 +87,10 @@ private:
   typedef boost::array<pack_list_t, actor_num> gc_t;
 
 public:
-  nonblocked_actor(context_t& ctx, service_t& svc, std::size_t index)
+  nonblocked_actor(context_t& ctx, service_t& svc, size_t index)
     : base_t(
       ctx, svc, actor_nonblocked,
-      aid_t(ctx.get_ctxid(), ctx.get_timestamp(), this, sid_t(0))
+      make_aid(ctx.get_ctxid(), ctx.get_timestamp(), this, sid_t(0))
       )
     , pack_queue_(1024)
     , svc_(svc)
@@ -218,14 +218,14 @@ public:
     GCE_ASSERT(pk.type_ != actor_nil);
 
     cache_queue& cac_que = cache_queue_list_arr_[pk.type_][pk.concurrency_index_];
-    boost::uint64_t garbage_tail =
+    uint64_t garbage_tail =
       cac_que.garbage_tail_.load(boost::memory_order_relaxed);
 
     if (garbage_tail != u64_nil && garbage_tail >= cac_que.head_)
     {
-      std::size_t size = garbage_tail - cac_que.head_ + 1;
+      size_t size = garbage_tail - cac_que.head_ + 1;
       GCE_ASSERT(cac_que.que_.size() >= size)(cac_que.que_.size())(size);
-      for (std::size_t i=0; i<size; ++i)
+      for (size_t i=0; i<size; ++i)
       {
         cac_que.que_.pop_front();
       }
@@ -245,7 +245,7 @@ public:
     pack_queue_.push(&cac_que.que_.back());
   }
 
-  void register_service(match_t name, aid_t const& svc, actor_type type, std::size_t concurrency_index)
+  void register_service(match_t name, aid_t const& svc, actor_type type, size_t concurrency_index)
   {
     pack pk = make_register_pack(type, concurrency_index);
     message m(msg_reg_svc);
@@ -254,7 +254,7 @@ public:
     on_recv(pk);
   }
 
-  void deregister_service(match_t name, aid_t const& svc, actor_type type, std::size_t concurrency_index)
+  void deregister_service(match_t name, aid_t const& svc, actor_type type, size_t concurrency_index)
   {
     pack pk = make_register_pack(type, concurrency_index);
     message m(msg_dereg_svc);
@@ -263,7 +263,7 @@ public:
     on_recv(pk);
   }
 
-  void register_socket(ctxid_pair_t ctxid_pr, aid_t const& skt, actor_type type, std::size_t concurrency_index)
+  void register_socket(ctxid_pair_t ctxid_pr, aid_t const& skt, actor_type type, size_t concurrency_index)
   {
     pack pk = make_register_pack(type, concurrency_index);
     message m(msg_reg_skt);
@@ -272,7 +272,7 @@ public:
     on_recv(pk);
   }
 
-  void deregister_socket(ctxid_pair_t ctxid_pr, aid_t const& skt, actor_type type, std::size_t concurrency_index)
+  void deregister_socket(ctxid_pair_t ctxid_pr, aid_t const& skt, actor_type type, size_t concurrency_index)
   {
     pack pk = make_register_pack(type, concurrency_index);
     message m(msg_dereg_skt);
@@ -287,7 +287,7 @@ private:
     for (int ty=0; ty<actor_num; ++ty)
     {
       pack_list_t& pack_list = gc_[ty];
-      for (std::size_t i=0, size=pack_list.size(); i<size; ++i)
+      for (size_t i=0, size=pack_list.size(); i<size; ++i)
       {
         pack* pk = pack_list[i];
         if (pk)
@@ -315,7 +315,7 @@ private:
     }
   }
 
-  pack make_register_pack(actor_type type, std::size_t concurrency_index)
+  pack make_register_pack(actor_type type, size_t concurrency_index)
   {
     pack pk;
     pk.concurrency_index_ = concurrency_index;

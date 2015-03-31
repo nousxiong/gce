@@ -110,7 +110,7 @@ struct receiver<ActorRef, false>
   {
     message msg;
     aid_t sender = pri_recv(msg);
-    if (sender)
+    if (sender != aid_nil)
     {
       msg >> a1;
     }

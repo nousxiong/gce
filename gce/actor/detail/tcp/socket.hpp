@@ -11,16 +11,21 @@
 #define GCE_ACTOR_DETAIL_TCP_SOCKET_HPP
 
 #include <gce/actor/config.hpp>
+#include <gce/actor/asio.hpp>
 #include <gce/actor/detail/basic_socket.hpp>
+#include <gce/detail/bytes.hpp>
+#include <gce/integer.hpp>
 #include <boost/asio/ip/tcp.hpp>
 #include <boost/asio/write.hpp>
 #include <boost/asio/connect.hpp>
 #include <boost/asio/placeholders.hpp>
 #include <boost/bind.hpp>
 #include <boost/array.hpp>
+#include <string>
 
 namespace gce
 {
+typedef std::basic_string<byte_t, std::char_traits<byte_t>, std::allocator<byte_t> > bytes_t;
 namespace detail
 {
 namespace tcp
@@ -70,8 +75,8 @@ public:
   }
 
   void send(
-    byte_t const* header, std::size_t header_size,
-    byte_t const* body, std::size_t body_size
+    byte_t const* header, size_t header_size,
+    byte_t const* body, size_t body_size
     )
   {
     if (!waiting_end_)
@@ -87,7 +92,7 @@ public:
     }
   }
 
-  std::size_t recv(byte_t* buf, std::size_t size, yield_t yield)
+  size_t recv(byte_t* buf, size_t size, yield_t yield)
   {
     return sock_.async_read_some(boost::asio::buffer(buf, size), yield);
   }
@@ -123,7 +128,7 @@ public:
     if (sending_)
     {
       errcode_t ec;
-      sync_.expires_from_now(infin);
+      sync_.expires_from_now(to_chrono(infin));
       sync_.async_wait(yield[ec]);
     }
   }
@@ -197,8 +202,8 @@ private:
   bool closed_;
   bool reconn_;
   bool sending_;
-  std::size_t sending_buffer_;
-  std::size_t standby_buffer_;
+  size_t sending_buffer_;
+  size_t standby_buffer_;
   boost::array<gce::detail::bytes_t, 2> send_buffer_;
 
   timer_t sync_;

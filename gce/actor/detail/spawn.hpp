@@ -29,7 +29,7 @@ public:
 
   spawn_t(
     spawn_type type, std::string const& func, match_t ctxid,
-    std::size_t stack_size, sid_t sid, aid_t aid
+    size_t stack_size, sid_t sid, aid_t aid
     )
     : type_(type)
     , func_(func)
@@ -48,7 +48,7 @@ public:
   spawn_type get_type() const { return type_; }
   std::string const& get_func() const { return func_; }
   match_t get_ctxid() const { return ctxid_; }
-  std::size_t get_stack_size() const { return stack_size_; }
+  size_t get_stack_size() const { return stack_size_; }
   sid_t get_id() const { return sid_; }
   aid_t get_aid() const { return aid_; }
 
@@ -56,7 +56,7 @@ private:
   spawn_type type_;
   std::string func_;
   match_t ctxid_;
-  std::size_t stack_size_;
+  size_t stack_size_;
   sid_t sid_;
   aid_t aid_;
 };

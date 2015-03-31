@@ -36,7 +36,7 @@ private:
       self->send(base, "echo");
       self->recv("echo");
 
-      tmr.expires_from_now(millisecs_t(1));
+      tmr.expires_from_now(boost::chrono::milliseconds(1));
       tmr.async_wait(yield);
     }
   }

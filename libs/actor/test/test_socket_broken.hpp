@@ -79,9 +79,9 @@ public:
       context ctx(attrs);
       threaded_actor base = spawn(ctx);
 
-      base.sleep_for(millisecs_t(100));
-      net_option opt;
-      opt.reconn_period_ = seconds_t(1);
+      base.sleep_for(millisecs(100));
+      netopt_t opt = make_netopt();
+      opt.reconn_period = seconds(1);
       connect(base, "one", "tcp://127.0.0.1:14923", opt);
 
       BOOST_FOREACH(aid_t& aid, quiter_list)

@@ -42,8 +42,8 @@ struct pack
   message msg_;
 
   /// for nonblocked actor recv
-  std::size_t concurrency_index_;
-  boost::uint64_t cache_index_;
+  size_t concurrency_index_;
+  uint64_t cache_index_;
   actor_type type_;
 
   /// for in pool actor recv

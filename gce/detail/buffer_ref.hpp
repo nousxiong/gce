@@ -11,6 +11,7 @@
 #define GCE_DETAIL_BUFFER_REF_HPP
 
 #include <gce/config.hpp>
+#include <cstddef>
 
 namespace gce
 {
@@ -30,7 +31,7 @@ public:
   {
   }
 
-  buffer_ref(byte_t* buf, std::size_t size)
+  buffer_ref(byte_t* buf, size_t size)
     : buf_(buf)
     , size_(size)
     , write_size_(0)
@@ -43,14 +44,14 @@ public:
   }
 
 public:
-  std::size_t remain_write_size() const { return size_ - write_size_; }
-  std::size_t remain_read_size() const { return write_size_ - read_size_; }
-  std::size_t write_size() const { return write_size_; }
-  std::size_t read_size() const { return read_size_; }
+  size_t remain_write_size() const { return size_ - write_size_; }
+  size_t remain_read_size() const { return write_size_ - read_size_; }
+  size_t write_size() const { return write_size_; }
+  size_t read_size() const { return read_size_; }
   byte_t* get_write_data() { return buf_ + write_size_; }
   byte_t* get_read_data() { return buf_ + read_size_; }
   byte_t const* data() const { return buf_; }
-  std::size_t size() const { return size_; }
+  size_t size() const { return size_; }
 
   void clear()
   {
@@ -68,7 +69,7 @@ public:
     write_size_ = 0;
   }
 
-  void reset(byte_t* buf, std::size_t size)
+  void reset(byte_t* buf, size_t size)
   {
     buf_ = buf;
     size_ = size;
@@ -84,7 +85,7 @@ public:
     }
   }
 
-  void read(std::size_t size)
+  void read(size_t size)
   {
     if (read_size_ + size > write_size_)
     {
@@ -94,7 +95,7 @@ public:
     read_size_ += size;
   }
 
-  void write(std::size_t size)
+  void write(size_t size)
   {
     if (write_size_ + size > size_)
     {
@@ -106,9 +107,9 @@ public:
 
 private:
   byte_t* buf_;
-  std::size_t size_;
-  std::size_t write_size_;
-  std::size_t read_size_;
+  size_t size_;
+  size_t write_size_;
+  size_t read_size_;
 };
 }
 }

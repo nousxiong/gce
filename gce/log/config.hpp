@@ -19,8 +19,7 @@
 /// Under winxp(x86) vc9
 #include <boost/atomic.hpp>
 
-#include <gce/amsg/amsg.hpp>
-#include <gce/amsg/zerocopy.hpp>
+#include <gce/amsg/all.hpp>
 #include <boost/chrono.hpp>
 #include <boost/function.hpp>
 
@@ -62,7 +61,7 @@ static const char* const level_string[] =
   "FATAL"
 };
 
-inline const char* const to_string(level lv)
+inline char const* const to_string(level lv)
 {
   return level_string[lv];
 }

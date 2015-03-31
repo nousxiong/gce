@@ -36,6 +36,9 @@ endif ()
 if (GCE_ACTOR_DEV)
   # Set up all files.
   file (GLOB_RECURSE GCE_ACTOR_HEADER_FILES "${PROJECT_SOURCE_DIR}/gce/actor/*.hpp")
+  if (GCE_LUA)
+    file (GLOB GCE_ACTOR_HEADER_FILES ${GCE_ACTOR_HEADER_FILES} "${PROJECT_SOURCE_DIR}/gce/actor/*.h")
+  endif ()
   file (GLOB_RECURSE GCE_ACTOR_SOURCE_FILES "${PROJECT_SOURCE_DIR}/libs/actor/src/src.cpp")
 
   # GCE.Actor library for dev

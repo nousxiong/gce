@@ -29,6 +29,7 @@
 #include <boost/lockfree/queue.hpp>
 #include <boost/ref.hpp>
 #include <boost/bind.hpp>
+#include <boost/core/null_deleter.hpp>
 #include <vector>
 
 namespace gce
@@ -89,7 +90,7 @@ public:
   {
     if (attrs_.ios_)
     {
-      ios_.reset(attrs_.ios_, detail::empty_deleter<io_service_t>());
+      ios_.reset(attrs_.ios_, boost::null_deleter());
     }
     else
     {
@@ -99,8 +100,8 @@ public:
 
     try
     {
-      std::size_t index = 0;
-      for (std::size_t i=0; i<service_size_; ++i, ++index)
+      size_t index = 0;
+      for (size_t i=0; i<service_size_; ++i, ++index)
       {
         strand_list_.emplace_back(boost::ref(*ios_));
         strand_t& snd = strand_list_.back();
@@ -114,7 +115,7 @@ public:
         acceptor_service_list_.emplace_back(boost::ref(*this), boost::ref(snd), index);
       }
 
-      for (std::size_t i=0; i<attrs_.nonblocked_num_; ++i, ++index)
+      for (size_t i=0; i<attrs_.nonblocked_num_; ++i, ++index)
       {
         strand_list_.emplace_back(boost::ref(*ios_));
         strand_t& snd = strand_list_.back();
@@ -137,7 +138,7 @@ public:
       lua_gce_path.erase(--lua_gce_path.end());
 
       lua_register_t& lua_reg = attrs_.lua_reg_;
-      for (std::size_t i=0; i<service_size_; ++i)
+      for (size_t i=0; i<service_size_; ++i)
       {
         lua_service_list_[i].initialize(lua_gce_path);
         if (lua_reg)
@@ -147,7 +148,7 @@ public:
       }
 #endif
 
-      for (std::size_t i=0; i<attrs_.thread_num_; ++i)
+      for (size_t i=0; i<attrs_.thread_num_; ++i)
       {
         thread_group_.create_thread(
           boost::bind(
@@ -201,12 +202,12 @@ public:
     return lg_;
   }
 
-  std::size_t get_service_size() const
+  size_t get_service_size() const
   {
     return service_size_;
   }
 
-  std::size_t get_concurrency_size() const
+  size_t get_concurrency_size() const
   {
     return concurrency_size_; 
   }
@@ -236,7 +237,7 @@ public:
   }
 
   template <typename Service>
-  Service& select_service(std::size_t index)
+  Service& select_service(size_t index)
   {
     typename Service::type ty;
     return get_service(ty, index);
@@ -259,17 +260,17 @@ public:
 
   nonblocked_actor_t& make_nonblocked_actor()
   {
-    std::size_t i = curr_nonblocked_actor_.fetch_add(1, boost::memory_order_relaxed);
+    size_t i = curr_nonblocked_actor_.fetch_add(1, boost::memory_order_relaxed);
     GCE_VERIFY(i < nonblocked_actor_list_.size())(i)(nonblocked_actor_list_.size())
       .log(lg_, "out of nonblocked actor list size");
     return nonblocked_actor_list_[i];
   }
 
   void register_service(
-    match_t name, aid_t const& svc, detail::actor_type type, std::size_t concurrency_index
+    match_t name, aid_t const& svc, detail::actor_type type, size_t concurrency_index
     )
   {
-    for (std::size_t i=0; i<service_size_; ++i)
+    for (size_t i=0; i<service_size_; ++i)
     {
       register_service(name, svc, threaded_service_list_[i]);
       register_service(name, svc, stackful_service_list_[i]);
@@ -281,17 +282,17 @@ public:
       register_service(name, svc, acceptor_service_list_[i]);
     }
 
-    for (std::size_t i=0, size=nonblocked_actor_list_.size(); i<size; ++i)
+    for (size_t i=0, size=nonblocked_actor_list_.size(); i<size; ++i)
     {
       nonblocked_actor_list_[i].register_service(name, svc, type, concurrency_index);
     }
   }
   
   void deregister_service(
-    match_t name, aid_t const& svc, detail::actor_type type, std::size_t concurrency_index
+    match_t name, aid_t const& svc, detail::actor_type type, size_t concurrency_index
     )
   {
-    for (std::size_t i=0; i<service_size_; ++i)
+    for (size_t i=0; i<service_size_; ++i)
     {
       deregister_service(name, svc, threaded_service_list_[i]);
       deregister_service(name, svc, stackful_service_list_[i]);
@@ -303,17 +304,17 @@ public:
       deregister_service(name, svc, acceptor_service_list_[i]);
     }
 
-    for (std::size_t i=0, size=nonblocked_actor_list_.size(); i<size; ++i)
+    for (size_t i=0, size=nonblocked_actor_list_.size(); i<size; ++i)
     {
       nonblocked_actor_list_[i].deregister_service(name, svc, type, concurrency_index);
     }
   }
 
   void register_socket(
-    ctxid_pair_t ctxid_pr, aid_t const& skt, detail::actor_type type, std::size_t concurrency_index
+    detail::ctxid_pair_t ctxid_pr, aid_t const& skt, detail::actor_type type, size_t concurrency_index
     )
   {
-    for (std::size_t i=0; i<service_size_; ++i)
+    for (size_t i=0; i<service_size_; ++i)
     {
       register_socket(ctxid_pr, skt, threaded_service_list_[i]);
       register_socket(ctxid_pr, skt, stackful_service_list_[i]);
@@ -325,17 +326,17 @@ public:
       register_socket(ctxid_pr, skt, acceptor_service_list_[i]);
     }
 
-    for (std::size_t i=0, size=nonblocked_actor_list_.size(); i<size; ++i)
+    for (size_t i=0, size=nonblocked_actor_list_.size(); i<size; ++i)
     {
       nonblocked_actor_list_[i].register_socket(ctxid_pr, skt, type, concurrency_index);
     }
   }
 
   void deregister_socket(
-    ctxid_pair_t ctxid_pr, aid_t const& skt, detail::actor_type type, std::size_t concurrency_index
+    detail::ctxid_pair_t ctxid_pr, aid_t const& skt, detail::actor_type type, size_t concurrency_index
     )
   {
-    for (std::size_t i=0; i<service_size_; ++i)
+    for (size_t i=0; i<service_size_; ++i)
     {
       deregister_socket(ctxid_pr, skt, threaded_service_list_[i]);
       deregister_socket(ctxid_pr, skt, stackful_service_list_[i]);
@@ -347,7 +348,7 @@ public:
       deregister_socket(ctxid_pr, skt, acceptor_service_list_[i]);
     }
 
-    for (std::size_t i=0, size=nonblocked_actor_list_.size(); i<size; ++i)
+    for (size_t i=0, size=nonblocked_actor_list_.size(); i<size; ++i)
     {
       nonblocked_actor_list_[i].deregister_socket(ctxid_pr, skt, type, concurrency_index);
     }
@@ -358,7 +359,7 @@ public:
   void register_script(std::string const& name, std::string const& script)
   {
     Type ty;
-    for (std::size_t i=0; i<service_size_; ++i)
+    for (size_t i=0; i<service_size_; ++i)
     {
       register_script(ty, name, script, i);
     }
@@ -401,7 +402,7 @@ private:
   {
     work_ = boost::none;
     stopped_ = true;
-    for (std::size_t i=0; i<service_size_; ++i)
+    for (size_t i=0; i<service_size_; ++i)
     {
       stop_service(threaded_service_list_[i]);
       stop_service(stackful_service_list_[i]);
@@ -460,7 +461,7 @@ private:
   }
 
   template <typename Service>
-  void register_socket(ctxid_pair_t ctxid_pr, aid_t const& skt, Service& s)
+  void register_socket(detail::ctxid_pair_t ctxid_pr, aid_t const& skt, Service& s)
   {
     s.get_strand().dispatch(
       boost::bind(
@@ -470,7 +471,7 @@ private:
   }
 
   template <typename Service>
-  void deregister_socket(ctxid_pair_t ctxid_pr, aid_t const& skt, Service& s)
+  void deregister_socket(detail::ctxid_pair_t ctxid_pr, aid_t const& skt, Service& s)
   {
     s.get_strand().dispatch(
       boost::bind(
@@ -480,7 +481,7 @@ private:
   }
 
 #ifdef GCE_LUA
-  void register_script(luaed, std::string const& name, std::string const& script, std::size_t i)
+  void register_script(luaed, std::string const& name, std::string const& script, size_t i)
   {
     lua_service_t& s = lua_service_list_[i];
     s.get_strand().dispatch(
@@ -524,9 +525,9 @@ private:
   }
 
   template <typename Service, typename ServiceList>
-  Service& select_service(std::size_t& curr_svc, ServiceList& svc_list)
+  Service& select_service(size_t& curr_svc, ServiceList& svc_list)
   {
-    std::size_t curr = curr_svc;
+    size_t curr = curr_svc;
     ++curr;
     if (curr >= service_size_)
     {
@@ -536,34 +537,34 @@ private:
     return svc_list[curr];
   }
 
-  threaded_service_t& get_service(threaded, std::size_t index)
+  threaded_service_t& get_service(threaded, size_t index)
   {
     return threaded_service_list_.at(index);
   }
 
-  stackful_service_t& get_service(stackful, std::size_t index)
+  stackful_service_t& get_service(stackful, size_t index)
   {
     return stackful_service_list_.at(index);
   }
 
-  stackless_service_t& get_service(stackless, std::size_t index)
+  stackless_service_t& get_service(stackless, size_t index)
   {
     return stackless_service_list_.at(index);
   }
 
 #ifdef GCE_LUA
-  lua_service_t& get_service(luaed, std::size_t index)
+  lua_service_t& get_service(luaed, size_t index)
   {
     return lua_service_list_.at(index);
   }
 #endif
   
-  socket_service_t& get_service(socket, std::size_t index)
+  socket_service_t& get_service(socket, size_t index)
   {
     return socket_service_list_.at(index);
   }
 
-  acceptor_service_t& get_service(acceptor, std::size_t index)
+  acceptor_service_t& get_service(acceptor, size_t index)
   {
     return acceptor_service_list_.at(index);
   }
@@ -579,9 +580,9 @@ private:
   GCE_CACHE_ALIGNED_VAR(volatile_bool_t, stopped_)
 
   /// select service
-  GCE_CACHE_ALIGNED_VAR(std::size_t, service_size_)
+  GCE_CACHE_ALIGNED_VAR(size_t, service_size_)
 
-  GCE_CACHE_ALIGNED_VAR(std::size_t, concurrency_size_)
+  GCE_CACHE_ALIGNED_VAR(size_t, concurrency_size_)
 
   GCE_CACHE_ALIGNED_VAR(detail::unique_ptr<io_service_t>, ios_)
   GCE_CACHE_ALIGNED_VAR(boost::optional<io_service_t::work>, work_)
@@ -593,20 +594,20 @@ private:
 
   /// threaded actor services
   GCE_CACHE_ALIGNED_VAR(detail::dynarray<threaded_service_t>, threaded_service_list_)
-  GCE_CACHE_ALIGNED_VAR(std::size_t, curr_threaded_svc_)
+  GCE_CACHE_ALIGNED_VAR(size_t, curr_threaded_svc_)
 
   /// stackful actor services
   GCE_CACHE_ALIGNED_VAR(detail::dynarray<stackful_service_t>, stackful_service_list_)
-  GCE_CACHE_ALIGNED_VAR(std::size_t, curr_stackful_svc_)
+  GCE_CACHE_ALIGNED_VAR(size_t, curr_stackful_svc_)
 
   /// stackless actor services
   GCE_CACHE_ALIGNED_VAR(detail::dynarray<stackless_service_t>, stackless_service_list_)
-  GCE_CACHE_ALIGNED_VAR(std::size_t, curr_stackless_svc_)
+  GCE_CACHE_ALIGNED_VAR(size_t, curr_stackless_svc_)
 
 #ifdef GCE_LUA
   /// lua actor services
   GCE_CACHE_ALIGNED_VAR(detail::dynarray<lua_service_t>, lua_service_list_)
-  GCE_CACHE_ALIGNED_VAR(std::size_t, curr_lua_svc_)
+  GCE_CACHE_ALIGNED_VAR(size_t, curr_lua_svc_)
 #endif
 
   /// nonblocked actors
@@ -616,11 +617,11 @@ private:
 
   /// socket actors
   GCE_CACHE_ALIGNED_VAR(detail::dynarray<socket_service_t>, socket_service_list_)
-  GCE_CACHE_ALIGNED_VAR(std::size_t, curr_socket_svc_)
+  GCE_CACHE_ALIGNED_VAR(size_t, curr_socket_svc_)
 
   /// acceptor actors
   GCE_CACHE_ALIGNED_VAR(detail::dynarray<acceptor_service_t>, acceptor_service_list_)
-  GCE_CACHE_ALIGNED_VAR(std::size_t, curr_acceptor_svc_)
+  GCE_CACHE_ALIGNED_VAR(size_t, curr_acceptor_svc_)
 
   /// threaded actors
   GCE_CACHE_ALIGNED_VAR(boost::lockfree::queue<threaded_actor_t*>, threaded_actor_list_)

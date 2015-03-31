@@ -1,0 +1,25 @@
+//
+// Copyright (c) 2009-2015 Nous Xiong (348944179 at qq dot com)
+//
+// Distributed under the Boost Software License, Version 1.0. (See accompanying
+// file LICENSE_1_0.txt or copy at http://www.boost.org/LICENSE_1_0.txt)
+//
+// See https://github.com/nousxiong/gce for latest version.
+//
+
+include = gce.actor.service_id;
+include = gce.actor.match;
+
+namespace = gce.adl;
+
+actor_id
+{
+  gce.adl.match ctxid_;
+  uint64 timestamp_;
+  uint64 uintptr_;
+  uint64 svc_id_;
+  uint8 type_;
+  uint8 in_pool_;
+  uint32 sid_;
+  gce.adl.service_id svc_;
+}

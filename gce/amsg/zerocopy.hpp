@@ -1,61 +1,96 @@
-﻿// (C) Copyright Ning Ding 2012.
-// lordoffox@gmail.com
-// Distributed under the boost Software License, Version 1.0. (See accompany-
-// ing file LICENSE_1_0.txt or copy at http://www.boost.org/LICENSE_1_0.txt)
+﻿///
+/// Copyright (c) 2012 Ning Ding (lordoffox@gmail.com)
+///
+/// Distributed under the Boost Software License, Version 1.0. (See accompanying
+/// file LICENSE_1_0.txt or copy at http://www.boost.org/LICENSE_1_0.txt)
+///
+/// See https://github.com/lordoffox/amsg for latest version.
+///
 
-#ifndef ZERO_COPY_HPP_VNFGHBF54646
-#define ZERO_COPY_HPP_VNFGHBF54646
+#ifndef AMSG_ZEROCOPY_HPP
+#define AMSG_ZEROCOPY_HPP
 
 #include "amsg.hpp"
 
-namespace boost{ namespace amsg
+namespace amsg
 {
-  template <typename error_string_ty>
-  struct basic_zero_copy_buffer : public base_store
+  struct zero_copy_buffer : public basic_store
   {
   private:
-    error_string_ty		m_error_info;
+    std::string		m_error_info;
 
-    unsigned char * m_header_ptr;
-    unsigned char * m_read_ptr;
-    unsigned char * m_write_ptr;
-    unsigned char * m_tail_ptr;
+    unsigned char const* m_read_header_ptr;
+    unsigned char* m_write_header_ptr;
+    unsigned char const* m_read_ptr;
+    unsigned char* m_write_ptr;
+    unsigned char const* m_read_tail_ptr;
+    unsigned char const* m_write_tail_ptr;
     int							m_status;
-    std::size_t			m_length;
 
   public:
-
     enum { good , read_overflow , write_overflow };
 
-
-    basic_zero_copy_buffer( unsigned char * buffer , ::std::size_t length ):m_header_ptr(buffer),m_read_ptr(buffer),m_write_ptr(buffer),m_tail_ptr(buffer+length),m_status(good),m_length(length)
+    zero_copy_buffer()
+      : m_read_header_ptr(0)
+      , m_write_header_ptr(0)
+      , m_read_ptr(0)
+      , m_write_ptr(0)
+      , m_read_tail_ptr(0)
+      , m_write_tail_ptr(0)
+      , m_status(good)
     {
     }
 
-    ~basic_zero_copy_buffer()
+    ~zero_copy_buffer()
     {
     }
 
-    AMSG_INLINE void append_debug_info(const char * info)
+    AMSG_INLINE void set_read(unsigned char const* buffer, ::std::size_t length)
+    {
+      this->m_read_header_ptr = buffer;
+      this->m_read_ptr = this->m_read_header_ptr;
+      this->m_read_tail_ptr = this->m_read_header_ptr + length;
+      this->m_status = good;
+    }
+
+    AMSG_INLINE void set_read(char const* buffer, ::std::size_t length)
+    {
+      set_read((unsigned char const*)buffer, length);
+    }
+
+    AMSG_INLINE void set_write(unsigned char* buffer, ::std::size_t length)
+    {
+      this->m_write_header_ptr = buffer;
+      this->m_write_ptr = this->m_write_header_ptr;
+      this->m_write_tail_ptr = this->m_write_header_ptr + length;
+      this->m_status = good;
+    }
+
+    AMSG_INLINE void set_write(char* buffer, ::std::size_t length)
+    {
+      set_write((unsigned char*)buffer, length);
+    }
+
+    void append_debug_info(const char * info)
     {
       m_error_info.append(info);
     }
 
-    AMSG_INLINE std::size_t read(char * buffer, std::size_t len)
+    std::size_t read(char * buffer,std::size_t len)
     {
-      if(this->m_read_ptr + len > this->m_tail_ptr)
+      if (this->m_read_ptr + len > this->m_read_tail_ptr)
       {
-        m_status = read_overflow;
+        this->m_status = read_overflow;
         return 0;
       }
-      memcpy(buffer,this->m_read_ptr,len);
+      std::memcpy(buffer, this->m_read_ptr, len);
       this->m_read_ptr += len;
       return len;
     }
 
-    AMSG_INLINE unsigned char get_char()
+    unsigned char get_char()
     {
-      if(this->m_read_ptr + 1 > this->m_tail_ptr)
+      if (this->m_read_ptr + 1 > this->m_read_tail_ptr)
       {
         m_status = read_overflow;
         return 0;
@@ -63,27 +98,25 @@ namespace boost{ namespace amsg
       return *m_read_ptr++;
     }
 
-    AMSG_INLINE std::size_t write(const char * buffer, std::size_t len)
+    std::size_t write(const char * buffer,std::size_t len)
     {
-      std::size_t writed_len = this->m_write_ptr + len - this->m_header_ptr;
-      if(writed_len > this->m_length)
+      if (this->m_write_ptr + len > this->m_write_tail_ptr)
       {
-        m_status = write_overflow;
+        this->m_status = write_overflow;
         return 0;
       }
-      memcpy((void*)this->m_write_ptr,buffer,len);
+      std::memcpy((void*)this->m_write_ptr, buffer, len);
       this->m_write_ptr += len;
       return len;
     }
 
-    AMSG_INLINE bool bad(){ return m_status != good; }
+    bool bad(){ return m_status != good || basic_store::error(); }
 
     AMSG_INLINE unsigned char * append_write(std::size_t len)
     {
-      std::size_t writed_len = (::std::size_t)(this->m_write_ptr + len - this->m_header_ptr);
-      if(writed_len > this->m_length)
+      if (this->m_write_ptr + len > this->m_write_tail_ptr)
       {
-        m_status = write_overflow;
+        this->m_status = write_overflow;
         return 0;
       }
       unsigned char * append_ptr = this->m_write_ptr;
@@ -91,54 +124,60 @@ namespace boost{ namespace amsg
       return append_ptr;
     }
 
-    AMSG_INLINE unsigned char * skip_read(std::size_t len)
+    AMSG_INLINE unsigned char const* skip_read(std::size_t len)
     {
-      if(this->m_read_ptr + len > this->m_tail_ptr)
+      if (this->m_read_ptr + len > this->m_read_tail_ptr)
       {
-        m_status = read_overflow;
-        return this->m_read_ptr;
+        this->m_status = read_overflow;
+        return 0;
       }
-      unsigned char * skip_ptr = this->m_read_ptr;
+      unsigned char const* ptr = this->m_read_ptr;
       this->m_read_ptr += len;
-      return skip_ptr;
+      return ptr;
     }
 
-    AMSG_INLINE const unsigned char * read_ptr()
+    AMSG_INLINE void clear_write()
     {
-      return this->m_read_ptr;
-    }
-
-    AMSG_INLINE unsigned char * write_ptr()
-    {
-      return this->m_write_ptr;
+      basic_store::clear();
+      this->m_write_ptr = this->m_write_header_ptr;
     }
 
     AMSG_INLINE void clear()
     {
-      this->m_read_ptr = this->m_header_ptr;
-      this->m_write_ptr = this->m_header_ptr;
+      basic_store::clear();
+      this->m_read_ptr = this->m_read_header_ptr;
+      this->m_write_ptr = this->m_write_header_ptr;
+      m_status = good;
     }
 
-    AMSG_INLINE const unsigned char * data() const
+    AMSG_INLINE unsigned char const* read_ptr() const
     {
-      return this->m_header_ptr;
+      return this->m_read_ptr;
+    }
+
+    AMSG_INLINE unsigned char* write_ptr() const
+    {
+      return this->m_write_ptr;
+    }
+
+    AMSG_INLINE unsigned char* write_data() const
+    {
+      return this->m_write_header_ptr;
     }
 
     AMSG_INLINE ::std::size_t read_length() const
     {
-      return this->m_read_ptr - this->m_header_ptr;
+      return this->m_read_ptr - this->m_read_header_ptr;
     }
 
     AMSG_INLINE ::std::size_t write_length() const
     {
-      return this->m_write_ptr - this->m_header_ptr;
+      return this->m_write_ptr - this->m_write_header_ptr;
     }
   };
 
-  typedef basic_zero_copy_buffer<std::string> zero_copy_buffer;
-
   namespace detail
-{
+  {
 	template<typename store_ty , typename ty>
 	struct value_read_support_zerocopy_impl
 	{
@@ -293,11 +332,11 @@ namespace boost{ namespace amsg
 		}
 	};
 
-	template<typename error_string_ty>
-	struct value_read_support_zerocopy_impl<basic_zero_copy_buffer<error_string_ty>, ::boost::uint16_t>
+  template <>
+	struct value_read_support_zerocopy_impl<zero_copy_buffer, ::boost::uint16_t>
 	{
 		typedef ::boost::uint16_t value_type;
-		typedef basic_zero_copy_buffer<error_string_ty> store_ty;
+		typedef zero_copy_buffer store_ty;
 		static AMSG_INLINE void read(store_ty& store_data, value_type& value)
 		{
 			const int bytes = sizeof(value_type);
@@ -333,12 +372,11 @@ namespace boost{ namespace amsg
 		}
 	};
 
-
-	template<typename error_string_ty>
-	struct value_write_support_zerocopy_impl<basic_zero_copy_buffer<error_string_ty>, ::boost::uint16_t>
+  template <>
+	struct value_write_support_zerocopy_impl<zero_copy_buffer, ::boost::uint16_t>
 	{
 		typedef ::boost::uint16_t value_type;
-		typedef basic_zero_copy_buffer<error_string_ty> store_ty;
+		typedef zero_copy_buffer store_ty;
 		static AMSG_INLINE void write(store_ty& store_data, const value_type& value)
 		{
 			if(value < const_tag_as_type)
@@ -349,8 +387,8 @@ namespace boost{ namespace amsg
 			else
 			{
 				value_type temp = host_to_little_endian16(value);
-				::boost::uint8_t * ptr = (uint8_t *)(&temp);
-				if(value < 0x100)
+				::boost::uint8_t * ptr = (::boost::uint8_t *)(&temp);
+				if(value < 0100)
 				{
 					::boost::uint8_t * wptr = store_data.append_write(2);
 					wptr[0] = 0x80;
@@ -372,11 +410,11 @@ namespace boost{ namespace amsg
 		}
 	};
 
-	template<typename error_string_ty>
-	struct value_read_support_zerocopy_impl<basic_zero_copy_buffer<error_string_ty>,::boost::int16_t>
+  template <>
+	struct value_read_support_zerocopy_impl<zero_copy_buffer,::boost::int16_t>
 	{
 		typedef ::boost::int16_t value_type;
-		typedef basic_zero_copy_buffer<error_string_ty> store_ty;
+		typedef zero_copy_buffer store_ty;
 		static AMSG_INLINE void read(store_ty& store_data, value_type& value)
 		{
 			const int bytes = sizeof(value_type);
@@ -420,11 +458,11 @@ namespace boost{ namespace amsg
 		}
 	};
 
-	template<typename error_string_ty>
-	struct value_write_support_zerocopy_impl<basic_zero_copy_buffer<error_string_ty>,::boost::int16_t>
+  template <>
+	struct value_write_support_zerocopy_impl<zero_copy_buffer,::boost::int16_t>
 	{
 		typedef ::boost::int16_t value_type;
-		typedef basic_zero_copy_buffer<error_string_ty> store_ty;
+		typedef zero_copy_buffer store_ty;
 		static AMSG_INLINE void write(store_ty& store_data, const value_type& value)
 		{
 			if(0 <= value && value < const_tag_as_type)
@@ -442,7 +480,7 @@ namespace boost{ namespace amsg
 					temp = -value;
 				}
 				value_type temp1 = host_to_little_endian16(temp);
-				::boost::uint8_t * ptr = (uint8_t *)(&temp1);
+				::boost::uint8_t * ptr = (::boost::uint8_t *)(&temp1);
 				if(temp < 0x100)
 				{
 					::boost::uint8_t * wptr = store_data.append_write(2);
@@ -465,11 +503,11 @@ namespace boost{ namespace amsg
 		}
 	};
 
-	template<typename error_string_ty>
-	struct value_read_support_zerocopy_impl<basic_zero_copy_buffer<error_string_ty>, ::boost::uint32_t>
+  template <>
+	struct value_read_support_zerocopy_impl<zero_copy_buffer, ::boost::uint32_t>
 	{
 		typedef ::boost::uint32_t value_type;
-		typedef basic_zero_copy_buffer<error_string_ty> store_ty;
+		typedef zero_copy_buffer store_ty;
 		static AMSG_INLINE void read(store_ty& store_data, value_type& value)
 		{
 			const ::std::size_t bytes = sizeof(value_type);
@@ -505,11 +543,11 @@ namespace boost{ namespace amsg
 		}
 	};
 
-	template<typename error_string_ty>
-	struct value_write_support_zerocopy_impl<basic_zero_copy_buffer<error_string_ty>, ::boost::uint32_t>
+  template <>
+	struct value_write_support_zerocopy_impl<zero_copy_buffer, ::boost::uint32_t>
 	{
 		typedef ::boost::uint32_t value_type;
-		typedef basic_zero_copy_buffer<error_string_ty> store_ty;
+		typedef zero_copy_buffer store_ty;
 		static AMSG_INLINE void write(store_ty& store_data, const value_type& value)
 		{
 			if(value < const_tag_as_type)
@@ -520,8 +558,8 @@ namespace boost{ namespace amsg
 			else
 			{
 				value_type temp = host_to_little_endian32(value);
-				::boost::uint8_t * ptr = (uint8_t *)(&temp);
-				if(value < 0x100)
+				::boost::uint8_t * ptr = (::boost::uint8_t *)(&temp);
+				if(value < 0100)
 				{
 					::boost::uint8_t * wptr = store_data.append_write(2);
 					wptr[0] = 0x80;
@@ -560,11 +598,11 @@ namespace boost{ namespace amsg
 		}
 	};
 
-	template<typename error_string_ty>
-	struct value_read_support_zerocopy_impl<basic_zero_copy_buffer<error_string_ty>,::boost::int32_t>
+  template <>
+	struct value_read_support_zerocopy_impl<zero_copy_buffer,::boost::int32_t>
 	{
 		typedef ::boost::int32_t value_type;
-		typedef basic_zero_copy_buffer<error_string_ty> store_ty;
+		typedef zero_copy_buffer store_ty;
 		static AMSG_INLINE void read(store_ty& store_data, value_type& value)
 		{
 			const int bytes = sizeof(value_type);
@@ -608,11 +646,11 @@ namespace boost{ namespace amsg
 		}
 	};
 
-	template<typename error_string_ty>
-	struct value_write_support_zerocopy_impl<basic_zero_copy_buffer<error_string_ty>,::boost::int32_t>
+  template <>
+	struct value_write_support_zerocopy_impl<zero_copy_buffer,::boost::int32_t>
 	{
 		typedef ::boost::int32_t value_type;
-		typedef basic_zero_copy_buffer<error_string_ty> store_ty;
+		typedef zero_copy_buffer store_ty;
 		static AMSG_INLINE void write(store_ty& store_data, const value_type& value)
 		{
 			if(0 <= value && value < const_tag_as_type)
@@ -630,7 +668,7 @@ namespace boost{ namespace amsg
 					temp = -value;
 				}
 				value_type temp1 = host_to_little_endian32(temp);
-				::boost::uint8_t * ptr = (uint8_t *)(&temp1);
+				::boost::uint8_t * ptr = (::boost::uint8_t *)(&temp1);
 				if(temp < 0x100)
 				{
 					::boost::uint8_t * wptr = store_data.append_write(2);
@@ -670,11 +708,11 @@ namespace boost{ namespace amsg
 		}
 	};
 
-	template<typename error_string_ty>
-	struct value_read_support_zerocopy_impl<basic_zero_copy_buffer<error_string_ty>, ::boost::uint64_t>
+  template <>
+	struct value_read_support_zerocopy_impl<zero_copy_buffer, ::boost::uint64_t>
 	{
 		typedef ::boost::uint64_t value_type;
-		typedef basic_zero_copy_buffer<error_string_ty> store_ty;
+		typedef zero_copy_buffer store_ty;
 		static AMSG_INLINE void read(store_ty& store_data, value_type& value)
 		{
 			const int bytes = sizeof(value_type);
@@ -710,11 +748,11 @@ namespace boost{ namespace amsg
 		}
 	};
 
-	template<typename error_string_ty>
-	struct value_write_support_zerocopy_impl<basic_zero_copy_buffer<error_string_ty>, ::boost::uint64_t>
+  template <>
+	struct value_write_support_zerocopy_impl<zero_copy_buffer, ::boost::uint64_t>
 	{
 		typedef ::boost::uint64_t value_type;
-		typedef basic_zero_copy_buffer<error_string_ty> store_ty;
+		typedef zero_copy_buffer store_ty;
 		static AMSG_INLINE void write(store_ty& store_data, const value_type& value)
 		{
 			if(value < const_tag_as_type)
@@ -725,8 +763,8 @@ namespace boost{ namespace amsg
 			else
 			{
 				value_type temp = host_to_little_endian64(value);
-				::boost::uint8_t * ptr = (uint8_t *)(&temp);
-				if(value < 0x100)
+				::boost::uint8_t * ptr = (::boost::uint8_t *)(&temp);
+				if(value < 0100)
 				{
 					::boost::uint8_t * wptr = store_data.append_write(2);
 					wptr[0] = 0x80;
@@ -811,11 +849,11 @@ namespace boost{ namespace amsg
 		}
 	};
 
-	template<typename error_string_ty>
-	struct value_read_support_zerocopy_impl<basic_zero_copy_buffer<error_string_ty>,::boost::int64_t>
+  template <>
+	struct value_read_support_zerocopy_impl<zero_copy_buffer,::boost::int64_t>
 	{
 		typedef ::boost::int64_t value_type;
-		typedef basic_zero_copy_buffer<error_string_ty> store_ty;
+		typedef zero_copy_buffer store_ty;
 		static AMSG_INLINE void read(store_ty& store_data, value_type& value)
 		{
 			const int bytes = sizeof(value_type);
@@ -859,11 +897,11 @@ namespace boost{ namespace amsg
 		}
 	};
 
-	template<typename error_string_ty>
-	struct value_write_support_zerocopy_impl<basic_zero_copy_buffer<error_string_ty>,::boost::int64_t>
+  template <>
+	struct value_write_support_zerocopy_impl<zero_copy_buffer,::boost::int64_t>
 	{
 		typedef ::boost::int64_t value_type;
-		typedef basic_zero_copy_buffer<error_string_ty> store_ty;
+		typedef zero_copy_buffer store_ty;
 		static AMSG_INLINE void write(store_ty& store_data, const value_type& value)
 		{
 			if(0 <= value && value < const_tag_as_type)
@@ -881,7 +919,7 @@ namespace boost{ namespace amsg
 					temp = -value;
 				}
 				value_type temp1 = host_to_little_endian64(temp);
-				::boost::uint8_t * ptr = (uint8_t *)(&temp1);
+				::boost::uint8_t * ptr = (::boost::uint8_t *)(&temp1);
 				if(temp < 0x100)
 				{
 					::boost::uint8_t * wptr = store_data.append_write(2);
@@ -967,126 +1005,126 @@ namespace boost{ namespace amsg
 		}
 	};
 
-	template<typename error_string_ty , int tag>
-	struct value_read_support_impl<basic_zero_copy_buffer<error_string_ty>,::boost::uint8_t,tag>
+	template<int tag>
+	struct value_read_support<zero_copy_buffer,::boost::uint8_t,tag>
 	{
-		typedef value_read_unsigned_char_like_support_zerocopy_impl<basic_zero_copy_buffer<error_string_ty>,::boost::uint8_t> impl_type;
+		typedef value_read_unsigned_char_like_support_zerocopy_impl<zero_copy_buffer,::boost::uint8_t> impl_type;
 	};
 
-	template<typename error_string_ty , int tag>
-	struct value_write_support_impl<basic_zero_copy_buffer<error_string_ty>, ::boost::uint8_t, tag>
+	template<int tag>
+	struct value_write_support<zero_copy_buffer,::boost::uint8_t,tag>
 	{
-		typedef value_write_unsigned_char_like_support_zerocopy_impl<basic_zero_copy_buffer<error_string_ty>,::boost::uint8_t> impl_type;
+		typedef value_write_unsigned_char_like_support_zerocopy_impl<zero_copy_buffer,::boost::uint8_t> impl_type;
 	};
 
-	template<typename error_string_ty , int tag>
-	struct value_read_support_impl<basic_zero_copy_buffer<error_string_ty>, ::boost::int8_t, tag>
+	template<int tag>
+	struct value_read_support<zero_copy_buffer,::boost::int8_t,tag>
 	{
-		typedef value_read_signed_char_like_support_zerocopy_impl<basic_zero_copy_buffer<error_string_ty>,::boost::int8_t> impl_type;
+		typedef value_read_signed_char_like_support_zerocopy_impl<zero_copy_buffer,::boost::int8_t> impl_type;
 	};
 
-	template<typename error_string_ty , int tag>
-	struct value_write_support_impl<basic_zero_copy_buffer<error_string_ty>, ::boost::int8_t, tag>
+	template<int tag>
+	struct value_write_support<zero_copy_buffer,::boost::int8_t,tag>
 	{
-		typedef value_write_signed_char_like_support_zerocopy_impl<basic_zero_copy_buffer<error_string_ty>,::boost::int8_t> impl_type;
+		typedef value_write_signed_char_like_support_zerocopy_impl<zero_copy_buffer,::boost::int8_t> impl_type;
 	};
 
-	template<typename error_string_ty , int tag>
-	struct value_read_support_impl<basic_zero_copy_buffer<error_string_ty>, char, tag>
-	{
-		typedef char value_type;
-		typedef typename ::boost::mpl::if_<
-			::boost::is_signed<value_type>,
-			value_read_signed_char_like_support_zerocopy_impl<basic_zero_copy_buffer<error_string_ty>,value_type>,
-			value_read_unsigned_char_like_support_zerocopy_impl<basic_zero_copy_buffer<error_string_ty>,value_type>
-		>::type impl_type;
-	};
-
-	template<typename error_string_ty , int tag>
-	struct value_write_support_impl<basic_zero_copy_buffer<error_string_ty>, char, tag>
+	template<int tag>
+	struct value_read_support<zero_copy_buffer,char,tag>
 	{
 		typedef char value_type;
 		typedef typename ::boost::mpl::if_<
 			::boost::is_signed<value_type>,
-			value_write_signed_char_like_support_zerocopy_impl<basic_zero_copy_buffer<error_string_ty>,value_type>,
-			value_write_unsigned_char_like_support_zerocopy_impl<basic_zero_copy_buffer<error_string_ty>,value_type>
+			value_read_signed_char_like_support_zerocopy_impl<zero_copy_buffer,value_type>,
+			value_read_unsigned_char_like_support_zerocopy_impl<zero_copy_buffer,value_type>
+		>::type impl_type;
+	};
+
+	template<int tag>
+	struct value_write_support<zero_copy_buffer,char,tag>
+	{
+		typedef char value_type;
+		typedef typename ::boost::mpl::if_<
+			::boost::is_signed<value_type>,
+			value_write_signed_char_like_support_zerocopy_impl<zero_copy_buffer,value_type>,
+			value_write_unsigned_char_like_support_zerocopy_impl<zero_copy_buffer,value_type>
 		>::type impl_type;
 	};
 
 
-	template<typename error_string_ty , int tag>
-	struct value_read_support_impl<basic_zero_copy_buffer<error_string_ty>, ::boost::uint16_t, tag>
+	template<int tag>
+	struct value_read_support<zero_copy_buffer,::boost::uint16_t,tag>
 	{
-		typedef value_read_support_zerocopy_impl<basic_zero_copy_buffer<error_string_ty>,::boost::uint16_t> impl_type;
+		typedef value_read_support_zerocopy_impl<zero_copy_buffer,::boost::uint16_t> impl_type;
 	};
 
-	template<typename error_string_ty , int tag>
-	struct value_write_support_impl<basic_zero_copy_buffer<error_string_ty>, ::boost::uint16_t, tag>
+	template<int tag>
+	struct value_write_support<zero_copy_buffer,::boost::uint16_t,tag>
 	{
-		typedef value_write_support_zerocopy_impl<basic_zero_copy_buffer<error_string_ty>,::boost::uint16_t> impl_type;
+		typedef value_write_support_zerocopy_impl<zero_copy_buffer,::boost::uint16_t> impl_type;
 	};
 
-	template<typename error_string_ty , int tag>
-	struct value_read_support_impl<basic_zero_copy_buffer<error_string_ty>, ::boost::int16_t, tag>
+	template<int tag>
+	struct value_read_support<zero_copy_buffer,::boost::int16_t,tag>
 	{
-		typedef value_read_support_zerocopy_impl<basic_zero_copy_buffer<error_string_ty>,::boost::int16_t> impl_type;
+		typedef value_read_support_zerocopy_impl<zero_copy_buffer,::boost::int16_t> impl_type;
 	};
 
-	template<typename error_string_ty , int tag>
-	struct value_write_support_impl<basic_zero_copy_buffer<error_string_ty>, ::boost::int16_t, tag>
+	template<int tag>
+	struct value_write_support<zero_copy_buffer,::boost::int16_t,tag>
 	{
-		typedef value_write_support_zerocopy_impl<basic_zero_copy_buffer<error_string_ty>,::boost::int16_t> impl_type;
+		typedef value_write_support_zerocopy_impl<zero_copy_buffer,::boost::int16_t> impl_type;
 	};
 
-	template<typename error_string_ty , int tag>
-	struct value_read_support_impl<basic_zero_copy_buffer<error_string_ty>, ::boost::uint32_t, tag>
+	template<int tag>
+	struct value_read_support<zero_copy_buffer,::boost::uint32_t,tag>
 	{
-		typedef value_read_support_zerocopy_impl<basic_zero_copy_buffer<error_string_ty>,::boost::uint32_t> impl_type;
+		typedef value_read_support_zerocopy_impl<zero_copy_buffer,::boost::uint32_t> impl_type;
 	};
 
-	template<typename error_string_ty , int tag>
-	struct value_write_support_impl<basic_zero_copy_buffer<error_string_ty>, ::boost::uint32_t, tag>
+	template<int tag>
+	struct value_write_support<zero_copy_buffer,::boost::uint32_t,tag>
 	{
-		typedef value_write_support_zerocopy_impl<basic_zero_copy_buffer<error_string_ty>,::boost::uint32_t> impl_type;
+		typedef value_write_support_zerocopy_impl<zero_copy_buffer,::boost::uint32_t> impl_type;
 	};
 
-	template<typename error_string_ty , int tag>
-	struct value_read_support_impl<basic_zero_copy_buffer<error_string_ty>, ::boost::int32_t, tag>
+	template<int tag>
+	struct value_read_support<zero_copy_buffer,::boost::int32_t,tag>
 	{
-		typedef value_read_support_zerocopy_impl<basic_zero_copy_buffer<error_string_ty>,::boost::int32_t> impl_type;
+		typedef value_read_support_zerocopy_impl<zero_copy_buffer,::boost::int32_t> impl_type;
 	};
 
-	template<typename error_string_ty , int tag>
-	struct value_write_support_impl<basic_zero_copy_buffer<error_string_ty>, ::boost::int32_t, tag>
+	template<int tag>
+	struct value_write_support<zero_copy_buffer,::boost::int32_t,tag>
 	{
-		typedef value_write_support_zerocopy_impl<basic_zero_copy_buffer<error_string_ty>,::boost::int32_t> impl_type;
+		typedef value_write_support_zerocopy_impl<zero_copy_buffer,::boost::int32_t> impl_type;
 	};
 
-	template<typename error_string_ty , int tag>
-	struct value_read_support_impl<basic_zero_copy_buffer<error_string_ty>, ::boost::uint64_t, tag>
+	template<int tag>
+	struct value_read_support<zero_copy_buffer,::boost::uint64_t,tag>
 	{
-		typedef value_read_support_zerocopy_impl<basic_zero_copy_buffer<error_string_ty>,::boost::uint64_t> impl_type;
+		typedef value_read_support_zerocopy_impl<zero_copy_buffer,::boost::uint64_t> impl_type;
 	};
 
-	template<typename error_string_ty , int tag>
-	struct value_write_support_impl<basic_zero_copy_buffer<error_string_ty>, ::boost::uint64_t, tag>
+	template<int tag>
+	struct value_write_support<zero_copy_buffer,::boost::uint64_t,tag>
 	{
-		typedef value_write_support_zerocopy_impl<basic_zero_copy_buffer<error_string_ty>,::boost::uint64_t> impl_type;
+		typedef value_write_support_zerocopy_impl<zero_copy_buffer,::boost::uint64_t> impl_type;
 	};
 
-	template<typename error_string_ty , int tag>
-	struct value_read_support_impl<basic_zero_copy_buffer<error_string_ty>, ::boost::int64_t, tag>
+	template<int tag>
+	struct value_read_support<zero_copy_buffer,::boost::int64_t,tag>
 	{
-		typedef value_read_support_zerocopy_impl<basic_zero_copy_buffer<error_string_ty>,::boost::int64_t> impl_type;
+		typedef value_read_support_zerocopy_impl<zero_copy_buffer,::boost::int64_t> impl_type;
 	};
 
-	template<typename error_string_ty , int tag>
-	struct value_write_support_impl<basic_zero_copy_buffer<error_string_ty>, ::boost::int64_t, tag>
+	template<int tag>
+	struct value_write_support<zero_copy_buffer,::boost::int64_t,tag>
 	{
-		typedef value_write_support_zerocopy_impl<basic_zero_copy_buffer<error_string_ty>,::boost::int64_t> impl_type;
+		typedef value_write_support_zerocopy_impl<zero_copy_buffer,::boost::int64_t> impl_type;
 	};
 
 
-}}}
+}}
 
 #endif

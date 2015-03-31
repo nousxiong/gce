@@ -90,7 +90,7 @@ public:
   void pri_send(aid_t const& recver, message const& m)
   {
     aid_t target = basic_svc_.filter_aid(recver);
-    if (target)
+    if (target != aid_nil)
     {
       pack& pk = basic_svc_.alloc_pack(target);
       pk.tag_ = get_aid();
@@ -105,7 +105,7 @@ public:
   void pri_send_svc(svcid_t const& recver, message const& m)
   {
     aid_t target = basic_svc_.filter_svcid(recver);
-    if (target)
+    if (target != aid_nil)
     {
       pack& pk = basic_svc_.alloc_pack(target);
       pk.tag_ = get_aid();
@@ -126,7 +126,7 @@ public:
   {
     aid_t target = basic_svc_.filter_aid(recver);
     request_t const* req = m.get_relay<request_t>();
-    if (target)
+    if (target != aid_nil)
     {
       pack& pk = basic_svc_.alloc_pack(target);
       if (req)
@@ -137,7 +137,7 @@ public:
       }
       else if (aid_t const* aid = m.get_relay<aid_t>())
       {
-        GCE_ASSERT(*aid)(recver);
+        GCE_ASSERT(*aid != aid_nil)(recver);
         pk.tag_ = *aid;
         m.clear_relay();
       }
@@ -200,7 +200,7 @@ public:
     aid_t target = basic_svc_.filter_aid(recver);
     aid_t sender = get_aid();
     request_t req(res.get_id(), sender);
-    if (target)
+    if (target != aid_nil)
     {
       pack& pk = basic_svc_.alloc_pack(target);
       pk.tag_ = req;
@@ -223,7 +223,7 @@ public:
     aid_t target = basic_svc_.filter_svcid(recver);
     aid_t sender = get_aid();
     request_t req(res.get_id(), sender);
-    if (target)
+    if (target != aid_nil)
     {
       pack& pk = basic_svc_.alloc_pack(target);
       pk.tag_ = req;
@@ -243,7 +243,7 @@ public:
   void pri_reply(aid_t const& recver, message const& m)
   {
     aid_t target = basic_svc_.filter_aid(recver);
-    if (target)
+    if (target != aid_nil)
     {
       request_t req;
       pack& pk = basic_svc_.alloc_pack(target);
@@ -276,12 +276,12 @@ public:
 
   void pri_spawn(
     sid_t sid, spawn_type type, std::string const& func, 
-    match_t ctxid, std::size_t stack_size
+    match_t ctxid, size_t stack_size
     )
   {
     ctxid_t target;
     aid_t skt = basic_svc_.select_socket(ctxid, &target);
-    GCE_VERIFY(skt)(ctxid)(target).log(lg_, "no socket available");
+    GCE_VERIFY(skt != aid_nil)(ctxid)(target).log(lg_, "no socket available");
 
     if (ctxid == ctxid_nil)
     {
@@ -317,7 +317,7 @@ protected:
     {
       GCE_ASSERT(svc)(recver);
       skt = svc->select_socket(recver.ctxid_);
-      if (!skt)
+      if (skt == aid_nil)
       {
         svc->send_already_exited(get_aid(), recver);
         return;
@@ -336,7 +336,7 @@ protected:
     if (svc)
     {
       aid_t target = is_local ? recver : skt;
-      GCE_ASSERT(target)(recver);
+      GCE_ASSERT(target != aid_nil)(recver);
 
       pack& pk = svc->alloc_pack(target);
       pk.tag_ = link_t(l.get_type(), get_aid());
@@ -355,8 +355,8 @@ protected:
 
     BOOST_FOREACH(link_list_t::value_type& pr, link_list_)
     {
-      aid_t const& target = pr.second ? pr.second : pr.first;
-      GCE_ASSERT(target)(pr.first);
+      aid_t const& target = pr.second != aid_nil ? pr.second : pr.first;
+      GCE_ASSERT(target != aid_nil)(pr.first);
 
       pack& pk = basic_svc_.alloc_pack(target);
       pk.tag_ = exit_t(ec, self_aid);

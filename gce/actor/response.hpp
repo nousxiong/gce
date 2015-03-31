@@ -39,18 +39,6 @@ public:
     return boost::get<T>(&recver_);
   }
 
-  std::string to_string() const
-  {
-    typedef boost::array<char, 32> strbuf_t;
-    std::string rt;
-    rt += "<";
-    rt += boost::lexical_cast<strbuf_t>(id_).cbegin();
-    rt += ".";
-    rt += aid_.to_string();
-    rt += ">";
-    return rt;
-  }
-
 private:
   sid_t id_;
   aid_t aid_;
@@ -60,6 +48,26 @@ private:
 };
 
 typedef response resp_t;
+
+inline std::string to_string(resp_t const& resp)
+{
+  std::string str;
+  str += "resp<";
+  str += boost::lexical_cast<intbuf_t>(resp.get_id()).cbegin();
+  str += ".";
+  str += gce::to_string(resp.get_aid());
+  str += ">";
+  return str;
+}
+}
+
+template<typename CharT, typename TraitsT>
+inline std::basic_ostream<CharT, TraitsT>& operator<<(
+  std::basic_ostream<CharT, TraitsT>& strm, gce::resp_t const& resp
+  )
+{
+  strm << gce::to_string(resp);
+  return strm;
 }
 
 #endif /// GCE_ACTOR_RESPONSE_HPP

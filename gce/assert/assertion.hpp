@@ -470,7 +470,7 @@ private:
     str_.append("  ");
     str_.append(name);
     str_.append(" = ");
-    str_.append(v.to_string());
+    str_.append(to_string(v));
     str_.append("\n");
     return *this;
   }

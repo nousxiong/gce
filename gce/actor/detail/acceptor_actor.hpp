@@ -66,7 +66,7 @@ public:
   }
 
 public:
-  void init(net_option opt)
+  void init(netopt_t opt)
   {
     GCE_ASSERT(stat_ == ready)(stat_).log(lg_, "acceptor_actor status error");
     opt_ = opt;
@@ -100,7 +100,7 @@ public:
     return actor_acceptor;
   }
 
-  static std::size_t get_pool_reserve_size(attributes const& attr)
+  static size_t get_pool_reserve_size(attributes const& attr)
   {
     return attr.acceptor_pool_reserve_size_;
   }
@@ -174,15 +174,15 @@ private:
             {
               GCE_ASSERT(stat_ == on)(stat_);
               ++curr_rebind_num;
-              if (curr_rebind_num <= opt_.rebind_try_)
+              if (curr_rebind_num <= opt_.rebind_try)
               {
                 if (last_tp != min_tp)
                 {
-                  duration_t diff = system_clock_t::now() - last_tp;
-                  if (diff < opt_.rebind_period_.dur_)
+                  duration_t diff = from_chrono(system_clock_t::now() - last_tp);
+                  if (diff < opt_.rebind_period)
                   {
                     errcode_t ignored_ec;
-                    tmr.expires_from_now(opt_.rebind_period_.dur_ - diff);
+                    tmr.expires_from_now(to_chrono(opt_.rebind_period - diff));
                     tmr.async_wait(yield[ignored_ec]);
                   }
                 }
@@ -243,13 +243,13 @@ private:
   {
     socket_actor_t* s = svc.make_actor();
     s->init(opt_);
-    s->start(remote_func_list, prot, opt_.is_router_);
+    s->start(remote_func_list, prot, opt_.is_router != 0);
   }
 
   void make_acceptor(std::string const& ep)
   {
     /// Find protocol name
-    std::size_t pos = ep.find("://");
+    size_t pos = ep.find("://");
     GCE_VERIFY(pos != std::string::npos)(ep)
       .log(lg_, "protocol name parse failed");
 
@@ -257,7 +257,7 @@ private:
     if (prot_name == "tcp")
     {
       /// Parse address
-      std::size_t begin = pos + 3;
+      size_t begin = pos + 3;
       pos = ep.find(':', begin);
       GCE_VERIFY(pos != std::string::npos)(ep)
         .log(lg_, "tcp address parse failed");
@@ -268,8 +268,8 @@ private:
       begin = pos + 1;
       pos = ep.size();
 
-      boost::uint16_t port =
-        boost::lexical_cast<boost::uint16_t>(
+      uint16_t port =
+        boost::lexical_cast<uint16_t>(
           ep.substr(begin, pos - begin)
           );
       acpr_ = boost::in_place(boost::ref(base_t::snd_), address, port);
@@ -317,9 +317,9 @@ private:
   byte_t pad0_[GCE_CACHE_LINE_SIZE];
 
   GCE_CACHE_ALIGNED_VAR(status, stat_)
-  GCE_CACHE_ALIGNED_VAR(net_option, opt_)
+  GCE_CACHE_ALIGNED_VAR(netopt_t, opt_)
 
-  /// thread local vars
+  /// coro local vars
   service_t& svc_;
   boost::optional<tcp::acceptor> acpr_;
   remote_func_list_t remote_func_list_;
