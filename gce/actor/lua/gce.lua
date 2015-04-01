@@ -436,7 +436,7 @@ end
 
 function gce.net_option()
 	if gce.packer == gce.pkr_amsg then
-		return libgce.make_netpot()
+		return libgce.make_netopt()
 	elseif gce.packer == gce.pkr_adata then
 		return netopt_adl.net_option()
 	else

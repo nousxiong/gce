@@ -29,9 +29,12 @@ private:
   {
     try
     {
-      std::size_t echo_num = 100;
+      std::size_t echo_num = 10;
 
+      gce::log::asio_logger lg;
       attributes attrs;
+      attrs.lg_ = boost::bind(&gce::log::asio_logger::output, &lg, _1, "");
+      
       attrs.id_ = atom("router");
       context ctx(attrs);
       attrs.id_ = atom("one");
@@ -53,7 +56,7 @@ private:
       opt.reconn_period = seconds(1);
       connect(base1, "router", "tcp://127.0.0.1:14923", opt);
       connect(base2, "router", "tcp://127.0.0.1:14923", opt);
-      base2.sleep_for(millisecs(100));
+      base2.sleep_for(millisecs(200));
 
       aid_t echo_aid = spawn(base1, "test_lua_actor/service_echo.lua");
       base1->send(echo_aid, "init", echo_svc);

@@ -936,7 +936,7 @@ private:
         return ec;
       }
 
-      GCE_VERIFY(!ec)(ec.value()).log(lg_, ec.message().c_str());
+      GCE_VERIFY(!ec)(ec.value()).msg(ec.message().c_str());
 
       conn_ = true;
       start_heartbeat(boost::bind(&self_t::reconn, this));

@@ -16,9 +16,9 @@ class lua_actor_ut
 public:
   static void run()
   {
-    /*std::cout << "lua_actor_ut test_base begin." << std::endl;
+    std::cout << "lua_actor_ut test_base begin." << std::endl;
     test_base();
-    std::cout << "lua_actor_ut test_base end." << std::endl;*/
+    std::cout << "lua_actor_ut test_base end." << std::endl;
 
     std::cout << "lua_actor_ut test_common begin." << std::endl;
     test_common();

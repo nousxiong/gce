@@ -378,13 +378,13 @@ private:
   void make_self()
   {
     a_ = lua::actor<self_t>::create(L_, this);
-    GCE_VERIFY(a_ != LUA_REFNIL).log(lg_).except<lua_exception>();
+    GCE_VERIFY(a_ != LUA_REFNIL).except<lua_exception>();
   }
 
   void set_self()
   {
     lua_getglobal(L_, "libgce");
-    GCE_VERIFY(gce::lualib::get_ref(L_, "libgce", a_) != 0).log(lg_).except<lua_exception>();
+    GCE_VERIFY(gce::lualib::get_ref(L_, "libgce", a_) != 0).except<lua_exception>();
     lua_setfield(L_, -2, "self");
     lua_pop(L_, 1);
   }

@@ -321,7 +321,7 @@ private:
   void pri_recv0(aid_t& sender, Match type, gce::guard g, duration_t tmo, bool has_match = true)
   {
     pattern patt(tmo);
-    bool has_exit = pri_recv(patt, type, gce::guard());
+    bool has_exit = pri_recv(patt, type, gce::guard(), has_match);
     actor_ref_t& a = base_t::get_actor_ref();
     a.recv(
       boost::bind(

@@ -7,11 +7,11 @@
 -- See https://github.com/nousxiong/gce for latest version.
 --
 
-local gce = require("gce")
+local gce = require('gce')
 
 gce.run_actor(
   function ()
-		local aid = gce.spawn("test_lua_actor/pingpong_ping.lua")
-		gce.send(aid, "init")
+		local aid = gce.spawn('test_lua_actor/pingpong_ping.lua')
+		gce.send(aid, 'init')
 		gce.recv()
   end)

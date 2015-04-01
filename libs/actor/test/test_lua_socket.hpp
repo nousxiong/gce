@@ -31,7 +31,10 @@ public:
     {
       std::size_t echo_num = 10;
 
+      gce::log::asio_logger lg;
       attributes attrs;
+      attrs.lg_ = boost::bind(&gce::log::asio_logger::output, &lg, _1, "");
+      
       attrs.id_ = atom("one");
       context ctx1(attrs);
       attrs.id_ = atom("two");

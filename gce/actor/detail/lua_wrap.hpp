@@ -128,7 +128,7 @@ struct service_id
     svcid_t* rhs = static_cast<svcid_t*>(lua_touserdata(L, 2));
     luaL_argcheck(L, rhs != 0, 2, "'service_id' expected");
 
-    lua_pushboolean(L, lhs == rhs);
+    lua_pushboolean(L, *lhs == *rhs);
     return 1;
   }
 
@@ -277,7 +277,7 @@ struct actor_id
     aid_t* rhs = static_cast<aid_t*>(lua_touserdata(L, 2));
     luaL_argcheck(L, rhs != 0, 2, "'actor_id' expected");
 
-    lua_pushboolean(L, lhs == rhs);
+    lua_pushboolean(L, *lhs == *rhs);
     return 1;
   }
 
@@ -391,7 +391,7 @@ struct match
     match_t* rhs = static_cast<match_t*>(lua_touserdata(L, 2));
     luaL_argcheck(L, rhs != 0, 2, "'match' expected");
 
-    lua_pushboolean(L, lhs == rhs);
+    lua_pushboolean(L, *lhs == *rhs);
     return 1;
   }
 
@@ -725,7 +725,7 @@ struct duration
     gce::duration_t* rhs = static_cast<gce::duration_t*>(lua_touserdata(L, 2));
     luaL_argcheck(L, rhs != 0, 2, "'duration' expected");
 
-    lua_pushboolean(L, lhs == rhs);
+    lua_pushboolean(L, *lhs == *rhs);
     return 1;
   }
 
@@ -872,11 +872,6 @@ struct net_option
 
 static void load(lua_State* L, int arg, netopt_t& netopt)
 {
-#if GCE_PACKER == GCE_AMSG
-  netopt_t* o = static_cast<netopt_t*>(lua_touserdata(L, arg));
-  luaL_argcheck(L, o != 0, arg, "'net_option' expected");
-  netopt = *o;
-#elif GCE_PACKER == GCE_ADATA
   if (arg != -1)
   {
     lua_pushvalue(L, arg);
@@ -886,7 +881,6 @@ static void load(lua_State* L, int arg, netopt_t& netopt)
   {
     lua_pop(L, 1);
   }
-#endif
 }
 
 static void push(lua_State* L, netopt_t const& netopt)
@@ -1128,7 +1122,7 @@ struct actor
 
     proxy_t& a = *o;
 
-    a->send(tid, *msg);
+    a->relay(tid, *msg);
     return 0;
   }
 

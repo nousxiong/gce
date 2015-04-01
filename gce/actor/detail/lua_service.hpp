@@ -213,8 +213,7 @@ public:
     {
       std::string errmsg("gce::lua_exception: ");
       errmsg += lua_tostring(L, -1);
-      GCE_VERIFY(false)(lua_gce_path)
-        .log(lg_, errmsg.c_str()).except<gce::lua_exception>();
+      GCE_VERIFY(false)(lua_gce_path).msg(errmsg.c_str()).except<gce::lua_exception>();
     }
 
     /// init libgce
@@ -265,8 +264,7 @@ public:
     {
       std::string errmsg("gce::lua_exception: ");
       errmsg += lua_tostring(L, -1);
-      GCE_VERIFY(false)
-        .log(lg_, errmsg.c_str()).except<gce::lua_exception>();
+      GCE_VERIFY(false).msg(errmsg.c_str()).except<gce::lua_exception>();
     }
 
     /// set libgce.zero and libgce.infin
@@ -307,20 +305,16 @@ public:
     {
       scr = set_script(name, script);
     }
-    GCE_VERIFY(scr != LUA_REFNIL)(name)
-      .log(lg_).except<gce::lua_exception>();
+    GCE_VERIFY(scr != LUA_REFNIL)(name).except<gce::lua_exception>();
 
     lua_State* L = L_.get();
-    GCE_VERIFY(gce::lualib::get_ref(L, "libgce", scr) != 0)(name)
-      .log(lg_).except<gce::lua_exception>();
+    GCE_VERIFY(gce::lualib::get_ref(L, "libgce", scr) != 0)(name).except<gce::lua_exception>();
 
     if (lua_pcall(L, 0, LUA_MULTRET, 0) != 0)
     {
       std::string errmsg("gce::lua_exception: ");
       errmsg += lua_tostring(L, -1);
-      GCE_VERIFY(false)
-        .log(lg_, errmsg.c_str())
-        .except<gce::lua_exception>();
+      GCE_VERIFY(false).msg(errmsg.c_str()).except<gce::lua_exception>();
     }
   }
 
@@ -334,7 +328,7 @@ public:
     {
       if (luaL_loadfile(L, name.c_str()) != 0)
       {
-        GCE_ERROR(lg_) << lua_tostring(L, -1);
+        GCE_ERROR(lg_)(__FILE__)(__LINE__) << lua_tostring(L, -1);
         return LUA_REFNIL;
       }
     }
@@ -342,7 +336,7 @@ public:
     {
       if (luaL_loadstring(L, script.c_str()) != 0)
       {
-        GCE_ERROR(lg_) << lua_tostring(L, -1);
+        GCE_ERROR(lg_)(__FILE__)(__LINE__) << lua_tostring(L, -1);
         return LUA_REFNIL;
       }
     }

@@ -7,18 +7,18 @@
 -- See https://github.com/nousxiong/gce for latest version.
 --
 
-local gce = require("gce")
+local gce = require('gce')
 
 gce.run_actor(
   function ()
-  	local sender, args = gce.recv("init", gce.aid())
+  	local base_aid, args = gce.recv('init', gce.actor_id)
 		local last_id = args[1]
 
 		local msg
 		sender, args, msg = gce.recv()
-		if (not last_id:is_nil()) then
+		if (last_id ~= gce.aid_nil) then
 			gce.relay(last_id, msg)
 		else
-			gce.reply(sender, "hello")
+			gce.reply(sender, 'hello')
 		end
   end)

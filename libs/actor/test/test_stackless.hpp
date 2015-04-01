@@ -62,6 +62,7 @@ public:
   public:
     void run(stackless_actor self)
     {
+      lg_ = self.get_context().get_logger();
       GCE_REENTER (self)
       {
         for (i_=0; i_<size_; ++i_)
@@ -106,6 +107,8 @@ public:
 
     timer_t tmr_;
     errcode_t ec_;
+
+    gce::log::logger_t lg_;
   };
 
   static void my_thr(context& ctx, aid_t base_id)
@@ -134,7 +137,9 @@ public:
       std::size_t free_actor_num = 10;
       std::size_t user_thr_num = 5;
       std::size_t my_actor_size = free_actor_num + user_thr_num * 2;
+      gce::log::asio_logger lg;
       attributes attrs;
+      attrs.lg_ = boost::bind(&gce::log::asio_logger::output, &lg, _1, "");
       context ctx(attrs);
       threaded_actor base = spawn(ctx);
 

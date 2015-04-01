@@ -162,7 +162,7 @@ public:
   void pri_relay_svc(svcid_t const& recver, message& m)
   {
     aid_t target = basic_svc_.filter_svcid(recver);
-    if (target)
+    if (target != aid_nil)
     {
       pack& pk = basic_svc_.alloc_pack(target);
       if (request_t const* req = m.get_relay<request_t>())
@@ -173,7 +173,7 @@ public:
       }
       else if (aid_t const* aid = m.get_relay<aid_t>())
       {
-        GCE_ASSERT(*aid)(recver);
+        GCE_ASSERT(*aid != aid_nil)(recver);
         pk.tag_ = *aid;
         m.clear_relay();
       }
@@ -281,7 +281,7 @@ public:
   {
     ctxid_t target;
     aid_t skt = basic_svc_.select_socket(ctxid, &target);
-    GCE_VERIFY(skt != aid_nil)(ctxid)(target).log(lg_, "no socket available");
+    GCE_VERIFY(skt != aid_nil)(ctxid)(target).msg("no socket available");
 
     if (ctxid == ctxid_nil)
     {
