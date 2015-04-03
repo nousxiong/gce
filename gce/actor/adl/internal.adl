@@ -7,11 +7,13 @@
 // See https://github.com/nousxiong/gce for latest version.
 //
 
-namespace = gce.adl;
+include = gce.actor.match;
 
-msg_header
+namespace = gce.adl.detail;
+
+header
 {
   uint32 size_;
-  uint64 type_;
+  gce.adl.match type_;
   uint32 tag_offset_;
 }

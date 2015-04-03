@@ -22,7 +22,7 @@
 #include <gce/actor/detail/basic_actor.hpp>
 #include <gce/actor/detail/pack.hpp>
 #include <gce/actor/detail/actor_function.hpp>
-#include <gce/actor/detail/protocol.hpp>
+#include <gce/actor/detail/internal.hpp>
 #include <gce/actor/detail/tcp/socket.hpp>
 #include <boost/asio/placeholders.hpp>
 #include <boost/variant/get.hpp>
@@ -264,7 +264,7 @@ private:
         sktaid_t skt = svc_.select_joint_socket(spw->get_ctxid());
         if (skt == aid_nil)
         {
-          send_spawn_ret(spw, pk, spawn_no_socket, nil_aid_, true);
+          send_spawn_ret(spw, pk, spawn_no_socket, aid_nil, true);
         }
         else
         {
@@ -282,7 +282,7 @@ private:
           typename remote_func_list_t::iterator itr(remote_func_list_.find(func));
           if (itr == remote_func_list_.end())
           {
-            send_spawn_ret(spw, pk, spawn_func_not_found, nil_aid_, true);
+            send_spawn_ret(spw, pk, spawn_func_not_found, aid_nil, true);
           }
           else
           {
@@ -396,7 +396,7 @@ private:
   {
     spawn_type type = spw.get_type();
     GCE_ASSERT(type == spw_stackful)(type);
-    aid_t aid = make_stackful_actor<context_t>(nil_aid_, svc, f.af_, spw.get_stack_size());
+    aid_t aid = make_stackful_actor<context_t>(aid_nil, svc, f.af_, spw.get_stack_size());
     base_t::snd_.post(
       boost::bind(
         &self_t::end_spawn_remote_actor, this, spw, aid
@@ -410,7 +410,7 @@ private:
   {
     spawn_type type = spw.get_type();
     GCE_ASSERT(type == spw_stackless)(type);
-    aid_t aid = make_stackless_actor<context_t>(nil_aid_, svc, f.ef_);
+    aid_t aid = make_stackless_actor<context_t>(aid_nil, svc, f.ef_);
     base_t::snd_.post(
       boost::bind(
         &self_t::end_spawn_remote_actor, this, spw, aid
@@ -421,7 +421,7 @@ private:
 #ifdef GCE_LUA
   void spawn_remote_lua_actor(lua_service_t& svc, spawn_t spw, std::string const& script)
   {
-    aid_t aid = svc.spawn_actor(script, nil_aid_, no_link);
+    aid_t aid = svc.spawn_actor(script, aid_nil, no_link);
     base_t::snd_.post(
       boost::bind(
         &self_t::end_spawn_remote_actor, this, spw, aid
@@ -481,18 +481,19 @@ private:
     GCE_ASSERT(skt_)(m);
     GCE_VERIFY(m.size() <= GCE_MAX_MSG_SIZE)(m);
 
-    msg_header hdr;
-    hdr.size_ = (uint32_t)m.size();
-    hdr.type_ = m.get_type();
-    hdr.tag_offset_ = m.get_tag_offset();
+    header_t hdr = make_header((uint32_t)m.size(), m.get_type(), m.get_tag_offset());
 
-    byte_t buf[sizeof(msg_header)];
-    amsg::zero_copy_buffer zbuf;
-    zbuf.set_write(buf, sizeof(msg_header));
-    amsg::write(zbuf, hdr);
+    /// shouldn't greater than this...
+    BOOST_ASSERT(packer::size_of(hdr) <= sizeof(header_t) * 3);
+
+    byte_t buf[sizeof(header_t) * 3];
+    size_t len = packer::size_of(hdr);
+    pkr_.set_write(buf, packer::size_of(hdr));
+    pkr_.write(hdr);
+    size_t wt_len = pkr_.write_length();
 
     skt_->send(
-      buf, zbuf.write_length(),
+      buf, pkr_.write_length(),
       m.data(), hdr.size_
       );
   }
@@ -862,22 +863,23 @@ private:
 private:
   bool parse_message(message& msg)
   {
-    msg_header hdr;
+    header_t hdr;
     byte_t* data = recv_cache_.get_read_data();
-    size_t remain_size = recv_cache_.remain_read_size();
+    size_t const remain_size = recv_cache_.remain_read_size();
 
-    amsg::zero_copy_buffer zbuf;
-    zbuf.set_read(data, remain_size);
-    amsg::read(zbuf, hdr);
-    if (zbuf.bad())
+    pkr_.set_read(data, remain_size);
+    packer::error_code_t ec = packer::ok();
+    pkr_.read(hdr, ec);
+    if (ec != packer::ok())
     {
+      pkr_.clear();
       return false;
     }
 
     GCE_VERIFY(hdr.size_ <= GCE_MAX_MSG_SIZE)(hdr.size_)(remain_size)(hdr.type_)
       .log(lg_, "message overlength");
 
-    size_t header_size = zbuf.read_length();
+    size_t const header_size = pkr_.read_length();
     if (remain_size - header_size < hdr.size_)
     {
       return false;
@@ -891,7 +893,7 @@ private:
     {
       GCE_ASSERT(recv_cache_.write_size() >= recv_cache_.read_size())
         (recv_cache_.write_size())(recv_cache_.read_size())(msg);
-      size_t copy_size =
+      size_t const copy_size =
         recv_cache_.write_size() - recv_cache_.read_size();
       std::memmove(recv_buffer_, recv_cache_.get_read_data(), copy_size);
       recv_cache_.clear();
@@ -1085,8 +1087,9 @@ private:
   remote_func_list_t remote_func_list_;
 
   bool is_router_;
-  aid_t const nil_aid_;
   log::logger_t& lg_;
+
+  packer pkr_;
 };
 }
 }

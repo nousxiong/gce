@@ -24,6 +24,22 @@ namespace gce
 class packer
 {
 public:
+#if GCE_PACKER == GCE_AMSG
+  typedef amsg::error_code_t error_code_t;
+#elif GCE_PACKER == GCE_ADATA
+  typedef adata::error_code_t error_code_t;
+#endif
+
+  static error_code_t ok()
+  {
+#if GCE_PACKER == GCE_AMSG
+    return amsg::success;
+#elif GCE_PACKER == GCE_ADATA
+    return adata::success;
+#endif
+  }
+
+public:
   template <typename T>
   static size_t size_of(T const& t)
   {
@@ -56,6 +72,20 @@ public:
   }
 
   template <typename T>
+  void read(T& t, error_code_t& ec)
+  {
+#if GCE_PACKER == GCE_AMSG
+    amsg::read(stream_, t);
+#elif GCE_PACKER == GCE_ADATA
+    adata::read(stream_, t);
+#endif
+    if (stream_.bad())
+    {
+      ec = stream_.error_code();
+    }
+  }
+
+  template <typename T>
   void write(T const& t)
   {
 #if GCE_PACKER == GCE_AMSG
@@ -64,6 +94,20 @@ public:
     adata::write(stream_, t);
 #endif
     GCE_VERIFY(!stream_.bad()).msg(stream_.message());
+  }
+
+  template <typename T>
+  void write(T const& t, error_code_t& ec)
+  {
+#if GCE_PACKER == GCE_AMSG
+    amsg::write(stream_, t);
+#elif GCE_PACKER == GCE_ADATA
+    adata::write(stream_, t);
+#endif
+    if (stream_.bad())
+    {
+      ec = stream_.error_code();
+    }
   }
 
   void write(byte_t const* buffer, size_t len)
@@ -77,6 +121,11 @@ public:
     byte_t const* ptr = stream_.skip_read(len);
     GCE_VERIFY(!stream_.bad()).msg(stream_.message());
     return ptr;
+  }
+
+  void clear()
+  {
+    stream_.clear();
   }
 
   size_t read_length() const
