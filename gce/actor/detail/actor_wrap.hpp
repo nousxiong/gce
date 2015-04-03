@@ -25,6 +25,9 @@ struct actor_wrap
 {
 };
 
+
+static match_t default_ = make_match(0);
+
 template <typename ActorRef>
 struct actor_wrap<ActorRef, false>
   : public sender<ActorRef>
@@ -35,223 +38,292 @@ struct actor_wrap<ActorRef, false>
 
   aid_t recv(duration_t tmo = infin)
   {
-    return pri_recv(gce::guard(), tmo);
+    return pri_recv(gce::guard(), tmo).first;
   }
 
   aid_t recv(gce::guard g, duration_t tmo = infin)
   {
-    return pri_recv(g, tmo);
+    return pri_recv(g, tmo).first;
   }
 
   template <typename Match>
   aid_t recv(Match type, duration_t tmo = infin)
   {
-    return pri_recv(type, gce::guard(), tmo);
+    return pri_recv(type, gce::guard(), tmo).first;
   }
   
   template <typename Match>
   aid_t recv(Match type, gce::guard g, duration_t tmo = infin)
   {
-    return pri_recv(type, g, tmo);
+    return pri_recv(type, g, tmo).first;
   }
 
   template <typename Match, typename A1>
   aid_t recv(Match type, A1& a1, duration_t tmo = infin)
   {
     message msg;
-    aid_t sender = pri_recv(type, gce::guard(), tmo, msg);
-    if (sender != aid_nil)
+    std::pair<aid_t, bool> pr = pri_recv(type, gce::guard(), tmo, msg);
+    if (pr.second)
     {
       msg >> a1;
     }
-    return sender;
+    return pr.first;
   }
 
   template <typename Match, typename A1>
   aid_t recv(Match type, gce::guard g, A1& a1, duration_t tmo = infin)
   {
     message msg;
-    aid_t sender = pri_recv(type, g, tmo, msg);
-    if (sender != aid_nil)
+    std::pair<aid_t, bool> pr = pri_recv(type, g, tmo, msg);
+    if (pr.second)
     {
       msg >> a1;
     }
-    return sender;
+    return pr.first;
   }
 
   template <typename Match, typename A1, typename A2>
   aid_t recv(Match type, A1& a1, A2& a2, duration_t tmo = infin)
   {
     message msg;
-    aid_t sender = pri_recv(type, gce::guard(), tmo, msg);
-    if (sender != aid_nil)
+    std::pair<aid_t, bool> pr = pri_recv(type, gce::guard(), tmo, msg);
+    if (pr.second)
     {
       msg >> a1 >> a2;
     }
-    return sender;
+    return pr.first;
   }
 
   template <typename Match, typename A1, typename A2>
   aid_t recv(Match type, gce::guard g, A1& a1, A2& a2, duration_t tmo = infin)
   {
     message msg;
-    aid_t sender = pri_recv(type, g, tmo, msg);
-    if (sender)
+    std::pair<aid_t, bool> pr = pri_recv(type, g, tmo, msg);
+    if (pr.second)
     {
       msg >> a1 >> a2;
     }
-    return sender;
+    return pr.first;
   }
 
   template <typename Match, typename A1, typename A2, typename A3>
   aid_t recv(Match type, A1& a1, A2& a2, A3& a3, duration_t tmo = infin)
   {
     message msg;
-    aid_t sender = pri_recv(type, gce::guard(), tmo, msg);
-    if (sender)
+    std::pair<aid_t, bool> pr = pri_recv(type, gce::guard(), tmo, msg);
+    if (pr.second)
     {
       msg >> a1 >> a2 >> a3;
     }
-    return sender;
+    return pr.first;
   }
 
   template <typename Match, typename A1, typename A2, typename A3>
   aid_t recv(Match type, gce::guard g, A1& a1, A2& a2, A3& a3, duration_t tmo = infin)
   {
     message msg;
-    aid_t sender = pri_recv(type, g, tmo, msg);
-    if (sender)
+    std::pair<aid_t, bool> pr = pri_recv(type, g, tmo, msg);
+    if (pr.second)
     {
       msg >> a1 >> a2 >> a3;
     }
-    return sender;
+    return pr.first;
   }
 
   template <typename Match, typename A1, typename A2, typename A3, typename A4>
   aid_t recv(Match type, A1& a1, A2& a2, A3& a3, A4& a4, duration_t tmo = infin)
   {
     message msg;
-    aid_t sender = pri_recv(type, gce::guard(), tmo, msg);
-    if (sender)
+    std::pair<aid_t, bool> pr = pri_recv(type, gce::guard(), tmo, msg);
+    if (pr.second)
     {
       msg >> a1 >> a2 >> a3 >> a4;
     }
-    return sender;
+    return pr.first;
   }
 
   template <typename Match, typename A1, typename A2, typename A3, typename A4>
   aid_t recv(Match type, gce::guard g, A1& a1, A2& a2, A3& a3, A4& a4, duration_t tmo = infin)
   {
     message msg;
-    aid_t sender = pri_recv(type, g, tmo, msg);
-    if (sender)
+    std::pair<aid_t, bool> pr = pri_recv(type, g, tmo, msg);
+    if (pr.second)
     {
       msg >> a1 >> a2 >> a3 >> a4;
     }
-    return sender;
+    return pr.first;
   }
 
   template <typename Match, typename A1, typename A2, typename A3, typename A4, typename A5>
   aid_t recv(Match type, A1& a1, A2& a2, A3& a3, A4& a4, A5& a5, duration_t tmo = infin)
   {
     message msg;
-    aid_t sender = pri_recv(type, gce::guard(), tmo, msg);
-    if (sender)
+    std::pair<aid_t, bool> pr = pri_recv(type, gce::guard(), tmo, msg);
+    if (pr.second)
     {
       msg >> a1 >> a2 >> a3 >> a4 >> a5;
     }
-    return sender;
+    return pr.first;
   }
 
   template <typename Match, typename A1, typename A2, typename A3, typename A4, typename A5>
   aid_t recv(Match type, gce::guard g, A1& a1, A2& a2, A3& a3, A4& a4, A5& a5, duration_t tmo = infin)
   {
     message msg;
-    aid_t sender = pri_recv(type, g, tmo, msg);
-    if (sender)
+    std::pair<aid_t, bool> pr = pri_recv(type, g, tmo, msg);
+    if (pr.second)
     {
       msg >> a1 >> a2 >> a3 >> a4 >> a5;
     }
-    return sender;
+    return pr.first;
   }
 
   aid_t respond(resp_t res, duration_t tmo = infin)
   {
     message msg;
-    return respond_impl(typename actor_ref_t::type(), base_t::get_actor_ref(), res, msg, tmo);
+    return respond_impl(typename actor_ref_t::type(), base_t::get_actor_ref(), res, msg, tmo).first;
   }
 
   template <typename A1>
   aid_t respond(resp_t res, A1& a1, duration_t tmo = infin)
   {
     message msg;
-    aid_t sender = respond_impl(typename actor_ref_t::type(), base_t::get_actor_ref(), res, msg, tmo);
-    if (sender)
+    std::pair<aid_t, bool> pr = respond_impl(typename actor_ref_t::type(), base_t::get_actor_ref(), res, msg, tmo);
+    if (pr.second)
     {
       msg >> a1;
     }
-    return sender;
+    return pr.first;
   }
 
   template <typename A1, typename A2>
   aid_t respond(resp_t res, A1& a1, A2& a2, duration_t tmo = infin)
   {
     message msg;
-    aid_t sender = respond_impl(typename actor_ref_t::type(), base_t::get_actor_ref(), res, msg, tmo);
-    if (sender)
+    std::pair<aid_t, bool> pr = respond_impl(typename actor_ref_t::type(), base_t::get_actor_ref(), res, msg, tmo);
+    if (pr.second)
     {
       msg >> a1 >> a2;
     }
-    return sender;
+    return pr.first;
   }
 
   template <typename A1, typename A2, typename A3>
   aid_t respond(resp_t res, A1& a1, A2& a2, A3& a3, duration_t tmo = infin)
   {
     message msg;
-    aid_t sender = respond_impl(typename actor_ref_t::type(), base_t::get_actor_ref(), res, msg, tmo);
-    if (sender)
+    std::pair<aid_t, bool> pr = respond_impl(typename actor_ref_t::type(), base_t::get_actor_ref(), res, msg, tmo);
+    if (pr.second)
     {
       msg >> a1 >> a2 >> a3;
     }
-    return sender;
+    return pr.first;
   }
 
   template <typename A1, typename A2, typename A3, typename A4>
   aid_t respond(resp_t res, A1& a1, A2& a2, A3& a3, A4& a4, duration_t tmo = infin)
   {
     message msg;
-    aid_t sender = respond_impl(typename actor_ref_t::type(), base_t::get_actor_ref(), res, msg, tmo);
-    if (sender)
+    std::pair<aid_t, bool> pr = respond_impl(typename actor_ref_t::type(), base_t::get_actor_ref(), res, msg, tmo);
+    if (pr.second)
     {
       msg >> a1 >> a2 >> a3 >> a4;
     }
-    return sender;
+    return pr.first;
   }
 
   template <typename A1, typename A2, typename A3, typename A4, typename A5>
   aid_t respond(resp_t res, A1& a1, A2& a2, A3& a3, A4& a4, A5& a5, duration_t tmo = infin)
   {
     message msg;
-    aid_t sender = respond_impl(typename actor_ref_t::type(), base_t::get_actor_ref(), res, msg, tmo);
-    if (sender)
+    std::pair<aid_t, bool> pr = respond_impl(typename actor_ref_t::type(), base_t::get_actor_ref(), res, msg, tmo);
+    if (pr.second)
     {
       msg >> a1 >> a2 >> a3 >> a4 >> a5;
     }
-    return sender;
+    return pr.first;
   }
 
-  template <typename Match>
-  receiver_t& match(Match type)
+  template <typename Match1>
+  receiver_t& match(Match1 type1, match_t& matched = default_)
   {
-    rcv_.match(type);
+    rcv_.add_match(type1);
+    if (&matched != &default_)
+    {
+      rcv_.set_match(matched);
+    }
     return rcv_;
   }
 
-  template <typename Rep, typename Period>
-  receiver_t& timeout(boost::chrono::duration<Rep, Period> tmo)
+  template <typename Match1, typename Match2>
+  receiver_t& match(Match1 type1, Match2 type2, match_t& matched = default_)
+  {
+    rcv_.add_match(type1);
+    rcv_.add_match(type2);
+    if (&matched != &default_)
+    {
+      rcv_.set_match(matched);
+    }
+    return rcv_;
+  }
+
+  template <typename Match1, typename Match2, typename Match3>
+  receiver_t& match(Match1 type1, Match2 type2, Match3 type3, match_t& matched = default_)
+  {
+    rcv_.add_match(type1);
+    rcv_.add_match(type2);
+    rcv_.add_match(type3);
+    if (&matched != &default_)
+    {
+      rcv_.set_match(matched);
+    }
+    return rcv_;
+  }
+
+  template <typename Match1, typename Match2, typename Match3, typename Match4>
+  receiver_t& match(Match1 type1, Match2 type2, Match3 type3, Match3 type4, match_t& matched = default_)
+  {
+    rcv_.add_match(type1);
+    rcv_.add_match(type2);
+    rcv_.add_match(type3);
+    rcv_.add_match(type4);
+    if (&matched != &default_)
+    {
+      rcv_.set_match(matched);
+    }
+    return rcv_;
+  }
+
+  template <typename Match1, typename Match2, typename Match3, typename Match4, typename Match5>
+  receiver_t& match(Match1 type1, Match2 type2, Match3 type3, Match3 type4, Match5 type5, match_t& matched = default_)
+  {
+    rcv_.add_match(type1);
+    rcv_.add_match(type2);
+    rcv_.add_match(type3);
+    rcv_.add_match(type4);
+    rcv_.add_match(type5);
+    if (&matched != &default_)
+    {
+      rcv_.set_match(matched);
+    }
+    return rcv_;
+  }
+
+  receiver_t& match(resp_t res)
+  {
+    rcv_.set_response(res);
+    return rcv_;
+  }
+
+  receiver_t& timeout(duration_t tmo)
   {
     rcv_.timeout(tmo);
+    return rcv_;
+  }
+
+  receiver_t& timeout(duration_t tmo, errcode_t& ec)
+  {
+    rcv_.timeout(tmo, ec);
     return rcv_;
   }
 
@@ -259,6 +331,25 @@ struct actor_wrap<ActorRef, false>
   receiver_t& guard(Recver const& recver)
   {
     rcv_.guard(recver);
+    return rcv_;
+  }
+
+  template <typename Recver>
+  receiver_t& guard(Recver const& recver, errcode_t& ec)
+  {
+    rcv_.guard(recver, ec);
+    return rcv_;
+  }
+
+  receiver_t& guard(errcode_t& ec)
+  {
+    rcv_.guard(ec);
+    return rcv_;
+  }
+
+  receiver_t& raw(message& msg)
+  {
+    rcv_.raw(msg);
     return rcv_;
   }
 
@@ -271,7 +362,7 @@ struct actor_wrap<ActorRef, false>
 
 private:
   template <typename Match>
-  aid_t pri_recv(Match type, gce::guard g, duration_t tmo, message& msg, bool has_match = true)
+  std::pair<aid_t, bool> pri_recv(Match type, gce::guard g, duration_t tmo, message& msg, bool has_match = true)
   {
     pattern patt(tmo);
     if (has_match)
@@ -283,13 +374,13 @@ private:
   }
 
   template <typename Match>
-  aid_t pri_recv(Match type, gce::guard g, duration_t tmo)
+  std::pair<aid_t, bool> pri_recv(Match type, gce::guard g, duration_t tmo)
   {
     message msg;
     return pri_recv(type, g, tmo, msg);
   }
 
-  aid_t pri_recv(gce::guard g, duration_t tmo)
+  std::pair<aid_t, bool> pri_recv(gce::guard g, duration_t tmo)
   {
     message msg;
     return pri_recv(match_nil, g, tmo, msg, false);

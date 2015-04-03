@@ -12,6 +12,7 @@
 
 #include <gce/actor/config.hpp>
 #include <gce/actor/detail/actor_wrap.hpp>
+#include <gce/actor/detail/listener.hpp>
 
 namespace gce
 {
@@ -52,6 +53,11 @@ public:
   actor_wrap_t* operator->()
   {
     return &aw_;
+  }
+
+  listener* get_listener()
+  {
+    return &a_;
   }
 
 private:
@@ -179,6 +185,11 @@ public:
     return &aw_;
   }
 
+  listener* get_listener()
+  {
+    return &a_;
+  }
+
 private:
   stackful_actor_t& a_;
   actor_wrap_t aw_;
@@ -299,6 +310,11 @@ public:
   actor_wrap_t* operator->()
   {
     return &aw_;
+  }
+
+  listener* get_listener()
+  {
+    return &a_;
   }
 
 private:
@@ -454,6 +470,11 @@ public:
   actor_wrap_t* operator->()
   {
     return &aw_;
+  }
+
+  listener* get_listener()
+  {
+    return &a_;
   }
 
 private:

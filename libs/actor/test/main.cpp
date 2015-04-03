@@ -42,6 +42,7 @@ static std::size_t const test_count = 1;
 #include "test_message.hpp"
 #include "test_relay.hpp"
 #include "test_common_relay.hpp"
+#include "test_addon.hpp"
 #include "test_socket.hpp"
 #include "test_socket_broken.hpp"
 #include "test_remote_link.hpp"
@@ -81,6 +82,7 @@ int main()
     gce::relay_ut::run();
     gce::common_relay_ut::run();
     gce::message_ut::run();
+    gce::addon_ut::run();
 
     /// remote test
     gce::socket_ut::run();

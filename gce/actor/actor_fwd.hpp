@@ -41,6 +41,7 @@ struct stackless {};
 struct nonblocked {};
 struct socket {};
 struct acceptor {};
+struct addon {};
 #ifdef GCE_LUA
 struct luaed {};
 #endif
@@ -74,6 +75,7 @@ enum actor_type
   actor_nonblocked,
   actor_socket,
   actor_acceptor,
+  actor_addon,
 #ifdef GCE_LUA
   actor_luaed,
 #endif

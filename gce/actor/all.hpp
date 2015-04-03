@@ -12,6 +12,7 @@
 
 #include <gce/actor/context.hpp>
 #include <gce/actor/actor.hpp>
+#include <gce/actor/addon.hpp>
 #include <gce/actor/message.hpp>
 #include <gce/actor/remote.hpp>
 #include <gce/actor/spawn.hpp>
@@ -25,6 +26,7 @@
 #include <gce/actor/actor_id.hpp>
 #include <gce/actor/net_option.hpp>
 #include <gce/actor/adaptor.hpp>
+#include <gce/actor/asio.hpp>
 #include <gce/actor/exception.hpp>
 
 #endif /// GCE_ACTOR_ALL_HPP

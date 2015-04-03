@@ -22,6 +22,7 @@ class listener
 {
 public:
   virtual void on_recv(pack&) = 0;
+  virtual void on_addon_recv(pack&) = 0;
 };
 }
 }

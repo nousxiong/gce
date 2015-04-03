@@ -115,6 +115,15 @@ public:
     handle_recv(pk);
   }
 
+  void on_addon_recv(pack& pk)
+  {
+    base_t::snd_.dispatch(
+      boost::bind(
+        &self_t::handle_recv, this, pk
+        )
+      );
+  }
+
   void send(aid_t const& recver, message const& m)
   {
     base_t::pri_send(recver, m);

@@ -13,6 +13,7 @@
 #include <gce/actor/config.hpp>
 #include <gce/actor/actor_id.hpp>
 #include <gce/actor/detail/pack.hpp>
+#include <gce/actor/detail/listener.hpp>
 #include <set>
 #include <map>
 
@@ -49,6 +50,7 @@ public:
 
   void send(aid_t const& recver, pack& pk)
   {
+    BOOST_ASSERT(recver.type_ != (byte_t)actor_addon);
     pk.concurrency_index_ = index_;
     pk.type_ = type_;
     bool already_exit = true;
@@ -78,6 +80,16 @@ public:
     {
       pk.expiry_ = true;
       send_already_exit(pk);
+    }
+  }
+
+  void send(listener* a, pack& pk)
+  {
+    pk.concurrency_index_ = index_;
+    pk.type_ = type_;
+    if (a)
+    {
+      a->on_addon_recv(pk);
     }
   }
 

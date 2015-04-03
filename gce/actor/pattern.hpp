@@ -96,6 +96,8 @@ struct pattern
 
   duration_t timeout_;
   match_list_t match_list_;
+
+  /// meta data, internal use
   detail::recver_t recver_;
 };
 

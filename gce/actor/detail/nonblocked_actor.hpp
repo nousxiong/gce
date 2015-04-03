@@ -245,6 +245,11 @@ public:
     pack_queue_.push(&cac_que.que_.back());
   }
 
+  void on_addon_recv(pack& pk)
+  {
+    on_recv(pk);
+  }
+
   void register_service(match_t name, aid_t const& svc, actor_type type, size_t concurrency_index)
   {
     pack pk = make_register_pack(type, concurrency_index);

@@ -33,6 +33,11 @@ private:
       self->send(base_id, "catch", i);
       ++i;
       self->send(base_id, "catch", i);
+
+      aid_t sender = self->match("resp").recv();
+      GCE_VERIFY(sender == base_id);
+      self->send(sender, exit);
+
       ++i;
       self->send(base_id, "catch", i);
     }
@@ -60,6 +65,13 @@ private:
       base->match("catch").guard(aid1).recv(i);
       GCE_VERIFY(i == 1);
       std::cout << "catch " << i << std::endl;
+
+      resp_t res = base->request(aid1, "resp", i);
+      errcode_t ec;
+      base->match(res).guard(ec).raw(msg).respond(i);
+      GCE_VERIFY(ec);
+      GCE_VERIFY(msg.get_type() == exit);
+
       base->match("not_catch").guard(aid1).recv(i);
       GCE_VERIFY(false);
     }

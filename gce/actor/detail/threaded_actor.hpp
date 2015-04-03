@@ -249,6 +249,15 @@ public:
       );
   }
 
+  void on_addon_recv(pack& pk)
+  {
+    base_t::snd_.dispatch(
+      boost::bind(
+        &self_t::handle_recv, this, pk
+        )
+      );
+  }
+
   sid_t spawn(spawn_type type, std::string const& func, match_t ctxid, size_t stack_size)
   {
     sid_t sid = base_t::new_request();

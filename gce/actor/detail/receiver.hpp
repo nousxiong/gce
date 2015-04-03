@@ -16,6 +16,7 @@
 #include <gce/actor/message.hpp>
 #include <gce/actor/guard.hpp>
 #include <gce/actor/detail/recv.hpp>
+#include <utility>
 
 namespace gce
 {
@@ -27,18 +28,16 @@ struct basic_receiver
   typedef ActorRef actor_ref_t;
   typedef SubType sub_t;
 
-  template <typename Match>
-  sub_t& match(Match type)
+  sub_t& timeout(duration_t tmo)
   {
-    type_ = to_match(type);
-    has_match_ = true;
+    tmo_ = tmo;
     return (sub_t&)*this;
   }
 
-  template <typename Rep, typename Period>
-  sub_t& timeout(boost::chrono::duration<Rep, Period> tmo)
+  sub_t& timeout(duration_t tmo, errcode_t& ec)
   {
     tmo_ = tmo;
+    meta_.tmo_ = &ec;
     return (sub_t&)*this;
   }
 
@@ -49,11 +48,31 @@ struct basic_receiver
     return (sub_t&)*this;
   }
 
+  template <typename Recver>
+  sub_t& guard(Recver const& recver, errcode_t& ec)
+  {
+    g_.recver_ = recver;
+    meta_.guard_ = &ec;
+    return (sub_t&)*this;
+  }
+
+  sub_t& guard(errcode_t& ec)
+  {
+    meta_.guard_ = &ec;
+    return (sub_t&)*this;
+  }
+
+  sub_t& raw(message& msg)
+  {
+    meta_.msg_ = &msg;
+    return (sub_t&)*this;
+  }
+
   /// internal use
   basic_receiver()
     : a_(0)
-    , type_(match_nil)
     , has_match_(false)
+    , tmo_(gce::infin)
   {
   }
 
@@ -62,13 +81,33 @@ struct basic_receiver
     a_ = &a;
   }
 
+  template <typename Match>
+  void add_match(Match type)
+  {
+    match_list_.push_back(to_match(type));
+    has_match_ = true;
+  }
+
+  void set_match(match_t& matched)
+  {
+    meta_.matched_ = &matched;
+  }
+
+  void set_response(resp_t res)
+  {
+    res_ = res;
+    has_match_ = true;
+  }
+
 protected:
   inline void reset()
   {
-    type_ = match_nil;
+    match_list_.clear();
+    res_ = resp_t();
     has_match_ = false;
-    tmo_ = duration_t();
+    tmo_ = gce::infin;
     g_ = gce::guard();
+    meta_ = recv_meta();
   }
 
   inline actor_ref_t& get_actor_ref()
@@ -80,10 +119,13 @@ protected:
 protected:
   actor_ref_t* a_;
 
-  match_t type_;
+  match_list_t match_list_;
+  resp_t res_;
   bool has_match_;
   duration_t tmo_;
   gce::guard g_;
+
+  recv_meta meta_;
 };
 
 template <typename ActorRef, bool is_stackless>
@@ -102,47 +144,162 @@ struct receiver<ActorRef, false>
   aid_t recv()
   {
     message msg;
-    return pri_recv(msg);
+    std::pair<aid_t, bool> pr = pri_recv(msg);
+    return pr.first;
   }
 
   template <typename A1>
   aid_t recv(A1& a1)
   {
     message msg;
-    aid_t sender = pri_recv(msg);
-    if (sender != aid_nil)
+    std::pair<aid_t, bool> pr = pri_recv(msg);
+    if (pr.second)
     {
       msg >> a1;
     }
-    return sender;
+    return pr.first;
   }
 
   template <typename A1, typename A2>
   aid_t recv(A1& a1, A2& a2)
   {
     message msg;
-    aid_t sender = pri_recv(msg);
-    if (sender)
+    std::pair<aid_t, bool> pr = pri_recv(msg);
+    if (pr.second)
     {
       msg >> a1 >> a2;
     }
-    return sender;
+    return pr.first;
+  }
+
+  template <typename A1, typename A2, typename A3>
+  aid_t recv(A1& a1, A2& a2, A3& a3)
+  {
+    message msg;
+    std::pair<aid_t, bool> pr = pri_recv(msg);
+    if (pr.second)
+    {
+      msg >> a1 >> a2 >> a3;
+    }
+    return pr.first;
+  }
+
+  template <typename A1, typename A2, typename A3, typename A4>
+  aid_t recv(A1& a1, A2& a2, A3& a3, A4& a4)
+  {
+    message msg;
+    std::pair<aid_t, bool> pr = pri_recv(msg);
+    if (pr.second)
+    {
+      msg >> a1 >> a2 >> a3 >> a4;
+    }
+    return pr.first;
+  }
+
+  template <typename A1, typename A2, typename A3, typename A4, typename A5>
+  aid_t recv(A1& a1, A2& a2, A3& a3, A4& a4, A5& a5)
+  {
+    message msg;
+    std::pair<aid_t, bool> pr = pri_recv(msg);
+    if (pr.second)
+    {
+      msg >> a1 >> a2 >> a3 >> a4 >> a5;
+    }
+    return pr.first;
+  }
+
+  aid_t respond()
+  {
+    message msg;
+    std::pair<aid_t, bool> pr = pri_respond(msg);
+    return pr.first;
+  }
+
+  template <typename A1>
+  aid_t respond(A1& a1)
+  {
+    message msg;
+    std::pair<aid_t, bool> pr = pri_respond(msg);
+    if (pr.second)
+    {
+      msg >> a1;
+    }
+    return pr.first;
+  }
+
+  template <typename A1, typename A2>
+  aid_t respond(A1& a1, A2& a2)
+  {
+    message msg;
+    std::pair<aid_t, bool> pr = pri_respond(msg);
+    if (pr.second)
+    {
+      msg >> a1 >> a2;
+    }
+    return pr.first;
+  }
+
+  template <typename A1, typename A2, typename A3>
+  aid_t respond(A1& a1, A2& a2, A3& a3)
+  {
+    message msg;
+    std::pair<aid_t, bool> pr = pri_respond(msg);
+    if (pr.second)
+    {
+      msg >> a1 >> a2 >> a3;
+    }
+    return pr.first;
+  }
+
+  template <typename A1, typename A2, typename A3, typename A4>
+  aid_t respond(A1& a1, A2& a2, A3& a3, A4& a4)
+  {
+    message msg;
+    std::pair<aid_t, bool> pr = pri_respond(msg);
+    if (pr.second)
+    {
+      msg >> a1 >> a2 >> a3 >> a4;
+    }
+    return pr.first;
+  }
+
+  template <typename A1, typename A2, typename A3, typename A4, typename A5>
+  aid_t respond(A1& a1, A2& a2, A3& a3, A4& a4, A5& a5)
+  {
+    message msg;
+    std::pair<aid_t, bool> pr = pri_respond(msg);
+    if (pr.second)
+    {
+      msg >> a1 >> a2 >> a3 >> a4 >> a5;
+    }
+    return pr.first;
   }
 
   /// internal use
   receiver() {}
 
 private:
-  aid_t pri_recv(message& msg)
+  std::pair<aid_t, bool> pri_recv(message& msg)
   {
     pattern patt(base_t::tmo_);
     if (base_t::has_match_)
     {
-      make_pattern(patt, base_t::type_);
+      make_pattern(patt, base_t::match_list_);
     }
     patt.recver_ = base_t::g_.recver_;
+    recv_meta meta = base_t::meta_;
     base_t::reset();
-    return recv_impl(typename actor_ref_t::type(), base_t::get_actor_ref(), msg, patt);
+    return recv_impl(typename actor_ref_t::type(), base_t::get_actor_ref(), msg, patt, meta);
+  }
+
+  
+  std::pair<aid_t, bool> pri_respond(message& msg)
+  {
+    resp_t res = base_t::res_;
+    duration_t tmo = base_t::tmo_;
+    recv_meta meta = base_t::meta_;
+    base_t::reset();
+    return respond_impl(typename actor_ref_t::type(), base_t::get_actor_ref(), res, msg, tmo, meta);
   }
 };
 
@@ -255,7 +412,7 @@ private:
     patt.recver_ = base_t::g_.recver_;
     if (base_t::has_match_)
     {
-      make_pattern(patt, base_t::type_);
+      make_pattern(patt, base_t::match_list_);
     }
     base_t::reset();
     return begin_recv(patt);
