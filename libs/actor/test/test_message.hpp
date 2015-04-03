@@ -29,8 +29,8 @@ struct arg2_t
   int i_;
 };
 }
-GCE_PACK(gce::arg1_t, (hi_&smax(100))(i_&sfix));
-GCE_PACK(gce::arg2_t, (v_&smax(5))(i_));
+GCE_PACK(gce::arg1_t, (v.hi_&smax(100))(v.i_&sfix));
+GCE_PACK(gce::arg2_t, (v.v_&smax(5))(v.i_));
 
 namespace gce
 {

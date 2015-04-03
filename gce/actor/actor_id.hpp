@@ -247,6 +247,6 @@ std::basic_ostream<CharT, TraitsT>& operator<<(
   return strm;
 }
 
-GCE_PACK(gce::aid_t, (ctxid_)(timestamp_)(uintptr_)(svc_id_)(type_)(in_pool_)(sid_)(svc_));
+GCE_PACK(gce::aid_t, (v.ctxid_)(v.timestamp_)(v.uintptr_)(v.svc_id_)(v.type_)(v.in_pool_)(v.sid_)(v.svc_));
 
 #endif /// GCE_ACTOR_ACTOR_ID_HPP

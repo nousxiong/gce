@@ -79,6 +79,6 @@ std::basic_ostream<CharT, TraitsT>& operator<<(
   return strm;
 }
 
-GCE_PACK(gce::match_t, (val_));
+GCE_PACK(gce::match_t, (v.val_));
 
 #endif /// GCE_ACTOR_MATCH_HPP

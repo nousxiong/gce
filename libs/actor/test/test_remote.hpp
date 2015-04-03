@@ -15,7 +15,7 @@ struct echo_data
   int i_;
 };
 }
-GCE_PACK(gce::echo_data, (hi_)(i_&sfix));
+GCE_PACK(gce::echo_data, (v.hi_)(v.i_&sfix));
 
 namespace gce
 {

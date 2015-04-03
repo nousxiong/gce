@@ -104,7 +104,7 @@ inline std::basic_ostream<CharT, TraitsT>& operator<<(
   return strm;
 }
 
-GCE_PACK(gce::svcid_t, (valid_)(ctxid_)(name_));
+GCE_PACK(gce::svcid_t, (v.valid_)(v.ctxid_)(v.name_));
 
 #endif /// GCE_ACTOR_SERVICE_ID_HPP
 

@@ -388,7 +388,7 @@ namespace amsg
 			{
 				value_type temp = host_to_little_endian16(value);
 				::boost::uint8_t * ptr = (::boost::uint8_t *)(&temp);
-				if(value < 0100)
+				if(value < 0x100)
 				{
 					::boost::uint8_t * wptr = store_data.append_write(2);
 					wptr[0] = 0x80;
@@ -559,7 +559,7 @@ namespace amsg
 			{
 				value_type temp = host_to_little_endian32(value);
 				::boost::uint8_t * ptr = (::boost::uint8_t *)(&temp);
-				if(value < 0100)
+				if(value < 0x100)
 				{
 					::boost::uint8_t * wptr = store_data.append_write(2);
 					wptr[0] = 0x80;
@@ -764,7 +764,7 @@ namespace amsg
 			{
 				value_type temp = host_to_little_endian64(value);
 				::boost::uint8_t * ptr = (::boost::uint8_t *)(&temp);
-				if(value < 0100)
+				if(value < 0x100)
 				{
 					::boost::uint8_t * wptr = store_data.append_write(2);
 					wptr[0] = 0x80;

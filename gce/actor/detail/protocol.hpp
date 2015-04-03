@@ -32,6 +32,6 @@ struct msg_header
 }
 }
 
-GCE_PACK(gce::detail::msg_header, (size_)(type_)(tag_offset_));
+GCE_PACK(gce::detail::msg_header, (v.size_)(v.type_)(v.tag_offset_));
 
 #endif /// GCE_ACTOR_DETAIL_PROTOCOL_HPP

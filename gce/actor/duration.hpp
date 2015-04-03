@@ -201,6 +201,6 @@ inline std::basic_ostream<CharT, TraitsT>& operator<<(
   return strm;
 }
 
-GCE_PACK(gce::duration_t, (val_)(ty_));
+GCE_PACK(gce::duration_t, (v.val_)(v.ty_));
 
 #endif /// GCE_ACTOR_DURATION_HPP
