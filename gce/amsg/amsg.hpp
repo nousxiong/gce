@@ -809,6 +809,20 @@ namespace amsg{	namespace detail
 		static AMSG_INLINE void write(store_ty& store_data, const value_type& value,::std::size_t max = 0);
 	};
 
+  template<typename store_ty , typename ty>
+	struct value_default_read_support_impl
+	{
+		typedef ty value_type;
+		static AMSG_INLINE void read(store_ty& store_data, value_type& value);
+	};
+
+	template<typename store_ty , typename ty>
+	struct value_default_write_support_impl
+	{
+		typedef ty value_type;
+		static AMSG_INLINE void write(store_ty& store_data, value_type& value);
+	};
+
 	template<typename store_ty , typename ty , int tag>
 	struct value_read_support_enum_impl
 	{
@@ -816,7 +830,7 @@ namespace amsg{	namespace detail
 		static AMSG_INLINE void read(store_ty& store_data, value_type& value)
 		{
 			int64_t temp;
-      value_read_support_impl<store_ty,int64_t,tag>::read(store_data,temp);
+      value_default_read_support_impl<store_ty,int64_t>::read(store_data,temp);
 			value = static_cast<ty>(temp);
 		}
 	};
@@ -828,7 +842,7 @@ namespace amsg{	namespace detail
 		static AMSG_INLINE void write(store_ty& store_data, const value_type& value)
 		{
 			int64_t temp = value;
-      value_write_support_impl<store_ty,int64_t,tag>::write(store_data,temp);
+      value_default_write_support_impl<store_ty,int64_t>::write(store_data,temp);
 		}
 	};
 
@@ -852,20 +866,6 @@ namespace amsg{	namespace detail
 			value_write_support_enum_impl<store_ty,value_type,tag>,
 			value_write_support_impl<store_ty,value_type,tag>
 		>::type impl_type;
-	};
-
-	template<typename store_ty , typename ty>
-	struct value_default_read_support_impl
-	{
-		typedef ty value_type;
-		static AMSG_INLINE void read(store_ty& store_data, value_type& value);
-	};
-
-	template<typename store_ty , typename ty>
-	struct value_default_write_support_impl
-	{
-		typedef ty value_type;
-		static AMSG_INLINE void write(store_ty& store_data, value_type& value);
 	};
 
 	template<typename store_ty,typename ty,int type_byte_size=sizeof(ty)>
