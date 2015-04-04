@@ -111,6 +111,15 @@ inline std::string to_string(pattern const& o)
   str += ">";
   return str;
 }
+
+template <>
+struct tostring<pattern>
+{
+  static std::string convert(pattern const& o)
+  {
+    return to_string(o);
+  }
+};
 }
 
 #endif /// GCE_ACTOR_PATTERN_HPP

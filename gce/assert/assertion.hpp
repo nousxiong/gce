@@ -25,6 +25,11 @@
 
 namespace gce
 {
+template <typename T>
+struct tostring
+{
+};
+
 class assert_except
   : public virtual std::exception
 {
@@ -470,7 +475,7 @@ private:
     str_.append("  ");
     str_.append(name);
     str_.append(" = ");
-    str_.append(to_string(v));
+    str_.append(tostring<T>::convert(v));
     str_.append("\n");
     return *this;
   }

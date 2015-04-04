@@ -56,6 +56,15 @@ inline std::string to_string(adl::match const& o)
   return str;
 }
 
+template <>
+struct tostring<adl::match>
+{
+  static std::string convert(adl::match const& o)
+  {
+    return to_string(o);
+  }
+};
+
 typedef adl::match match_t;
 
 match_t make_match(uint64_t val)

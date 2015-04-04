@@ -313,7 +313,7 @@ struct receiver<ActorRef, true>
 
   void recv(aid_t& sender)
   {
-    pattern patt(tmo);
+    pattern patt(base_t::tmo);
     bool has_exit = pri_recv(patt);
     actor_ref_t& a = base_t::get_actor_ref();
     a.recv(
@@ -328,7 +328,7 @@ struct receiver<ActorRef, true>
   template <typename A1>
   void recv(aid_t& sender, A1& a1)
   {
-    pattern patt(tmo);
+    pattern patt(base_t::tmo);
     bool has_exit = pri_recv(patt);
     actor_ref_t& a = base_t::get_actor_ref();
     a.recv(
@@ -343,7 +343,7 @@ struct receiver<ActorRef, true>
   template <typename A1, typename A2>
   void recv(aid_t& sender, A1& a1, A2& a2)
   {
-    pattern patt(tmo);
+    pattern patt(base_t::tmo);
     bool has_exit = pri_recv(patt);
     actor_ref_t& a = base_t::get_actor_ref();
     a.recv(
@@ -358,7 +358,7 @@ struct receiver<ActorRef, true>
   template <typename A1, typename A2, typename A3>
   void recv(aid_t& sender, A1& a1, A2& a2, A3& a3)
   {
-    pattern patt(tmo);
+    pattern patt(base_t::tmo);
     bool has_exit = pri_recv(patt);
     actor_ref_t& a = base_t::get_actor_ref();
     a.recv(
@@ -374,7 +374,7 @@ struct receiver<ActorRef, true>
   template <typename A1, typename A2, typename A3, typename A4>
   void recv(aid_t& sender, A1& a1, A2& a2, A3& a3, A4& a4)
   {
-    pattern patt(tmo);
+    pattern patt(base_t::tmo);
     bool has_exit = pri_recv(patt);
     actor_ref_t& a = base_t::get_actor_ref();
     a.recv(
@@ -390,7 +390,7 @@ struct receiver<ActorRef, true>
   template <typename A1, typename A2, typename A3, typename A4, typename A5>
   void recv(aid_t& sender, A1& a1, A2& a2, A3& a3, A4& a4, A5& a5)
   {
-    pattern patt(tmo);
+    pattern patt(base_t::tmo);
     bool has_exit = pri_recv(patt);
     actor_ref_t& a = base_t::get_actor_ref();
     a.recv(

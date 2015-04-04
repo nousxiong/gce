@@ -251,7 +251,7 @@ namespace amsg{	namespace detail
 		static AMSG_INLINE ::boost::uint32_t size(const value_type& value)
 		{
 			int64_t temp = value;
-			return byte_size_of<int64_t,tag>::impl_type::size(temp);
+      return byte_size_of_impl<int64_t,tag>::size(temp);
 		}
 	};
 
@@ -575,7 +575,7 @@ namespace amsg{	namespace detail
 		{
       (max);
       ::boost::uint32_t len = (::boost::uint32_t)value.length();
-      ::boost::uint32_t size = byte_size_of<::boost::uint32_t, 0>::impl_type::size(len) + len;
+      ::boost::uint32_t size = byte_size_of< ::boost::uint32_t, 0>::impl_type::size(len) + len;
 			return size;
 		}
 	};
@@ -588,10 +588,10 @@ namespace amsg{	namespace detail
 		static AMSG_INLINE ::boost::uint32_t size(const value_type& value , ::std::size_t max = 0)
 		{
 			::std::size_t len = value.length();
-      ::std::size_t size = byte_size_of< ::boost::uint32_t, 0>::::impl_type::size(len);
+      ::std::size_t size = byte_size_of< ::boost::uint32_t, 0>::impl_type::size(len);
 			for(::boost::uint32_t i = 0 ; i< len ; ++i)
 			{
-        size += byte_size_of<wchar_t, 0>::::impl_type::size(value[i]);
+        size += byte_size_of<wchar_t, 0>::impl_type::size(value[i]);
 			}
 			return size;
 		}
@@ -606,7 +606,7 @@ namespace amsg{	namespace detail
 		{
       (max);
       ::boost::uint32_t len = (::boost::uint32_t)value.size();
-      ::boost::uint32_t size = byte_size_of<::boost::uint32_t, 0>::impl_type::size(len);
+      ::boost::uint32_t size = byte_size_of< ::boost::uint32_t, 0>::impl_type::size(len);
 			for( typename value_type::const_iterator i = value.begin() ; i != value.end(); ++i )
 			{
 				const typename value_type::value_type& elem_value = *i;
@@ -816,7 +816,7 @@ namespace amsg{	namespace detail
 		static AMSG_INLINE void read(store_ty& store_data, value_type& value)
 		{
 			int64_t temp;
-			value_read_support<store_ty,int64_t,tag>::impl_type::read(store_data,temp);
+      value_read_support_impl<store_ty,int64_t,tag>::read(store_data,temp);
 			value = static_cast<ty>(temp);
 		}
 	};
@@ -828,7 +828,7 @@ namespace amsg{	namespace detail
 		static AMSG_INLINE void write(store_ty& store_data, const value_type& value)
 		{
 			int64_t temp = value;
-			value_write_support<store_ty,int64_t,tag>::impl_type::write(store_data,temp);
+      value_write_support_impl<store_ty,int64_t,tag>::write(store_data,temp);
 		}
 	};
 
@@ -1946,7 +1946,7 @@ namespace amsg{	namespace detail
 
   struct class_t{};
 
-  template<::std::size_t size>
+  template< ::std::size_t size>
   struct fix_bytes_t{};
 
   struct string_t{};
@@ -1998,16 +1998,16 @@ namespace amsg{	namespace detail
   {
     static AMSG_INLINE void read(store_ty& store_data, const del_int_t&)
     {
-      ::boost::uint8_t tag;
-      store_data.read((char*)&tag, 1);
+      ::boost::uint8_t vtag;
+      store_data.read((char*)&vtag, 1);
       if (store_data.bad())
       {
         store_data.set_error_code(stream_buffer_overflow);
         return;
       }
-      if (tag > const_tag_as_value)
+      if (vtag > const_tag_as_value)
       {
-        int read_bytes = int(tag & const_interger_byte_msak) + 1;
+        int read_bytes = int(vtag & const_interger_byte_msak) + 1;
         store_data.skip_read(read_bytes);
         if (store_data.bad())
         {
@@ -3007,7 +3007,7 @@ namespace amsg{	namespace detail
   };
 
   template<typename alloc_ty>
-  struct can_skip_opt<::std::basic_string<char, ::std::char_traits<char>, alloc_ty> >
+  struct can_skip_opt< ::std::basic_string<char, ::std::char_traits<char>, alloc_ty> >
   {
     typedef ::std::basic_string<char, ::std::char_traits<char>, alloc_ty> value_type;
     static AMSG_INLINE bool check(const value_type& value)

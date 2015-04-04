@@ -27,6 +27,15 @@ inline std::string to_string(errcode_t const& ec)
   str += ">";
   return str;
 }
+
+template <>
+struct tostring<errcode_t>
+{
+  static std::string convert(errcode_t const& o)
+  {
+    return to_string(o);
+  }
+};
 }
 
 template<typename CharT, typename TraitsT>

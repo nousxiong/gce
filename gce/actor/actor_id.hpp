@@ -144,6 +144,15 @@ inline std::string to_string(adl::actor_id const& o)
   return str;
 }
 
+template <>
+struct tostring<adl::actor_id>
+{
+  static std::string convert(adl::actor_id const& o)
+  {
+    return to_string(o);
+  }
+};
+
 detail::listener* get_actor_ptr(adl::actor_id const& aid, ctxid_t ctxid, timestamp_t timestamp)
 {
   GCE_ASSERT(!in_pool(aid))(aid);

@@ -21,10 +21,19 @@ namespace gce
 namespace detail
 {
 struct match_enum_t {};
+struct match_integer_t {};
 struct match_other_t {};
 
 template <typename Match>
 inline match_t to_match_impl(match_enum_t, Match match)
+{
+  match_t rt;
+  rt.val_ = match;
+  return rt;
+}
+
+template <typename Match>
+inline match_t to_match_impl(match_integer_t, Match match)
 {
   match_t rt;
   rt.val_ = match;
@@ -41,30 +50,9 @@ inline match_t to_match_impl(std::string const& match)
   return atom(match.c_str());
 }
 
-inline match_t to_match_impl(int match)
-{
-  match_t rt;
-  rt.val_ = match;
-  return rt;
-}
-
 inline match_t to_match_impl(match_t match)
 {
   return match;
-}
-
-inline match_t to_match_impl(uint32_t match)
-{
-  match_t rt;
-  rt.val_ = match;
-  return rt;
-}
-
-inline match_t to_match_impl(uint16_t match)
-{
-  match_t rt;
-  rt.val_ = match;
-  return rt;
 }
 
 template <typename Match>
@@ -84,6 +72,9 @@ inline match_t to_match(Match match)
     >::type param_t;
   typedef typename boost::mpl::if_<
     typename boost::is_enum<param_t>::type, detail::match_enum_t, detail::match_other_t
+    >::type select_enum_t;
+  typedef typename boost::mpl::if_<
+    typename boost::is_integral<param_t>::type, detail::match_integer_t, select_enum_t
     >::type select_t;
   return detail::to_match_impl(select_t(), match);
 }

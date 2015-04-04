@@ -189,6 +189,15 @@ inline std::string to_string(gce::adl::duration const& o)
   return str;
 }
 
+template <>
+struct tostring<adl::duration>
+{
+  static std::string convert(adl::duration const& o)
+  {
+    return to_string(o);
+  }
+};
+
 typedef adl::duration duration_t;
 } /// namespace gce
 

@@ -13,10 +13,16 @@
 #define GCE_INTEGER_HPP
 
 #include <gce/config.hpp>
-#if !defined(_MSC_VER) || _MSC_VER > 1500
-# include <cstdint>
+#ifdef _MSC_VER
+# if _MSC_VER <= 1500
+#   include <gce/adata/cpp/stdint.hpp>
+# else
+#   include <cstdint>
+# endif
+#elif __cplusplus < 201103L
+# include <stdint.h>
 #else
-# include <gce/adata/cpp/stdint.hpp>
+# include <cstdint>
 #endif
 #include <boost/mpl/if.hpp>
 #include <boost/mpl/int.hpp>

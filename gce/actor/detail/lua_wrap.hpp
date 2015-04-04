@@ -1076,7 +1076,6 @@ struct actor
     return 0;
   }
 
-  template <typename TargetId>
   static int send(lua_State* L)
   {
     proxy_t* o = static_cast<proxy_t*>(lua_touserdata(L, 1));
@@ -1087,21 +1086,44 @@ struct actor
 #elif GCE_PACKER == GCE_ADATA
     int arg2check = lua_istable(L, 2);
 #endif
-    luaL_argcheck(L, arg2check, 2, "'actor_id or service_id' expected");
+    luaL_argcheck(L, arg2check, 2, "'actor_id' expected");
 
     gce::message* msg = static_cast<gce::message*>(lua_touserdata(L, 3));
     luaL_argcheck(L, msg != 0, 3, "'message' expected");
 
-    TargetId tid;
-    load(L, 2, tid);
+    gce::aid_t aid;
+    load(L, 2, aid);
 
     proxy_t& a = *o;
 
-    a->send(tid, *msg);
+    a->send(aid, *msg);
+    return 0;
+  }
+  
+  static int send2svc(lua_State* L)
+  {
+    proxy_t* o = static_cast<proxy_t*>(lua_touserdata(L, 1));
+    luaL_argcheck(L, o != 0, 1, "'actor' expected");
+
+#if GCE_PACKER == GCE_AMSG
+    int arg2check = lua_isuserdata(L, 2);
+#elif GCE_PACKER == GCE_ADATA
+    int arg2check = lua_istable(L, 2);
+#endif
+    luaL_argcheck(L, arg2check, 2, "'service_id' expected");
+
+    gce::message* msg = static_cast<gce::message*>(lua_touserdata(L, 3));
+    luaL_argcheck(L, msg != 0, 3, "'message' expected");
+
+    gce::svcid_t svcid;
+    load(L, 2, svcid);
+
+    proxy_t& a = *o;
+
+    a->send(svcid, *msg);
     return 0;
   }
 
-  template <typename TargetId>
   static int relay(lua_State* L)
   {
     proxy_t* o = static_cast<proxy_t*>(lua_touserdata(L, 1));
@@ -1112,21 +1134,44 @@ struct actor
 #elif GCE_PACKER == GCE_ADATA
     int arg2check = lua_istable(L, 2);
 #endif
-    luaL_argcheck(L, arg2check, 2, "'actor_id or service_id' expected");
+    luaL_argcheck(L, arg2check, 2, "'actor_id' expected");
 
     gce::message* msg = static_cast<gce::message*>(lua_touserdata(L, 3));
     luaL_argcheck(L, msg != 0, 3, "'message' expected");
 
-    TargetId tid;
-    load(L, 2, tid);
+    gce::aid_t aid;
+    load(L, 2, aid);
 
     proxy_t& a = *o;
 
-    a->relay(tid, *msg);
+    a->relay(aid, *msg);
+    return 0;
+  }
+  
+  static int relay2svc(lua_State* L)
+  {
+    proxy_t* o = static_cast<proxy_t*>(lua_touserdata(L, 1));
+    luaL_argcheck(L, o != 0, 1, "'actor' expected");
+
+#if GCE_PACKER == GCE_AMSG
+    int arg2check = lua_isuserdata(L, 2);
+#elif GCE_PACKER == GCE_ADATA
+    int arg2check = lua_istable(L, 2);
+#endif
+    luaL_argcheck(L, arg2check, 2, "'service_id' expected");
+
+    gce::message* msg = static_cast<gce::message*>(lua_touserdata(L, 3));
+    luaL_argcheck(L, msg != 0, 3, "'message' expected");
+
+    gce::svcid_t svcid;
+    load(L, 2, svcid);
+
+    proxy_t& a = *o;
+
+    a->relay(svcid, *msg);
     return 0;
   }
 
-  template <typename TargetId>
   static int request(lua_State* L)
   {
     proxy_t* o = static_cast<proxy_t*>(lua_touserdata(L, 1));
@@ -1137,17 +1182,42 @@ struct actor
 #elif GCE_PACKER == GCE_ADATA
     int arg2check = lua_istable(L, 2);
 #endif
-    luaL_argcheck(L, arg2check, 2, "'actor_id or service_id' expected");
+    luaL_argcheck(L, arg2check, 2, "'actor_id' expected");
 
     gce::message* msg = static_cast<gce::message*>(lua_touserdata(L, 3));
     luaL_argcheck(L, msg != 0, 3, "'message' expected");
 
-    TargetId tid;
-    load(L, 2, tid);
+    gce::aid_t aid;
+    load(L, 2, aid);
 
     proxy_t& a = *o;
 
-    gce::resp_t resp = a->request(tid, *msg);
+    gce::resp_t resp = a->request(aid, *msg);
+    response::create(L, resp);
+    return 1;
+  }
+  
+  static int request2svc(lua_State* L)
+  {
+    proxy_t* o = static_cast<proxy_t*>(lua_touserdata(L, 1));
+    luaL_argcheck(L, o != 0, 1, "'actor' expected");
+
+#if GCE_PACKER == GCE_AMSG
+    int arg2check = lua_isuserdata(L, 2);
+#elif GCE_PACKER == GCE_ADATA
+    int arg2check = lua_istable(L, 2);
+#endif
+    luaL_argcheck(L, arg2check, 2, "'service_id' expected");
+
+    gce::message* msg = static_cast<gce::message*>(lua_touserdata(L, 3));
+    luaL_argcheck(L, msg != 0, 3, "'message' expected");
+
+    gce::svcid_t svcid;
+    load(L, 2, svcid);
+
+    proxy_t& a = *o;
+
+    gce::resp_t resp = a->request(svcid, *msg);
     response::create(L, resp);
     return 1;
   }

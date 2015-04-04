@@ -30,6 +30,15 @@ inline std::string to_string(adl::service_id const& o)
   return str;
 }
 
+template <>
+struct tostring<adl::service_id>
+{
+  static std::string convert(adl::service_id const& o)
+  {
+    return to_string(o);
+  }
+};
+
 namespace adl
 {
 inline bool operator==(service_id const& lhs, service_id const& rhs)

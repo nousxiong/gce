@@ -264,7 +264,7 @@ inline void handle_remote_spawn(
   msg >> err >> ret_sid;
   do
   {
-    if (err != 0 || (aid && sid == ret_sid))
+    if (err != 0 || (aid != aid_nil  && sid == ret_sid))
     {
       break;
     }

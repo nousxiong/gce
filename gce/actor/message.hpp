@@ -524,6 +524,15 @@ inline std::string to_string(message const& msg)
   str += ">";
   return str;
 }
+
+template <>
+struct tostring<message>
+{
+  static std::string convert(message const& o)
+  {
+    return to_string(o);
+  }
+};
 }
 
 template<typename CharT, typename TraitsT>
