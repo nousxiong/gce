@@ -53,7 +53,7 @@ endmacro (gce_set_lib)
 
 # Provide user options to customise the build process.
 option (GCE_LUA "Allow gce using lua actor" OFF)
-set (GCE_PACKER "adata" CACHE STRING "GCE pack lib type, option are: adata amsg")
+set (GCE_PACKER "amsg" CACHE STRING "GCE pack lib type, option are: adata amsg")
 
 if (GCE_LUA)
   set (GCE_LUA_VERSION "5.1" CACHE STRING "GCE lua version, option are: 5.1 5.2 5.3 jit2")
