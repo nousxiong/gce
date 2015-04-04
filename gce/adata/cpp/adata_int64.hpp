@@ -6,10 +6,16 @@
 #ifndef l_adata_int64_hpp
 #define l_adata_int64_hpp
 
-#if !defined(_MSC_VER) || _MSC_VER > 1500
-# include <cstdint>
+#ifdef _MSC_VER
+# if _MSC_VER <= 1500
+#   include "stdint.hpp"
+# else
+#   include <cstdint>
+# endif
+#elif __cplusplus < 201103L
+# include <stdint.h>
 #else
-# include "stdint.hpp"
+# include <cstdint>
 #endif
 
 extern "C" {
@@ -17,6 +23,8 @@ extern "C" {
 #include "lualib.h"
 #include "lauxlib.h"
 }
+
+#include <cmath>
 
 namespace adata {
   namespace lua{
