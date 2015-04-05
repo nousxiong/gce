@@ -19,7 +19,7 @@ namespace gce
 namespace detail
 {
 typedef gce::adl::detail::header header_t;
-header_t make_header(
+inline header_t make_header(
   uint32_t size = 0, 
   gce::match_t type = gce::match_nil, 
   uint32_t tag_offset = gce::u32_nil

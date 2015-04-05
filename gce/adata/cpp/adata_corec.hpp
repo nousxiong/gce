@@ -18,7 +18,7 @@ extern "C" {
 namespace adata {
   namespace lua{
 
-    const char * zbuffer_metatable = "zbuf_meta";
+    static const char * zbuffer_metatable = "zbuf_meta";
 
     static int new_zbuf(lua_State * L)
     {

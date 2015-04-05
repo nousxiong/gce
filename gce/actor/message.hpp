@@ -17,6 +17,7 @@
 #include <gce/actor/service_id.hpp>
 #include <gce/actor/response.hpp>
 #include <gce/actor/atom.hpp>
+#include <gce/actor/move_ptr.hpp>
 #include <gce/actor/error_code.hpp>
 #include <gce/actor/detail/spawn.hpp>
 #include <gce/actor/detail/link.hpp>
@@ -97,6 +98,7 @@ public:
     , cow_(other.cow_)
     , pkr_(other.pkr_)
     , relay_(other.relay_)
+    , local_list_(other.local_list_)
   {
   }
 
@@ -109,6 +111,7 @@ public:
       cow_ = rhs.cow_;
       pkr_ = rhs.pkr_;
       relay_ = rhs.relay_;
+      local_list_ = rhs.local_list_;
     }
     return *this;
   }
@@ -143,6 +146,34 @@ public:
     pre_read();
     pkr_.read(t);
     end_read();
+    return *this;
+  }
+
+  template <typename T>
+  message& operator<<(move_ptr<T> const& p)
+  {
+    uint32_t index = local_list_.size();
+    size_t size = packer::size_of(index);
+    pre_write(size);
+    pkr_.write(index);
+    local_list_.push_back(p);
+    end_write();
+    return *this;
+  }
+
+  template <typename T>
+  message& operator>>(move_ptr<T>& p)
+  {
+    uint32_t index;
+
+    pre_read();
+    pkr_.read(index);
+    end_read();
+
+    GCE_VERIFY(index < local_list_.size())(index);
+    GCE_ASSERT(local_list_[index])(index);
+
+    p = local_list_[index];
     return *this;
   }
 
@@ -512,6 +543,9 @@ private:
 
   /// relay helper data
   detail::relay_t relay_;
+
+  /// local data to carry
+  std::vector<move_ptr<void> > local_list_;
 };
 
 inline std::string to_string(message const& msg)

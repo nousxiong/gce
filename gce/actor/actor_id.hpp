@@ -153,7 +153,7 @@ struct tostring<adl::actor_id>
   }
 };
 
-detail::listener* get_actor_ptr(adl::actor_id const& aid, ctxid_t ctxid, timestamp_t timestamp)
+inline detail::listener* get_actor_ptr(adl::actor_id const& aid, ctxid_t ctxid, timestamp_t timestamp)
 {
   GCE_ASSERT(!in_pool(aid))(aid);
   detail::listener* ret = 0;
@@ -186,7 +186,7 @@ struct actor_index
 };
 }
 
-detail::actor_index get_actor_index(adl::actor_id const& aid, ctxid_t ctxid, timestamp_t timestamp)
+inline detail::actor_index get_actor_index(adl::actor_id const& aid, ctxid_t ctxid, timestamp_t timestamp)
 {
   detail::actor_index ret;
   GCE_ASSERT(in_pool(aid))(aid);
@@ -219,7 +219,7 @@ static adl::actor_id const aid_nil = adl::actor_id();
 typedef adl::actor_id aid_t;
 typedef adl::actor_id sktaid_t;
 
-gce::aid_t make_aid(ctxid_t ctxid, timestamp_t timestamp, detail::listener* ptr, sid_t sid)
+inline gce::aid_t make_aid(ctxid_t ctxid, timestamp_t timestamp, detail::listener* ptr, sid_t sid)
 {
   gce::aid_t aid;
   aid.ctxid_ = ctxid;
@@ -232,7 +232,7 @@ gce::aid_t make_aid(ctxid_t ctxid, timestamp_t timestamp, detail::listener* ptr,
   return aid;
 }
 
-gce::aid_t make_aid(ctxid_t ctxid, timestamp_t timestamp, uint32_t id, uint16_t cac_id, detail::actor_type type, sid_t sid)
+inline gce::aid_t make_aid(ctxid_t ctxid, timestamp_t timestamp, uint32_t id, uint16_t cac_id, detail::actor_type type, sid_t sid)
 {
   gce::aid_t aid;
   aid.ctxid_ = ctxid;

@@ -53,9 +53,9 @@ namespace adata {
     const int64_t max_int64_integer = 9223372036854775807LL;
 
 #if LUA_VERSION_NUM < 503
-    const char * int64_metatable = "int64_meta";
+    static const char * int64_metatable = "int64_meta";
 #endif
-    const char * uint64_metatable = "uint64_meta";
+    static const char * uint64_metatable = "uint64_meta";
 
     ADATA_INLINE int lua_tonumber64(lua_State * L, int idx, number64_type * it)
     {

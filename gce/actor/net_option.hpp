@@ -18,7 +18,7 @@ namespace gce
 {
 typedef adl::net_option netopt_t;
 
-netopt_t make_netopt(
+inline netopt_t make_netopt(
   bool is_router = false, /// if is router, set it true
   duration_t heartbeat_period = seconds(30),
   int32_t heartbeat_count = 3,

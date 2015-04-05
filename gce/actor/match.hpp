@@ -67,7 +67,7 @@ struct tostring<adl::match>
 
 typedef adl::match match_t;
 
-match_t make_match(uint64_t val)
+inline match_t make_match(uint64_t val)
 {
   match_t rt;
   rt.val_ = val;

@@ -55,7 +55,7 @@ inline bool operator!=(service_id const& lhs, service_id const& rhs)
   return !(lhs == rhs);
 }
 
-bool operator<(service_id const& lhs, service_id const& rhs)
+inline bool operator<(service_id const& lhs, service_id const& rhs)
 {
   if (lhs.valid_ < rhs.valid_)
   {
