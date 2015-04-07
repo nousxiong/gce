@@ -12,17 +12,21 @@ local gce = require('gce')
 local test = function (name)
 	local path = 'test_lua_actor/' .. name .. '.lua'
 	gce.print(name .. ' test begin')
-	gce.spawn(path, gce.linked)
-	gce.recv(gce.exit)
+	gce.spawn(path, gce.monitored)
+	local ec, sender, args = gce.recv(gce.exit, gce.atom, '')
+	if args[1] ~= gce.exit_normal then
+		gce.print(name, ' ', gce.deatom(args[1]), ': ', args[2])
+	end
 	gce.print(name .. ' test end')
 end
 
-gce.run_actor(
+gce.actor(
   function ()
-		local sender, args = gce.recv('init', gce.actor_id)
+		local ec, sender, args = gce.recv('init', gce.actor_id)
 		local base_aid = args[1]
 
 		test('match_ut')
+		test('match_recver_ut')
 		test('pingpong_ut')
 		test('relay_ut')
 

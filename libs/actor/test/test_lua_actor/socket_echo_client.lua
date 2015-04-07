@@ -9,9 +9,9 @@
 
 local gce = require('gce')
 
-gce.run_actor(
+gce.actor(
   function ()
-    local sender, args = gce.recv('init', gce.actor_id)
+    local ec, sender, args = gce.recv('init', gce.actor_id)
     local svr_aid = args[1]
 
   	local echo_num = 10

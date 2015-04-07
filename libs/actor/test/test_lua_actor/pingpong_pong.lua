@@ -9,13 +9,13 @@
 
 local gce = require('gce')
 
-gce.run_actor(
+gce.actor(
   function ()
-  	local sender, args = gce.recv('init', gce.actor_id)
+  	local ec, sender, args = gce.recv('init', gce.actor_id)
 		base_aid = args[1]
 
 		while true do
-			local aid, args, m = gce.recv()
+			local ec, aid, args, m = gce.recv()
 			if m:getty() == gce.atom(2) then
 				break
 			else

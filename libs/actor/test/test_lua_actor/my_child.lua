@@ -9,8 +9,8 @@
 
 local gce = require('gce')
 
-gce.run_actor(
+gce.actor(
   function ()
-		local sender, msg = gce.recv()
+		local ec, sender, msg = gce.recv()
 		gce.reply(sender)
   end)

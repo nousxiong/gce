@@ -470,6 +470,7 @@ private:
       base_t::mb_.push(*res, pk.msg_);
     }
 
+    match_t ty = pk.msg_.get_type();
     recv_t rcv;
     message msg;
     aid_t sender;
@@ -477,7 +478,7 @@ private:
 
     if (
       (recv_h_ && !is_response) ||
-      (res_h_ && is_response)
+      (res_h_ && (is_response || ty == exit))
       )
     {
       if (recv_h_ && !is_response)
@@ -493,7 +494,7 @@ private:
         recv_h_.clear();
       }
 
-      if (res_h_ && is_response)
+      if (res_h_ && (is_response || ty == exit))
       {
         GCE_ASSERT(recving_res_.valid());
         bool ret = base_t::mb_.pop(recving_res_, msg);

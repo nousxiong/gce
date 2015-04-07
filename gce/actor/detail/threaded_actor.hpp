@@ -400,12 +400,13 @@ private:
       base_t::mb_.push(*res, pk.msg_);
     }
 
+    match_t ty = pk.msg_.get_type();
     recv_t rcv;
     message msg;
 
     if (
       (recv_p_ && !is_response) ||
-      (res_p_ && is_response)
+      (res_p_ && (is_response || ty == exit))
       )
     {
       if (recv_p_ && !is_response)
@@ -420,7 +421,7 @@ private:
         curr_pattern_.clear();
       }
 
-      if (res_p_ && is_response)
+      if (res_p_ && (is_response || ty == exit))
       {
         GCE_ASSERT(recving_res_.valid());
         bool ret = base_t::mb_.pop(recving_res_, msg);

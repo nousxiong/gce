@@ -9,7 +9,7 @@
 
 local gce = require('gce')
 
-gce.run_actor(
+gce.actor(
   function ()
   	local free_actor_num = 10
   	local last_id = gce.actor_id()
@@ -26,7 +26,7 @@ gce.run_actor(
 		
 		local i = 1
 		local res = gce.request(last_id, 'hi', i)
-		local sender, args, msg = gce.respond(res)
+		local ec, sender, args, msg = gce.respond(res)
 		assert (sender == first_id)
 		assert (msg:getty() == gce.atom('hello'))
   end)

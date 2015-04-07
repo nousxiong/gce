@@ -29,12 +29,17 @@ end
 gce.ty_pattern = libgce.ty_pattern
 gce.ty_match = libgce.ty_match
 gce.ty_message = libgce.ty_message
+gce.ty_response = libgce.ty_response
 gce.ty_actor_id = libgce.ty_actor_id
 gce.ty_service_id = libgce.ty_service_id
 gce.ty_duration = libgce.ty_duration
 gce.ty_userdef = libgce.ty_userdef
 gce.ty_lua = libgce.ty_lua
 gce.ty_other = libgce.ty_other
+
+gce.ec_ok = libgce.ec_ok
+gce.ec_timeout = libgce.ec_timeout
+gce.ec_guard = libgce.ec_guard
 
 gce.dur_raw = libgce.dur_raw
 gce.dur_microsec = libgce.dur_microsec
@@ -53,9 +58,10 @@ gce.infin = libgce.infin
 gce.zero = libgce.zero
 gce.aid_nil = libgce.aid_nil
 gce.svcid_nil = libgce.svcid_nil
+gce.match_nil = libgce.match_nil
 
 -- functions
-function gce.run_actor(f)
+function gce.actor(f)
   local co = coroutine.create(f)
 	libgce.self:init_coro(co, gce.resume)
   gce.resume(co)
@@ -116,6 +122,39 @@ function gce.monitor(target)
 	libgce.self:monitor(target)
 end
 
+function gce.match(...)
+  local receiver = libgce.receiver
+  assert (receiver ~= nil)
+  if receiver.matches == nil then
+    receiver.matches = {}
+  end
+  local matches = receiver.matches
+  if receiver.resp == nil then
+  	receiver.resp = {}
+  end
+
+  local resp = receiver.resp
+  resp[1] = nil
+  resp[2] = nil
+  receiver.recver = nil
+  receiver.tmo = nil
+
+  matches[#matches + 1] = nil
+  for i,v in ipairs{...} do
+    if i == 1 then
+      local oty = libgce.typeof(v)
+      if oty == gce.ty_response then
+        resp[1] = v
+        break
+      end
+    end
+    matches[i] = gce.atom(v)
+    matches[i+1] = nil
+  end
+
+  return receiver
+end
+
 function gce.recv(cfg, ...)
 	local co = nil
 	if cfg == nil then
@@ -160,12 +199,13 @@ function gce.recv(cfg, ...)
 			patt = gce.pattern(cfg)
 		else
 			assert (ty == 'userdata')
-			if cfg:gcety() == gce.ty_pattern then
+      local gty = cfg:gcety()
+			if gty == gce.ty_pattern then
 				patt = cfg
-			elseif cfg:gcety() == gce.ty_match then
+			elseif gty == gce.ty_match then
 				patt = gce.pattern(cfg)
 			else -- timeout
-				assert (cfg:gcety() == gce.ty_duration)
+				assert (gty == gce.ty_duration)
 				patt = libgce.make_patt()
 				patt:set_timeout(cfg)
 			end
@@ -175,8 +215,11 @@ function gce.recv(cfg, ...)
 	if co ~= nil then
 		coroutine.yield(co)
 	end
-	local args = gce.unpack(libgce.recv_msg, ...)
-  return libgce.recv_sender, args, libgce.recv_msg
+	local args = nil
+  if libgce.recv_ec == gce.ec_ok then
+    args = gce.unpack(libgce.recv_msg, ...)
+  end
+  return libgce.recv_ec, libgce.recv_sender, args, libgce.recv_msg
 end
 
 function gce.respond(cfg, ...)
@@ -201,8 +244,11 @@ function gce.respond(cfg, ...)
 	if co ~= nil then
 		coroutine.yield(co)
 	end
-	local args = gce.unpack(libgce.recv_msg, ...)
-  return libgce.recv_sender, args, libgce.recv_msg
+	local args = nil
+  if libgce.recv_ec == gce.ec_ok then
+    args = gce.unpack(libgce.recv_msg, ...)
+  end
+  return libgce.recv_ec, libgce.recv_sender, args, libgce.recv_msg
 end
 
 function gce.sleep_for(dur)
@@ -226,14 +272,8 @@ function gce.connect(target, ep, opt)
 	if opt == nil then
 		opt = gce.net_option()
 	end
-	local ty = type(target)
 
-	if ty == 'string' or ty == 'number' then
-		target = gce.atom(target)
-	else
-		assert (ty == 'userdata')
-		assert (target:gcety() == gce.ty_match)
-	end
+	target = gce.atom(target)
 	local co = libgce.self:connect(target, ep, opt)
 	if co ~= nil then
 		coroutine.yield(co)
@@ -264,25 +304,13 @@ end
 
 function gce.register_service(name)
 	assert (name ~= nil)
-	local ty = type(name)
-	if ty == 'string' or ty == 'number' then
-		name = gce.atom(name)
-	else
-		assert (ty == 'userdata')
-		assert (name:gcety() == gce.ty_match)
-	end
+	name = gce.atom(name)
 	libgce.self:register_service(name)
 end
 
 function gce.deregister_service(name)
 	assert (name ~= nil)
-	local ty = type(name)
-	if ty == 'string' or ty == 'number' then
-		name = gce.atom(name)
-	else
-		assert (ty == 'userdata')
-		assert (name:gcety() == gce.ty_match)
-	end
+	name = gce.atom(name)
 	libgce.self:deregister_service(name)
 end
 
@@ -402,10 +430,6 @@ function gce.message(cfg, ...)
 	return m
 end
 
-function gce.match()
-	return libgce.make_match(0)
-end
-
 function gce.actor_id()
 	if gce.packer == gce.pkr_amsg then
 		return libgce.make_aid()
@@ -446,15 +470,26 @@ function gce.net_option()
 end
 
 function gce.atom(v)
-	if type(v) == 'string' then
+  if v == nil then
+    return libgce.make_match()
+  end
+
+  local ty = type(v)
+	if ty == 'string' then
 		return libgce.atom(v)
+  elseif ty == 'number' then
+    return libgce.make_match(v)
 	else
-		return libgce.make_match(v)
+    assert (ty == 'userdata')
+    assert (v:gcety() == gce.ty_match)
+		return v
 	end
 end
 
-function gce.deatom(i)
-	return libgce.deatom(i)
+function gce.deatom(v)
+  assert (type(v) == 'userdata')
+  assert (v:gcety() == gce.ty_match)
+	return libgce.deatom(v)
 end
 
 function gce.stacksize()
@@ -486,6 +521,7 @@ function gce.fatal(...)
 end
 
 gce.exit = gce.atom('gce_exit')
+gce.exit_normal = gce.atom('gce_ex_normal')
 
 
 -------------------internal use-------------------
@@ -625,6 +661,54 @@ function libgce.unpack(t)
     return unpack(t)
   else
     return table.unpack(t)
+  end
+end
+
+-- recv and respond syntactic sugar
+libgce.receiver = {}
+
+-- guard
+function libgce.receiver.guard(aid)
+  libgce.receiver.recver = aid
+  return libgce.receiver
+end
+
+-- timeout
+function libgce.receiver.timeout(dur)
+  libgce.receiver.tmo = dur
+  return libgce.receiver
+end
+
+-- recv
+function libgce.receiver.recv(...)
+  local receiver = libgce.receiver
+  local matches = receiver.matches
+  if #matches == 0 then
+    return gce.recv(nil, ...)
+  else
+    if receiver.recver ~= nil then
+      matches[#matches + 1] = receiver.recver
+    end
+    if libgce.receiver.tmo ~= nil then
+      matches[#matches + 1] = receiver.tmo
+    end
+    return gce.recv(matches, ...)
+  end
+end
+
+-- recv
+function libgce.receiver.respond(...)
+  local receiver = libgce.receiver
+  local resp = receiver.resp
+  local tmo = receiver.tmo
+  assert (resp ~= nil)
+  assert (resp[1] ~= nil)
+  
+  if tmo ~= nil then
+  	resp[2] = tmo
+  	return gce.respond(resp, ...)
+  else
+  	return gce.respond(resp[1], ...)
   end
 end
 

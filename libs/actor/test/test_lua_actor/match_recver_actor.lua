@@ -12,8 +12,19 @@ local gce = require('gce')
 gce.actor(
   function ()
   	local ec, sender, args = gce.recv('init', gce.actor_id)
-  	local base_id = args[1]
-  	if base_id ~= gce.aid_nil then
-  		gce.send(base_id)
-  	end
+    local base_id = args[1]
+
+    if base_id ~= gce.aid_nil then
+      local i = 0
+      gce.send(base_id, 'catch', i)
+      i = i + 1
+      gce.send(base_id, 'catch', i)
+
+      ec, sender = gce.match('resp').recv()
+      assert (sender == base_id)
+      gce.send(sender, gce.exit)
+
+      i = i + 1
+      gce.send(base_id, 'catch', i)
+    end
   end)

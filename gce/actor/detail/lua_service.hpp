@@ -103,11 +103,13 @@ public:
         .end_userdata()
         .add_function("make_resp", lua::response::make)
         .begin_userdata("response")
+          .add_function("gcety", lua::response::gcety)
           .add_function("__tostring", lua::response::tostring)
           .add_function("__gc", lua::response::gc)
         .end_userdata()
         .add_function("make_patt", lua::pattern::make)
         .begin_userdata("pattern")
+          .add_function("set_timeout", lua::pattern::set_timeout)
           .add_function("gcety", lua::pattern::gcety)
           .add_function("add_match", lua::pattern::add_match)
           .add_function("set_match_aid", lua::pattern::set_match_aid)
@@ -229,13 +231,18 @@ public:
     oss << "libgce.ty_pattern = " << lua::ty_pattern << std::endl;
     oss << "libgce.ty_match = " << lua::ty_match << std::endl;
     oss << "libgce.ty_message = " << lua::ty_message << std::endl;
+    oss << "libgce.ty_response = " << lua::ty_response << std::endl;
     oss << "libgce.ty_duration = " << lua::ty_duration << std::endl;
     oss << "libgce.ty_actor_id = " << lua::ty_actor_id << std::endl;
     oss << "libgce.ty_service_id = " << lua::ty_service_id << std::endl;
     oss << "libgce.ty_userdef = " << lua::ty_userdef << std::endl;
     oss << "libgce.ty_lua = " << lua::ty_lua << std::endl;
     oss << "libgce.ty_other = " << lua::ty_other << std::endl;
-    
+
+    oss << "libgce.ec_ok = " << lua::ec_ok << std::endl;
+    oss << "libgce.ec_timeout = " << lua::ec_timeout << std::endl;
+    oss << "libgce.ec_guard = " << lua::ec_guard << std::endl;
+
     oss << "libgce.dur_raw = " << gce::dur_raw << std::endl;
     oss << "libgce.dur_microsec = " << gce::dur_microsec << std::endl;
     oss << "libgce.dur_millisec = " << gce::dur_millisec << std::endl;
@@ -277,6 +284,8 @@ public:
     lua_setfield(L, -2, "aid_nil");
     lua::push(L, gce::svcid_nil);
     lua_setfield(L, -2, "svcid_nil");
+    lua::match::create(L, gce::match_nil);
+    lua_setfield(L, -2, "match_nil");
     lua_pop(L, 1);
   }
 

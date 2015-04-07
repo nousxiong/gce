@@ -9,11 +9,11 @@
 
 local gce = require('gce')
 
-gce.run_actor(
+gce.actor(
   function ()
   	local end_num = 0
   	while true do
-  		local sender, args, msg = gce.recv()
+  		local ec, sender, args, msg = gce.recv()
   		if msg:getty() == gce.atom('echo') then
   			gce.send(sender, msg)
   		else

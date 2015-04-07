@@ -41,7 +41,7 @@ inline bool find_exit(match_t type)
   return type == exit;
 }
 
-inline bool check_exit(std::vector<match_t>& match_list)
+inline bool check_exit(std::vector<match_t> const& match_list)
 {
   if (match_list.empty())
   {
@@ -49,7 +49,7 @@ inline bool check_exit(std::vector<match_t>& match_list)
   }
   else
   {
-    std::vector<match_t>::iterator itr =
+    std::vector<match_t>::const_iterator itr =
       std::find_if(
         match_list.begin(),
         match_list.end(),

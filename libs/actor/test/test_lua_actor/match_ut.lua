@@ -9,7 +9,7 @@
 
 local gce = require('gce')
 
-gce.run_actor(
+gce.actor(
   function ()
   	local size = 100
   	local base_id = gce.get_aid()
@@ -27,11 +27,11 @@ gce.run_actor(
 			gce.send(aid, 'init', gce.actor_id())
 		end
 		
-		local sender = gce.recv{'timeout', gce.millisecs(1)}
+		local ec, sender = gce.recv{'timeout', gce.millisecs(1)}
 		assert (sender == gce.aid_nil)
 
 		for i=1, size do
-			local aid, args, m = gce.recv{'not_catch', aid_list[i], gce.seconds(180)}
+			local ec, aid, args, m = gce.recv{'not_catch', aid_list[i], gce.seconds(180)}
 			assert (aid ~= gce.aid_nil)
 			assert (m:getty() == gce.exit)
 		end

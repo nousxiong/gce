@@ -151,7 +151,8 @@ public:
       sender = end_recv(res);
     }
 
-    set_recv_result(sender, msg);
+    int ec = check_result(msg);
+    set_recv_result(sender, msg, ec);
     return false;
   }
 
@@ -398,6 +399,26 @@ private:
     lua_pop(L_, 1);
   }
 
+  int check_result(pattern const& patt, message const& msg)
+  {
+    bool has_exit = check_exit(patt.match_list_);
+    if (!has_exit && msg.get_type() == exit)
+    {
+      BOOST_ASSERT(!patt.recver_.empty());
+      return lua::ec_guard;
+    }
+    return lua::ec_ok;
+  }
+
+  int check_result(message const& msg)
+  {
+    if (msg.get_type() == exit)
+    {
+      return lua::ec_guard;
+    }
+    return lua::ec_ok;
+  }
+
   bool pri_recv_match(pattern const& patt, aid_t& sender, message& msg)
   {
     recv_t rcv;
@@ -421,8 +442,9 @@ private:
     {
       sender = end_recv(rcv, msg);
     }
-  
-    set_recv_result(sender, msg);
+
+    int ec = check_result(patt, msg);
+    set_recv_result(sender, msg, ec);
     return false;
   }
 
@@ -440,10 +462,20 @@ private:
     yielding_ = false;
     set_self();
 
-    GCE_VERIFY(gce::lualib::get_ref(L_, "libgce", rf_) != 0).except<lua_exception>();
+    int rf = gce::lualib::get_ref(L_, "libgce", rf_);
+    GCE_ASSERT(rf != 0);
     GCE_ASSERT(lua_type(L_, -1) == LUA_TFUNCTION);
-    GCE_VERIFY(gce::lualib::get_ref(L_, "libgce", co_) != 0).except<lua_exception>();
-    GCE_VERIFY(lua_pcall(L_, 1, 0, 0) == 0).msg(lua_tostring(L_, -1)).except<lua_exception>();
+    int co = gce::lualib::get_ref(L_, "libgce", co_);
+    GCE_ASSERT(co != 0);
+
+    exit_code_t exc = exit_normal;
+    std::string errmsg;
+    if (lua_pcall(L_, 1, 0, 0) != 0)
+    {
+      exc = exit_except;
+      errmsg = lua_tostring(L_, -1);
+    }
+    quit(exc, errmsg);
   }
 
   void stop(aid_t self_aid, exit_code_t ec, std::string const& exit_msg)
@@ -476,23 +508,15 @@ private:
       recving_ = false;
       responsing_ = false;
       curr_pattern_.clear();
-      try
+
+      if (spw_hdr_)
       {
-        if (spw_hdr_)
-        {
-          pri_handle_remote_spawn(nil_aid_, nil_msg_);
-        }
-        else
-        {
-          set_recv_result(nil_aid_, nil_msg_);
-          resume();
-          quit();
-        }
+        pri_handle_remote_spawn(nil_aid_, nil_msg_);
       }
-      catch (std::exception& ex)
+      else
       {
-        GCE_ERROR(lg_)(__FILE__)(__LINE__) << ex.what();
-        quit(exit_except, ex.what());
+        set_recv_result(nil_aid_, nil_msg_, lua::ec_timeout);
+        resume();
       }
     }
   }
@@ -550,14 +574,16 @@ private:
       base_t::mb_.push(*res, pk.msg_);
     }
 
+    match_t ty = pk.msg_.get_type();
     recv_t rcv;
     message msg;
     aid_t sender;
+    int ec = lua::ec_ok;
     bool need_resume = false;
 
     if (
       (recving_ && !is_response) ||
-      (responsing_ && is_response)
+      (responsing_ && (is_response || ty == exit))
       )
     {
       if (recving_ && !is_response)
@@ -568,12 +594,13 @@ private:
           return;
         }
         sender = end_recv(rcv, msg);
+        ec = check_result(curr_pattern_, msg);
         curr_pattern_.clear();
         need_resume = true;
         recving_ = false;
       }
 
-      if (responsing_ && is_response)
+      if (responsing_ && (is_response || ty == exit))
       {
         GCE_ASSERT(recving_res_.valid());
         bool ret = base_t::mb_.pop(recving_res_, msg);
@@ -582,14 +609,15 @@ private:
           return;
         }
         sender = end_recv(recving_res_);
+        ec = check_result(msg);
         need_resume = true;
         responsing_ = false;
         recving_res_ = nil_resp_;
       }
 
       ++tmr_sid_;
-      errcode_t ec;
-      tmr_.cancel(ec);
+      errcode_t ignored_ec;
+      tmr_.cancel(ignored_ec);
 
       match_t msg_type = msg.get_type();
       if (msg_type == msg_new_actor)
@@ -615,103 +643,67 @@ private:
 
       if (need_resume)
       {
-        try
-        {
-          set_recv_result(sender, msg);
-          resume();
-          quit();
-        }
-        catch (std::exception& ex)
-        {
-          GCE_ERROR(lg_)(__FILE__)(__LINE__) << ex.what();
-          quit(exit_except, ex.what());
-        }
+        set_recv_result(sender, msg, ec);
+        resume();
       }
     }
   }
 
   void handle_bind()
   {
-    try
+    if (yielding_)
     {
-      if (yielding_)
-      {
-        resume();
-        quit();
-      }
-    }
-    catch (std::exception& ex)
-    {
-      GCE_ERROR(lg_)(__FILE__)(__LINE__) << ex.what();
-      quit(exit_except, ex.what());
+      resume();
     }
   }
 
   void handle_connect(aid_t skt, message& msg)
   {
-    try
+    ctxid_pair_t ctxid_pr;
+    errcode_t ec;
+    msg >> ctxid_pr >> ec;
+
+    if (skt != aid_nil)
     {
-      ctxid_pair_t ctxid_pr;
-      errcode_t ec;
-      msg >> ctxid_pr >> ec;
-
-      if (skt != aid_nil)
-      {
-        svc_.register_socket(ctxid_pr, skt);
-      }
-
-      lua_getglobal(L_, "libgce");
-      lua_pushinteger(L_, ec.value());
-      lua_setfield(L_, -2, "conn_ret");
-      std::string errmsg = ec.message();
-      lua_pushlstring(L_, errmsg.c_str(), errmsg.size());
-      lua_setfield(L_, -2, "conn_errmsg");
-      lua_pop(L_, 1);
-
-      if (yielding_)
-      {
-        resume();
-        quit();
-      }
+      svc_.register_socket(ctxid_pr, skt);
     }
-    catch (std::exception& ex)
+
+    lua_getglobal(L_, "libgce");
+    lua_pushinteger(L_, ec.value());
+    lua_setfield(L_, -2, "conn_ret");
+    std::string errmsg = ec.message();
+    lua_pushlstring(L_, errmsg.c_str(), errmsg.size());
+    lua_setfield(L_, -2, "conn_errmsg");
+    lua_pop(L_, 1);
+
+    if (yielding_)
     {
-      GCE_ERROR(lg_)(__FILE__)(__LINE__) << ex.what();
-      quit(exit_except, ex.what());
+      resume();
     }
   }
 
   void handle_spawn(aid_t aid, message& msg)
   {
-    try
+    uint16_t ty = u16_nil;
+    msg >> ty;
+    link_type type = (link_type)ty;
+
+    if (aid != aid_nil)
     {
-      uint16_t ty = u16_nil;
-      msg >> ty;
-      link_type type = (link_type)ty;
-
-      if (aid != aid_nil)
+      if (type == linked)
       {
-        if (type == linked)
-        {
-          link(aid);
-        }
-        else if (type == monitored)
-        {
-          monitor(aid);
-        }
+        link(aid);
       }
-
-      set_spawn_result(aid);
-      if (yielding_)
+      else if (type == monitored)
       {
-        resume();
-        quit();
+        monitor(aid);
       }
     }
-    catch (std::exception& ex)
+
+    set_spawn_result(aid);
+    if (yielding_)
     {
-      GCE_ERROR(lg_)(__FILE__)(__LINE__) << ex.what();
-      quit(exit_except, ex.what());
+      resume();
     }
   }
 
@@ -775,17 +767,8 @@ private:
 
     if (yielding_)
     {
-      try
-      {
-        set_spawn_result(aid);
-        resume();
-        quit();
-      }
-      catch (std::exception& ex)
-      {
-        GCE_ERROR(lg_)(__FILE__)(__LINE__) << ex.what();
-        quit(exit_except, ex.what());
-      }
+      set_spawn_result(aid);
+      resume();
     }
     return false;
   }
@@ -801,13 +784,15 @@ private:
     return false;
   }
 
-  void set_recv_result(gce::aid_t const& sender, message const& msg)
+  void set_recv_result(gce::aid_t const& sender, message const& msg, int ec)
   {
     lua_getglobal(L_, "libgce");
     lua::push(L_, sender);
     lua_setfield(L_, -2, "recv_sender");
     lua::message::create(L_, msg);
     lua_setfield(L_, -2, "recv_msg");
+    lua_pushinteger(L_, ec);
+    lua_setfield(L_, -2, "recv_ec");
     lua_pop(L_, 1);
   }
 

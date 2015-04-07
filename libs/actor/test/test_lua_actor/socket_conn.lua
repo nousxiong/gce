@@ -9,7 +9,7 @@
 
 local gce = require('gce')
 
-gce.run_actor(
+gce.actor(
   function ()
   	local opt = gce.net_option()
   	opt.reconn_period = gce.seconds(1)

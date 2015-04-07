@@ -9,11 +9,11 @@
 
 local gce = require('gce')
 
-gce.run_actor(
+gce.actor(
   function ()
 		local size = 50
 		local res_list = {}
-		local sender, args = gce.recv('init', gce.actor_id)
+		local ec, sender, args = gce.recv('init', gce.actor_id)
 		local base_id = args[1]
 
 		for i=1, size do
@@ -23,7 +23,7 @@ gce.run_actor(
 
 		for i=1, size do
 			repeat
-				local sender, args = gce.respond{res_list[i], gce.seconds(1)}
+				local ec, sender, args = gce.respond{res_list[i], gce.seconds(1)}
 			until sender ~= gce.aid_nil
 		end
 

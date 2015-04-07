@@ -9,7 +9,7 @@
 
 local gce = require('gce')
 
-gce.run_actor(
+gce.actor(
   function ()
 		local aid = gce.spawn('test_lua_actor/pingpong_ping.lua')
 		gce.send(aid, 'init')

@@ -9,13 +9,13 @@
 
 local gce = require('gce')
 
-gce.run_actor(
+gce.actor(
   function ()
-  	local base_aid, args = gce.recv('init', gce.actor_id)
+  	local ec, base_aid, args = gce.recv('init', gce.actor_id)
 		local last_id = args[1]
 
 		local msg
-		sender, args, msg = gce.recv()
+		ec, sender, args, msg = gce.recv()
 		if (last_id ~= gce.aid_nil) then
 			gce.relay(last_id, msg)
 		else

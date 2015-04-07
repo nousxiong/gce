@@ -37,6 +37,7 @@ enum
   ty_pattern = 0,
   ty_match,
   ty_message,
+  ty_response,
 
   /// in adata means adtype, in amsg means userdata
   ty_duration,
@@ -49,6 +50,13 @@ enum
 
   /// none gce userdata
   ty_other,
+};
+
+enum
+{
+  ec_ok = 0,
+  ec_timeout,
+  ec_guard,
 };
 ///------------------------------------------------------------------------------
 /// service_id
@@ -354,7 +362,7 @@ struct match
   static int make(lua_State* L)
   {
     int ty = lua_type(L, 1);
-    match_t mt;
+    match_t mt = gce::match_nil;
     if (ty == LUA_TNUMBER)
     {
       mt.val_ = lua_tointeger(L, 1);
@@ -554,6 +562,12 @@ struct response
     gce::resp_t* o = new (block) gce::resp_t(resp);
     gce::lualib::setmetatab(L, "response");
     return o;
+  }
+
+  static int gcety(lua_State* L)
+  {
+    lua_pushinteger(L, (int)ty_response);
+    return 1;
   }
 
   static int tostring(lua_State* L)

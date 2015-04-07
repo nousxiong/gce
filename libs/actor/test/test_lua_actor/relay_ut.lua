@@ -9,7 +9,7 @@
 
 local gce = require('gce')
 
-gce.run_actor(
+gce.actor(
   function ()
   	local root_num = 1
   	for i=1, root_num do

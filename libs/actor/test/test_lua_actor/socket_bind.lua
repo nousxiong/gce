@@ -9,7 +9,7 @@
 
 local gce = require('gce')
 
-gce.run_actor(
+gce.actor(
   function ()
   	gce.bind('tcp://127.0.0.1:14923')
   end)
