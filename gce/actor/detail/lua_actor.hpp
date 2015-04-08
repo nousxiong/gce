@@ -511,11 +511,11 @@ private:
 
       if (spw_hdr_)
       {
-        pri_handle_remote_spawn(nil_aid_, nil_msg_);
+        pri_handle_remote_spawn(aid_nil, nil_msg_);
       }
       else
       {
-        set_recv_result(nil_aid_, nil_msg_, lua::ec_timeout);
+        set_recv_result(aid_nil, nil_msg_, lua::ec_timeout);
         resume();
       }
     }
@@ -749,7 +749,7 @@ private:
       spawn_error error = (spawn_error)err;
       if (error != spawn_ok)
       {
-        aid = nil_aid_;
+        aid = aid_nil;
       }
 
       if (aid != aid_nil)
@@ -827,7 +827,6 @@ private:
   typedef boost::function<bool (aid_t, message)> spawn_handler_t;
   spawn_handler_t spw_hdr_;
 
-  aid_t const nil_aid_;
   recv_t const nil_rcv_;
   resp_t const nil_resp_;
   message const nil_msg_;

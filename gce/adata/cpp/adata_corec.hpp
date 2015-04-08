@@ -1683,9 +1683,9 @@ namespace adata {
       return false;
     }
 
-    static int sizeof_type(lua_State *L, zero_copy_buffer * buf, adata_type * type, sizeof_cache_contex * ctx = NULL);
+    static int sizeof_type(lua_State *L, /*zero_copy_buffer * buf, */adata_type * type, sizeof_cache_contex * ctx = NULL);
 
-    static ADATA_INLINE int32_t sizeof_value(lua_State *L, zero_copy_buffer * buf, int type, int size, adata_type * type_define, sizeof_cache_contex * ctx)
+    static ADATA_INLINE int32_t sizeof_value(lua_State *L, /*zero_copy_buffer * buf, */int type, int size, adata_type * type_define, sizeof_cache_contex * ctx)
     {
       (size);
       switch (type)
@@ -1717,7 +1717,7 @@ namespace adata {
       {
         if (type_define)
         {
-          return sizeof_type(L, buf, type_define, ctx);
+          return sizeof_type(L, /*buf, */type_define, ctx);
         }
         break;
       }
@@ -1725,7 +1725,7 @@ namespace adata {
       return 0;
     }
 
-    static int32_t sizeof_member(lua_State *L, zero_copy_buffer * buf, adata_member * mb, sizeof_cache_contex * ctx)
+    static int32_t sizeof_member(lua_State *L, /*zero_copy_buffer * buf, */adata_member * mb, sizeof_cache_contex * ctx)
     {
       int32_t size = 0;
       if (mb->type == adata_et_list)
@@ -1740,7 +1740,7 @@ namespace adata {
         for (int i = 1; i <= len; ++i)
         {
           lua_rawgeti(L, -1, i);
-          size += sizeof_value(L, buf, ptype->type, ptype->size, ptype->type_define, ctx);
+          size += sizeof_value(L, /*buf, */ptype->type, ptype->size, ptype->type_define, ctx);
           lua_pop(L, 1);
         }
       }
@@ -1753,9 +1753,9 @@ namespace adata {
         while (lua_next(L, -2))
         {
           lua_pushvalue(L, -2);
-          size += sizeof_value(L, buf, ptype1->type, ptype1->size, ptype1->type_define, ctx);
+          size += sizeof_value(L, /*buf, */ptype1->type, ptype1->size, ptype1->type_define, ctx);
           lua_pop(L, 1);
-          size += sizeof_value(L, buf, ptype2->type, ptype2->size, ptype2->type_define, ctx);
+          size += sizeof_value(L, /*buf, */ptype2->type, ptype2->size, ptype2->type_define, ctx);
           lua_pop(L, 1);
           ++i;
         }
@@ -1763,12 +1763,12 @@ namespace adata {
       }
       else
       {
-        size += sizeof_value(L, buf, mb->type, mb->size, mb->type_define, ctx);
+        size += sizeof_value(L, /*buf, */mb->type, mb->size, mb->type_define, ctx);
       }
       return size;
     }
 
-    static int sizeof_type(lua_State *L, zero_copy_buffer * buf, adata_type * type, sizeof_cache_contex * ctx)
+    static int sizeof_type(lua_State *L, /*zero_copy_buffer * buf, */adata_type * type, sizeof_cache_contex * ctx)
     {
       type_sizeof_info info;
       size_t top = 0;
@@ -1788,7 +1788,7 @@ namespace adata {
           if (test_adata_empty(L, mb) == false)
           {
             info.tag |= mask;
-            info.size += sizeof_member(L, buf, mb, ctx);
+            info.size += sizeof_member(L, /*buf, */mb, ctx);
           }
           lua_pop(L, 1);
         }
@@ -1805,10 +1805,11 @@ namespace adata {
 
     static int lua_sizeof(lua_State * L)
     {
-      zero_copy_buffer * zbuf = (zero_copy_buffer*)lua_touserdata(L, 3);
-      adata_type * type = (adata_type*)lua_touserdata(L, 4);
-      sizeof_type(L, zbuf, type, NULL);
-      lua_pushinteger(L, zbuf->error_code());
+      /// Nous Xiong: remove unused zbuf
+      //zero_copy_buffer * zbuf = (zero_copy_buffer*)lua_touserdata(L, 3);
+      adata_type * type = (adata_type*)lua_touserdata(L, 3);
+      int size = sizeof_type(L, /*buf, */type, NULL);
+      lua_pushinteger(L, size);
       return 1;
     }
 
@@ -1962,7 +1963,7 @@ namespace adata {
       adata_type * type = (adata_type*)lua_touserdata(L, 4);
       sizeof_cache_contex ctx;
       int top = lua_gettop(L);
-      sizeof_type(L, zbuf, type, &ctx);
+      sizeof_type(L, /*zbuf, */type, &ctx);
       top = lua_gettop(L);
       write_type(L, zbuf, type, ctx);
       lua_pushinteger(L, zbuf->error_code());
@@ -1991,7 +1992,7 @@ namespace adata {
         { "set_layout_mt", set_layout_mt },
         { "read", lua_read },
         { "skip_read", lua_skip_read },
-        { "sizeof", lua_sizeof },
+        { "size_of", lua_sizeof },
         { "write", lua_write },
         { "new_buf", new_zbuf },
         { "del_buf", del_zbuf },
@@ -2114,7 +2115,7 @@ namespace adata {
         { "read", lua_read },
         { "skip_read", lua_skip_read },
         { "write", lua_write },
-        { "sizeof", lua_sizeof },
+        { "size_of", lua_sizeof },
         { "new_buf", new_zbuf },
         { "del_buf", del_zbuf },
         { "resize_buf", resize_zuf },

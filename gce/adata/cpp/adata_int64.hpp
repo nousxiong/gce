@@ -184,7 +184,7 @@ namespace adata {
 
     ADATA_INLINE void lua_pushuint64(lua_State *L, uint64_t n)
     {
-      if (n < (1LL << 53))
+      if (n < (std::numeric_limits<lua_Integer>::max)())
       {
         lua_pushinteger(L, (lua_Integer)n);
       }
@@ -205,7 +205,7 @@ namespace adata {
     ADATA_INLINE void lua_pushint64(lua_State *L, int64_t n)
     {
 #if LUA_VERSION_NUM < 503
-      if (n < (1LL << 53))
+      if (n < (std::numeric_limits<lua_Integer>::max)())
       {
         lua_pushinteger(L, (lua_Integer)n);
       }

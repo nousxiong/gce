@@ -58,9 +58,9 @@ layouts.gce_adl_actor_id = layout_gce_adl_actor_id
 
 local mc = {};
 mc = {
-  adtype = function() return m.actor_id end,
+  adtype = function(o) return m.actor_id end,
   skip_read = function(o,buf) return skip_read_c( field_list , mt_type_list , buf , layout_gce_adl_actor_id , o) end,
-  size_of = function(o,buf) return size_of_c( field_list , mt_type_list , buf , layout_gce_adl_actor_id , o) end,
+  size_of = function(o) return size_of_c( field_list , mt_type_list , layout_gce_adl_actor_id , o) end,
   read = function(o,buf) return read_c( field_list , mt_type_list , buf , layout_gce_adl_actor_id , o) end,
   write = function(o,buf) return write_c( field_list , mt_type_list , buf , layout_gce_adl_actor_id , o) end,
 };

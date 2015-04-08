@@ -7,6 +7,7 @@
 /// See https://github.com/nousxiong/gce for latest version.
 ///
 
+#include "arg.adl.h"
 #include <gce/amsg/amsg.hpp>
 #include <boost/thread.hpp>
 #include <boost/assign.hpp>
@@ -17,17 +18,8 @@
 
 namespace gce
 {
-struct arg1_t
-{
-  std::string hi_;
-  int i_;
-};
-
-struct arg2_t
-{
-  std::vector<int> v_;
-  int i_;
-};
+typedef adl::arg1_t arg1_t;
+typedef adl::arg2_t arg2_t;
 }
 GCE_PACK(gce::arg1_t, (v.hi_&smax(100))(v.i_&sfix));
 GCE_PACK(gce::arg2_t, (v.v_&smax(5))(v.i_));

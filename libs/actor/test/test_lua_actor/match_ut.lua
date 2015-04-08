@@ -24,15 +24,15 @@ gce.actor(
 
 		for i=1, size do
 			local aid = gce.spawn(name, gce.monitored)
-			gce.send(aid, 'init', gce.actor_id())
+			gce.send(aid, 'init', gce.aid_nil)
 		end
-		
+
 		local ec, sender = gce.recv{'timeout', gce.millisecs(1)}
 		assert (sender == gce.aid_nil)
 
 		for i=1, size do
 			local ec, aid, args, m = gce.recv{'not_catch', aid_list[i], gce.seconds(180)}
-			assert (aid ~= gce.aid_nil)
+			assert (aid == aid_list[i])
 			assert (m:getty() == gce.exit)
 		end
 

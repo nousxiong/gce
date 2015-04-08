@@ -138,7 +138,7 @@ namespace adata
     ADATA_INLINE void load(lua_State * L, uint64_t& v)
     {
       lua::number64_type it = { et_int64_unknow };
-      lua::lua_tonumber64(L, 1, &it);
+      lua::lua_tonumber64(L, -1, &it);
       switch (it.type)
       {
       case et_int64_lua_number:

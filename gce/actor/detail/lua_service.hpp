@@ -79,18 +79,15 @@ public:
     lua_State* L = L_.get();
     luaL_openlibs(L);
 
+#if GCE_PACKER == GCE_ADATA
+    adata::lua::init_adata_corec(L);
+#endif
+
     typedef lua::actor<actor_t> lua_actor_t;
 
     /// register libgce
     gce::lualib::open(L)
       .begin("libgce")
-        .add_function("make_match", lua::match::make)
-        .begin_userdata("match")
-          .add_function("gcety", lua::match::gcety)
-          .add_function("__tostring", lua::match::tostring)
-          .add_function("__gc", lua::match::gc)
-          .add_function("__eq", lua::match::eq)
-        .end_userdata()
         .add_function("make_msg", lua::message::make)
         .begin_userdata("message")
           .add_function("setty", lua::message::setty)
@@ -119,6 +116,13 @@ public:
         .end_userdata()
         .add_function("make_netopt", lua::net_option::make)
 #if GCE_PACKER == GCE_AMSG
+        .add_function("make_match", lua::match::make)
+        .begin_userdata("match")
+          .add_function("gcety", lua::match::gcety)
+          .add_function("__tostring", lua::match::tostring)
+          .add_function("__gc", lua::match::gc)
+          .add_function("__eq", lua::match::eq)
+        .end_userdata()
         .add_function("make_svcid", lua::service_id::make)
         .begin_userdata("service_id")
           .add_function("pack", lua::service_id::pack)
@@ -156,6 +160,7 @@ public:
           .add_function("__gc", lua::duration::gc)
         .end_userdata()
 #elif GCE_PACKER == GCE_ADATA
+        .add_function("mt_tostring", lua::match::tostring)
         .add_function("svcid_tostring", lua::service_id::tostring)
         .add_function("aid_tostring", lua::actor_id::tostring)
         .add_function("dur_tostring", lua::duration::tostring)
@@ -206,6 +211,7 @@ public:
         .add_function("unpack_boolean", lua::unpack_boolean)
         .add_function("unpack_object", lua::unpack_object)
         .add_function("print", lua::print)
+        .add_function("init_nil", lua::init_nil)
       .end()
       ;
 
@@ -229,9 +235,9 @@ public:
     oss << "libgce.packer = libgce.pkr_adata" << std::endl;
 #endif
     oss << "libgce.ty_pattern = " << lua::ty_pattern << std::endl;
-    oss << "libgce.ty_match = " << lua::ty_match << std::endl;
     oss << "libgce.ty_message = " << lua::ty_message << std::endl;
     oss << "libgce.ty_response = " << lua::ty_response << std::endl;
+    oss << "libgce.ty_match = " << lua::ty_match << std::endl;
     oss << "libgce.ty_duration = " << lua::ty_duration << std::endl;
     oss << "libgce.ty_actor_id = " << lua::ty_actor_id << std::endl;
     oss << "libgce.ty_service_id = " << lua::ty_service_id << std::endl;
@@ -273,20 +279,6 @@ public:
       errmsg += lua_tostring(L, -1);
       GCE_VERIFY(false).msg(errmsg.c_str()).except<gce::lua_exception>();
     }
-
-    /// set libgce.zero and libgce.infin
-    lua_getglobal(L, "libgce");
-    lua::push(L, gce::zero);
-    lua_setfield(L, -2, "zero");
-    lua::push(L, gce::infin);
-    lua_setfield(L, -2, "infin");
-    lua::push(L, gce::aid_nil);
-    lua_setfield(L, -2, "aid_nil");
-    lua::push(L, gce::svcid_nil);
-    lua_setfield(L, -2, "svcid_nil");
-    lua::match::create(L, gce::match_nil);
-    lua_setfield(L, -2, "match_nil");
-    lua_pop(L, 1);
   }
 
   actor_t* make_actor()

@@ -44,9 +44,9 @@ layouts.gce_adl_duration = layout_gce_adl_duration
 
 local mc = {};
 mc = {
-  adtype = function() return m.duration end,
+  adtype = function(o) return m.duration end,
   skip_read = function(o,buf) return skip_read_c( field_list , mt_type_list , buf , layout_gce_adl_duration , o) end,
-  size_of = function(o,buf) return size_of_c( field_list , mt_type_list , buf , layout_gce_adl_duration , o) end,
+  size_of = function(o) return size_of_c( field_list , mt_type_list , layout_gce_adl_duration , o) end,
   read = function(o,buf) return read_c( field_list , mt_type_list , buf , layout_gce_adl_duration , o) end,
   write = function(o,buf) return write_c( field_list , mt_type_list , buf , layout_gce_adl_duration , o) end,
 };

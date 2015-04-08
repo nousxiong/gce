@@ -7,13 +7,11 @@
 /// See https://github.com/nousxiong/gce for latest version.
 ///
 
+#include "echo.adl.h"
+
 namespace gce
 {
-struct echo_data
-{
-  std::string hi_;
-  int i_;
-};
+typedef adl::echo_data echo_data;
 }
 GCE_PACK(gce::echo_data, (v.hi_)(v.i_&sfix));
 

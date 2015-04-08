@@ -14,22 +14,26 @@ gce.pkr_amsg = libgce.pkr_amsg
 gce.pkr_adata = libgce.pkr_adata
 gce.packer = libgce.packer
 
+local mt_adl = nil
 local dur_adl = nil
 local netopt_adl = nil
 local aid_adl = nil
 local svcid_adl = nil
 if gce.packer == gce.pkr_adata then
-	aid_adl = require('actor_id_adl')
+	mt_adl = require('match_adl')
+  aid_adl = require('actor_id_adl')
 	svcid_adl = require('service_id_adl')
 	dur_adl = require('duration_adl')
 	netopt_adl = require('net_option_adl')
 end
 
+libgce.init_nil()
+
 -- enum and constant def
 gce.ty_pattern = libgce.ty_pattern
-gce.ty_match = libgce.ty_match
 gce.ty_message = libgce.ty_message
 gce.ty_response = libgce.ty_response
+gce.ty_match = libgce.ty_match
 gce.ty_actor_id = libgce.ty_actor_id
 gce.ty_service_id = libgce.ty_service_id
 gce.ty_duration = libgce.ty_duration
@@ -162,7 +166,7 @@ function gce.recv(cfg, ...)
 	else
 		local ty = type(cfg)
 		local patt
-		if ty == 'table' then
+		if ty == 'table' and cfg.adtype == nil then
 			-- match_t*N + [aid/svcid] + [timeout] (N >= 0)
 			local tmo, recver
 			local last_idx = #cfg
@@ -198,17 +202,16 @@ function gce.recv(cfg, ...)
 		elseif ty == 'string' or ty == 'number' then
 			patt = gce.pattern(cfg)
 		else
-			assert (ty == 'userdata')
-      local gty = cfg:gcety()
-			if gty == gce.ty_pattern then
-				patt = cfg
-			elseif gty == gce.ty_match then
-				patt = gce.pattern(cfg)
-			else -- timeout
-				assert (gty == gce.ty_duration)
-				patt = libgce.make_patt()
-				patt:set_timeout(cfg)
-			end
+      local oty = libgce.typeof(cfg)
+      if oty == gce.ty_pattern then
+        patt = cfg
+      elseif oty == gce.ty_match then
+        patt = gce.pattern(cfg)
+      else -- timeout
+        assert (oty == gce.ty_duration)
+        patt = libgce.make_patt()
+        patt:set_timeout(cfg)
+      end
 		end
 		co = libgce.self:recv_match(patt)
 	end
@@ -335,8 +338,8 @@ function gce.duration(v)
 		return libgce.make_dur(v)
 	elseif gce.packer == gce.pkr_adata then
 		local dur = dur_adl.duration()
-		dur.dur_ = v
-		dur.ty_ = dur_raw
+		dur.val_ = v
+		dur.ty_ = gce.dur_raw
 		return dur
 	else
 		error("gce.packer invalid")
@@ -349,8 +352,8 @@ function gce.millisecs(v)
 		return libgce.make_millisecs(v)
 	elseif gce.packer == gce.pkr_adata then
 		local dur = dur_adl.duration()
-		dur.dur_ = v
-		dur.ty_ = dur_millisec
+		dur.val_ = v
+		dur.ty_ = gce.dur_millisec
 		return dur
 	else
 		error("gce.packer invalid")
@@ -363,8 +366,8 @@ function gce.seconds(v)
 		return libgce.make_seconds(v)
 	elseif gce.packer == gce.pkr_adata then
 		local dur = dur_adl.duration()
-		dur.dur_ = v
-		dur.ty_ = dur_second
+		dur.val_ = v
+		dur.ty_ = gce.dur_second
 		return dur
 	else
 		error("gce.packer invalid")
@@ -377,8 +380,8 @@ function gce.minutes(v)
 		return libgce.make_minutes(v)
 	elseif gce.packer == gce.pkr_adata then
 		local dur = dur_adl.duration()
-		dur.dur_ = v
-		dur.ty_ = dur_minute
+		dur.val_ = v
+		dur.ty_ = gce.dur_minute
 		return dur
 	else
 		error("gce.packer invalid")
@@ -391,8 +394,8 @@ function gce.hours(v)
 		return libgce.make_hours(v)
 	elseif gce.packer == gce.pkr_adata then
 		local dur = dur_adl.duration()
-		dur.dur_ = v
-		dur.ty_ = dur_hour
+		dur.val_ = v
+		dur.ty_ = gce.dur_hour
 		return dur
 	else
 		error("gce.packer invalid")
@@ -402,25 +405,20 @@ end
 function gce.message(cfg, ...)
 	local m = nil
 	if cfg ~= nil then
-		local ty = type(cfg)
-		if ty == 'userdata' then
-			if cfg:gcety() == gce.ty_message then
-				m = cfg
-			end
+    local oty = libgce.typeof(cfg)
+		if oty == gce.ty_message then
+			m = cfg
 		end
 
 		if m == nil then
 			m = libgce.make_msg()
 		end
 
-		if ty == 'string' or ty == 'number' then
+		if oty == gce.ty_lua then
 			local mt = gce.atom(cfg)
 			m:setty(mt)
-		else
-			assert (ty == 'userdata')
-			if cfg:gcety() == gce.ty_match then
-				m:setty(cfg)
-			end
+		elseif oty == gce.ty_match then
+			m:setty(cfg)
 		end
 	end
   if m == nil then
@@ -459,36 +457,36 @@ function gce.pattern(...)
 end
 
 function gce.net_option()
-	if gce.packer == gce.pkr_amsg then
-		return libgce.make_netopt()
-	elseif gce.packer == gce.pkr_adata then
-		return netopt_adl.net_option()
-	else
-		error("gce.packer invalid")
-	end
-	return 
+	return libgce.make_netopt()
 end
 
 function gce.atom(v)
   if v == nil then
-    return libgce.make_match()
+    return gce.make_match(gce.match_nil.val_)
   end
 
   local ty = type(v)
 	if ty == 'string' then
 		return libgce.atom(v)
   elseif ty == 'number' then
-    return libgce.make_match(v)
+    return gce.make_match(v)
 	else
-    assert (ty == 'userdata')
-    assert (v:gcety() == gce.ty_match)
-		return v
+    if gce.packer == gce.pkr_amsg then
+      assert (ty == 'userdata')
+      assert (v:gcety() == gce.ty_match)
+    elseif gce.packer == gce.pkr_adata then
+      assert (ty == 'table')
+      assert (v.adtype ~= nil)
+      assert (v:adtype() == mt_nil.match)
+    else
+      error("gce.packer invalid")
+    end
+    return v
 	end
 end
 
 function gce.deatom(v)
-  assert (type(v) == 'userdata')
-  assert (v:gcety() == gce.ty_match)
+  assert (libgce.typeof(v) == gce.ty_match)
 	return libgce.deatom(v)
 end
 
@@ -523,8 +521,19 @@ end
 gce.exit = gce.atom('gce_exit')
 gce.exit_normal = gce.atom('gce_ex_normal')
 
-
 -------------------internal use-------------------
+function gce.make_match(v)
+  if gce.packer == gce.pkr_amsg then
+    return libgce.make_match(v)
+  elseif gce.packer == gce.pkr_adata then
+    local mt = mt_adl.match()
+    mt.val_ = v
+    return mt
+  else
+    error("gce.packer invalid")
+  end
+end
+
 function gce.concat(...)
 	local t = {}
 	for _,v in ipairs{...} do
@@ -542,7 +551,11 @@ function gce.serialize(m, o)
 	elseif ty == 'boolean' then
 		libgce.pack_boolean(m, o)
 	else
-		libgce.pack_object(m, o)
+    if gce.packer == gce.pkr_adata then
+		  libgce.pack_object(m, o, o.size_of)
+    else
+      libgce.pack_object(m, o)
+    end
 	end
 end
 
@@ -588,6 +601,13 @@ if gce.packer == gce.pkr_adata then
 	  mt[name] = f
 	end
 
+  local mt_eq = function(lhs, rhs)
+    if rawequal(lhs, nil) or rawequal(rhs, nil) then return false end
+    if rawequal(lhs, rhs) then return true end
+
+    return lhs.val_ == rhs.val_
+  end
+
 	local svcid_eq = function(lhs, rhs)
 	  if rawequal(lhs, nil) or rawequal(rhs, nil) then return false end
 		if rawequal(lhs, rhs) then return true end
@@ -615,7 +635,10 @@ if gce.packer == gce.pkr_adata then
 	local tmp_svcid = gce.service_id()
 	local tmp_aid = gce.actor_id()
 	local tmp_dur = gce.duration()
+  local tmp_mt = gce.atom()
 
+  set_method(tmp_mt, '__eq', mt_eq)
+  set_method(tmp_mt, '__tostring', libgce.mt_tostring)
   set_method(tmp_aid, '__eq', aid_eq)
   set_method(tmp_aid, '__tostring', libgce.aid_tostring)
 	set_method(tmp_svcid, '__eq', svcid_eq)
@@ -625,6 +648,7 @@ if gce.packer == gce.pkr_adata then
   set_method(tmp_dur, '__le', libgce.dur_le)
   set_method(tmp_dur, '__add', libgce.dur_add)
   set_method(tmp_dur, '__sub', libgce.dur_sub)
+  set_method(tmp_dur, '__tostring', libgce.dur_tostring)
 	set_method(tmp_dur, "type", function (dur) return dur.ty_ end)
 end
 
@@ -639,6 +663,8 @@ function libgce.typeof(o)
 				return gce.ty_service_id
 			elseif adty == dur_adl.duration then
 				return gce.ty_duration
+      elseif adty == mt_adl.match then
+        return gce.ty_match
 			else
 				return gce.ty_userdef
 			end

@@ -40,6 +40,16 @@ if (GCE_LUA)
     COMMAND ${CMAKE_COMMAND} -E echo "done."
     VERBATIM
     )
+  if (${GCE_PACKER} STREQUAL "adata")
+    add_custom_command (
+      TARGET gce_actor_ut
+      POST_BUILD
+      COMMAND ${CMAKE_COMMAND} -E echo "copy adata lua files to build dir..."
+      COMMAND ${CMAKE_COMMAND} -E copy_directory ${PROJECT_SOURCE_DIR}/gce/adata/lua ${PROJECT_BINARY_DIR}/libs/actor/test
+      COMMAND ${CMAKE_COMMAND} -E echo "done."
+      VERBATIM
+      )
+  endif ()
 endif ()
 
 if (GCE_LINK_PROP)

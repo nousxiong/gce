@@ -213,6 +213,19 @@ public:
     return *this;
   }
 
+  message& operator<<(std::string const& str)
+  {
+    uint32_t len = (uint32_t)str.size();
+    size_t size = packer::size_of(len);
+    size += len;
+
+    pre_write(size);
+    pkr_.write(len);
+    pkr_.write((byte_t const*)str.data(), (size_t)len);
+    end_write();
+    return *this;
+  }
+
   message& operator<<(boost::string_ref str)
   {
     uint32_t len = (uint32_t)str.size();
@@ -236,6 +249,17 @@ public:
     pkr_.write(len);
     pkr_.write((byte_t const*)str, (size_t)len);
     end_write();
+    return *this;
+  }
+
+  message& operator>>(std::string& str)
+  {
+    uint32_t len = 0;
+    pre_read();
+    pkr_.read(len);
+    byte_t const* ptr = pkr_.skip_read(len);
+    str.assign((char const*)ptr, len);
+    end_read();
     return *this;
   }
 

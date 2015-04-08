@@ -21,7 +21,7 @@ namespace adata
   template<typename stream_ty>
   ADATA_INLINE void read( stream_ty& stream, ::gce::adl::duration& value)
   {
-    ::size_t offset = stream.read_length();
+    ::std::size_t offset = stream.read_length();
     uint64_t tag = 0;
     read(stream,tag);
     if(stream.error()){return;}
@@ -33,8 +33,8 @@ namespace adata
     if(tag&2ULL)    {read(stream,value.ty_);{if(stream.error()){stream.trace_error("ty_",-1);return;}}}
     if(len_tag >= 0)
     {
-      ::size_t read_len = stream.read_length() - offset;
-      ::size_t len = (::size_t)len_tag;
+      ::std::size_t read_len = stream.read_length() - offset;
+      ::std::size_t len = (::std::size_t)len_tag;
       if(len > read_len) stream.skip_read(len - read_len);
     }
   }
