@@ -42,7 +42,7 @@ private:
         aid_t aid =
           spawn(
             self,
-            boost::bind(&response_ut::my_child, _1),
+            boost::bind(&response_ut::my_child, _arg1),
             monitored
             );
         res_list[i] = self->request(aid);
@@ -82,7 +82,7 @@ private:
     threaded_actor a = spawn(ctx);
     for (std::size_t i=0; i<2; ++i)
     {
-      spawn(a, boost::bind(&response_ut::my_actor, _1, base_id));
+      spawn(a, boost::bind(&response_ut::my_actor, _arg1, base_id));
     }
   }
 
@@ -103,7 +103,7 @@ private:
         spawn(
           base,
           boost::bind(
-            &response_ut::my_actor, _1,
+            &response_ut::my_actor, _arg1,
             base_id
             )
           );

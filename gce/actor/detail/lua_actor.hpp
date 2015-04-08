@@ -238,7 +238,7 @@ public:
     clock_t::time_point begin_tp = clock_t::now();
     spw_hdr_ = 
       boost::bind(
-        &self_t::handle_remote_spawn, this, _1, _2,
+        &self_t::handle_remote_spawn, this, _arg1, _arg2,
         (link_type)type, begin_tp, sid, tmo, curr_tmo
         );
 
@@ -739,7 +739,7 @@ private:
         {
           spw_hdr_ = 
             boost::bind(
-              &self_t::handle_remote_spawn, this, _1, _2,
+              &self_t::handle_remote_spawn, this, _arg1, _arg2,
               type, begin_tp, sid, tmo, curr_tmo
               );
           return true;

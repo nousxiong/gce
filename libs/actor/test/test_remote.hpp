@@ -53,7 +53,7 @@ public:
       func_list.push_back(
         make_remote_func<stackful>(
           "echo_client", 
-          boost::bind(&remote_ut::echo_client, _1)
+          boost::bind(&remote_ut::echo_client, _arg1)
           )
         );
       gce::bind(base_cln, "tcp://127.0.0.1:14923", func_list);
@@ -65,7 +65,7 @@ public:
         spawn(
           base_svr,
           boost::bind(
-            &remote_ut::echo_server, _1, client_num
+            &remote_ut::echo_server, _arg1, client_num
             ),
           monitored
           );

@@ -90,7 +90,7 @@ private:
           boost::bind(
             &my_child::run, 
             boost::make_shared<my_child>(base_id_), 
-            _1
+            _arg1
             ),
           aid_
           );
@@ -135,7 +135,7 @@ private:
           boost::bind(
             &my_actor::run, 
             boost::make_shared<my_actor>(base_id), 
-            _1
+            _arg1
             )
           );
 

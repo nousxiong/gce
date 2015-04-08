@@ -51,8 +51,8 @@ private:
       threaded_actor base = spawn(ctx);
 
       aid_t base_id = base.get_aid();
-      aid_t aid1 = spawn(base, boost::bind(&match_recver_ut::my_actor, _1, base_id), monitored);
-      spawn(base, boost::bind(&match_recver_ut::my_actor, _1, aid_t()), monitored);
+      aid_t aid1 = spawn(base, boost::bind(&match_recver_ut::my_actor, _arg1, base_id), monitored);
+      spawn(base, boost::bind(&match_recver_ut::my_actor, _arg1, aid_t()), monitored);
 
       message msg;
       aid_t sender = base.recv(msg, pattern("timeout", millisecs(1)));

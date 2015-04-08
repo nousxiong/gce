@@ -318,7 +318,7 @@ struct receiver<ActorRef, true>
     actor_ref_t& a = base_t::get_actor_ref();
     a.recv(
       boost::bind(
-        &handle_recv0<actor_ref_t>, _1, _2, _3,
+        &handle_recv0<actor_ref_t>, _arg1, _arg2, _arg3,
         boost::ref(sender), has_exit
         ),
       patt
@@ -333,7 +333,7 @@ struct receiver<ActorRef, true>
     actor_ref_t& a = base_t::get_actor_ref();
     a.recv(
       boost::bind(
-        &handle_recv1<actor_ref_t, A1>, _1, _2, _3,
+        &handle_recv1<actor_ref_t, A1>, _arg1, _arg2, _arg3,
         boost::ref(sender), has_exit, boost::ref(a1)
         ),
       patt
@@ -348,7 +348,7 @@ struct receiver<ActorRef, true>
     actor_ref_t& a = base_t::get_actor_ref();
     a.recv(
       boost::bind(
-        &handle_recv2<actor_ref_t, A1, A2>, _1, _2, _3,
+        &handle_recv2<actor_ref_t, A1, A2>, _arg1, _arg2, _arg3,
         boost::ref(sender), has_exit, boost::ref(a1), boost::ref(a2)
         ),
       patt
@@ -363,7 +363,7 @@ struct receiver<ActorRef, true>
     actor_ref_t& a = base_t::get_actor_ref();
     a.recv(
       boost::bind(
-        &handle_recv3<actor_ref_t, A1, A2, A3>, _1, _2, _3,
+        &handle_recv3<actor_ref_t, A1, A2, A3>, _arg1, _arg2, _arg3,
         boost::ref(sender), has_exit, boost::ref(a1), boost::ref(a2),
         boost::ref(a3)
         ),
@@ -379,7 +379,7 @@ struct receiver<ActorRef, true>
     actor_ref_t& a = base_t::get_actor_ref();
     a.recv(
       boost::bind(
-        &handle_recv4<actor_ref_t, A1, A2, A3, A4>, _1, _2, _3,
+        &handle_recv4<actor_ref_t, A1, A2, A3, A4>, _arg1, _arg2, _arg3,
         boost::ref(sender), has_exit, boost::ref(a1), boost::ref(a2),
         boost::ref(a3), boost::ref(a4)
         ),
@@ -395,7 +395,7 @@ struct receiver<ActorRef, true>
     actor_ref_t& a = base_t::get_actor_ref();
     a.recv(
       boost::bind(
-        &handle_recv5<actor_ref_t, A1, A2, A3, A4, A5>, _1, _2, _3,
+        &handle_recv5<actor_ref_t, A1, A2, A3, A4, A5>, _arg1, _arg2, _arg3,
         boost::ref(sender), has_exit, boost::ref(a1), boost::ref(a2),
         boost::ref(a3), boost::ref(a4), boost::ref(a5)
         ),

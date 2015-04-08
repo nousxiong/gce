@@ -202,7 +202,7 @@ inline void spawn(
   pattern patt(detail::msg_new_actor);
   sire.recv(
     boost::bind(
-      &handle_spawn<context_t>, _1, _2, _3,
+      &handle_spawn<context_t>, _arg1, _arg2, _arg3,
       type, spawn_handler_t(h)
       ),
     patt
@@ -233,7 +233,7 @@ inline void spawn(
   pattern patt(detail::msg_new_actor);
   sire.recv(
     boost::bind(
-      &handle_spawn<context_t>, _1, _2, _3,
+      &handle_spawn<context_t>, _arg1, _arg2, _arg3,
       type, spawn_handler_t(h)
       ),
     patt
@@ -279,7 +279,7 @@ inline void handle_remote_spawn(
     pattern patt(detail::msg_spawn_ret, curr_tmo);
     self.recv(
       boost::bind(
-        &handle_remote_spawn<context_t>, _1, _2, _3,
+        &handle_remote_spawn<context_t>, _arg1, _arg2, _arg3,
         type, begin_tp, sid, tmo, curr_tmo, hdr
         ),
       patt
@@ -433,7 +433,7 @@ inline void spawn_remote(
   pattern patt(detail::msg_spawn_ret, curr_tmo);
   sire.recv(
     boost::bind(
-      &handle_remote_spawn<context_t>, _1, _2, _3,
+      &handle_remote_spawn<context_t>, _arg1, _arg2, _arg3,
       type, begin_tp, sid, tmo, curr_tmo, spawn_handler_t(h)
       ),
     patt

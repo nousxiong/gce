@@ -119,7 +119,7 @@ inline void spawn(
     stackless(), sire, f, 
     boost::bind(
       &stackless_actor_t::spawn_handler, &a, 
-      _1, _2, boost::ref(aid)
+      _arg1, _arg2, boost::ref(aid)
       ), 
     boost::ref(svc), type
     );
@@ -141,7 +141,7 @@ inline void spawn(
     luaed(), sire, 
     boost::bind(
       &stackless_actor_t::spawn_handler, &a, 
-      _1, _2, boost::ref(aid)
+      _arg1, _arg2, boost::ref(aid)
       ), 
     script, boost::ref(svc), type
     );
@@ -235,7 +235,7 @@ inline void spawn_remote(
     stackful(), sire, func, 
     boost::bind(
       &stackless_actor_t::spawn_handler, &a, 
-      _1, _2, boost::ref(aid)
+      _arg1, _arg2, boost::ref(aid)
       ), 
     to_match(ctxid), type, stack_size, tmo
     );

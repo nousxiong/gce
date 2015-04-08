@@ -28,7 +28,7 @@ public:
       , cln_(spawn(base_))
       , stopped_(false)
     {
-      aid_t counter = spawn(base_, boost::bind(&slice_ut::cd, _1));
+      aid_t counter = spawn(base_, boost::bind(&slice_ut::cd, _arg1));
       cln_->send(counter, "cd", count_down);
     }
 

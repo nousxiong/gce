@@ -90,7 +90,7 @@ public:
           spawn(
             base,
             boost::bind(
-              &socket_broken_ut::quiter, _1
+              &socket_broken_ut::quiter, _arg1
               ),
             monitored
             );

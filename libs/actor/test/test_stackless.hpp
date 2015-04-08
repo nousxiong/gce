@@ -71,7 +71,7 @@ public:
             self,
             boost::bind(
               &my_child::run, 
-              boost::make_shared<my_child>(), _1
+              boost::make_shared<my_child>(), _arg1
               ),
             aid_
             );
@@ -124,7 +124,7 @@ public:
           boost::make_shared<my_actor>(
             boost::ref(ios), base_id
             ), 
-          _1
+          _arg1
           )
         );
     }
@@ -139,7 +139,7 @@ public:
       std::size_t my_actor_size = free_actor_num + user_thr_num * 2;
       gce::log::asio_logger lg;
       attributes attrs;
-      attrs.lg_ = boost::bind(&gce::log::asio_logger::output, &lg, _1, "");
+      attrs.lg_ = boost::bind(&gce::log::asio_logger::output, &lg, _arg1, "");
       context ctx(attrs);
       threaded_actor base = spawn(ctx);
 
@@ -154,7 +154,7 @@ public:
             boost::make_shared<my_actor>(
               boost::ref(ios), base_id
               ), 
-            _1
+            _arg1
             )
           );
       }

@@ -33,7 +33,7 @@ public:
       std::size_t echo_num = 10;
 
       attributes attrs;
-      attrs.lg_ = boost::bind(&gce::log::asio_logger::output, &lg, _1, "");
+      attrs.lg_ = boost::bind(&gce::log::asio_logger::output, &lg, _arg1, "");
       attrs.id_ = atom("one");
       context ctx1(attrs);
       attrs.id_ = atom("two");
@@ -48,7 +48,7 @@ public:
         spawn(
           base2,
           boost::bind(
-            &socket_ut::echo, _1
+            &socket_ut::echo, _arg1
             ),
           monitored
           );

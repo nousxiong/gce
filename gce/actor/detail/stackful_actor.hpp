@@ -258,7 +258,7 @@ public:
     boost::asio::spawn(
       base_t::snd_,
       boost::bind(
-        &self_t::run, this, _1
+        &self_t::run, this, _arg1
         ),
       boost::coroutines::attributes(stack_size)
       );
@@ -338,7 +338,7 @@ private:
     GCE_ASSERT(yld_);
     async_result_init_t init(BOOST_ASIO_MOVE_CAST(yield_t)(*yld_));
 
-    yld_cb_ = boost::bind<void>(init.handler, _1);
+    yld_cb_ = boost::bind<void>(init.handler, _arg1);
     return init.result.get();
   }
 

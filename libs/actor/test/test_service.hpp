@@ -52,7 +52,7 @@ private:
       spawn(
         base2,
         boost::bind(
-          &service_ut::echo_service, _1
+          &service_ut::echo_service, _arg1
           ),
         monitored
         );

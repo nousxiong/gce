@@ -53,7 +53,7 @@ public:
           spawn(
             base2,
             boost::bind(
-              &remote_link_ut::quiter, _1
+              &remote_link_ut::quiter, _arg1
               ),
             monitored
             );

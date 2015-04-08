@@ -82,7 +82,7 @@ private:
   static void test_base()
   {
     log::asio_logger lgr;
-    log::logger_t lg = boost::bind(&gce::log::asio_logger::output, &lgr, _1, "");
+    log::logger_t lg = boost::bind(&gce::log::asio_logger::output, &lgr, _arg1, "");
     
     try
     {
@@ -92,7 +92,7 @@ private:
       threaded_actor base = spawn(ctx);
       echo_addon ea(base);
 
-      aid_t aid = spawn(base, boost::bind(&addon_ut::my_actor, _1), monitored);
+      aid_t aid = spawn(base, boost::bind(&addon_ut::my_actor, _arg1), monitored);
       base->send(aid, "init");
       while (true)
       {

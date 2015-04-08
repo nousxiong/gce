@@ -51,7 +51,7 @@ private:
         self,
         boost::bind(
           &actor_pingpong_ut::my_child,
-          _1, self.get_aid(), base_id
+          _arg1, self.get_aid(), base_id
           )
         );
 
@@ -83,7 +83,7 @@ private:
         spawn(
           base,
           boost::bind(
-            &actor_pingpong_ut::my_actor, _1,
+            &actor_pingpong_ut::my_actor, _arg1,
             base_id
             )
           );

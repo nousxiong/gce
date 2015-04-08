@@ -111,7 +111,7 @@ inline void connect(
   patt.match_list_.push_back(detail::msg_new_conn);
   sire.recv(
     boost::bind(
-      &detail::handle_connect<context>, _1, _2, _3, 
+      &detail::handle_connect<context>, _arg1, _arg2, _arg3, 
       boost::ref(sire.get_service()), boost::ref(ec)
       ), 
     patt
@@ -155,7 +155,7 @@ inline void bind(
   patt.match_list_.push_back(detail::msg_new_bind);
   sire.recv(
     boost::bind(
-      &detail::handle_bind<context>, _1, _2, _3
+      &detail::handle_bind<context>, _arg1, _arg2, _arg3
       ), 
     patt
     );

@@ -64,7 +64,7 @@ public:
           spawn(
             base2,
             boost::bind(
-              &router_broken_ut::quiter, _1
+              &router_broken_ut::quiter, _arg1
               ),
             monitored
             );

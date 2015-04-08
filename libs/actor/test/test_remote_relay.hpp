@@ -97,7 +97,7 @@ private:
     {
       gce::log::asio_logger lg;
       attributes attrs;
-      attrs.lg_ = boost::bind(&gce::log::asio_logger::output, &lg, _1, "");
+      attrs.lg_ = boost::bind(&gce::log::asio_logger::output, &lg, _arg1, "");
       attrs.id_ = to_match(id);
       attrs.thread_num_ = 1;
       context ctx(attrs);
@@ -110,7 +110,7 @@ private:
       func_list.push_back(
         make_remote_func<stackful>(
           "my_actor", 
-          boost::bind(&remote_relay_ut::my_actor, _1)
+          boost::bind(&remote_relay_ut::my_actor, _arg1)
           )
         );
       connect(base, "router", "tcp://127.0.0.1:14924", opt, func_list);

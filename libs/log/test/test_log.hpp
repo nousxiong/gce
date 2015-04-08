@@ -33,9 +33,9 @@ private:
     try
     {
       Logger my_lg;
-      log::logger_t login = boost::bind(&Logger::output, &my_lg, _1, "login");
-      log::logger_t logout = boost::bind(&Logger::output, &my_lg, _1, "logout");
-      log::logger_t lg = boost::bind(&Logger::output, &my_lg, _1, "");
+      log::logger_t login = boost::bind(&Logger::output, &my_lg, _arg1, "login");
+      log::logger_t logout = boost::bind(&Logger::output, &my_lg, _arg1, "logout");
+      log::logger_t lg = boost::bind(&Logger::output, &my_lg, _arg1, "");
       log::logger_t empty_lg;
 
       int i = 1;

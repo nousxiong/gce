@@ -36,7 +36,7 @@ public:
     std::vector<resp_t> res_list(size);
     for (std::size_t i=0; i<size; ++i)
     {
-      aid_t aid = spawn(self, boost::bind(&match_ut::my_actor_child, _1));
+      aid_t aid = spawn(self, boost::bind(&match_ut::my_actor_child, _arg1));
       res_list[i] = self->request(aid, 3);
     }
 
@@ -52,7 +52,7 @@ public:
     threaded_actor a = spawn(ctx);
     for (std::size_t i=0; i<2; ++i)
     {
-      spawn(a, boost::bind(&match_ut::my_actor, _1, base_id));
+      spawn(a, boost::bind(&match_ut::my_actor, _arg1, base_id));
     }
   }
 

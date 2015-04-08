@@ -41,7 +41,7 @@ private:
       aid_t aid =
         spawn(
           a,
-          boost::bind(&mixin_ut::my_child, _1)
+          boost::bind(&mixin_ut::my_child, _arg1)
           );
       res_list[i] = a->request(aid);
     }

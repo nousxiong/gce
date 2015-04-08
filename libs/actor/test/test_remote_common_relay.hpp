@@ -108,7 +108,7 @@ private:
       func_list.push_back(
         make_remote_func<stackful>(
           "my_actor", 
-          boost::bind(&remote_common_relay_ut::my_actor, _1)
+          boost::bind(&remote_common_relay_ut::my_actor, _arg1)
           )
         );
       connect(base, "router", "tcp://127.0.0.1:14924", opt, func_list);

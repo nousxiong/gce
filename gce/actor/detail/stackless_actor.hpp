@@ -108,7 +108,7 @@ public:
   {
     recv(
       boost::bind(
-        &self_t::recv_handler, this, _1, _2, _3,
+        &self_t::recv_handler, this, _arg1, _arg2, _arg3,
         boost::ref(sender), boost::ref(msg)
         ),
       patt
@@ -135,7 +135,7 @@ public:
   {
     respond(
       boost::bind(
-        &self_t::recv_handler, this, _1, _2, _3,
+        &self_t::recv_handler, this, _arg1, _arg2, _arg3,
         boost::ref(sender), boost::ref(msg)
         ),
       res,
@@ -159,7 +159,7 @@ public:
   {
     sleep_for(
       boost::bind(
-        &self_t::wait_handler, this, _1
+        &self_t::wait_handler, this, _arg1
         ),
       dur
       );

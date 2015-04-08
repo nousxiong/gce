@@ -52,7 +52,7 @@ private:
         spawn(
           self,
           boost::bind(
-            &relay_ut::my_actor, _1, last_id
+            &relay_ut::my_actor, _arg1, last_id
             )
           );
       if (i == 0)
@@ -83,7 +83,7 @@ private:
         spawn(
           base,
           boost::bind(
-            &relay_ut::root, _1
+            &relay_ut::root, _arg1
             ),
           monitored
           );

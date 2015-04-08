@@ -29,7 +29,7 @@ private:
   {
     {
       log::std_logger_st my_lg;
-      log::logger_t lg = boost::bind(&log::std_logger_st::output, &my_lg, _1, "");
+      log::logger_t lg = boost::bind(&log::std_logger_st::output, &my_lg, _arg1, "");
 
       try
       {

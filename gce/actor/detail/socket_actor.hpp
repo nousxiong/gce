@@ -126,7 +126,7 @@ public:
       base_t::snd_,
       boost::bind(
         &self_t::run_conn,
-        this, sire, ctxid_pr, ep, _1
+        this, sire, ctxid_pr, ep, _arg1
         ),
       boost::coroutines::attributes(default_stacksize())
       );
@@ -162,7 +162,7 @@ public:
     boost::asio::spawn(
       base_t::snd_,
       boost::bind(
-        &self_t::run, this, skt, _1
+        &self_t::run, this, skt, _arg1
         ),
       boost::coroutines::attributes(default_stacksize())
       );

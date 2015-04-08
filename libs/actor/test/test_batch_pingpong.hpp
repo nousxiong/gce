@@ -430,13 +430,13 @@ private:
         svc_list[0].spawn(
           boost::bind(
             &batch_pingpong_ut::ping, 
-            _1, _2, _3, msg_size
+            _arg1, _arg2, _arg3, msg_size
             )
           );
       aid_t pong_aid = 
         svc_list[1].spawn(
           boost::bind(
-            &batch_pingpong_ut::pong, _1, _2, _3
+            &batch_pingpong_ut::pong, _arg1, _arg2, _arg3
             )
           );
 

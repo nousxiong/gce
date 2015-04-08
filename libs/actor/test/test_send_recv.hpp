@@ -60,8 +60,8 @@ public:
       threaded_actor base = spawn(ctx);
 
       int const count_down = 10000;
-      aid_t ping = spawn(base, boost::bind(&send_recv_ut::ping_pong, _1));
-      aid_t pong = spawn(base, boost::bind(&send_recv_ut::ping_pong, _1));
+      aid_t ping = spawn(base, boost::bind(&send_recv_ut::ping_pong, _arg1));
+      aid_t pong = spawn(base, boost::bind(&send_recv_ut::ping_pong, _arg1));
 
       base->send(ping, "prepare", pong);
       base->send(pong, "prepare", ping);

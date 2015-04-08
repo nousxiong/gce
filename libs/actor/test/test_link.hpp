@@ -39,7 +39,7 @@ public:
         spawn(
           self,
           boost::bind(
-            &link_ut::my_actor_child, _1
+            &link_ut::my_actor_child, _arg1
             ),
           linked
           );
@@ -71,7 +71,7 @@ public:
     {
       spawn(
         a,
-        boost::bind(&link_ut::my_actor, _1),
+        boost::bind(&link_ut::my_actor, _arg1),
         monitored
         );
     }
@@ -88,7 +88,7 @@ public:
     {
       spawn(
         self,
-        boost::bind(&link_ut::my_actor, _1),
+        boost::bind(&link_ut::my_actor, _arg1),
         monitored
         );
     }
@@ -120,7 +120,7 @@ public:
           );
         /*spawn(
           base,
-          boost::bind(&link_ut::my_root, _1),
+          boost::bind(&link_ut::my_root, _arg1),
           monitored
           );*/
       }

@@ -53,7 +53,7 @@ inline bool check_exit(std::vector<match_t> const& match_list)
       std::find_if(
         match_list.begin(),
         match_list.end(),
-        boost::bind(&find_exit, _1)
+        boost::bind(&find_exit, _arg1)
         );
     return itr != match_list.end();
   }

@@ -55,7 +55,7 @@ private:
         {
           aid_t aid = spawn(
             base,
-            boost::bind(&coro_ut::my_actor, _1, base.get_aid()),
+            boost::bind(&coro_ut::my_actor, _arg1, base.get_aid()),
             monitored
             );
         }

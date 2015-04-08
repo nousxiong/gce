@@ -33,7 +33,7 @@ public:
 
       gce::log::asio_logger lg;
       attributes attrs;
-      attrs.lg_ = boost::bind(&gce::log::asio_logger::output, &lg, _1, "");
+      attrs.lg_ = boost::bind(&gce::log::asio_logger::output, &lg, _arg1, "");
       
       attrs.id_ = atom("one");
       context ctx1(attrs);

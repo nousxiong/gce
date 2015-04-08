@@ -58,7 +58,7 @@ private:
         spawn(
           base,
           boost::bind(
-            &slice_pingpong_ut::pong_actor, _1
+            &slice_pingpong_ut::pong_actor, _arg1
             )
           );
 

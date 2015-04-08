@@ -59,7 +59,7 @@ public:
           spawn(
             base2,
             boost::bind(
-              &router_link_ut::quiter, _1
+              &router_link_ut::quiter, _arg1
               ),
             monitored
             );

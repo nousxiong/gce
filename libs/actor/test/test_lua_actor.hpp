@@ -42,7 +42,7 @@ private:
     {
       gce::log::asio_logger lg;
       attributes attrs;
-      attrs.lg_ = boost::bind(&gce::log::asio_logger::output, &lg, _1, "");
+      attrs.lg_ = boost::bind(&gce::log::asio_logger::output, &lg, _arg1, "");
       std::size_t free_actor_num = 10;
       std::size_t user_thr_num = 5;
       std::size_t my_actor_size = free_actor_num + user_thr_num * 2;

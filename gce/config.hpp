@@ -13,6 +13,7 @@
 #define GCE_CONFIG_HPP
 
 #include <boost/predef.h>
+#include <boost/bind/placeholders.hpp>
 #include <boost/type_traits/remove_reference.hpp>
 
 /// The configured options and settings for gce.
@@ -59,5 +60,19 @@
 #   define GCE_PACKER GCE_AMSG
 # endif
 #endif
+
+/// boost placeholders define, compatible with cpp11's std::placeholders
+namespace
+{
+static boost::arg<1> _arg1;
+static boost::arg<2> _arg2;
+static boost::arg<3> _arg3;
+static boost::arg<4> _arg4;
+static boost::arg<5> _arg5;
+static boost::arg<6> _arg6;
+static boost::arg<7> _arg7;
+static boost::arg<8> _arg8;
+static boost::arg<9> _arg9;
+}
 
 #endif /// GCE_CONFIG_HPP

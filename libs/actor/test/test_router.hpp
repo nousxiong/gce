@@ -51,7 +51,7 @@ public:
         spawn(
           base2,
           boost::bind(
-            &socket_ut::echo, _1
+            &socket_ut::echo, _arg1
             ),
           monitored
           );
