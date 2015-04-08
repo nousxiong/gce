@@ -38,10 +38,7 @@ struct tostring<errcode_t>
 };
 }
 
-template<typename CharT, typename TraitsT>
-inline std::basic_ostream<CharT, TraitsT>& operator<<(
-  std::basic_ostream<CharT, TraitsT>& strm, gce::errcode_t const& ec
-  )
+inline std::ostream& operator<<(std::ostream& strm, gce::errcode_t const& ec)
 {
   strm << gce::to_string(ec);
   return strm;

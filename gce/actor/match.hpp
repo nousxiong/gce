@@ -79,10 +79,7 @@ static match_t const match_nil = make_match(u64_nil);
 typedef std::vector<match_t> match_list_t;
 }
 
-template<typename CharT, typename TraitsT>
-std::basic_ostream<CharT, TraitsT>& operator<<(
-  std::basic_ostream<CharT, TraitsT>& strm, gce::match_t const& mat
-  )
+inline std::ostream& operator<<(std::ostream& strm, gce::match_t const& mat)
 {
   strm << gce::to_string(mat);
   return strm;

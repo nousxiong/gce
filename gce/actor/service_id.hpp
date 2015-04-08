@@ -104,10 +104,7 @@ inline svcid_t make_svcid(Ctxid ctxid, Match name)
 }
 } /// namespace gce
 
-template<typename CharT, typename TraitsT>
-inline std::basic_ostream<CharT, TraitsT>& operator<<(
-  std::basic_ostream<CharT, TraitsT>& strm, gce::svcid_t const& svcid
-  )
+inline std::ostream& operator<<(std::ostream& strm, gce::svcid_t const& svcid)
 {
   strm << gce::to_string(svcid);
   return strm;

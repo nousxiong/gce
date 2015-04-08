@@ -593,10 +593,7 @@ struct tostring<message>
 };
 }
 
-template<typename CharT, typename TraitsT>
-inline std::basic_ostream<CharT, TraitsT>& operator<<(
-  std::basic_ostream<CharT, TraitsT>& strm, gce::message const& msg
-  )
+inline std::ostream& operator<<(std::ostream& strm, gce::message const& msg)
 {
   strm << gce::to_string(msg);
   return strm;

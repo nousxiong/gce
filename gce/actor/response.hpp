@@ -70,10 +70,7 @@ struct tostring<resp_t>
 };
 }
 
-template<typename CharT, typename TraitsT>
-inline std::basic_ostream<CharT, TraitsT>& operator<<(
-  std::basic_ostream<CharT, TraitsT>& strm, gce::resp_t const& resp
-  )
+inline std::ostream& operator<<(std::ostream& strm, gce::resp_t const& resp)
 {
   strm << gce::to_string(resp);
   return strm;

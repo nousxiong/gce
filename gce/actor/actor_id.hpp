@@ -247,10 +247,7 @@ inline gce::aid_t make_aid(ctxid_t ctxid, timestamp_t timestamp, uint32_t id, ui
 
 } /// namespace gce
 
-template<typename CharT, typename TraitsT>
-std::basic_ostream<CharT, TraitsT>& operator<<(
-  std::basic_ostream<CharT, TraitsT>& strm, gce::aid_t const& aid
-  )
+inline std::ostream& operator<<(std::ostream& strm, gce::aid_t const& aid)
 {
   strm << gce::to_string(aid);
   return strm;

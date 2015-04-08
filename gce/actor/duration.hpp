@@ -201,10 +201,7 @@ struct tostring<adl::duration>
 typedef adl::duration duration_t;
 } /// namespace gce
 
-template<typename CharT, typename TraitsT>
-inline std::basic_ostream<CharT, TraitsT>& operator<<(
-  std::basic_ostream<CharT, TraitsT>& strm, gce::duration_t const& dur
-  )
+inline std::ostream& operator<<(std::ostream& strm, gce::duration_t const& dur)
 {
   strm << gce::to_string(dur);
   return strm;
