@@ -22,6 +22,10 @@
 #ifdef GCE_SCRIPT
 # include <gce/actor/script.hpp>
 #endif
+#ifdef GCE_LUA
+# include <gce/actor/cpp2lua.hpp>
+# include <gce/actor/lua_actor_proxy.hpp>
+#endif
 #include <gce/actor/response.hpp>
 #include <gce/actor/actor_id.hpp>
 #include <gce/actor/net_option.hpp>

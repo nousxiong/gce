@@ -1,5 +1,5 @@
 ///
-/// Copyright (c) 2009-2014 Nous Xiong (348944179 at qq dot com)
+/// Copyright (c) 2009-2015 Nous Xiong (348944179 at qq dot com)
 ///
 /// Distributed under the Boost Software License, Version 1.0. (See accompanying
 /// file LICENSE_1_0.txt or copy at http://www.boost.org/LICENSE_1_0.txt)
@@ -378,6 +378,25 @@ public:
     {
       BOOST_ASSERT(p_ != 0);
       return p_;
+    }
+
+    /// compatible with actor_ref
+    aid_t const& get_aid() const
+    {
+      BOOST_ASSERT(p_ != 0);
+      return p_->get_aid();
+    }
+
+    listener* get_listener()
+    {
+      BOOST_ASSERT(p_ != 0);
+      return p_;
+    }
+
+    service_t& get_service()
+    {
+      BOOST_ASSERT(p_ != 0);
+      return p_->get_service();
     }
 
   private:

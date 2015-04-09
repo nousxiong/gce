@@ -40,6 +40,8 @@ static std::size_t const test_count = 1;
 #include "test_match_recver.hpp"
 #include "test_link.hpp"
 #include "test_message.hpp"
+#include "test_move_ptr.hpp"
+#include "test_pointer.hpp"
 #include "test_relay.hpp"
 #include "test_common_relay.hpp"
 #include "test_addon.hpp"
@@ -65,7 +67,7 @@ int main()
   try
   {
     /// basic test
-    gce::coro_ut::run();
+    /*gce::coro_ut::run();
     gce::send_recv_ut::run();
     gce::actor_ut::run();
     gce::response_ut::run();
@@ -81,11 +83,13 @@ int main()
     gce::link_ut::run();
     gce::relay_ut::run();
     gce::common_relay_ut::run();
-    gce::message_ut::run();
-    gce::addon_ut::run();
+    gce::message_ut::run();*/
+    gce::move_ptr_ut::run();
+    gce::pointer_ut::run();
+    /*gce::addon_ut::run();*/
 
     /// remote test
-    gce::socket_ut::run();
+    /*gce::socket_ut::run();
     gce::socket_broken_ut::run();
     gce::remote_ut::run();
     gce::remote_link_ut::run();
@@ -94,13 +98,13 @@ int main()
     gce::router_broken_ut::run();
     gce::remote_relay_ut::run();
     gce::remote_common_relay_ut::run();
-    gce::service_ut::run();
+    gce::service_ut::run();*/
 
     /// script test
 #ifdef GCE_LUA
-    gce::lua_actor_ut::run();
+    /*gce::lua_actor_ut::run();
     gce::lua_socket_ut::run();
-    gce::lua_service_ut::run();
+    gce::lua_service_ut::run();*/
 #endif
   }
   catch (std::exception& ex)

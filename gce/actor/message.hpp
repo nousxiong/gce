@@ -24,6 +24,7 @@
 #include <gce/actor/detail/exit.hpp>
 #include <gce/actor/to_match.hpp>
 #include <gce/detail/cow_buffer.hpp>
+#include <boost/shared_ptr.hpp>
 #include <boost/variant/variant.hpp>
 #include <boost/variant/get.hpp>
 #include <boost/array.hpp>
@@ -98,7 +99,8 @@ public:
     , cow_(other.cow_)
     , pkr_(other.pkr_)
     , relay_(other.relay_)
-    , local_list_(other.local_list_)
+    , moved_list_(other.moved_list_)
+    , shared_list_(other.shared_list_)
   {
   }
 
@@ -111,7 +113,8 @@ public:
       cow_ = rhs.cow_;
       pkr_ = rhs.pkr_;
       relay_ = rhs.relay_;
-      local_list_ = rhs.local_list_;
+      moved_list_ = rhs.moved_list_;
+      shared_list_ = rhs.shared_list_;
     }
     return *this;
   }
@@ -152,11 +155,11 @@ public:
   template <typename T>
   message& operator<<(move_ptr<T> const& p)
   {
-    uint32_t index = local_list_.size();
+    uint32_t index = moved_list_.size();
     size_t size = packer::size_of(index);
     pre_write(size);
     pkr_.write(index);
-    local_list_.push_back(p);
+    moved_list_.push_back(p);
     end_write();
     return *this;
   }
@@ -170,10 +173,47 @@ public:
     pkr_.read(index);
     end_read();
 
-    GCE_VERIFY(index < local_list_.size())(index);
-    GCE_ASSERT(local_list_[index])(index);
+    GCE_VERIFY(index < moved_list_.size())(index);
+    GCE_ASSERT(moved_list_[index])(index);
 
-    p = local_list_[index];
+    p = static_pointer_cast<T>(moved_list_[index]);
+    if (index + 1 == moved_list_.size())
+    {
+      moved_list_.clear();
+    }
+    return *this;
+  }
+
+  template <typename T>
+  message& operator<<(boost::shared_ptr<T> const& p)
+  {
+    uint32_t index = shared_list_.size();
+    size_t size = packer::size_of(index);
+    pre_write(size);
+    pkr_.write(index);
+    shared_list_.push_back(p);
+    end_write();
+    return *this;
+  }
+
+  template <typename T>
+  message& operator>>(boost::shared_ptr<T>& p)
+  {
+    uint32_t index;
+
+    pre_read();
+    pkr_.read(index);
+    end_read();
+
+    GCE_VERIFY(index < shared_list_.size())(index);
+    GCE_ASSERT(shared_list_[index])(index);
+
+    p = boost::static_pointer_cast<T>(shared_list_[index]);
+    shared_list_[index].reset();
+    if (index + 1 == shared_list_.size())
+    {
+      shared_list_.clear();
+    }
     return *this;
   }
 
@@ -569,7 +609,8 @@ private:
   detail::relay_t relay_;
 
   /// local data to carry
-  std::vector<move_ptr<void> > local_list_;
+  std::vector<move_ptr<void> > moved_list_;
+  std::vector<boost::shared_ptr<void> > shared_list_;
 };
 
 inline std::string to_string(message const& msg)

@@ -83,7 +83,7 @@ private:
   {
     log::asio_logger lgr;
     log::logger_t lg = boost::bind(&gce::log::asio_logger::output, &lgr, _arg1, "");
-    
+
     try
     {
       attributes attrs;
