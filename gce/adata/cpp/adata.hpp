@@ -22,6 +22,7 @@
 
 #include <vector>
 #include <map>
+#include <string>
 
 //define inline macro
 #ifndef ADATA_INLINE

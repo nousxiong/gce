@@ -81,5 +81,18 @@ if (GCE_ACTOR_BUILD_TEST)
 endif ()
 
 if (GCE_LUA)
+  if (${GCE_LUA_VERSION} STREQUAL "5.1")
+    set (GCE_LUADIR "lua51")
+  elseif (${GCE_LUA_VERSION} STREQUAL "5.2")
+    set (GCE_LUADIR "lua52")
+  elseif (${GCE_LUA_VERSION} STREQUAL "5.3")
+    set (GCE_LUADIR "lua53")
+  elseif (${GCE_LUA_VERSION} STREQUAL "jit2")
+    set (GCE_LUADIR "luajit")
+  endif ()
+
   install (FILES ${PROJECT_SOURCE_DIR}/gce/actor/lua/gce.lua DESTINATION bin)
+  
+  file (GLOB GCE_ACTOR_LUA_FILES "${PROJECT_SOURCE_DIR}/gce/actor/lua/${GCE_LUADIR}/*.lua")
+  install (FILES ${GCE_ACTOR_LUA_FILES} DESTINATION bin)
 endif ()

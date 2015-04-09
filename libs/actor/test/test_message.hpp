@@ -7,8 +7,6 @@
 /// See https://github.com/nousxiong/gce for latest version.
 ///
 
-#include "arg.adl.h"
-#include <gce/amsg/amsg.hpp>
 #include <boost/thread.hpp>
 #include <boost/assign.hpp>
 #include <sstream>

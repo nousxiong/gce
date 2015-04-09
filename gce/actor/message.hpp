@@ -11,7 +11,6 @@
 #define GCE_ACTOR_MESSAGE_HPP
 
 #include <gce/actor/config.hpp>
-#include <gce/actor/packer.hpp>
 #include <gce/actor/duration.hpp>
 #include <gce/actor/detail/request.hpp>
 #include <gce/actor/service_id.hpp>
@@ -19,6 +18,8 @@
 #include <gce/actor/atom.hpp>
 #include <gce/actor/move_ptr.hpp>
 #include <gce/actor/error_code.hpp>
+#include <gce/actor/detail/internal.hpp>
+#include <gce/actor/packer.hpp>
 #include <gce/actor/detail/spawn.hpp>
 #include <gce/actor/detail/link.hpp>
 #include <gce/actor/detail/exit.hpp>

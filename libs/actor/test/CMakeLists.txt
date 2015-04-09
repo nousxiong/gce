@@ -21,15 +21,6 @@ add_executable (gce_actor_ut ${GCE_ACTOR_UNIT_TEST_FILES})
 
 # Copy lua files to build dir
 if (GCE_LUA)
-  if (${GCE_LUA_VERSION} STREQUAL "5.1")
-    set (GCE_LUADIR "lua51")
-  elseif (${GCE_LUA_VERSION} STREQUAL "5.2")
-    set (GCE_LUADIR "lua52")
-  elseif (${GCE_LUA_VERSION} STREQUAL "5.3")
-    set (GCE_LUADIR "lua53")
-  elseif (${GCE_LUA_VERSION} STREQUAL "jit2")
-    set (GCE_LUADIR "luajit")
-  endif ()
   add_custom_command (
     TARGET gce_actor_ut
     POST_BUILD

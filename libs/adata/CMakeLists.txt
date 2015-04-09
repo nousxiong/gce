@@ -22,5 +22,6 @@ install (
   )
 
 if (GCE_LUA)
-  install (FILES ${PROJECT_SOURCE_DIR}/gce/adata/lua/*.lua DESTINATION bin)
+  file (GLOB GCE_ADATA_LUA_FILES "${PROJECT_SOURCE_DIR}/gce/adata/lua/*.lua")
+  install (FILES ${GCE_ADATA_LUA_FILES} DESTINATION bin)
 endif ()
