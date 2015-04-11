@@ -1,9 +1,6 @@
 #
 # This file is part of the CMake build system for GCE
 #
-# CMake auto-generated configuration options.
-# Do not check in modified versions of this file.
-#
 # Copyright (c) 2009-2014 Nous Xiong (348944179 at qq dot com)
 #
 # Distributed under the Boost Software License, Version 1.0. (See accompanying
@@ -19,37 +16,8 @@ project (gce)
 set (GCE_VERSION_MAJOR 1)
 set (GCE_VERSION_MINOR 2)
 
-# Add library.
-macro (gce_add_library library_name)
-  string (TOUPPER ${library_name} gce_add_library_upper_name)
-  set (${gce_add_library_upper_name}_LIBRARYDIR "" CACHE PATH "Path to ${library_name} libraries directory")
-  set (${gce_add_library_upper_name}_INCLUDEDIR "" CACHE PATH "Path to ${library_name} include directory")
-  include_directories (${${gce_add_library_upper_name}_INCLUDEDIR})
-endmacro (gce_add_library)
-
-# Set lib.
-macro (gce_set_lib library_name name)
-  string (TOUPPER ${library_name} gce_set_lib_upper_name)
-  string (TOLOWER ${name} gce_set_lib_lower_name)
-  find_library (${name}_LIBRARY_DEBUG NAMES ${gce_set_lib_lower_name}_debug PATHS "${${gce_set_lib_upper_name}_LIBRARYDIR}" NO_DEFAULT_PATH)
-  find_library (${name}_LIBRARY_RELEASE NAMES ${gce_set_lib_lower_name} PATHS "${${gce_set_lib_upper_name}_LIBRARYDIR}" NO_DEFAULT_PATH)
-
-  if (${name}_LIBRARY_DEBUG AND ${name}_LIBRARY_RELEASE)
-    if (CMAKE_CONFIGURATION_TYPES OR CMAKE_BUILD_TYPE)
-      set (${name}_LIBRARIES optimized ${${name}_LIBRARY_RELEASE} debug ${${name}_LIBRARY_DEBUG})
-    else ()
-      set (${name}_LIBRARIES ${${name}_LIBRARY_RELEASE})
-    endif ()
-  endif ()
-
-  if (${name}_LIBRARY_RELEASE AND NOT ${name}_LIBRARY_DEBUG)
-    set (${name}_LIBRARIES ${${name}_LIBRARY_RELEASE})
-  endif ()
-
-  if (${name}_LIBRARY_DEBUG AND NOT ${name}_LIBRARY_RELEASE)
-    set (${name}_LIBRARIES ${${name}_LIBRARY_DEBUG})
-  endif ()
-endmacro (gce_set_lib)
+list (APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake")
+include (util)
 
 # Provide user options to customise the build process.
 option (GCE_LUA "Allow gce using lua actor" OFF)
@@ -75,6 +43,16 @@ if (GCE_LUA)
     add_definitions (-DGCE_LUA_VERSION=${GCE_LUAJIT2})
   else ()
     message (FATAL_ERROR "GCE_LUA_VERSION error, must be 5.1 5.2 5.3 jit2 one of them")
+  endif ()
+  
+  if (${GCE_LUA_VERSION} STREQUAL "5.1")
+    set (GCE_LUADIR "lua51")
+  elseif (${GCE_LUA_VERSION} STREQUAL "5.2")
+    set (GCE_LUADIR "lua52")
+  elseif (${GCE_LUA_VERSION} STREQUAL "5.3")
+    set (GCE_LUADIR "lua53")
+  elseif (${GCE_LUA_VERSION} STREQUAL "jit2")
+    set (GCE_LUADIR "luajit")
   endif ()
 endif ()
 

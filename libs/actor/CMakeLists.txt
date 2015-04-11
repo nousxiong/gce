@@ -1,9 +1,6 @@
 #
 # This file is part of the CMake build system for GCE
 #
-# CMake auto-generated configuration options.
-# Do not check in modified versions of this file.
-#
 # Copyright (c) 2009-2014 Nous Xiong (348944179 at qq dot com)
 #
 # Distributed under the Boost Software License, Version 1.0. (See accompanying
@@ -81,16 +78,6 @@ if (GCE_ACTOR_BUILD_TEST)
 endif ()
 
 if (GCE_LUA)
-  if (${GCE_LUA_VERSION} STREQUAL "5.1")
-    set (GCE_LUADIR "lua51")
-  elseif (${GCE_LUA_VERSION} STREQUAL "5.2")
-    set (GCE_LUADIR "lua52")
-  elseif (${GCE_LUA_VERSION} STREQUAL "5.3")
-    set (GCE_LUADIR "lua53")
-  elseif (${GCE_LUA_VERSION} STREQUAL "jit2")
-    set (GCE_LUADIR "luajit")
-  endif ()
-
   install (FILES ${PROJECT_SOURCE_DIR}/gce/actor/lua/gce.lua DESTINATION bin)
   
   file (GLOB GCE_ACTOR_LUA_FILES "${PROJECT_SOURCE_DIR}/gce/actor/lua/${GCE_LUADIR}/*.lua")

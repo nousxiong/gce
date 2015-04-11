@@ -12,7 +12,6 @@
 
 #include <gce/config.hpp>
 #include <gce/integer.hpp>
-#include <gce/amsg/all.hpp>
 #include <gce/assert/all.hpp>
 #include <gce/log/all.hpp>
 

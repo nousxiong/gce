@@ -144,7 +144,12 @@ struct receiver<ActorRef, false>
   aid_t recv()
   {
     message msg;
+    message* meta_msg = base_t::meta_.msg_;
     std::pair<aid_t, bool> pr = pri_recv(msg);
+    if (meta_msg)
+    {
+      *meta_msg = msg;
+    }
     return pr.first;
   }
 
@@ -152,10 +157,19 @@ struct receiver<ActorRef, false>
   aid_t recv(A1& a1)
   {
     message msg;
+    message* meta_msg = base_t::meta_.msg_;
     std::pair<aid_t, bool> pr = pri_recv(msg);
     if (pr.second)
     {
-      msg >> a1;
+      if (meta_msg)
+      {
+        *meta_msg = msg;
+        *meta_msg >> a1;
+      }
+      else
+      {
+        msg >> a1;
+      }
     }
     return pr.first;
   }
@@ -164,10 +178,19 @@ struct receiver<ActorRef, false>
   aid_t recv(A1& a1, A2& a2)
   {
     message msg;
+    message* meta_msg = base_t::meta_.msg_;
     std::pair<aid_t, bool> pr = pri_recv(msg);
     if (pr.second)
     {
-      msg >> a1 >> a2;
+      if (meta_msg)
+      {
+        *meta_msg = msg;
+        *meta_msg >> a1 >> a2;
+      }
+      else
+      {
+        msg >> a1 >> a2;
+      }
     }
     return pr.first;
   }
@@ -176,10 +199,19 @@ struct receiver<ActorRef, false>
   aid_t recv(A1& a1, A2& a2, A3& a3)
   {
     message msg;
+    message* meta_msg = base_t::meta_.msg_;
     std::pair<aid_t, bool> pr = pri_recv(msg);
     if (pr.second)
     {
-      msg >> a1 >> a2 >> a3;
+      if (meta_msg)
+      {
+        *meta_msg = msg;
+        *meta_msg >> a1 >> a2 >> a3;
+      }
+      else
+      {
+        msg >> a1 >> a2 >> a3;
+      }
     }
     return pr.first;
   }
@@ -188,10 +220,19 @@ struct receiver<ActorRef, false>
   aid_t recv(A1& a1, A2& a2, A3& a3, A4& a4)
   {
     message msg;
+    message* meta_msg = base_t::meta_.msg_;
     std::pair<aid_t, bool> pr = pri_recv(msg);
     if (pr.second)
     {
-      msg >> a1 >> a2 >> a3 >> a4;
+      if (meta_msg)
+      {
+        *meta_msg = msg;
+        *meta_msg >> a1 >> a2 >> a3 >> a4;
+      }
+      else
+      {
+        msg >> a1 >> a2 >> a3 >> a4;
+      }
     }
     return pr.first;
   }
@@ -200,10 +241,19 @@ struct receiver<ActorRef, false>
   aid_t recv(A1& a1, A2& a2, A3& a3, A4& a4, A5& a5)
   {
     message msg;
+    message* meta_msg = base_t::meta_.msg_;
     std::pair<aid_t, bool> pr = pri_recv(msg);
     if (pr.second)
     {
-      msg >> a1 >> a2 >> a3 >> a4 >> a5;
+      if (meta_msg)
+      {
+        *meta_msg = msg;
+        *meta_msg >> a1 >> a2 >> a3 >> a4 >> a5;
+      }
+      else
+      {
+        msg >> a1 >> a2 >> a3 >> a4 >> a5;
+      }
     }
     return pr.first;
   }
@@ -211,6 +261,7 @@ struct receiver<ActorRef, false>
   aid_t respond()
   {
     message msg;
+    message* meta_msg = base_t::meta_.msg_;
     std::pair<aid_t, bool> pr = pri_respond(msg);
     return pr.first;
   }
@@ -219,10 +270,19 @@ struct receiver<ActorRef, false>
   aid_t respond(A1& a1)
   {
     message msg;
+    message* meta_msg = base_t::meta_.msg_;
     std::pair<aid_t, bool> pr = pri_respond(msg);
     if (pr.second)
     {
-      msg >> a1;
+      if (meta_msg)
+      {
+        *meta_msg = msg;
+        *meta_msg >> a1;
+      }
+      else
+      {
+        msg >> a1;
+      }
     }
     return pr.first;
   }
@@ -231,10 +291,19 @@ struct receiver<ActorRef, false>
   aid_t respond(A1& a1, A2& a2)
   {
     message msg;
+    message* meta_msg = base_t::meta_.msg_;
     std::pair<aid_t, bool> pr = pri_respond(msg);
     if (pr.second)
     {
-      msg >> a1 >> a2;
+      if (meta_msg)
+      {
+        *meta_msg = msg;
+        *meta_msg >> a1 >> a2;
+      }
+      else
+      {
+        msg >> a1 >> a2;
+      }
     }
     return pr.first;
   }
@@ -243,10 +312,19 @@ struct receiver<ActorRef, false>
   aid_t respond(A1& a1, A2& a2, A3& a3)
   {
     message msg;
+    message* meta_msg = base_t::meta_.msg_;
     std::pair<aid_t, bool> pr = pri_respond(msg);
     if (pr.second)
     {
-      msg >> a1 >> a2 >> a3;
+      if (meta_msg)
+      {
+        *meta_msg = msg;
+        *meta_msg >> a1 >> a2 >> a3;
+      }
+      else
+      {
+        msg >> a1 >> a2 >> a3;
+      }
     }
     return pr.first;
   }
@@ -255,10 +333,19 @@ struct receiver<ActorRef, false>
   aid_t respond(A1& a1, A2& a2, A3& a3, A4& a4)
   {
     message msg;
+    message* meta_msg = base_t::meta_.msg_;
     std::pair<aid_t, bool> pr = pri_respond(msg);
     if (pr.second)
     {
-      msg >> a1 >> a2 >> a3 >> a4;
+      if (meta_msg)
+      {
+        *meta_msg = msg;
+        *meta_msg >> a1 >> a2 >> a3 >> a4;
+      }
+      else
+      {
+        msg >> a1 >> a2 >> a3 >> a4;
+      }
     }
     return pr.first;
   }
@@ -267,10 +354,19 @@ struct receiver<ActorRef, false>
   aid_t respond(A1& a1, A2& a2, A3& a3, A4& a4, A5& a5)
   {
     message msg;
+    message* meta_msg = base_t::meta_.msg_;
     std::pair<aid_t, bool> pr = pri_respond(msg);
     if (pr.second)
     {
-      msg >> a1 >> a2 >> a3 >> a4 >> a5;
+      if (meta_msg)
+      {
+        *meta_msg = msg;
+        *meta_msg >> a1 >> a2 >> a3 >> a4 >> a5;
+      }
+      else
+      {
+        msg >> a1 >> a2 >> a3 >> a4 >> a5;
+      }
     }
     return pr.first;
   }
@@ -314,12 +410,12 @@ struct receiver<ActorRef, true>
   void recv(aid_t& sender)
   {
     pattern patt(base_t::tmo);
-    bool has_exit = pri_recv(patt);
+    std::pair<recv_meta, bool> pr = pri_recv(patt);
     actor_ref_t& a = base_t::get_actor_ref();
     a.recv(
       boost::bind(
         &handle_recv0<actor_ref_t>, _arg1, _arg2, _arg3,
-        boost::ref(sender), has_exit
+        boost::ref(sender), pr
         ),
       patt
       );
@@ -329,12 +425,12 @@ struct receiver<ActorRef, true>
   void recv(aid_t& sender, A1& a1)
   {
     pattern patt(base_t::tmo);
-    bool has_exit = pri_recv(patt);
+    std::pair<recv_meta, bool> pr = pri_recv(patt);
     actor_ref_t& a = base_t::get_actor_ref();
     a.recv(
       boost::bind(
         &handle_recv1<actor_ref_t, A1>, _arg1, _arg2, _arg3,
-        boost::ref(sender), has_exit, boost::ref(a1)
+        boost::ref(sender), pr, boost::ref(a1)
         ),
       patt
       );
@@ -344,12 +440,12 @@ struct receiver<ActorRef, true>
   void recv(aid_t& sender, A1& a1, A2& a2)
   {
     pattern patt(base_t::tmo);
-    bool has_exit = pri_recv(patt);
+    std::pair<recv_meta, bool> pr = pri_recv(patt);
     actor_ref_t& a = base_t::get_actor_ref();
     a.recv(
       boost::bind(
         &handle_recv2<actor_ref_t, A1, A2>, _arg1, _arg2, _arg3,
-        boost::ref(sender), has_exit, boost::ref(a1), boost::ref(a2)
+        boost::ref(sender), pr, boost::ref(a1), boost::ref(a2)
         ),
       patt
       );
@@ -359,12 +455,12 @@ struct receiver<ActorRef, true>
   void recv(aid_t& sender, A1& a1, A2& a2, A3& a3)
   {
     pattern patt(base_t::tmo);
-    bool has_exit = pri_recv(patt);
+    std::pair<recv_meta, bool> pr = pri_recv(patt);
     actor_ref_t& a = base_t::get_actor_ref();
     a.recv(
       boost::bind(
         &handle_recv3<actor_ref_t, A1, A2, A3>, _arg1, _arg2, _arg3,
-        boost::ref(sender), has_exit, boost::ref(a1), boost::ref(a2),
+        boost::ref(sender), pr, boost::ref(a1), boost::ref(a2),
         boost::ref(a3)
         ),
       patt
@@ -375,12 +471,12 @@ struct receiver<ActorRef, true>
   void recv(aid_t& sender, A1& a1, A2& a2, A3& a3, A4& a4)
   {
     pattern patt(base_t::tmo);
-    bool has_exit = pri_recv(patt);
+    std::pair<recv_meta, bool> pr = pri_recv(patt);
     actor_ref_t& a = base_t::get_actor_ref();
     a.recv(
       boost::bind(
         &handle_recv4<actor_ref_t, A1, A2, A3, A4>, _arg1, _arg2, _arg3,
-        boost::ref(sender), has_exit, boost::ref(a1), boost::ref(a2),
+        boost::ref(sender), pr, boost::ref(a1), boost::ref(a2),
         boost::ref(a3), boost::ref(a4)
         ),
       patt
@@ -391,15 +487,113 @@ struct receiver<ActorRef, true>
   void recv(aid_t& sender, A1& a1, A2& a2, A3& a3, A4& a4, A5& a5)
   {
     pattern patt(base_t::tmo);
-    bool has_exit = pri_recv(patt);
+    std::pair<recv_meta, bool> pr = pri_recv(patt);
     actor_ref_t& a = base_t::get_actor_ref();
     a.recv(
       boost::bind(
         &handle_recv5<actor_ref_t, A1, A2, A3, A4, A5>, _arg1, _arg2, _arg3,
-        boost::ref(sender), has_exit, boost::ref(a1), boost::ref(a2),
+        boost::ref(sender), pr, boost::ref(a1), boost::ref(a2),
         boost::ref(a3), boost::ref(a4), boost::ref(a5)
         ),
       patt
+      );
+  }
+
+  void respond(aid_t& sender)
+  {
+    resp_t res = base_t::res_;
+    duration_t tmo = base_t::tmo;
+    recv_meta meta = pri_respond();
+    actor_ref_t& a = base_t::get_actor_ref();
+    a.respond(
+      boost::bind(
+        &handle_respond0<actor_ref_t>, _arg1, _arg2, _arg3,
+        boost::ref(sender), meta
+        ),
+      res, tmo
+      );
+  }
+
+  template <typename A1>
+  void respond(aid_t& sender, A1& a1)
+  {
+    resp_t res = base_t::res_;
+    duration_t tmo = base_t::tmo;
+    recv_meta meta = pri_respond();
+    actor_ref_t& a = base_t::get_actor_ref();
+    a.respond(
+      boost::bind(
+        &handle_respond1<actor_ref_t, A1>, _arg1, _arg2, _arg3,
+        boost::ref(sender), meta, boost::ref(a1)
+        ),
+      res, tmo
+      );
+  }
+
+  template <typename A1, typename A2>
+  void respond(aid_t& sender, A1& a1, A2& a2)
+  {
+    resp_t res = base_t::res_;
+    duration_t tmo = base_t::tmo;
+    recv_meta meta = pri_respond();
+    actor_ref_t& a = base_t::get_actor_ref();
+    a.respond(
+      boost::bind(
+        &handle_respond2<actor_ref_t, A1, A2>, _arg1, _arg2, _arg3,
+        boost::ref(sender), meta, boost::ref(a1), boost::ref(a2)
+        ),
+      res, tmo
+      );
+  }
+
+  template <typename A1, typename A2, typename A3>
+  void respond(aid_t& sender, A1& a1, A2& a2, A3& a3)
+  {
+    resp_t res = base_t::res_;
+    duration_t tmo = base_t::tmo;
+    recv_meta meta = pri_respond();
+    actor_ref_t& a = base_t::get_actor_ref();
+    a.respond(
+      boost::bind(
+        &handle_respond3<actor_ref_t, A1, A2, A3>, _arg1, _arg2, _arg3,
+        boost::ref(sender), meta, boost::ref(a1), boost::ref(a2), 
+        boost::ref(a3)
+        ),
+      res, tmo
+      );
+  }
+
+  template <typename A1, typename A2, typename A3, typename A4>
+  void respond(aid_t& sender, A1& a1, A2& a2, A3& a3, A4& a4)
+  {
+    resp_t res = base_t::res_;
+    duration_t tmo = base_t::tmo;
+    recv_meta meta = pri_respond();
+    actor_ref_t& a = base_t::get_actor_ref();
+    a.respond(
+      boost::bind(
+        &handle_respond4<actor_ref_t, A1, A2, A3, A4>, _arg1, _arg2, _arg3,
+        boost::ref(sender), meta, boost::ref(a1), boost::ref(a2), 
+        boost::ref(a3), boost::ref(a4)
+        ),
+      res, tmo
+      );
+  }
+
+  template <typename A1, typename A2, typename A3, typename A4, typename A5>
+  void respond(aid_t& sender, A1& a1, A2& a2, A3& a3, A4& a4, A5& a5)
+  {
+    resp_t res = base_t::res_;
+    duration_t tmo = base_t::tmo;
+    recv_meta meta = pri_respond();
+    actor_ref_t& a = base_t::get_actor_ref();
+    a.respond(
+      boost::bind(
+        &handle_respond5<actor_ref_t, A1, A2, A3, A4, A5>, _arg1, _arg2, _arg3,
+        boost::ref(sender), meta, boost::ref(a1), boost::ref(a2), 
+        boost::ref(a3), boost::ref(a4), boost::ref(a5)
+        ),
+      res, tmo
       );
   }
 
@@ -407,15 +601,23 @@ struct receiver<ActorRef, true>
   receiver() {}
 
 private:
-  bool pri_recv(pattern& patt)
+  std::pair<recv_meta, bool> pri_recv(pattern& patt)
   {
-    patt.recver_ = base_t::g_.recver_;
     if (base_t::has_match_)
     {
       make_pattern(patt, base_t::match_list_);
     }
+    patt.recver_ = base_t::g_.recver_;
+    recv_meta meta = base_t::meta_;
     base_t::reset();
-    return begin_recv(patt);
+    return std::make_pair(meta, begin_recv(patt));
+  }
+
+  recv_meta pri_respond()
+  {
+    recv_meta meta = base_t::meta_;
+    base_t::reset();
+    return meta;
   }
 };
 }

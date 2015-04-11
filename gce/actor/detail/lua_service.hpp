@@ -74,7 +74,7 @@ public:
   }
 
 public:
-  void initialize(std::string const& lua_gce_path)
+  void make_libgce(std::string const& lua_gce_path)
   {
     lua_State* L = L_.get();
     luaL_openlibs(L);

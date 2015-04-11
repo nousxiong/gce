@@ -15,6 +15,8 @@
 #include <gce/actor/actor_id.hpp>
 #include <gce/actor/detail/basic_service.hpp>
 #include <gce/actor/asio.hpp>
+#include <gce/detail/ref_count.hpp>
+#include <boost/noncopyable.hpp>
 
 namespace gce
 {
@@ -25,6 +27,68 @@ class basic_addon
 {
   typedef Context context_t;
   typedef basic_service<context_t> service_t;
+
+public:
+  template <typename T>
+  class guard
+    : public ref_count
+  {
+  public:
+    explicit guard(T* p)
+      : ref_count(boost::bind(&guard<T>::free, this))
+      , p_(p)
+    {
+      GCE_ASSERT(p_ != 0);
+    }
+
+  public:
+    void notify()
+    {
+      p_ = 0;
+    }
+
+    T* get() const
+    {
+      return p_;
+    }
+
+    void free()
+    {
+      delete this;
+    }
+
+  private:
+    T* p_;
+  };
+
+  template <typename T>
+  class scope
+    : private boost::noncopyable
+  {
+  public:
+    typedef guard<T> guard_t;
+    typedef boost::intrusive_ptr<guard_t> guard_ptr;
+
+  public:
+    explicit scope(T* t)
+      : guard_(new guard_t(t))
+    {
+    }
+
+    ~scope()
+    {
+      guard_->notify();
+    }
+
+  public:
+    guard_ptr get()
+    {
+      return guard_;
+    }
+
+  private:
+    guard_ptr guard_;
+  };
 
 public:
   template <typename Actor>

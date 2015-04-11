@@ -137,13 +137,14 @@ public:
       }
       lua_gce_path.erase(--lua_gce_path.end());
 
-      lua_register_t& lua_reg = attrs_.lua_reg_;
+      std::vector<lua_register_t>& lua_reg_list = attrs_.lua_reg_list_;
       for (size_t i=0; i<service_size_; ++i)
       {
-        lua_service_list_[i].initialize(lua_gce_path);
-        if (lua_reg)
+        lua_service_list_[i].make_libgce(lua_gce_path);
+        lua_State* L = lua_service_list_[i].get_lua_state();
+        BOOST_FOREACH(lua_register_t& lua_reg, lua_reg_list)
         {
-          lua_reg(lua_service_list_[i].get_lua_state());
+          lua_reg(L);
         }
       }
 #endif

@@ -1,9 +1,6 @@
 #
 # This file is part of the CMake build system for GCE
 #
-# CMake auto-generated configuration options.
-# Do not check in modified versions of this file.
-#
 # Copyright (c) 2009-2014 Nous Xiong (348944179 at qq dot com)
 #
 # Distributed under the Boost Software License, Version 1.0. (See accompanying

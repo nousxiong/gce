@@ -51,7 +51,7 @@ struct attributes
   std::vector<thread_callback_t> thread_end_cb_list_;
 #ifdef GCE_LUA
   std::vector<std::string> lua_gce_path_list_;
-  lua_register_t lua_reg_;
+  std::vector<lua_register_t> lua_reg_list_;
 #endif
   log::logger_t lg_;
 };

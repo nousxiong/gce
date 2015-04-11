@@ -63,14 +63,20 @@ private:
     {
       echo_addon ea(self);
       aid_t sender = self->match("init").recv();
-      for (size_t i=0; i<10; ++i)
+      while (true)
       {
+        match_t type;
+        self->match("echo", "quit", type).recv();
+        if (type == atom("quit"))
+        {
+          break;
+        }
+
         ea.echo("hello world!");
         message msg;
         self->match("echo").raw(msg).recv();
 
         self.send(sender, msg);
-        self->match("echo").recv();
       }
     }
     catch (std::exception& ex)
@@ -86,34 +92,50 @@ private:
 
     try
     {
+      size_t size = 10;
       attributes attrs;
       attrs.lg_ = lg;
       context ctx(attrs);
       threaded_actor base = spawn(ctx);
       echo_addon ea(base);
+      std::vector<aid_t> echo_list(size);
 
-      aid_t aid = spawn(base, boost::bind(&addon_ut::my_actor, _arg1), monitored);
-      base->send(aid, "init");
-      while (true)
+      for (size_t i=0; i<size; ++i)
       {
-        errcode_t ec;
-        message msg;
-        match_t type;
-        std::string str;
-        base->match("echo", type).guard(aid, ec).raw(msg).recv(str);
-        if (ec)
+        aid_t aid = spawn(base, boost::bind(&addon_ut::my_actor, _arg1), monitored);
+        base->send(aid, "init");
+        echo_list[i] = aid;
+      }
+
+      for (size_t n=0; n<10; ++n)
+      {
+        for (size_t i=0; i<size; ++i)
         {
-          BOOST_ASSERT(type == exit);
-          break;
+          base->send(echo_list[i], "echo", "hi");
         }
-        BOOST_ASSERT(type == atom("echo"));
 
-        msg >> str;
-        BOOST_ASSERT(str == "hello world!");
+        for (size_t i=0; i<size; ++i)
+        {
+          errcode_t ec;
+          message msg;
+          match_t type;
+          std::string str;
+          base->match("echo", type).guard(echo_list[i], ec).raw(msg).recv();
+          GCE_VERIFY(!ec);
+          GCE_VERIFY(type == atom("echo"));
 
-        ea.echo(str);
-        base->match("echo").raw(msg).recv();
-        base.send(aid, msg);
+          msg >> str;
+          GCE_VERIFY(str == "hello world!");
+
+          ea.echo(str);
+          base->match("echo").raw(msg).recv();
+        }
+      }
+
+      for (size_t i=0; i<size; ++i)
+      {
+        base->send(echo_list[i], "quit");
+        base->recv(exit);
       }
     }
     catch (std::exception& ex)

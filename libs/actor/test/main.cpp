@@ -87,8 +87,8 @@ int main()
     gce::common_relay_ut::run();
     gce::message_ut::run();
     gce::move_ptr_ut::run();
-    gce::pointer_ut::run();
-    gce::addon_ut::run();*/
+    gce::pointer_ut::run();*/
+    gce::addon_ut::run();
 
     /// remote test
     /*gce::socket_ut::run();
@@ -104,9 +104,9 @@ int main()
 
     /// script test
 #ifdef GCE_LUA
-    gce::lua_actor_ut::run();
+    /*gce::lua_actor_ut::run();
     gce::lua_socket_ut::run();
-    gce::lua_service_ut::run();
+    gce::lua_service_ut::run();*/
 #endif
   }
   catch (std::exception& ex)

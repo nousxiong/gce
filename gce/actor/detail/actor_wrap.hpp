@@ -412,12 +412,12 @@ private:
   void pri_recv0(aid_t& sender, Match type, gce::guard g, duration_t tmo, bool has_match = true)
   {
     pattern patt(tmo);
-    bool has_exit = pri_recv(patt, type, gce::guard(), has_match);
+    std::pair<recv_meta, bool> pr = pri_recv(patt, type, gce::guard(), has_match);
     actor_ref_t& a = base_t::get_actor_ref();
     a.recv(
       boost::bind(
         &handle_recv0<actor_ref_t>, _arg1, _arg2, _arg3,
-        boost::ref(sender), has_exit
+        boost::ref(sender), pr
         ),
       patt
       );
@@ -433,27 +433,27 @@ public:
   void recv(aid_t& sender, Match type, A1& a1, duration_t tmo = infin)
   {
     pattern patt(tmo);
-    bool has_exit = pri_recv(patt, type, gce::guard());
-    pri_recv1(sender, has_exit, patt, a1);
+    std::pair<recv_meta, bool> pr = pri_recv(patt, type, gce::guard());
+    pri_recv1(sender, pr, patt, a1);
   }
 
   template <typename Match, typename A1>
   void recv(aid_t& sender, Match type, gce::guard g, A1& a1, duration_t tmo = infin)
   {
     pattern patt(tmo);
-    bool has_exit = pri_recv(patt, type, g);
-    pri_recv1(sender, has_exit, patt, a1);
+    std::pair<recv_meta, bool> pr = pri_recv(patt, type, g);
+    pri_recv1(sender, pr, patt, a1);
   }
 
 private:
   template <typename A1>
-  void pri_recv1(aid_t& sender, bool has_exit, pattern& patt, A1& a1)
+  void pri_recv1(aid_t& sender, std::pair<recv_meta, bool> pr, pattern& patt, A1& a1)
   {
     actor_ref_t& a = base_t::get_actor_ref();
     a.recv(
       boost::bind(
         &handle_recv1<actor_ref_t, A1>, _arg1, _arg2, _arg3,
-        boost::ref(sender), has_exit, boost::ref(a1)
+        boost::ref(sender), pr, boost::ref(a1)
         ),
       patt
       );
@@ -464,27 +464,27 @@ public:
   void recv(aid_t& sender, Match type, A1& a1, A2& a2, duration_t tmo = infin)
   {
     pattern patt(tmo);
-    bool has_exit = pri_recv(patt, type, gce::guard());
-    pri_recv2(sender, has_exit, patt, a1, a2);
+    std::pair<recv_meta, bool> pr = pri_recv(patt, type, gce::guard());
+    pri_recv2(sender, pr, patt, a1, a2);
   }
   
   template <typename Match, typename A1, typename A2>
   void recv(aid_t& sender, Match type, gce::guard g, A1& a1, A2& a2, duration_t tmo = infin)
   {
     pattern patt(tmo);
-    bool has_exit = pri_recv(patt, type, g);
-    pri_recv2(sender, has_exit, patt, a1, a2);
+    std::pair<recv_meta, bool> pr = pri_recv(patt, type, g);
+    pri_recv2(sender, pr, patt, a1, a2);
   }
 
 private:
   template <typename A1, typename A2>
-  void pri_recv2(aid_t& sender, bool has_exit, pattern& patt, A1& a1, A2& a2)
+  void pri_recv2(aid_t& sender, std::pair<recv_meta, bool> pr, pattern& patt, A1& a1, A2& a2)
   {
     actor_ref_t& a = base_t::get_actor_ref();
     a.recv(
       boost::bind(
         &handle_recv2<actor_ref_t, A1, A2>, _arg1, _arg2, _arg3,
-        boost::ref(sender), has_exit, boost::ref(a1), boost::ref(a2)
+        boost::ref(sender), pr, boost::ref(a1), boost::ref(a2)
         ),
       patt
       );
@@ -495,27 +495,27 @@ public:
   void recv(aid_t& sender, Match type, A1& a1, A2& a2, A3& a3, duration_t tmo = infin)
   {
     pattern patt(tmo);
-    bool has_exit = pri_recv(patt, type, gce::guard());
-    pri_recv3(sender, has_exit, patt, a1, a2, a3);
+    std::pair<recv_meta, bool> pr = pri_recv(patt, type, gce::guard());
+    pri_recv3(sender, pr, patt, a1, a2, a3);
   }
 
   template <typename Match, typename A1, typename A2, typename A3>
   void recv(aid_t& sender, Match type, gce::guard g, A1& a1, A2& a2, A3& a3, duration_t tmo = infin)
   {
     pattern patt(tmo);
-    bool has_exit = pri_recv(patt, type, g);
-    pri_recv3(sender, has_exit, patt, a1, a2, a3);
+    std::pair<recv_meta, bool> pr = pri_recv(patt, type, g);
+    pri_recv3(sender, pr, patt, a1, a2, a3);
   }
 
 private:
   template <typename A1, typename A2, typename A3>
-  void pri_recv3(aid_t& sender, bool has_exit, pattern& patt, A1& a1, A2& a2, A3& a3)
+  void pri_recv3(aid_t& sender, std::pair<recv_meta, bool> pr, pattern& patt, A1& a1, A2& a2, A3& a3)
   {
     actor_ref_t& a = base_t::get_actor_ref();
     a.recv(
       boost::bind(
         &handle_recv3<actor_ref_t, A1, A2, A3>, _arg1, _arg2, _arg3,
-        boost::ref(sender), has_exit, boost::ref(a1), boost::ref(a2), 
+        boost::ref(sender), pr, boost::ref(a1), boost::ref(a2), 
         boost::ref(a3)
         ),
       patt
@@ -527,27 +527,27 @@ public:
   void recv(aid_t& sender, Match type, A1& a1, A2& a2, A3& a3, A4& a4, duration_t tmo = infin)
   {
     pattern patt(tmo);
-    bool has_exit = pri_recv(patt, type, gce::guard());
-    pri_recv4(sender, has_exit, patt, a1, a2, a3, a4);
+    std::pair<recv_meta, bool> pr = pri_recv(patt, type, gce::guard());
+    pri_recv4(sender, pr, patt, a1, a2, a3, a4);
   }
 
   template <typename Match, typename A1, typename A2, typename A3, typename A4>
   void recv(aid_t& sender, Match type, gce::guard g, A1& a1, A2& a2, A3& a3, A4& a4, duration_t tmo = infin)
   {
     pattern patt(tmo);
-    bool has_exit = pri_recv(patt, type, g);
-    pri_recv4(sender, has_exit, patt, a1, a2, a3, a4);
+    std::pair<recv_meta, bool> pr = pri_recv(patt, type, g);
+    pri_recv4(sender, pr, patt, a1, a2, a3, a4);
   }
 
 private:
   template <typename A1, typename A2, typename A3, typename A4>
-  void pri_recv4(aid_t& sender, bool has_exit, pattern& patt, A1& a1, A2& a2, A3& a3, A4& a4)
+  void pri_recv4(aid_t& sender, std::pair<recv_meta, bool> pr, pattern& patt, A1& a1, A2& a2, A3& a3, A4& a4)
   {
     actor_ref_t& a = base_t::get_actor_ref();
     a.recv(
       boost::bind(
         &handle_recv4<actor_ref_t, A1, A2, A3, A4>, _arg1, _arg2, _arg3,
-        boost::ref(sender), has_exit, boost::ref(a1), boost::ref(a2), 
+        boost::ref(sender), pr, boost::ref(a1), boost::ref(a2), 
         boost::ref(a3), boost::ref(a4)
         ),
       patt
@@ -559,27 +559,27 @@ public:
   void recv(aid_t& sender, Match type, A1& a1, A2& a2, A3& a3, A4& a4, A5& a5, duration_t tmo = infin)
   {
     pattern patt(tmo);
-    bool has_exit = pri_recv(patt, type, gce::guard());
-    pri_recv5(sender, has_exit, patt, a1, a2, a3, a4, a5);
+    std::pair<recv_meta, bool> pr = pri_recv(patt, type, gce::guard());
+    pri_recv5(sender, pr, patt, a1, a2, a3, a4, a5);
   }
 
   template <typename Match, typename A1, typename A2, typename A3, typename A4, typename A5>
   void recv(aid_t& sender, Match type, gce::guard g, A1& a1, A2& a2, A3& a3, A4& a4, A5& a5, duration_t tmo = infin)
   {
     pattern patt(tmo);
-    bool has_exit = pri_recv(patt, type, g);
-    pri_recv5(sender, has_exit, patt, a1, a2, a3, a4, a5);
+    std::pair<recv_meta, bool> pr = pri_recv(patt, type, g);
+    pri_recv5(sender, pr, patt, a1, a2, a3, a4, a5);
   }
 
 private:
   template <typename A1, typename A2, typename A3, typename A4, typename A5>
-  void pri_recv5(aid_t& sender, bool has_exit, pattern& patt, A1& a1, A2& a2, A3& a3, A4& a4, A5& a5)
+  void pri_recv5(aid_t& sender, std::pair<recv_meta, bool> pr, pattern& patt, A1& a1, A2& a2, A3& a3, A4& a4, A5& a5)
   {
     actor_ref_t& a = base_t::get_actor_ref();
     a.recv(
       boost::bind(
         &handle_recv5<actor_ref_t, A1, A2, A3, A4, A5>, _arg1, _arg2, _arg3,
-        boost::ref(sender), has_exit, boost::ref(a1), boost::ref(a2), 
+        boost::ref(sender), pr, boost::ref(a1), boost::ref(a2), 
         boost::ref(a3), boost::ref(a4), boost::ref(a5)
         ),
       patt
@@ -593,8 +593,8 @@ public:
     actor_ref_t& a = base_t::get_actor_ref();
     a->respond(
       boost::bind(
-        &handle_recv0<actor_ref_t>, _arg1, _arg2, _arg3,
-        boost::ref(sender), false
+        &handle_respond0<actor_ref_t>, _arg1, _arg2, _arg3,
+        boost::ref(sender), recv_meta()
         ),
       res, tmo
       );
@@ -606,8 +606,8 @@ public:
     actor_ref_t& a = base_t::get_actor_ref();
     a->respond(
       boost::bind(
-        &handle_recv1<actor_ref_t, A1>, _arg1, _arg2, _arg3,
-        boost::ref(sender), false, boost::ref(a1)
+        &handle_respond1<actor_ref_t, A1>, _arg1, _arg2, _arg3,
+        boost::ref(sender), recv_meta(), boost::ref(a1)
         ),
       res, tmo
       );
@@ -619,8 +619,8 @@ public:
     actor_ref_t& a = base_t::get_actor_ref();
     a->respond(
       boost::bind(
-        &handle_recv2<actor_ref_t, A1, A2>, _arg1, _arg2, _arg3,
-        boost::ref(sender), false, boost::ref(a1), boost::ref(a2)
+        &handle_respond2<actor_ref_t, A1, A2>, _arg1, _arg2, _arg3,
+        boost::ref(sender), recv_meta(), boost::ref(a1), boost::ref(a2)
         ),
       res, tmo
       );
@@ -632,8 +632,8 @@ public:
     actor_ref_t& a = base_t::get_actor_ref();
     a->respond(
       boost::bind(
-        &handle_recv3<actor_ref_t, A1, A2, A3>, _arg1, _arg2, _arg3,
-        boost::ref(sender), false, boost::ref(a1), boost::ref(a2),
+        &handle_respond3<actor_ref_t, A1, A2, A3>, _arg1, _arg2, _arg3,
+        boost::ref(sender), recv_meta(), boost::ref(a1), boost::ref(a2),
         boost::ref(a3)
         ),
       res, tmo
@@ -646,8 +646,8 @@ public:
     actor_ref_t& a = base_t::get_actor_ref();
     a->respond(
       boost::bind(
-        &detail::handle_recv4<actor_ref_t, A1, A2, A3, A4>, _arg1, _arg2, _arg3,
-        boost::ref(sender), false, boost::ref(a1), boost::ref(a2),
+        &handle_respond4<actor_ref_t, A1, A2, A3, A4>, _arg1, _arg2, _arg3,
+        boost::ref(sender), recv_meta(), boost::ref(a1), boost::ref(a2),
         boost::ref(a3), boost::ref(a4)
         ),
       res, tmo
@@ -660,8 +660,8 @@ public:
     actor_ref_t& a = base_t::get_actor_ref();
     a->respond(
       boost::bind(
-        &detail::handle_recv5<actor_ref_t, A1, A2, A3, A4, A5>, _arg1, _arg2, _arg3,
-        boost::ref(sender), false, boost::ref(a1), boost::ref(a2),
+        &handle_respond5<actor_ref_t, A1, A2, A3, A4, A5>, _arg1, _arg2, _arg3,
+        boost::ref(sender), recv_meta(), boost::ref(a1), boost::ref(a2),
         boost::ref(a3), boost::ref(a4), boost::ref(a5)
         ),
       res, tmo
@@ -676,14 +676,14 @@ public:
 
 private:
   template <typename Match>
-  bool pri_recv(pattern& patt, Match type, gce::guard g, bool has_match = true)
+  std::pair<recv_meta, bool> pri_recv(pattern& patt, Match type, gce::guard g, bool has_match = true)
   {
     patt.recver_ = g.recver_;
     if (has_match)
     {
       make_pattern(patt, type);
     }
-    return begin_recv(patt);
+    return std::make_pair(recv_meta(), begin_recv(patt));
   }
 };
 }
