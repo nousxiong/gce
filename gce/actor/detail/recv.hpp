@@ -367,9 +367,9 @@ inline std::pair<bool, bool> end_respond(
   osender = sender;
   if (msg.get_type() == exit)
   {
-    if (pr.first.guard_ != 0)
+    if (meta.guard_ != 0)
     {
-      *pr.first.guard_ = boost::asio::error::make_error_code(boost::asio::error::shut_down);
+      *meta.guard_ = boost::asio::error::make_error_code(boost::asio::error::shut_down);
       return std::make_pair(false, true);
     }
     else
@@ -383,9 +383,9 @@ inline std::pair<bool, bool> end_respond(
   }
   else if (sender == aid_nil)
   {
-    if (pr.first.tmo_ != 0)
+    if (meta.tmo_ != 0)
     {
-      *pr.first.tmo_ = boost::asio::error::make_error_code(boost::asio::error::timed_out);
+      *meta.tmo_ = boost::asio::error::make_error_code(boost::asio::error::timed_out);
       return std::make_pair(false, true);
     }
     else
