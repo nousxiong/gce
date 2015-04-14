@@ -28,7 +28,7 @@ private:
   typedef boost::shared_ptr<boost::atomic_int> shared_integer;
   static void my_actor(stackful_actor self)
   {
-    move_ptr<int> mv_init;
+    moved_ptr<int> mv_init;
     shared_integer shr_init;
     aid_t sender = self->match("init").recv(mv_init, shr_init);
     BOOST_ASSERT(*mv_init == 1);
@@ -55,12 +55,12 @@ private:
       for (size_t i=0; i<size; ++i)
       {
         aid_t aid = spawn(base, boost::bind(&pointer_ut::my_actor, _arg1), monitored);
-        base->send(aid, "init", move_ptr<int>(new int(1)), shr_int);
+        base->send(aid, "init", moved_ptr<int>(new int(1)), shr_int);
       }
 
       for (size_t i=0; i<size; ++i)
       {
-        move_ptr<int> mv_ok;
+        moved_ptr<int> mv_ok;
         shared_integer shr_ok;
         base->match("ok").recv(mv_ok, shr_ok);
         BOOST_ASSERT(*mv_ok == 2);

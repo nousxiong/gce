@@ -31,18 +31,18 @@ struct default_move_deleter
 
 /// move when copy or assign, intrusive ptr
 template <typename T>
-class move_ptr
+class moved_ptr
 {
   typedef boost::function<void (void*)> deleter_t;
 
 public:
-  move_ptr()
+  moved_ptr()
     : p_(0)
   {
   }
   
   template<class Y>
-  explicit move_ptr(Y* p)
+  explicit moved_ptr(Y* p)
     : p_(p)
     , d_(default_move_deleter<T>())
   {
@@ -50,21 +50,21 @@ public:
   }
   
   template<class Y, class D>
-  explicit move_ptr(Y* p, D d)
+  explicit moved_ptr(Y* p, D d)
     : p_(p)
     , d_(d)
   {
   }
   
   template<class Y>
-  move_ptr(move_ptr<Y> const& other)
+  moved_ptr(moved_ptr<Y> const& other)
     : p_(other.p_)
     , d_(other.d_)
   {
     other.release();
   }
   
-  move_ptr(move_ptr const& other)
+  moved_ptr(moved_ptr const& other)
     : p_(other.p_)
     , d_(other.d_)
   {
@@ -72,7 +72,7 @@ public:
   }
   
   template<class Y>
-  move_ptr(move_ptr<Y> const& other, T* p)
+  moved_ptr(moved_ptr<Y> const& other, T* p)
     : p_(p)
     , d_(other.d_)
   {
@@ -80,7 +80,7 @@ public:
   }
   
   template<class Y>
-  move_ptr& operator=(move_ptr<Y> const& rhs)
+  moved_ptr& operator=(moved_ptr<Y> const& rhs)
   {
     BOOST_ASSERT(p_ != rhs.p_);
     dispose();
@@ -90,7 +90,7 @@ public:
     return *this;
   }
   
-  move_ptr& operator=(move_ptr const& rhs)
+  moved_ptr& operator=(moved_ptr const& rhs)
   {
     if (this != &rhs)
     {
@@ -103,7 +103,7 @@ public:
     return *this;
   }
   
-  ~move_ptr()
+  ~moved_ptr()
   {
     dispose();
   }
@@ -153,38 +153,38 @@ private:
   }
 
 private:
-  template<class Y> friend class move_ptr;
+  template<class Y> friend class moved_ptr;
   mutable T* p_;
   mutable deleter_t d_;
 };
 
 template <>
-class move_ptr<void>
+class moved_ptr<void>
 {
   typedef boost::function<void (void*)> deleter_t;
 
 public:
-  move_ptr()
+  moved_ptr()
     : p_(0)
   {
   }
   
   template<class Y, class D>
-  explicit move_ptr(Y* p, D d)
+  explicit moved_ptr(Y* p, D d)
     : p_(p)
     , d_(d)
   {
   }
   
   template<class Y>
-  move_ptr(move_ptr<Y> const& other)
+  moved_ptr(moved_ptr<Y> const& other)
     : p_(other.p_)
     , d_(other.d_)
   {
     other.release();
   }
   
-  move_ptr(move_ptr const& other)
+  moved_ptr(moved_ptr const& other)
     : p_(other.p_)
     , d_(other.d_)
   {
@@ -192,7 +192,7 @@ public:
   }
   
   template<class Y>
-  move_ptr(move_ptr<Y> const& other, void* p)
+  moved_ptr(moved_ptr<Y> const& other, void* p)
     : p_(p)
     , d_(other.d_)
   {
@@ -200,7 +200,7 @@ public:
   }
   
   template<class Y>
-  move_ptr& operator=(move_ptr<Y> const& rhs)
+  moved_ptr& operator=(moved_ptr<Y> const& rhs)
   {
     BOOST_ASSERT(p_ != rhs.p_);
     dispose();
@@ -210,7 +210,7 @@ public:
     return *this;
   }
   
-  move_ptr& operator=(move_ptr const& rhs)
+  moved_ptr& operator=(moved_ptr const& rhs)
   {
     if (this != &rhs)
     {
@@ -223,7 +223,7 @@ public:
     return *this;
   }
   
-  ~move_ptr()
+  ~moved_ptr()
   {
     dispose();
   }
@@ -261,17 +261,17 @@ private:
   }
 
 private:
-  template<class Y> friend class move_ptr;
+  template<class Y> friend class moved_ptr;
   mutable void* p_;
   mutable deleter_t d_;
 };
 
-template<class T, class U> move_ptr<T> static_pointer_cast(move_ptr<U> const& r) BOOST_NOEXCEPT
+template<class T, class U> moved_ptr<T> static_pointer_cast(moved_ptr<U> const& r) BOOST_NOEXCEPT
 {
   (void) static_cast<T*>(static_cast<U*>(0));
 
   T* p = static_cast<T*>(r.get());
-  return move_ptr<T>(r, p);
+  return moved_ptr<T>(r, p);
 }
 }
 

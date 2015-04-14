@@ -59,21 +59,34 @@ public:
     read_size_ = 0;
   }
 
-  void clear_read()
+  byte_t const* clear_read(size_t len = size_nil)
   {
-    read_size_ = 0;
+    if (len <= read_size_)
+    {
+      read_size_ -= len;
+    }
+    else
+    {
+      read_size_ = 0;
+    }
+    return buf_ + read_size_;
   }
 
-  void clear_write()
+  byte_t* clear_write(size_t len = size_nil)
   {
-    write_size_ = 0;
+    if (len <= write_size_)
+    {
+      write_size_ -= len;
+    }
+    else
+    {
+      write_size_ = 0;
+    }
+    return buf_ + write_size_;
   }
 
   void reset(byte_t* buf, size_t size)
   {
-    buf_ = buf;
-    size_ = size;
-
     if (read_size_ > size_)
     {
       throw std::out_of_range("read buffer overflow");
@@ -83,6 +96,9 @@ public:
     {
       throw std::out_of_range("write buffer overflow");
     }
+
+    buf_ = buf;
+    size_ = size;
   }
 
   void read(size_t size)

@@ -31,9 +31,18 @@ inline header_t make_header(
   o.tag_offset_ = tag_offset;
   return o;
 }
+
+gce::adl::detail::errcode make_errcode(uint32_t code = 0, uint64_t errcat = 0)
+{
+  gce::adl::detail::errcode ec;
+  ec.code_ = code;
+  ec.errcat_ = errcat;
+  return ec;
+}
 }
 }
 
 GCE_PACK(gce::detail::header_t, (v.size_)(v.type_)(v.tag_offset_));
+GCE_PACK(gce::adl::detail::errcode, (v.code_&sfix)(v.errcat_&sfix));
 
 #endif /// GCE_ACTOR_DETAIL_INTERNAL_HPP

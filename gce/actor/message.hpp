@@ -16,7 +16,7 @@
 #include <gce/actor/service_id.hpp>
 #include <gce/actor/response.hpp>
 #include <gce/actor/atom.hpp>
-#include <gce/actor/move_ptr.hpp>
+#include <gce/actor/moved_ptr.hpp>
 #include <gce/actor/error_code.hpp>
 #include <gce/actor/detail/internal.hpp>
 #include <gce/actor/packer.hpp>
@@ -25,11 +25,13 @@
 #include <gce/actor/detail/exit.hpp>
 #include <gce/actor/to_match.hpp>
 #include <gce/detail/cow_buffer.hpp>
+#include <boost/asio/buffer.hpp>
 #include <boost/shared_ptr.hpp>
 #include <boost/variant/variant.hpp>
 #include <boost/variant/get.hpp>
 #include <boost/array.hpp>
 #include <boost/utility/string_ref.hpp>
+#include <boost/foreach.hpp>
 #include <utility>
 #include <iostream>
 
@@ -64,6 +66,29 @@ typedef boost::variant<int, aid_t, request_t> relay_t;
 
 class message
 {
+public:
+  struct chunk
+  {
+    explicit chunk(size_t len = size_nil)
+      : data_(0)
+      , len_(len)
+    {
+    }
+
+    byte_t const* data() const
+    {
+      return data_;
+    }
+
+    size_t size() const
+    {
+      return len_;
+    }
+
+    byte_t const* data_;
+    size_t len_;
+  };
+
 public:
   message()
     : tag_offset_(u32_nil)
@@ -130,9 +155,20 @@ public:
   uint32_t get_tag_offset() const { return tag_offset_; }
 
   template <typename Match>
-  void set_type(Match type) { type_ = to_match(type); }
-  void reset_write() { cow_.get_buffer_ref().clear_write(); }
-  void reset_read() { cow_.get_buffer_ref().clear_read(); }
+  void set_type(Match type)
+  {
+    type_ = to_match(type);
+  }
+
+  byte_t* reset_write(size_t len = size_nil)
+  {
+    return cow_.get_buffer_ref().clear_write(len);
+  }
+
+  byte_t const* reset_read(size_t len = size_nil)
+  {
+    return cow_.get_buffer_ref().clear_read(len);
+  }
 
   template <typename T>
   message& operator<<(T const& t)
@@ -154,7 +190,7 @@ public:
   }
 
   template <typename T>
-  message& operator<<(move_ptr<T> const& p)
+  message& operator<<(moved_ptr<T> const& p)
   {
     uint32_t index = moved_list_.size();
     size_t size = packer::size_of(index);
@@ -166,7 +202,7 @@ public:
   }
 
   template <typename T>
-  message& operator>>(move_ptr<T>& p)
+  message& operator>>(moved_ptr<T>& p)
   {
     uint32_t index;
 
@@ -319,18 +355,18 @@ public:
   {
     int32_t code = (int32_t)ec.value();
     uint64_t errcat = (uint64_t)(&ec.category());
-    *this << code << errcat;
+    gce::adl::detail::errcode e = detail::make_errcode(code, errcat);
+    *this << e;
     return *this;
   }
 
   message& operator>>(errcode_t& ec)
   {
-    int32_t code;
-    uint64_t errcat;
-    *this >> code >> errcat;
+    gce::adl::detail::errcode e;
+    *this >> e;
     boost::system::error_category const* errcat_ptr =
-      (boost::system::error_category const*)errcat;
-    ec = errcode_t((int)code, *errcat_ptr);
+      (boost::system::error_category const*)e.errcat_;
+    ec = errcode_t((int)e.code_, *errcat_ptr);
     return *this;
   }
 
@@ -420,6 +456,160 @@ public:
     *this >> f;
     flag = f != 0;
     return *this;
+  }
+
+  message& operator<<(boost::asio::mutable_buffers_1 const& buffer)
+  {
+    uint64_t p = (uint64_t)boost::asio::buffer_cast<void*>(buffer);
+    uint64_t s = (uint64_t)boost::asio::buffer_size(buffer);
+    *this << p << s;
+    return *this;
+  }
+
+  message& operator>>(boost::asio::mutable_buffers_1& buffer)
+  {
+    uint64_t p = 0;
+    uint64_t s = 0;
+    *this >> p >> s;
+    buffer = boost::asio::buffer((void*)p, (size_t)s);
+    return *this;
+  }
+
+  template <size_t N>
+  message& operator<<(boost::array<boost::asio::mutable_buffers_1, N> const& buffers)
+  {
+    *this << (uint32_t)buffers.size();
+    BOOST_FOREACH(boost::asio::mutable_buffers_1 const& buffer, buffers)
+    {
+      *this << buffer;
+    }
+    return *this;
+  }
+
+  template <size_t N>
+  message& operator>>(boost::array<boost::asio::mutable_buffers_1, N>& buffers)
+  {
+    uint32_t size = 0;
+    *this >> size;
+    GCE_ASSERT(size == buffers)(size)(buffers.size());
+    BOOST_FOREACH(boost::asio::mutable_buffers_1& buffer, buffers)
+    {
+      *this >> buffer;
+    }
+    return *this;
+  }
+
+  template <typename Allocator>
+  message& operator<<(std::vector<boost::asio::mutable_buffers_1, Allocator> const& buffers)
+  {
+    *this << (uint32_t)buffers.size();
+    BOOST_FOREACH(boost::asio::mutable_buffers_1 const& buffer, buffers)
+    {
+      *this << buffer;
+    }
+    return *this;
+  }
+
+  template <typename Allocator>
+  message& operator>>(std::vector<boost::asio::mutable_buffers_1, Allocator>& buffers)
+  {
+    uint32_t size = 0;
+    *this >> size;
+    buffers.resize(size);
+    BOOST_FOREACH(boost::asio::mutable_buffers_1& buffer, buffers)
+    {
+      *this >> buffer;
+    }
+    return *this;
+  }
+
+  message& operator<<(boost::asio::const_buffers_1 const& buffer)
+  {
+    uint64_t p = (uint64_t)boost::asio::buffer_cast<void const*>(buffer);
+    uint64_t s = (uint64_t)boost::asio::buffer_size(buffer);
+    *this << p << s;
+    return *this;
+  }
+
+  message& operator>>(boost::asio::const_buffers_1& buffer)
+  {
+    uint64_t p = 0;
+    uint64_t s = 0;
+    *this >> p >> s;
+    buffer = boost::asio::buffer((void const*)p, (size_t)s);
+    return *this;
+  }
+
+  template <size_t N>
+  message& operator<<(boost::array<boost::asio::const_buffers_1, N> const& buffers)
+  {
+    *this << (uint32_t)buffers.size();
+    BOOST_FOREACH(boost::asio::const_buffers_1 const& buffer, buffers)
+    {
+      *this << buffer;
+    }
+    return *this;
+  }
+
+  template <size_t N>
+  message& operator>>(boost::array<boost::asio::const_buffers_1, N>& buffers)
+  {
+    uint32_t size = 0;
+    *this >> size;
+    GCE_ASSERT(size == buffers)(size)(buffers.size());
+    BOOST_FOREACH(boost::asio::const_buffers_1& buffer, buffers)
+    {
+      *this >> buffer;
+    }
+    return *this;
+  }
+
+  template <typename Allocator>
+  message& operator<<(std::vector<boost::asio::const_buffers_1, Allocator> const& buffers)
+  {
+    *this << (uint32_t)buffers.size();
+    BOOST_FOREACH(boost::asio::const_buffers_1 const& buffer, buffers)
+    {
+      *this << buffer;
+    }
+    return *this;
+  }
+
+  template <typename Allocator>
+  message& operator>>(std::vector<boost::asio::const_buffers_1, Allocator>& buffers)
+  {
+    uint32_t size = 0;
+    *this >> size;
+    buffers.resize(size);
+    BOOST_FOREACH(boost::asio::const_buffers_1& buffer, buffers)
+    {
+      *this >> buffer;
+    }
+    return *this;
+  }
+
+  message& operator>>(chunk& ch)
+  {
+    detail::buffer_ref& buf = cow_.get_buffer_ref();
+    if (ch.len_ > buf.remain_read_size())
+    {
+      ch.len_ = buf.remain_read_size();
+    }
+    pre_read();
+    ch.data_ = pkr_.skip_read(ch.len_);
+    end_read();
+    return *this;
+  }
+
+  message& operator>>(chunk& ch) const
+  {
+    detail::buffer_ref const& buf = cow_.get_buffer_ref();
+    if (ch.len_ > buf.remain_read_size())
+    {
+      ch.len_ = buf.remain_read_size();
+    }
+    ch.data_ = buf.data() + buf.read_size();
+    return *const_cast<message*>(this);
   }
 
 public:
@@ -610,7 +800,7 @@ private:
   detail::relay_t relay_;
 
   /// local data to carry
-  std::vector<move_ptr<void> > moved_list_;
+  std::vector<moved_ptr<void> > moved_list_;
   std::vector<boost::shared_ptr<void> > shared_list_;
 };
 

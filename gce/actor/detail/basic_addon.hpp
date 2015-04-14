@@ -101,6 +101,15 @@ public:
   {
   }
   
+  basic_addon(aid_t const& target, listener* a, service_t& svc)
+    : aid_(make_aid(target))
+    , target_(target)
+    , a_(a)
+    , svc_(svc)
+    , snd_(svc_.get_strand())
+  {
+  }
+  
   virtual ~basic_addon()
   {
   }
@@ -126,12 +135,33 @@ public:
     return snd_;
   }
   
+protected:
+  aid_t const& get_target()
+  {
+    return target_;
+  }
+  
+  listener* get_listener()
+  {
+    return a_;
+  }
+  
+  service_t& get_service()
+  {
+    return svc_;
+  }
+  
 private:
   template <typename Actor>
   aid_t make_aid(Actor& a)
   {
+    return make_aid(a.get_aid());
+  }
+  
+  aid_t make_aid(aid_t const& target)
+  {
     aid_t aid;
-    aid_t target = a.get_aid();
+    aid_t target = target;
     aid.ctxid_ = target.ctxid_;
     aid.timestamp_ = target.timestamp_;
     aid.uintptr_ = (uint64_t)this;

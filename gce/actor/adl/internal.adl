@@ -17,3 +17,9 @@ header
   gce.adl.match type_;
   uint32 tag_offset_;
 }
+
+errcode
+{
+  fix_uint32 code_;
+  fix_uint64 errcat_;
+}

@@ -13,9 +13,9 @@ namespace gce
 {
 class move_ptr_ut
 {
-  typedef gce::move_ptr<void> void_ptr;
+  typedef gce::moved_ptr<void> void_ptr;
   typedef boost::asio::ip::tcp::socket tcp_socket;
-  typedef gce::move_ptr<tcp_socket> tcp_socket_ptr;
+  typedef gce::moved_ptr<tcp_socket> tcp_socket_ptr;
 
 public:
   static void run()
