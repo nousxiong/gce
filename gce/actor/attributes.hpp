@@ -11,7 +11,9 @@
 #define GCE_ACTOR_ATTRIBUTE_HPP
 
 #include <gce/actor/config.hpp>
-#include <gce/lualib/all.hpp>
+#ifdef GCE_LUA
+# include <gce/lualib/all.hpp>
+#endif
 #include <gce/actor/asio.hpp>
 #include <boost/thread/thread.hpp>
 #include <boost/function.hpp>
