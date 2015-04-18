@@ -32,7 +32,7 @@ inline header_t make_header(
   return o;
 }
 
-gce::adl::detail::errcode make_errcode(uint32_t code = 0, uint64_t errcat = 0)
+inline gce::adl::detail::errcode make_errcode(uint32_t code = 0, uint64_t errcat = 0)
 {
   gce::adl::detail::errcode ec;
   ec.code_ = code;
