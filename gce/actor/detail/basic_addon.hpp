@@ -25,6 +25,7 @@ namespace detail
 template <typename Context>
 class basic_addon
 {
+public:
   typedef Context context_t;
   typedef basic_service<context_t> service_t;
 
@@ -94,22 +95,13 @@ public:
   template <typename Actor>
   explicit basic_addon(Actor& a)
     : aid_(make_aid(a))
-    , target_(a.get_aid())
+    , host_(a.get_aid())
     , a_(a.get_listener())
     , svc_(a.get_service())
     , snd_(svc_.get_strand())
   {
   }
-  
-  basic_addon(aid_t const& target, listener* a, service_t& svc)
-    : aid_(make_aid(target))
-    , target_(target)
-    , a_(a)
-    , svc_(svc)
-    , snd_(svc_.get_strand())
-  {
-  }
-  
+
   virtual ~basic_addon()
   {
   }
@@ -120,12 +112,12 @@ public:
     return aid_;
   }
   
-  void send(message const& m)
+  void send2actor(message const& m)
   {
     pack pk;
     pk.tag_ = get_aid();
-    pk.recver_ = target_;
-    pk.skt_ = target_;
+    pk.recver_ = host_;
+    pk.skt_ = host_;
     pk.msg_ = m;
     svc_.send(a_, pk);
   }
@@ -136,9 +128,9 @@ public:
   }
   
 protected:
-  aid_t const& get_target()
+  aid_t const& get_host() const
   {
-    return target_;
+    return host_;
   }
   
   listener* get_listener()
@@ -158,12 +150,11 @@ private:
     return make_aid(a.get_aid());
   }
   
-  aid_t make_aid(aid_t const& target)
+  aid_t make_aid(aid_t const& host)
   {
     aid_t aid;
-    aid_t target = target;
-    aid.ctxid_ = target.ctxid_;
-    aid.timestamp_ = target.timestamp_;
+    aid.ctxid_ = host.ctxid_;
+    aid.timestamp_ = host.timestamp_;
     aid.uintptr_ = (uint64_t)this;
     aid.svc_id_ = 0;
     aid.type_ = (byte_t)actor_addon;
@@ -174,7 +165,7 @@ private:
   
 private:
   aid_t aid_;
-  aid_t target_;
+  aid_t host_;
   listener* a_;
   service_t& svc_;
   strand_t& snd_;

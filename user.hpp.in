@@ -1,0 +1,47 @@
+///
+/// user.hpp
+/// 
+/// CMake auto-generated configuration options. 
+/// Do not check in modified versions of this file.
+///
+/// Copyright (c) 2009-2015 Nous Xiong (348944179 at qq dot com)
+///
+/// Distributed under the Boost Software License, Version 1.0. (See accompanying
+/// file LICENSE_1_0.txt or copy at http://www.boost.org/LICENSE_1_0.txt)
+///
+/// See https://github.com/nousxiong/gce for latest version.
+///
+
+#ifndef GCE_USER_HPP
+#define GCE_USER_HPP
+
+#include <boost/predef.h>
+
+/// The configured options and settings for gce.
+#define GCE_VERSION_MAJOR @GCE_VERSION_MAJOR@
+#define GCE_VERSION_MINOR @GCE_VERSION_MINOR@
+
+/// User options.
+#ifndef BOOST_ASIO_DISABLE_STD_CHRONO
+# define BOOST_ASIO_DISABLE_STD_CHRONO
+#endif
+
+#if defined(BOOST_OS_WINDOWS) && !defined(_WIN32_WINNT)
+# define _WIN32_WINNT @GCE_WINVER@
+#endif
+
+#cmakedefine GCE_LUA
+#cmakedefine GCE_OPENSSL
+
+#ifdef GCE_LUA
+# define GCE_LUA51 @GCE_LUA51@
+# define GCE_LUA52 @GCE_LUA52@
+# define GCE_LUA53 @GCE_LUA53@
+# define GCE_LUAJIT2 @GCE_LUAJIT2@
+# define GCE_LUA_VERSION @GCE_LUA_VERSION@
+#endif
+
+#define GCE_AMSG @GCE_AMSG@
+#define GCE_ADATA @GCE_ADATA@
+
+#endif /// GCE_USER_HPP

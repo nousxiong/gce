@@ -13,23 +13,8 @@
 #define GCE_CONFIG_HPP
 
 #include <boost/predef.h>
+#include <gce/user.hpp>
 #include <boost/bind/placeholders.hpp>
-#include <boost/type_traits/remove_reference.hpp>
-
-/// The configured options and settings for gce.
-#define GCE_VERSION_MAJOR 1
-#define GCE_VERSION_MINOR 2
-
-/// User options.
-#ifndef GCE_ASIO_ALLOC_HANDLER_SIZE
-# define GCE_ASIO_ALLOC_HANDLER_SIZE 1024
-#endif
-
-#ifdef BOOST_OS_WINDOWS
-# ifndef GCE_WINVER
-#   define GCE_WINVER 0x0501
-# endif
-#endif
 
 /// Suppress some vc warnings.
 #ifdef BOOST_COMP_MSVC
@@ -43,22 +28,6 @@
 
 #if defined(GCE_LUA)
 # define GCE_SCRIPT
-#endif
-
-#ifndef GCE_AMSG
-# define GCE_AMSG 0
-#endif
-
-#ifndef GCE_ADATA
-# define GCE_ADATA 1
-#endif
-
-#ifndef GCE_PACKER
-# ifdef GCE_SCRIPT
-#   define GCE_PACKER GCE_ADATA
-# else
-#   define GCE_PACKER GCE_AMSG
-# endif
 #endif
 
 /// boost placeholders define, compatible with cpp11's std::placeholders

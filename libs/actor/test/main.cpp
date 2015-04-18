@@ -42,7 +42,6 @@ static std::size_t const test_count = 1;
 #include "test_match_recver.hpp"
 #include "test_link.hpp"
 #include "test_message.hpp"
-#include "test_move_ptr.hpp"
 #include "test_pointer.hpp"
 #include "test_relay.hpp"
 #include "test_common_relay.hpp"
@@ -85,9 +84,8 @@ int main()
     gce::link_ut::run();
     gce::relay_ut::run();
     gce::common_relay_ut::run();
-    gce::message_ut::run();
-    gce::move_ptr_ut::run();
-    gce::pointer_ut::run();*/
+    gce::message_ut::run();*/
+    gce::pointer_ut::run();
     gce::addon_ut::run();
 
     /// remote test

@@ -52,7 +52,7 @@ private:
     {
       message m("echo");
       m << str;
-      base_t::send(m);
+      base_t::send2actor(m);
     }
   };
 

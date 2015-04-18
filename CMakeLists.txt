@@ -21,6 +21,7 @@ include (util)
 
 # Provide user options to customise the build process.
 option (GCE_LUA "Allow gce using lua actor" OFF)
+option (GCE_OPENSSL "Allow gce using openssl" OFF)
 set (GCE_PACKER "amsg" CACHE STRING "GCE pack lib type, option are: adata amsg")
 
 if (GCE_LUA)
@@ -29,43 +30,30 @@ if (GCE_LUA)
   set (GCE_LUA52 1)
   set (GCE_LUA53 2)
   set (GCE_LUAJIT2 3)
-  add_definitions (-DGCE_LUA51=${GCE_LUA51})
-  add_definitions (-DGCE_LUA52=${GCE_LUA52})
-  add_definitions (-DGCE_LUA53=${GCE_LUA53})
-  add_definitions (-DGCE_LUAJIT2=${GCE_LUAJIT2})
-  if (${GCE_LUA_VERSION} STREQUAL "5.1")
-    add_definitions (-DGCE_LUA_VERSION=${GCE_LUA51})
-  elseif (${GCE_LUA_VERSION} STREQUAL "5.2")
-    add_definitions (-DGCE_LUA_VERSION=${GCE_LUA52})
-  elseif (${GCE_LUA_VERSION} STREQUAL "5.3")
-    add_definitions (-DGCE_LUA_VERSION=${GCE_LUA53})
-  elseif (${GCE_LUA_VERSION} STREQUAL "jit2")
-    add_definitions (-DGCE_LUA_VERSION=${GCE_LUAJIT2})
-  else ()
-    message (FATAL_ERROR "GCE_LUA_VERSION error, must be 5.1 5.2 5.3 jit2 one of them")
-  endif ()
-  
   if (${GCE_LUA_VERSION} STREQUAL "5.1")
     set (GCE_LUADIR "lua51")
+    set (GCE_LUA_VERSION ${GCE_LUA51})
   elseif (${GCE_LUA_VERSION} STREQUAL "5.2")
     set (GCE_LUADIR "lua52")
+    set (GCE_LUA_VERSION ${GCE_LUA52})
   elseif (${GCE_LUA_VERSION} STREQUAL "5.3")
     set (GCE_LUADIR "lua53")
+    set (GCE_LUA_VERSION ${GCE_LUA53})
   elseif (${GCE_LUA_VERSION} STREQUAL "jit2")
     set (GCE_LUADIR "luajit")
+    set (GCE_LUA_VERSION ${GCE_LUAJIT2})
+  else ()
+    message (FATAL_ERROR "GCE_LUA_VERSION error, must be 5.1 5.2 5.3 jit2 one of them")
   endif ()
 endif ()
 
 # Define gce packer types
 set (GCE_AMSG 0)
 set (GCE_ADATA 1)
-add_definitions (-DGCE_AMSG=${GCE_AMSG})
-add_definitions (-DGCE_ADATA=${GCE_ADATA})
-
 if (${GCE_PACKER} STREQUAL "amsg")
-  add_definitions (-DGCE_PACKER=${GCE_AMSG})
+  set (GCE_PACKER ${GCE_AMSG})
 elseif (${GCE_PACKER} STREQUAL "adata")
-  add_definitions (-DGCE_PACKER=${GCE_ADATA})
+  set (GCE_PACKER ${GCE_ADATA})
 else ()
   message (FATAL_ERROR "GCE_PACKER error, must be adata or amsg")
 endif ()
@@ -76,14 +64,7 @@ endif ()
 
 if (WIN32)
   set (GCE_WINVER "0x0501" CACHE STRING "Windows version maro. Default is 0x0501 - winxp, user can reset")
-  add_definitions (-D_WIN32_WINNT=${GCE_WINVER})
 endif ()
-
-if (GCE_LUA)
-  add_definitions (-DGCE_LUA)
-endif ()
-
-add_definitions (-DBOOST_ASIO_DISABLE_STD_CHRONO)
 
 # Set glibc.
 if (GCE_STATIC)
@@ -99,8 +80,23 @@ endif ()
 
 # Set lua
 if (GCE_LUA)
-  gce_add_library(lua)
-  gce_set_lib(lua Lua)
+  gce_add_library (lua)
+  gce_set_lib (lua Lua)
+endif ()
+
+# Find openssl
+if (GCE_OPENSSL)
+  gce_add_library (OpenSSL)
+  if (WIN32)
+    set (OPENSSL_LIBSSL_NAME "ssleay32" CACHE PATH "Lib file name to openssl ssl name, e.g. ssleay32")
+    set (OPENSSL_LIBCRYPTO_NAME "libeay32" CACHE PATH "Lib file name to openssl crypto name, e.g. libeay32")
+  else ()
+    set (OPENSSL_LIBSSL_NAME "libssl" CACHE PATH "Lib file name to openssl ssl name, e.g. libssl")
+    set (OPENSSL_LIBCRYPTO_NAME "libcrypto" CACHE PATH "Lib file name to openssl crypto name, e.g. libcrypto")
+  endif ()
+  gce_set_lib (OpenSSL ${OPENSSL_LIBSSL_NAME})
+  gce_set_lib (OpenSSL ${OPENSSL_LIBCRYPTO_NAME})
+  set (OpenSSL_LIBRARIES ${${OPENSSL_LIBSSL_NAME}_LIBRARIES} ${${OPENSSL_LIBCRYPTO_NAME}_LIBRARIES})
 endif ()
 
 # Add the source and build tree to the search path for include gce header files.
@@ -108,11 +104,11 @@ include_directories (${PROJECT_SOURCE_DIR})
 include_directories (${PROJECT_BINARY_DIR})
 
 # Boost libraries search.
-set (BOOST_ROOT "" CACHE PATH "Path to glibc include directory")
+set (BOOST_ROOT "" CACHE PATH "Path to boost directory, e.g. boost_1_57_0")
 set (GCE_BOOST_VERSION "1.57.0" CACHE STRING "Boost version, e.g. 1.57.0")
 
 if (${GCE_BOOST_VERSION} LESS 1.57.0)
-  message(FATAL_ERROR "Please using boost 1.57.0 and higher")
+  message (FATAL_ERROR "Please using boost 1.57.0 or higher")
 endif ()
 
 set (Boost_USE_STATIC_LIBS ON)
@@ -148,13 +144,21 @@ if (WIN32)
 endif ()
 
 # Select build sub libs.
-set (SUB_LIBRARYS "actor log" CACHE STRING "Select build sub libs")
+set (SUB_LIBRARYS "actor log assert" CACHE STRING "Select build sub libs")
 string (TOLOWER ${SUB_LIBRARYS} SUB_LIBRARYS_TOLOWER)
 string (REGEX MATCHALL "[a-z_]+" SUB_LIB_NAME_LIST ${SUB_LIBRARYS_TOLOWER})
 
 foreach (SUB_LIB_NAME ${SUB_LIB_NAME_LIST})
   add_subdirectory (libs/${SUB_LIB_NAME})
 endforeach(SUB_LIB_NAME)
+
+# Configure a header file to pass some of the CMake settings to the source code.
+configure_file (
+  "${PROJECT_SOURCE_DIR}/user.hpp.in"
+  "${PROJECT_BINARY_DIR}/gce/user.hpp"
+  )
+
+install (FILES ${PROJECT_BINARY_DIR}/gce/user.hpp DESTINATION include/gce)
 
 # Build a CPack driven installer package.
 include (InstallRequiredSystemLibraries)

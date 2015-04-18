@@ -16,7 +16,6 @@
 #include <gce/actor/service_id.hpp>
 #include <gce/actor/response.hpp>
 #include <gce/actor/atom.hpp>
-#include <gce/actor/moved_ptr.hpp>
 #include <gce/actor/error_code.hpp>
 #include <gce/actor/detail/internal.hpp>
 #include <gce/actor/packer.hpp>
@@ -89,6 +88,22 @@ public:
     size_t len_;
   };
 
+  struct skip
+  {
+    template <typename T>
+    explicit skip(T const& t)
+      : len_(packer::size_of(t))
+    {
+    }
+
+    explicit skip(size_t len)
+      : len_(len)
+    {
+    }
+
+    size_t len_;
+  };
+
 public:
   message()
     : tag_offset_(u32_nil)
@@ -125,7 +140,6 @@ public:
     , cow_(other.cow_)
     , pkr_(other.pkr_)
     , relay_(other.relay_)
-    , moved_list_(other.moved_list_)
     , shared_list_(other.shared_list_)
   {
   }
@@ -139,7 +153,6 @@ public:
       cow_ = rhs.cow_;
       pkr_ = rhs.pkr_;
       relay_ = rhs.relay_;
-      moved_list_ = rhs.moved_list_;
       shared_list_ = rhs.shared_list_;
     }
     return *this;
@@ -170,6 +183,14 @@ public:
     return cow_.get_buffer_ref().clear_read(len);
   }
 
+  void to_large()
+  {
+    if (cow_.is_small())
+    {
+      cow_.reserve(GCE_SMALL_MSG_SIZE + 8);
+    }
+  }
+
   template <typename T>
   message& operator<<(T const& t)
   {
@@ -189,35 +210,20 @@ public:
     return *this;
   }
 
-  template <typename T>
-  message& operator<<(moved_ptr<T> const& p)
+  message& operator<<(skip s)
   {
-    uint32_t index = moved_list_.size();
-    size_t size = packer::size_of(index);
+    size_t size = s.len_;
     pre_write(size);
-    pkr_.write(index);
-    moved_list_.push_back(p);
+    pkr_.skip_write(size);
     end_write();
     return *this;
   }
 
-  template <typename T>
-  message& operator>>(moved_ptr<T>& p)
+  message& operator>>(skip s)
   {
-    uint32_t index;
-
     pre_read();
-    pkr_.read(index);
+    pkr_.skip_read(s.len_);
     end_read();
-
-    GCE_VERIFY(index < moved_list_.size())(index);
-    GCE_ASSERT(moved_list_[index])(index);
-
-    p = static_pointer_cast<T>(moved_list_[index]);
-    if (index + 1 == moved_list_.size())
-    {
-      moved_list_.clear();
-    }
     return *this;
   }
 
@@ -800,7 +806,6 @@ private:
   detail::relay_t relay_;
 
   /// local data to carry
-  std::vector<moved_ptr<void> > moved_list_;
   std::vector<boost::shared_ptr<void> > shared_list_;
 };
 

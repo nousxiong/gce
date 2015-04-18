@@ -123,6 +123,13 @@ public:
     return ptr;
   }
 
+  byte_t* skip_write(size_t len)
+  {
+    byte_t* ptr = stream_.append_write(len);
+    GCE_VERIFY(!stream_.bad()).msg(stream_.message());
+    return ptr;
+  }
+
   void clear()
   {
     stream_.clear();

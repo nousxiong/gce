@@ -278,6 +278,13 @@ public:
     throw gce::assert_except(ex_, msg_, str_ref, is_verify_);
   }
 
+  void except(boost::system::error_code const& ec)
+  {
+    boost::string_ref str_ref = pri_except();
+    gce::assert_except ex(ex_, msg_, str_ref, is_verify_);
+    boost::throw_exception(boost::system::system_error(ec, ex.what()));
+  }
+
   template <typename Except>
   void except()
   {
