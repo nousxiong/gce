@@ -877,7 +877,7 @@ inline std::string to_string(message::chunk const& ch)
 }
 
 template <>
-struct tostring<errcode_t>
+struct tostring<message::chunk>
 {
   static std::string convert(message::chunk const& o)
   {
