@@ -114,6 +114,27 @@ public:
           .add_function("__tostring", lua::pattern::tostring)
           .add_function("__gc", lua::pattern::gc)
         .end_userdata()
+        .add_function("make_chunk", lua::chunk::make)
+        .begin_userdata("chunk")
+          .add_function("pack", lua::chunk::pack)
+          .add_function("unpack", lua::chunk::unpack)
+          .add_function("gcety", lua::chunk::gcety)
+          .add_function("to_string", lua::chunk::to_string)
+          .add_function("from_string", lua::chunk::from_string)
+          .add_function("__tostring", lua::chunk::tostring)
+          .add_function("__gc", lua::chunk::gc)
+        .end_userdata()
+        .add_function("make_errcode", lua::errcode::make)
+        .begin_userdata("errcode")
+          .add_function("value", lua::errcode::value)
+          .add_function("errmsg", lua::errcode::errmsg)
+          .add_function("pack", lua::errcode::pack)
+          .add_function("unpack", lua::errcode::unpack)
+          .add_function("gcety", lua::errcode::gcety)
+          .add_function("__tostring", lua::errcode::tostring)
+          .add_function("__eq", lua::errcode::eq)
+          .add_function("__gc", lua::errcode::gc)
+        .end_userdata()
         .add_function("make_netopt", lua::net_option::make)
 #if GCE_PACKER == GCE_AMSG
         .add_function("make_match", lua::match::make)
@@ -237,6 +258,7 @@ public:
     oss << "libgce.ty_pattern = " << lua::ty_pattern << std::endl;
     oss << "libgce.ty_message = " << lua::ty_message << std::endl;
     oss << "libgce.ty_response = " << lua::ty_response << std::endl;
+    oss << "libgce.ty_errcode = " << lua::ty_errcode << std::endl;
     oss << "libgce.ty_match = " << lua::ty_match << std::endl;
     oss << "libgce.ty_duration = " << lua::ty_duration << std::endl;
     oss << "libgce.ty_actor_id = " << lua::ty_actor_id << std::endl;
@@ -297,6 +319,7 @@ public:
     )
   {
     int scr = LUA_REFNIL;
+    std::string errmsg;
     script_list_t::iterator itr(script_list_.find(name));
     if (itr != script_list_.end())
     {
@@ -304,9 +327,11 @@ public:
     }
     else
     {
-      scr = set_script(name, script);
+      std::pair<int, std::string> pr = set_script(name, script);
+      scr = pr.first;
+      errmsg = pr.second;
     }
-    GCE_VERIFY(scr != LUA_REFNIL)(name).except<gce::lua_exception>();
+    GCE_VERIFY(scr != LUA_REFNIL)(name)(errmsg).except<gce::lua_exception>();
 
     lua_State* L = L_.get();
     GCE_VERIFY(gce::lualib::get_ref(L, "libgce", scr) != 0)(name).except<gce::lua_exception>();
@@ -319,7 +344,7 @@ public:
     }
   }
 
-  int set_script(
+  std::pair<int, std::string> set_script(
     std::string const& name, 
     std::string const& script = std::string()
     )
@@ -329,16 +354,14 @@ public:
     {
       if (luaL_loadfile(L, name.c_str()) != 0)
       {
-        GCE_ERROR(lg_)(__FILE__)(__LINE__) << lua_tostring(L, -1);
-        return LUA_REFNIL;
+        return std::make_pair(LUA_REFNIL, lua_tostring(L, -1));
       }
     }
     else
     {
       if (luaL_loadstring(L, script.c_str()) != 0)
       {
-        GCE_ERROR(lg_)(__FILE__)(__LINE__) << lua_tostring(L, -1);
-        return LUA_REFNIL;
+        return std::make_pair(LUA_REFNIL, lua_tostring(L, -1));
       }
     }
     int r = gce::lualib::make_ref(L, "libgce");
@@ -348,7 +371,7 @@ public:
     {
       pr.first->second = r;
     }
-    return r;
+    return std::make_pair(r, "");
   }
 
   lua_State* get_lua_state()

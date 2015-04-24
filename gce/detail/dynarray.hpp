@@ -11,6 +11,7 @@
 #define GCE_DETAIL_DYNARRAY_HPP
 
 #include <gce/config.hpp>
+#include <gce/integer.hpp>
 #include <vector>
 
 namespace gce
@@ -40,7 +41,7 @@ class dynarray
   };
 
 public:
-  explicit dynarray(std::size_t max_size, allocator_t a = allocator_t())
+  explicit dynarray(size_t max_size, allocator_t a = allocator_t())
     : elem_list_(max_size, element(), a)
     , size_(0)
   {
@@ -52,12 +53,12 @@ public:
   }
 
 public:
-  std::size_t size() const
+  size_t size() const
   {
     return size_;
   }
 
-  std::size_t capacity() const
+  size_t capacity() const
   {
     return elem_list_.size();
   }
@@ -170,29 +171,29 @@ public:
     ++size_;
   }
 
-  reference operator[](std::size_t i)
+  reference operator[](size_t i)
   {
     return *elem_list_[i].p_;
   }
 
-  const_reference operator[](std::size_t i) const
+  const_reference operator[](size_t i) const
   {
     return *elem_list_[i].p_;
   }
 
-  reference at(std::size_t i)
+  reference at(size_t i)
   {
     return *elem_list_.at(i).p_;
   }
 
-  const_reference at(std::size_t i) const
+  const_reference at(size_t i) const
   {
     return *elem_list_.at(i).p_;
   }
 
   void clear()
   {
-    for (std::size_t i=size_; i>0; --i)
+    for (size_t i=size_; i>0; --i)
     {
       element& e = elem_list_[i-1];
       pointer p = e.p_;
@@ -204,7 +205,7 @@ public:
 
 private:
   std::vector<element, allocator_t> elem_list_;
-  std::size_t size_;
+  size_t size_;
 };
 }
 }

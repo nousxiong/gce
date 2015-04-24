@@ -14,6 +14,7 @@
 #include <gce/actor/message.hpp>
 #include <gce/actor/net_option.hpp>
 #include <gce/actor/exception.hpp>
+#include <gce/actor/detail/basic_addon.hpp>
 #include <gce/actor/detail/remote.hpp>
 #include <gce/actor/detail/service.hpp>
 #include <gce/actor/detail/lua_service.hpp>
@@ -37,6 +38,13 @@ private:
   typedef basic_actor<context_t> base_t;
   typedef lua_actor<context_t> self_t;
   typedef lua_service<self_t> service_t;
+
+  struct addon
+  {
+    std::string lib_;
+    int k_;
+    basic_addon<context_t>* ao_;
+  };
 
 public:
   lua_actor(aid_t aid, service_t& svc)
@@ -287,6 +295,15 @@ public:
     GCE_FATAL(lg_) << str;
   }
 
+  void add_addon(char const* lib, int k, basic_addon<context_t>* a)
+  {
+    addon ao;
+    ao.lib_ = lib;
+    ao.k_ = k;
+    ao.ao_ = a;
+    addon_list_.push_back(ao);
+  }
+
 public:
   /// internal use
   typedef gce::luaed type;
@@ -502,6 +519,12 @@ private:
     gce::lualib::rmv_ref(L_, "libgce", a_);
     gce::lualib::rmv_ref(L_, "libgce", co_);
     gce::lualib::rmv_ref(L_, "libgce", rf_);
+
+    BOOST_FOREACH(addon& ao, addon_list_)
+    {
+      ao.ao_->dispose();
+      gce::lualib::rmv_ref(L_, ao.lib_.c_str(), ao.k_);
+    }
 
     base_t::send_exit(self_aid, ec, exit_msg);
     svc_.free_actor(this);
@@ -845,6 +868,8 @@ private:
 
   typedef boost::function<bool (aid_t, message)> spawn_handler_t;
   spawn_handler_t spw_hdr_;
+
+  std::vector<addon> addon_list_;
 
   recv_t const nil_rcv_;
   resp_t const nil_resp_;

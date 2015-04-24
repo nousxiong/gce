@@ -37,6 +37,8 @@ enum
   ty_pattern = 0,
   ty_message,
   ty_response,
+  ty_chunk,
+  ty_errcode,
 
   /// in adata means adtype, in amsg means userdata
   ty_match,
@@ -1081,6 +1083,242 @@ struct pattern
   }
 };
 ///------------------------------------------------------------------------------
+/// chunk
+///------------------------------------------------------------------------------
+struct chunk
+{
+  static int make(lua_State* L)
+  {
+    void* block = lua_newuserdata(L, sizeof(gce::message::chunk));
+    if (!block)
+    {
+      luaL_error(L, "lua_newuserdata for chunk failed");
+      return 0;
+    }
+
+    int luaty = lua_type(L, 2);
+    if (luaty == LUA_TNONE || luaty == LUA_TNIL)
+    {
+      new (block) gce::message::chunk;
+    }
+    else if (luaty == LUA_TSTRING)
+    {
+      size_t len = (size_t)lua_tointeger(L, 2);
+      new (block) gce::message::chunk(len);
+    }
+    else if (luaty == LUA_TNUMBER)
+    {
+      size_t len = 0;
+      byte_t const* data = (byte_t const*)lua_tolstring(L, 2, &len);
+      new (block) gce::message::chunk(data, len);
+    }
+
+    gce::lualib::setmetatab(L, "chunk");
+    return 1;
+  }
+
+  static int gc(lua_State* L)
+  {
+    gce::message::chunk* o = static_cast<gce::message::chunk*>(lua_touserdata(L, 1));
+    if (o)
+    {
+      o->~chunk();
+    }
+    return 0;
+  }
+
+  static int pack(lua_State* L)
+  {
+    gce::message::chunk* o = static_cast<gce::message::chunk*>(lua_touserdata(L, 1));
+    luaL_argcheck(L, o != 0, 1, "'chunk' expected");
+
+    gce::message* msg = static_cast<gce::message*>(lua_touserdata(L, 2));
+    luaL_argcheck(L, msg != 0, 2, "'message' expected");
+
+    try
+    {
+      *msg << *o;
+    }
+    catch (std::exception& ex)
+    {
+      return luaL_error(L, ex.what());
+    }
+    return 0;
+  }
+
+  static int unpack(lua_State* L)
+  {
+    gce::message::chunk* o = static_cast<gce::message::chunk*>(lua_touserdata(L, 1));
+    luaL_argcheck(L, o != 0, 1, "'chunk' expected");
+
+    gce::message* msg = static_cast<gce::message*>(lua_touserdata(L, 2));
+    luaL_argcheck(L, msg != 0, 2, "'message' expected");
+
+    try
+    {
+      *msg >> *o;
+    }
+    catch (std::exception& ex)
+    {
+      return luaL_error(L, ex.what());
+    }
+    return 0;
+  }
+
+  static int gcety(lua_State* L)
+  {
+    lua_pushinteger(L, (int)ty_chunk);
+    return 1;
+  }
+
+  static int tostring(lua_State* L)
+  {
+    gce::message::chunk* o = static_cast<gce::message::chunk*>(lua_touserdata(L, 1));
+    luaL_argcheck(L, o != 0, 1, "'chunk' expected");
+
+    std::string str = gce::to_string(*o);
+    lua_pushlstring(L, str.c_str(), str.size());
+    return 1;
+  }
+
+  static int to_string(lua_State* L)
+  {
+    gce::message::chunk* o = static_cast<gce::message::chunk*>(lua_touserdata(L, 1));
+    luaL_argcheck(L, o != 0, 1, "'chunk' expected");
+
+    lua_pushlstring(L, (char const*)o->data(), o->size());
+    return 1;
+  }
+  
+  static int from_string(lua_State* L)
+  {
+    gce::message::chunk* o = static_cast<gce::message::chunk*>(lua_touserdata(L, 1));
+    luaL_argcheck(L, o != 0, 1, "'chunk' expected");
+
+    o->data_ = (byte_t const*)luaL_checklstring(L, 2, &o->len_);
+    return 0;
+  }
+};
+///------------------------------------------------------------------------------
+/// errcode
+///------------------------------------------------------------------------------
+struct errcode
+{
+  static int make(lua_State* L)
+  {
+    create(L);
+    return 1;
+  }
+
+  static int gc(lua_State* L)
+  {
+    gce::errcode_t* o = static_cast<gce::errcode_t*>(lua_touserdata(L, 1));
+    if (o)
+    {
+      o->~errcode_t();
+    }
+    return 0;
+  }
+
+  static int value(lua_State* L)
+  {
+    gce::errcode_t* o = static_cast<gce::errcode_t*>(lua_touserdata(L, 1));
+    luaL_argcheck(L, o != 0, 1, "'errcode' expected");
+
+    lua_pushinteger(L, o->value());
+    return 1;
+  }
+
+  static int errmsg(lua_State* L)
+  {
+    gce::errcode_t* o = static_cast<gce::errcode_t*>(lua_touserdata(L, 1));
+    luaL_argcheck(L, o != 0, 1, "'errcode' expected");
+
+    std::string msg = o->message();
+    lua_pushlstring(L, msg.c_str(), msg.size());
+    return 1;
+  }
+
+  static int pack(lua_State* L)
+  {
+    gce::errcode_t* o = static_cast<gce::errcode_t*>(lua_touserdata(L, 1));
+    luaL_argcheck(L, o != 0, 1, "'errcode_t' expected");
+
+    gce::message* msg = static_cast<gce::message*>(lua_touserdata(L, 2));
+    luaL_argcheck(L, msg != 0, 2, "'message' expected");
+
+    try
+    {
+      *msg << *o;
+    }
+    catch (std::exception& ex)
+    {
+      return luaL_error(L, ex.what());
+    }
+    return 0;
+  }
+
+  static int unpack(lua_State* L)
+  {
+    gce::errcode_t* o = static_cast<gce::errcode_t*>(lua_touserdata(L, 1));
+    luaL_argcheck(L, o != 0, 1, "'errcode_t' expected");
+
+    gce::message* msg = static_cast<gce::message*>(lua_touserdata(L, 2));
+    luaL_argcheck(L, msg != 0, 2, "'message' expected");
+
+    try
+    {
+      *msg >> *o;
+    }
+    catch (std::exception& ex)
+    {
+      return luaL_error(L, ex.what());
+    }
+    return 0;
+  }
+
+  static gce::errcode_t* create(lua_State* L, gce::errcode_t const& ec = gce::errcode_t())
+  {
+    void* block = lua_newuserdata(L, sizeof(gce::errcode_t));
+    if (!block)
+    {
+      luaL_error(L, "lua_newuserdata for errcode failed");
+      return 0;
+    }
+    gce::errcode_t* o = new (block) gce::errcode_t(ec);
+    gce::lualib::setmetatab(L, "errcode");
+    return o;
+  }
+
+  static int gcety(lua_State* L)
+  {
+    lua_pushinteger(L, (int)ty_errcode);
+    return 1;
+  }
+
+  static int tostring(lua_State* L)
+  {
+    gce::errcode_t* o = static_cast<gce::errcode_t*>(lua_touserdata(L, 1));
+    luaL_argcheck(L, o != 0, 1, "'errcode' expected");
+
+    std::string str = gce::to_string(*o);
+    lua_pushlstring(L, str.c_str(), str.size());
+    return 1;
+  }
+
+  static int eq(lua_State* L)
+  {
+    gce::errcode_t* lhs = static_cast<gce::errcode_t*>(lua_touserdata(L, 1));
+    luaL_argcheck(L, lhs != 0, 1, "'errcode' expected");
+
+    gce::errcode_t* rhs = static_cast<gce::errcode_t*>(lua_touserdata(L, 2));
+    luaL_argcheck(L, rhs != 0, 2, "'errcode' expected");
+
+    lua_pushboolean(L, *lhs == *rhs);
+    return 1;
+  }
+};
+///------------------------------------------------------------------------------
 /// atom/deatom
 ///------------------------------------------------------------------------------
 inline int s2i(lua_State* L)
@@ -1092,8 +1330,6 @@ inline int s2i(lua_State* L)
 ///------------------------------------------------------------------------------
 inline int i2s(lua_State* L)
 {
-  luaL_argcheck(L, lua_istable(L, 1), 1, "'match' expected");
-
   match_t mt;
   load(L, 1, mt);
   std::string str = gce::atom(mt);
@@ -1811,6 +2047,18 @@ inline int pack_object(lua_State* L)
         *msg << *o;
       }break;
 #endif
+      case ty_chunk: 
+      {
+        gce::message::chunk* o = static_cast<gce::message::chunk*>(lua_touserdata(L, 2));
+        luaL_argcheck(L, o != 0, 2, "'chunk' expected");
+        *msg << *o;
+      }break;
+      case ty_errcode: 
+      {
+        gce::errcode_t* o = static_cast<gce::errcode_t*>(lua_touserdata(L, 2));
+        luaL_argcheck(L, o != 0, 2, "'errcode' expected");
+        *msg << *o;
+      }break;
       case ty_message: 
       {
         gce::message* o = static_cast<gce::message*>(lua_touserdata(L, 2));
@@ -1986,6 +2234,18 @@ inline int unpack_object(lua_State* L)
         *msg >> *o;
       }break;
 #endif
+      case ty_chunk: 
+      {
+        gce::message::chunk* o = static_cast<gce::message::chunk*>(lua_touserdata(L, 2));
+        luaL_argcheck(L, o != 0, 2, "'chunk' expected");
+        *msg >> *o;
+      }break;
+      case ty_errcode: 
+      {
+        gce::errcode_t* o = static_cast<gce::errcode_t*>(lua_touserdata(L, 2));
+        luaL_argcheck(L, o != 0, 2, "'errcode' expected");
+        *msg >> *o;
+      }break;
       case ty_message: 
       {
         gce::message* o = static_cast<gce::message*>(lua_touserdata(L, 2));
@@ -1993,7 +2253,7 @@ inline int unpack_object(lua_State* L)
         *msg >> *o;
       }break;
       default: 
-        luaL_argerror(L, 2, "unpack obj only 'duration' or 'match' or 'message'");
+        luaL_argerror(L, 2, "unpack obj type err");
         break;
       }
     }
@@ -2038,6 +2298,8 @@ inline int init_nil(lua_State* L)
   lua_setfield(L, -2, "svcid_nil");
   lua::push(L, gce::match_nil);
   lua_setfield(L, -2, "match_nil");
+  lua::errcode::create(L);
+  lua_setfield(L, -2, "err_nil");
   lua_pop(L, 1);
   return 0;
 }

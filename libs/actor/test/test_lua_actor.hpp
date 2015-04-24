@@ -89,11 +89,11 @@ private:
       threaded_actor base = spawn(ctx);
 
       aid_t base_aid = base.get_aid();
-      aid_t aid = spawn(base, "test_lua_actor/root.lua");
+      aid_t aid = spawn(base, "test_lua_actor/root.lua", monitored);
       base->send(aid, "init", base_aid);
 
       boost::timer::auto_cpu_timer t;
-      base->recv();
+      base->recv(exit);
     }
     catch (std::exception& ex)
     {

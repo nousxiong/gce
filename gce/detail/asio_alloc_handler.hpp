@@ -11,15 +11,20 @@
 #define GCE_DETAIL_ASIO_ALLOC_HANDLER_HPP
 
 #include <gce/config.hpp>
+#include <gce/integer.hpp>
 #include <boost/aligned_storage.hpp>
 #include <boost/noncopyable.hpp>
+
+#ifndef GCE_ASIO_ALLOC_HANDLER_SIZE
+# define GCE_ASIO_ALLOC_HANDLER_SIZE 1024
+#endif
 
 namespace gce
 {
 namespace detail
 {
 /// handler allocator
-template <std::size_t StorageSize>
+template <size_t StorageSize>
 class handler_allocator
   : private boost::noncopyable
 {
@@ -33,7 +38,7 @@ public:
   {
   }
 
-  void* allocate(std::size_t const size)
+  void* allocate(size_t const size)
   {
     if (!in_use_ && size < storage_.size)
     {
@@ -69,7 +74,7 @@ private:
 };
 
 /// asio_alloc_handler.
-template <typename Handler, std::size_t StorageSize>
+template <typename Handler, size_t StorageSize>
 class asio_alloc_handler
 {
 public:
@@ -228,7 +233,7 @@ public:
 
 public:
   friend void* asio_handler_allocate(
-    std::size_t const size,
+    size_t const size,
     self_t* this_handler
     )
   {
@@ -236,7 +241,7 @@ public:
   }
 
   friend void asio_handler_deallocate(
-    void* pointer, std::size_t const /*size*/,
+    void* pointer, size_t const /*size*/,
     self_t* this_handler
     )
   {
@@ -249,7 +254,7 @@ private:
 };
 
 /// Helper function to wrap a handler object to add custom allocation.
-template <typename Handler, std::size_t StorageSize>
+template <typename Handler, size_t StorageSize>
 inline asio_alloc_handler<Handler, StorageSize> make_asio_alloc_handler(
   handler_allocator<StorageSize>& a, Handler const& h
   )

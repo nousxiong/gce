@@ -22,6 +22,7 @@ include (util)
 # Provide user options to customise the build process.
 option (GCE_LUA "Allow gce using lua actor" OFF)
 option (GCE_OPENSSL "Allow gce using openssl" OFF)
+set (GCE_ASIO_ALLOC_HANDLER_SIZE "1024" CACHE STRING "Boost.Asio handler allocator size")
 set (GCE_PACKER "amsg" CACHE STRING "GCE pack lib type, option are: adata amsg")
 
 if (GCE_LUA)

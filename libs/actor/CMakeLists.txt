@@ -11,13 +11,6 @@
 
 # Provide user options to customise the build process.
 option (GCE_ACTOR_DEV "GCE.Actor dev mode" OFF)
-set (GCE_CACHE_LINE_SIZE "64" CACHE STRING "Cache line size")
-set (GCE_SOCKET_RECV_CACHE_SIZE "65535" CACHE STRING "Socket recv cache size")
-set (GCE_SOCKET_RECV_MAX_SIZE "60000" CACHE STRING "Socket max recv size")
-set (GCE_SMALL_MSG_SIZE "128" CACHE STRING "Small message size")
-set (GCE_MSG_MIN_GROW_SIZE "64" CACHE STRING "Message grow min size")
-set (GCE_DEFAULT_REQUEST_TIMEOUT_SEC "180" CACHE STRING "Default request timeout seconds, 180 secs")
-
 option (GCE_ACTOR_BUILD_EXAMPLE "Build GCE.Actor examples" ON)
 option (GCE_ACTOR_BUILD_TEST "Build GCE.Actor tests" ON)
 

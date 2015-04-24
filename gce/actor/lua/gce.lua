@@ -34,6 +34,7 @@ libgce.init_nil()
 gce.ty_pattern = libgce.ty_pattern
 gce.ty_message = libgce.ty_message
 gce.ty_response = libgce.ty_response
+gce.ty_errcode = libgce.ty_errcode
 gce.ty_match = libgce.ty_match
 gce.ty_actor_id = libgce.ty_actor_id
 gce.ty_service_id = libgce.ty_service_id
@@ -64,6 +65,7 @@ gce.zero = libgce.zero
 gce.aid_nil = libgce.aid_nil
 gce.svcid_nil = libgce.svcid_nil
 gce.match_nil = libgce.match_nil
+gce.err_nil = libgce.err_nil
 
 -- functions
 function gce.actor(f)
@@ -263,9 +265,7 @@ function gce.sleep_for(dur)
 end
 
 function gce.bind(ep, opt)
-	if opt == nil then
-		opt = gce.net_option()
-	end
+  opt = opt or gce.net_option()
 	local co = libgce.self:bind(ep, opt)
 	if co ~= nil then
 		coroutine.yield(co)
@@ -273,10 +273,7 @@ function gce.bind(ep, opt)
 end
 
 function gce.connect(target, ep, opt)
-	if opt == nil then
-		opt = gce.net_option()
-	end
-
+  opt = opt or gce.net_option()
 	target = gce.atom(target)
 	local co = libgce.self:connect(target, ep, opt)
 	if co ~= nil then
@@ -403,6 +400,10 @@ function gce.hours(v)
 	end
 end
 
+function gce.errcode()
+  return libgce.make_errcode()
+end
+
 function gce.message(cfg, ...)
 	local m = nil
 	if cfg ~= nil then
@@ -478,7 +479,7 @@ function gce.atom(v)
     elseif gce.packer == gce.pkr_adata then
       assert (ty == 'table')
       assert (v.adtype ~= nil)
-      assert (v:adtype() == mt_nil.match)
+      assert (v:adtype() == mt_adl.match)
     else
       error("gce.packer invalid")
     end
@@ -500,23 +501,23 @@ function gce.print(...)
 end
 
 function gce.debug(...)
-	libgce.self:debug(gce.concat(...))
+	libgce.self:log_debug(gce.concat(...))
 end
 
 function gce.info(...)
-	libgce.self:info(gce.concat(...))
+	libgce.self:log_info(gce.concat(...))
 end
 
 function gce.warn(...)
-	libgce.self:warn(gce.concat(...))
+	libgce.self:log_warn(gce.concat(...))
 end
 
 function gce.error(...)
-	libgce.self:error(gce.concat(...))
+	libgce.self:log_error(gce.concat(...))
 end
 
 function gce.fatal(...)
-	libgce.self:fatal(gce.concat(...))
+	libgce.self:log_fatal(gce.concat(...))
 end
 
 gce.exit = gce.atom('gce_exit')

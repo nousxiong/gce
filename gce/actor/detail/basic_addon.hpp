@@ -30,13 +30,17 @@ public:
   typedef basic_service<context_t> service_t;
 
 public:
-  template <typename T>
+  template <typename T, typename Attachment = boost::none_t>
   class guard
     : public ref_count
   {
   public:
+    typedef guard<T, Attachment> self_t;
+    typedef Attachment attachment_t;
+
+  public:
     explicit guard(T* p)
-      : ref_count(boost::bind(&guard<T>::free, this))
+      : ref_count(boost::bind(&self_t::free, this))
       , p_(p)
     {
       GCE_ASSERT(p_ != 0);
@@ -53,6 +57,16 @@ public:
       return p_;
     }
 
+    attachment_t& get_attachment()
+    {
+      return am_;
+    }
+
+    attachment_t const& get_attachment() const
+    {
+      return am_;
+    }
+
     void free()
     {
       delete this;
@@ -60,14 +74,15 @@ public:
 
   private:
     T* p_;
+    attachment_t am_;
   };
 
-  template <typename T>
+  template <typename T, typename Attachment = boost::none_t>
   class scope
     : private boost::noncopyable
   {
   public:
-    typedef guard<T> guard_t;
+    typedef guard<T, Attachment> guard_t;
     typedef boost::intrusive_ptr<guard_t> guard_ptr;
 
   public:
@@ -78,13 +93,18 @@ public:
 
     ~scope()
     {
-      guard_->notify();
+      notify();
     }
 
   public:
     guard_ptr get()
     {
       return guard_;
+    }
+
+    void notify()
+    {
+      guard_->notify();
     }
 
   private:
@@ -126,7 +146,9 @@ public:
   {
     return snd_;
   }
-  
+
+  virtual void dispose() {}
+
 protected:
   aid_t const& get_host() const
   {

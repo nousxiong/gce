@@ -28,7 +28,7 @@ if (GCE_LUA)
     COMMAND ${CMAKE_COMMAND} -E echo "done."
     VERBATIM
     )
-  if (${GCE_PACKER} STREQUAL "adata")
+  if (${GCE_PACKER} EQUAL ${GCE_ADATA})
     add_custom_command (
       TARGET gce_actor_ut
       POST_BUILD

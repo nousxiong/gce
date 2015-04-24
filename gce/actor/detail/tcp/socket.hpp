@@ -13,6 +13,7 @@
 #include <gce/actor/config.hpp>
 #include <gce/actor/asio.hpp>
 #include <gce/actor/detail/basic_socket.hpp>
+#include <gce/detail/asio_alloc_handler.hpp>
 #include <gce/detail/bytes.hpp>
 #include <gce/integer.hpp>
 #include <boost/asio/ip/tcp.hpp>
@@ -161,9 +162,12 @@ private:
       sock_,
       boost::asio::buffer(bytes.data(), bytes.size()),
       snd.wrap(
-        boost::bind(
-          &socket::end_send, this,
-          boost::asio::placeholders::error
+        make_asio_alloc_handler(
+          ha_,
+          boost::bind(
+            &socket::end_send, this,
+            boost::asio::placeholders::error
+            )
           )
         )
       );
@@ -208,6 +212,8 @@ private:
 
   timer_t sync_;
   bool waiting_end_;
+
+  handler_allocator_t ha_;
 };
 typedef boost::shared_ptr<socket> socket_ptr;
 } /// namespace tcp

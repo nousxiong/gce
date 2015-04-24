@@ -29,6 +29,4 @@ gce.actor(
 		test('match_recver_ut')
 		test('pingpong_ut')
 		test('relay_ut')
-
-		gce.send(base_aid)
   end)

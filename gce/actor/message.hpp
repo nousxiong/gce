@@ -74,6 +74,12 @@ public:
     {
     }
 
+    chunk(byte_t const* data, size_t len)
+      : data_(data)
+      , len_(len)
+    {
+    }
+
     byte_t const* data() const
     {
       return data_;
@@ -265,18 +271,27 @@ public:
     uint32_t msg_size = (uint32_t)m.size();
     match_t msg_type = m.get_type();
     uint32_t tag_offset = m.tag_offset_;
+    uint32_t shared_offset = shared_list_.size();
+    uint32_t shared_size = m.shared_list_.size();
 
     size_t size = packer::size_of(msg_size);
     size += packer::size_of(msg_type);
     size += packer::size_of(tag_offset);
     size += msg_size;
+    size += packer::size_of(shared_offset);
+    size += packer::size_of(shared_size);
 
     pre_write(size);
     pkr_.write(msg_size);
     pkr_.write(msg_type);
     pkr_.write(tag_offset);
     pkr_.write(m.data(), msg_size);
+    pkr_.write(shared_offset);
+    pkr_.write(shared_size);
     end_write();
+
+    shared_list_.resize(shared_offset + shared_size);
+    std::copy_backward(m.shared_list_.begin(), m.shared_list_.end(), shared_list_.end());
     return *this;
   }
 
@@ -285,14 +300,27 @@ public:
     uint32_t msg_size;
     match_t msg_type;
     uint32_t tag_offset;
+    uint32_t shared_offset;
+    uint32_t shared_size;
 
     pre_read();
     pkr_.read(msg_size);
     pkr_.read(msg_type);
     pkr_.read(tag_offset);
     byte_t const* body = pkr_.skip_read(msg_size);
-    msg = message(msg_type, body, msg_size, tag_offset);
+    pkr_.read(shared_offset);
+    pkr_.read(shared_size);
     end_read();
+
+    message m(msg_type, body, msg_size, tag_offset);
+    m.shared_list_.resize(shared_size);
+    std::copy(
+      shared_list_.begin()+shared_offset, 
+      shared_list_.begin()+(shared_offset+shared_size), 
+      m.shared_list_.begin()
+      );
+
+    msg = m;
     return *this;
   }
 
@@ -594,6 +622,14 @@ public:
     return *this;
   }
 
+  message& operator<<(chunk const& ch)
+  {
+    pre_write(ch.size());
+    pkr_.write(ch.data(), ch.size());
+    end_write();
+    return *this;
+  }
+
   message& operator>>(chunk& ch)
   {
     detail::buffer_ref& buf = cow_.get_buffer_ref();
@@ -828,11 +864,37 @@ struct tostring<message>
     return to_string(o);
   }
 };
+
+inline std::string to_string(message::chunk const& ch)
+{
+  std::string str;
+  str += "chunk<";
+  str += boost::lexical_cast<intbuf_t>(ch.data()).cbegin();
+  str += ".";
+  str += boost::lexical_cast<intbuf_t>(ch.size()).cbegin();
+  str += ">";
+  return str;
+}
+
+template <>
+struct tostring<errcode_t>
+{
+  static std::string convert(message::chunk const& o)
+  {
+    return to_string(o);
+  }
+};
 }
 
 inline std::ostream& operator<<(std::ostream& strm, gce::message const& msg)
 {
   strm << gce::to_string(msg);
+  return strm;
+}
+
+inline std::ostream& operator<<(std::ostream& strm, gce::message::chunk const& ch)
+{
+  strm << gce::to_string(ch);
   return strm;
 }
 
