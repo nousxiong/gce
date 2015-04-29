@@ -12,6 +12,7 @@
 
 #include <gce/config.hpp>
 #include <cstddef>
+#include <cassert>
 
 namespace gce
 {
@@ -82,6 +83,7 @@ public:
     {
       write_size_ = 0;
     }
+    assert(read_size_ <= write_size_);
     return buf_ + write_size_;
   }
 

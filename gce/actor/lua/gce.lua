@@ -34,6 +34,7 @@ libgce.init_nil()
 gce.ty_pattern = libgce.ty_pattern
 gce.ty_message = libgce.ty_message
 gce.ty_response = libgce.ty_response
+gce.ty_chunk = libgce.ty_chunk
 gce.ty_errcode = libgce.ty_errcode
 gce.ty_match = libgce.ty_match
 gce.ty_actor_id = libgce.ty_actor_id
@@ -400,6 +401,10 @@ function gce.hours(v)
 	end
 end
 
+function gce.chunk(cfg)
+  return libgce.make_chunk(cfg)
+end
+
 function gce.errcode()
   return libgce.make_errcode()
 end
@@ -520,6 +525,31 @@ function gce.fatal(...)
 	libgce.self:log_fatal(gce.concat(...))
 end
 
+function gce.pack(m, ...)
+  for _,v in ipairs{...} do
+    gce.serialize(m, v)
+  end
+end
+
+function gce.unpack(m, ...)
+  local res = {}
+  for i,v in ipairs{...} do
+    res[i] = gce.deserialize(m, v)
+  end
+  return res
+end
+
+function gce.check_exit(pre, printer)
+  pre = pre or ''
+  printer = printer or gce.print
+  local ec, sender, args = gce.match(gce.exit).recv(gce.atom, '')
+  assert(ec == gce.ec_ok, ec)
+  local mt = args[1]
+  if mt ~= gce.exit_normal then
+    printer(pre, ' ', gce.deatom(mt), ': ', args[2])
+  end
+end
+
 gce.exit = gce.atom('gce_exit')
 gce.exit_normal = gce.atom('gce_ex_normal')
 
@@ -553,11 +583,7 @@ function gce.serialize(m, o)
 	elseif ty == 'boolean' then
 		libgce.pack_boolean(m, o)
 	else
-    if gce.packer == gce.pkr_adata then
-		  libgce.pack_object(m, o, o.size_of)
-    else
-      libgce.pack_object(m, o)
-    end
+    libgce.pack_object(m, o)
 	end
 end
 
@@ -579,20 +605,6 @@ function gce.deserialize(m, o)
 		libgce.unpack_object(m, o)
     return o
 	end
-end
-
-function gce.pack(m, ...)
-	for _,v in ipairs{...} do
-		gce.serialize(m, v)
-	end
-end
-
-function gce.unpack(m, ...)
-	local res = {}
-	for i,v in ipairs{...} do
-		res[i] = gce.deserialize(m, v)
-	end
-	return res
 end
 
 if gce.packer == gce.pkr_adata then

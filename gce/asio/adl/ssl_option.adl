@@ -1,0 +1,55 @@
+//
+// Copyright (c) 2009-2015 Nous Xiong (348944179 at qq dot com)
+//
+// Distributed under the Boost Software License, Version 1.0. (See accompanying
+// file LICENSE_1_0.txt or copy at http://www.boost.org/LICENSE_1_0.txt)
+//
+// See https://github.com/nousxiong/gce for latest version.
+//
+
+namespace = gce.asio.adl;
+
+// -1 means not set this opt
+// all args under boost::asio::ssl::context/stream's member methods
+ssl_option
+{
+  list<string> verify_paths; // add_verify_path
+  int8 default_verify_paths = -1; // set_default_verify_paths
+
+  string certificate_authority; // add_certificate_authority 
+  string verify_file; // load_verify_file
+
+  // options (set_options)
+  int8 default_workarounds = -1;
+  int8 single_dh_use = -1;
+  int8 no_sslv2 = -1;
+  int8 no_sslv3 = -1;
+  int8 no_tlsv1 = -1;
+  int8 no_compression = -1;
+
+  int32 verify_depth = -1; // set_verify_depth 
+
+  // verify_mode types (set_verify_mode)
+  int8 verify_none = -1;
+  int8 verify_peer = -1;
+  int8 verify_fail_if_no_peer_cert = -1;
+  int8 verify_client_once = -1;
+
+  string certificate; // use_certificate
+  string certificate_file; // use_certificate_file
+  int8 certificate_format = 1; // 0 asn1, 1 pem
+
+  string certificate_chain; // use_certificate_chain
+  string certificate_chain_file; // use_certificate_chain_file
+
+  string private_key; // use_private_key
+  string private_key_file; // use_private_key_file
+  int8 private_key_format = 1; // 0 asn1, 1 pem
+
+  string rsa_private_key; // use_rsa_private_key
+  string rsa_private_key_file; // use_rsa_private_key_file
+  int8 rsa_private_key_format = 1; // 0 asn1, 1 pem
+
+  string tmp_dh; // use_tmp_dh
+  string tmp_dh_file; // use_tmp_dh_file
+}

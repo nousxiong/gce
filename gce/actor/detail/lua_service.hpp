@@ -258,6 +258,7 @@ public:
     oss << "libgce.ty_pattern = " << lua::ty_pattern << std::endl;
     oss << "libgce.ty_message = " << lua::ty_message << std::endl;
     oss << "libgce.ty_response = " << lua::ty_response << std::endl;
+    oss << "libgce.ty_chunk = " << lua::ty_chunk << std::endl;
     oss << "libgce.ty_errcode = " << lua::ty_errcode << std::endl;
     oss << "libgce.ty_match = " << lua::ty_match << std::endl;
     oss << "libgce.ty_duration = " << lua::ty_duration << std::endl;

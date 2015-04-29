@@ -123,17 +123,8 @@ public:
   {
   }
 
-  message(byte_t const* data, size_t size)
-    : tag_offset_(u32_nil)
-    , cow_(data, size)
-  {
-  }
-  
   template <typename Match>
-  message(
-    Match type, byte_t const* data,
-    size_t size, uint32_t tag_offset
-    )
+  message(Match type, byte_t const* data, size_t size, uint32_t tag_offset)
     : type_(to_match(type))
     , tag_offset_(tag_offset)
     , cow_(data, size)
@@ -179,14 +170,14 @@ public:
     type_ = to_match(type);
   }
 
-  byte_t* reset_write(size_t len = size_nil)
-  {
-    return cow_.get_buffer_ref().clear_write(len);
-  }
-
   byte_t const* reset_read(size_t len = size_nil)
   {
     return cow_.get_buffer_ref().clear_read(len);
+  }
+
+  byte_t* reset_write(size_t len = size_nil)
+  {
+    return cow_.get_buffer_ref().clear_write(len);
   }
 
   void to_large()
@@ -268,24 +259,18 @@ public:
 
   message& operator<<(message const m) /// for self serialize, copy first
   {
-    uint32_t msg_size = (uint32_t)m.size();
-    match_t msg_type = m.get_type();
-    uint32_t tag_offset = m.tag_offset_;
+    detail::header_t hdr = detail::make_header((uint32_t)m.size(), m.get_type(), m.tag_offset_);
     uint32_t shared_offset = shared_list_.size();
     uint32_t shared_size = m.shared_list_.size();
 
-    size_t size = packer::size_of(msg_size);
-    size += packer::size_of(msg_type);
-    size += packer::size_of(tag_offset);
-    size += msg_size;
+    size_t size = packer::size_of(hdr);
+    size += hdr.size_;
     size += packer::size_of(shared_offset);
     size += packer::size_of(shared_size);
 
     pre_write(size);
-    pkr_.write(msg_size);
-    pkr_.write(msg_type);
-    pkr_.write(tag_offset);
-    pkr_.write(m.data(), msg_size);
+    pkr_.write(hdr);
+    pkr_.write(m.data(), hdr.size_);
     pkr_.write(shared_offset);
     pkr_.write(shared_size);
     end_write();
@@ -297,22 +282,18 @@ public:
 
   message& operator>>(message& msg)
   {
-    uint32_t msg_size;
-    match_t msg_type;
-    uint32_t tag_offset;
+    detail::header_t hdr;
     uint32_t shared_offset;
     uint32_t shared_size;
 
     pre_read();
-    pkr_.read(msg_size);
-    pkr_.read(msg_type);
-    pkr_.read(tag_offset);
-    byte_t const* body = pkr_.skip_read(msg_size);
+    pkr_.read(hdr);
+    byte_t const* body = pkr_.skip_read(hdr.size_);
     pkr_.read(shared_offset);
     pkr_.read(shared_size);
     end_read();
 
-    message m(msg_type, body, msg_size, tag_offset);
+    message m(hdr.type_, body, hdr.size_, hdr.tag_offset_);
     m.shared_list_.resize(shared_size);
     std::copy(
       shared_list_.begin()+shared_offset, 

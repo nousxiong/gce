@@ -1,0 +1,24 @@
+//
+// Copyright (c) 2009-2015 Nous Xiong (348944179 at qq dot com)
+//
+// Distributed under the Boost Software License, Version 1.0. (See accompanying
+// file LICENSE_1_0.txt or copy at http://www.boost.org/LICENSE_1_0.txt)
+//
+// See https://github.com/nousxiong/gce for latest version.
+//
+
+namespace = gce.asio.adl;
+
+// -1 means not set this opt
+tcp_option
+{
+  string address; // ip address, ipv4 or ipv6
+  string port; // port or name
+  int32 backlog = -1; // when listen, queued unhandled conn requests
+  int8 reuse_address = -1;
+  int32 receive_buffer_size = -1;
+  int32 send_buffer_size = -1;
+  int8 no_delay = -1;
+  int8 keep_alive = -1;
+  int8 enable_connection_aborted = -1;
+}
