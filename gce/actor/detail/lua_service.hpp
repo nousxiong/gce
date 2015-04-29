@@ -92,8 +92,6 @@ public:
         .begin_userdata("message")
           .add_function("setty", lua::message::setty)
           .add_function("getty", lua::message::getty)
-          .add_function("pack", lua::message::pack)
-          .add_function("unpack", lua::message::unpack)
           .add_function("gcety", lua::message::gcety)
           .add_function("__tostring", lua::message::tostring)
           .add_function("__gc", lua::message::gc)
@@ -116,8 +114,6 @@ public:
         .end_userdata()
         .add_function("make_chunk", lua::chunk::make)
         .begin_userdata("chunk")
-          .add_function("pack", lua::chunk::pack)
-          .add_function("unpack", lua::chunk::unpack)
           .add_function("gcety", lua::chunk::gcety)
           .add_function("to_string", lua::chunk::to_string)
           .add_function("from_string", lua::chunk::from_string)
@@ -128,8 +124,6 @@ public:
         .begin_userdata("errcode")
           .add_function("value", lua::errcode::value)
           .add_function("errmsg", lua::errcode::errmsg)
-          .add_function("pack", lua::errcode::pack)
-          .add_function("unpack", lua::errcode::unpack)
           .add_function("gcety", lua::errcode::gcety)
           .add_function("__tostring", lua::errcode::tostring)
           .add_function("__eq", lua::errcode::eq)
@@ -146,8 +140,6 @@ public:
         .end_userdata()
         .add_function("make_svcid", lua::service_id::make)
         .begin_userdata("service_id")
-          .add_function("pack", lua::service_id::pack)
-          .add_function("unpack", lua::service_id::unpack)
           .add_function("gcety", lua::service_id::gcety)
           .add_function("__tostring", lua::service_id::tostring)
           .add_function("__eq", lua::service_id::eq)
@@ -155,8 +147,6 @@ public:
         .end_userdata()
         .add_function("make_aid", lua::actor_id::make)
         .begin_userdata("actor_id")
-          .add_function("pack", lua::actor_id::pack)
-          .add_function("unpack", lua::actor_id::unpack)
           .add_function("gcety", lua::actor_id::gcety)
           .add_function("__tostring", lua::actor_id::tostring)
           .add_function("__eq", lua::actor_id::eq)
@@ -169,8 +159,6 @@ public:
         .add_function("make_hours", lua::duration::make_hours)
         .begin_userdata("duration")
           .add_function("type", lua::duration::type)
-          .add_function("pack", lua::duration::pack)
-          .add_function("unpack", lua::duration::unpack)
           .add_function("gcety", lua::duration::gcety)
           .add_function("__tostring", lua::duration::tostring)
           .add_function("__eq", lua::duration::eq)
@@ -255,18 +243,18 @@ public:
 #elif GCE_PACKER == GCE_ADATA
     oss << "libgce.packer = libgce.pkr_adata" << std::endl;
 #endif
-    oss << "libgce.ty_pattern = " << lua::ty_pattern << std::endl;
-    oss << "libgce.ty_message = " << lua::ty_message << std::endl;
-    oss << "libgce.ty_response = " << lua::ty_response << std::endl;
-    oss << "libgce.ty_chunk = " << lua::ty_chunk << std::endl;
-    oss << "libgce.ty_errcode = " << lua::ty_errcode << std::endl;
-    oss << "libgce.ty_match = " << lua::ty_match << std::endl;
-    oss << "libgce.ty_duration = " << lua::ty_duration << std::endl;
-    oss << "libgce.ty_actor_id = " << lua::ty_actor_id << std::endl;
-    oss << "libgce.ty_service_id = " << lua::ty_service_id << std::endl;
-    oss << "libgce.ty_userdef = " << lua::ty_userdef << std::endl;
-    oss << "libgce.ty_lua = " << lua::ty_lua << std::endl;
-    oss << "libgce.ty_other = " << lua::ty_other << std::endl;
+    oss << "libgce.ty_pattern = " << gce::lua::ty_pattern << std::endl;
+    oss << "libgce.ty_message = " << gce::lua::ty_message << std::endl;
+    oss << "libgce.ty_response = " << gce::lua::ty_response << std::endl;
+    oss << "libgce.ty_chunk = " << gce::lua::ty_chunk << std::endl;
+    oss << "libgce.ty_errcode = " << gce::lua::ty_errcode << std::endl;
+    oss << "libgce.ty_match = " << gce::lua::ty_match << std::endl;
+    oss << "libgce.ty_duration = " << gce::lua::ty_duration << std::endl;
+    oss << "libgce.ty_actor_id = " << gce::lua::ty_actor_id << std::endl;
+    oss << "libgce.ty_service_id = " << gce::lua::ty_service_id << std::endl;
+    oss << "libgce.ty_userdef = " << gce::lua::ty_userdef << std::endl;
+    oss << "libgce.ty_lua = " << gce::lua::ty_lua << std::endl;
+    oss << "libgce.ty_other = " << gce::lua::ty_other << std::endl;
 
     oss << "libgce.ec_ok = " << lua::ec_ok << std::endl;
     oss << "libgce.ec_timeout = " << lua::ec_timeout << std::endl;

@@ -11,6 +11,8 @@
 #define GCE_ACTOR_LUA_OBJECT_HPP
 
 #include <gce/actor/config.hpp>
+#include <gce/lualib/all.hpp>
+#include <cstring>
 
 namespace gce
 {
@@ -49,8 +51,8 @@ public:
   virtual ~basic_object() {}
 
 public:
-  virtual void pack(message&) = 0;
-  virtual void unpack(message&) = 0;
+  virtual void pack(gce::message&) = 0;
+  virtual void unpack(gce::message&) = 0;
   virtual int gcety() const = 0;
 };
 }
