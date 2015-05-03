@@ -29,10 +29,7 @@ static match_t const as_send = atom("as_send");
 static match_t const as_send_some = atom("as_send_some");
 
 /// a wrapper for boost::asio::ssl::stream
-template <
-  typename Socket = boost::asio::ip::tcp::socket,
-  typename Resolver = boost::asio::ip::tcp::resolver
-  >
+template <typename Socket = boost::asio::ip::tcp::socket>
 class stream
   : public addon_t
 {
@@ -49,11 +46,10 @@ class stream
 
 public:
   typedef Socket socket_t;
-  typedef Resolver resolver_t;
 
 private:
   typedef addon_t base_t;
-  typedef stream<socket_t, resolver_t> self_t;
+  typedef stream<socket_t> self_t;
   typedef base_t::scope<self_t, boost::array<gce::detail::handler_allocator_t, ha_num> > scope_t;
   typedef typename scope_t::guard_ptr guard_ptr;
 
@@ -123,28 +119,24 @@ public:
   }
   
   /// resovlve before connect
-  void async_connect(typename resolver_t::query const& qry, message const& msg = message(as_conn))
+  template <typename Iterator>
+  void async_connect(Iterator itr, message const& msg = message(as_conn))
   {
     GCE_ASSERT(!conning_);
     GCE_ASSERT(!handshaking_);
     GCE_ASSERT(!shuting_down_);
     GCE_ASSERT(!recving_);
     GCE_ASSERT(!sending_);
-    
-    if (resolver_ == boost::none)
-    {
-      resolver_.emplace(boost::ref(snd_.get_io_service()));
-    }
-    
+
     conn_msg_ = msg;
-    resolver_->async_resolve(
-      qry,
+    boost::asio::async_connect(
+      impl_->lowest_layer(), itr,
       snd_.wrap(
         gce::detail::make_asio_alloc_handler(
           scp_.get()->get_attachment()[ha_conn],
           boost::bind(
-            &self_t::handle_resolve, scp_.get(),
-            boost::asio::placeholders::error, boost::asio::placeholders::iterator
+            &self_t::handle_connect, scp_.get(),
+            boost::asio::placeholders::error
             )
           )
         )
@@ -371,7 +363,7 @@ public:
     sending_ = true;
   }
   
-  void async_write_some(message const& msg, size_t length = size_nil)
+  void async_write_some(message const& msg, size_t offset = 0, size_t length = size_nil)
   {
     GCE_ASSERT(!sending_);
     GCE_ASSERT(!conning_);
@@ -382,7 +374,7 @@ public:
     message::chunk ch(length);
     m >> ch;
     impl_->async_write_some(
-      boost::asio::buffer(ch.data(), ch.size()), 
+      boost::asio::buffer(ch.data()+offset, ch.size()), 
       snd_.wrap(
         gce::detail::make_asio_alloc_handler(
           scp_.get()->get_attachment()[ha_send],
@@ -456,38 +448,7 @@ private:
     m << ec;
     o->pri_send2actor(m);
   }
-  
-  static void handle_resolve(guard_ptr guard, errcode_t const& ec, typename resolver_t::iterator eitr)
-  {
-    self_t* o = guard->get();
-    if (!o)
-    {
-      return;
-    }
-    
-    if (ec)
-    {
-      o->conning_ = false;
-      message& m = o->conn_msg_;
-      m << ec;
-      o->pri_send2actor(m);
-      return;
-    }
-    
-    boost::asio::async_connect(
-      o->impl_->lowest_layer(), eitr,
-      o->snd_.wrap(
-        gce::detail::make_asio_alloc_handler(
-          o->scp_.get()->get_attachment()[ha_conn],
-          boost::bind(
-            &self_t::handle_connect, o->scp_.get(),
-            boost::asio::placeholders::error
-            )
-          )
-        )
-      );
-  }
-  
+
   static void handle_recv(guard_ptr guard, errcode_t const& ec, size_t bytes_transferred)
   {
     self_t* o = guard->get();
@@ -555,7 +516,6 @@ private:
   bool shuting_down_;
   bool recving_;
   bool sending_;
-  boost::optional<resolver_t> resolver_;
   
   message conn_msg_;
   message handshake_msg_;

@@ -14,6 +14,7 @@ local gce = {}
 gce.pkr_amsg = libgce.pkr_amsg
 gce.pkr_adata = libgce.pkr_adata
 gce.packer = libgce.packer
+gce.openssl = libgce.openssl
 
 local mt_adl = nil
 local dur_adl = nil

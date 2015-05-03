@@ -12,8 +12,6 @@
 
 #include <gce/actor/config.hpp>
 #include <gce/actor/detail/lua_wrap.hpp>
-#include <boost/static_assert.hpp>
-#include <boost/type_traits/is_same.hpp>
 
 namespace gce
 {
@@ -82,46 +80,20 @@ inline void push(lua_State* L, gce::netopt_t const& o)
 ///------------------------------------------------------------------------------
 /// message, errcode, chunk
 ///------------------------------------------------------------------------------
-struct message
-{
-  typedef detail::lua::message wrapper_t;
-  typedef wrapper_t::object_t object_t; 
-};
-
-struct errcode
-{
-  typedef detail::lua::errcode wrapper_t;
-  typedef wrapper_t::object_t object_t; 
-};
-
-struct chunk
-{
-  typedef detail::lua::chunk wrapper_t;
-  typedef wrapper_t::object_t object_t; 
-};
+typedef detail::lua::message message;
+typedef detail::lua::errcode errcode;
+typedef detail::lua::chunk chunk;
 
 /// helper function
 template <typename Tag>
 typename Tag::object_t* from_lua(lua_State* L, int arg)
 {
-  return detail::lua::to_obj<typename Tag::wrapper_t>(L, arg);
+  return detail::lua::to_obj<Tag>(L, arg);
 }
 
 template <typename Object>
 Object* from_lua(lua_State* L, int arg, char const* name)
 {
-  BOOST_STATIC_ASSERT_MSG(
-    !boost::is_same<Object, detail::lua::message>::value, 
-    "Object can't be gce::detail::lua::message"
-    );
-  BOOST_STATIC_ASSERT_MSG(
-    !boost::is_same<Object, detail::lua::errcode>::value, 
-    "Object can't be gce::detail::lua::errcode"
-    );
-  BOOST_STATIC_ASSERT_MSG(
-    !boost::is_same<Object, detail::lua::chunk>::value, 
-    "Object can't be gce::detail::lua::chunk"
-    );
   return detail::lua::to_obj<Object>(L, arg, name);
 }
 ///------------------------------------------------------------------------------

@@ -22,8 +22,8 @@ gce.actor(
 		local ec, sender, args = gce.recv('init', gce.actor_id)
 		local base_aid = args[1]
 
-		--test('timer_ut')
-		--test('signal_ut')
+		test('timer_ut')
+		test('signal_ut')
 		test('tcp_ut')
 		test('ssl_ut')
   end)

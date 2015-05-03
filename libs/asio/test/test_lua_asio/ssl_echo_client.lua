@@ -17,17 +17,18 @@ end
 gce.actor(
   function ()
     local ec, sender, args, msg, err
-
     local ecount = 10
-    local ssl_opt = asio.ssl_option()
-    ssl_opt.verify_file = 'ssl_pem/ca.pem'
-    local ssl_ctx = asio.ssl_context(asio.sslv23, ssl_opt)
+    
+    ec, sender, args = gce.match('init').recv(asio.tcp_endpoint_itr, asio.ssl_context)
+    local eitr = args[1]
+    local ssl_ctx = args[2]
 
+    local ssl_opt = asio.ssl_option()
     ssl_opt.verify_peer = 1
     local skt = asio.ssl_stream(ssl_ctx, ssl_opt)
     skt:set_verify_callback(verify_cb)
 
-    skt:async_connect('127.0.0.1', '23333')
+    skt:async_connect(eitr)
     ec, sender, args = gce.match(asio.as_conn).recv(gce.errcode)
     err = args[1]
     assert (err == gce.err_nil, tostring(err))

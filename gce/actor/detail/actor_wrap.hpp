@@ -244,6 +244,28 @@ struct actor_wrap<ActorRef, false>
     return pr.first;
   }
 
+  receiver_t& match(match_t& matched = default_)
+  {
+    if (&matched != &default_)
+    {
+      rcv_.set_match(matched);
+    }
+    return rcv_;
+  }
+
+  receiver_t& match(match_list_t const& match_list, match_t& matched = default_)
+  {
+    BOOST_FOREACH(match_t const& mt, match_list)
+    {
+      rcv_.add_match(mt);
+    }
+    if (&matched != &default_)
+    {
+      rcv_.set_match(matched);
+    }
+    return rcv_;
+  }
+
   template <typename Match1>
   receiver_t& match(Match1 type1, match_t& matched = default_)
   {

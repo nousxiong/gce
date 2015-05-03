@@ -11,10 +11,6 @@ namespace adata
   {
     ADATA_INLINE void load( lua_State * L, ::gce::asio::adl::tcp_option& value)
     {
-      lua_getfield(L, -1, "address");
-      {load(L, value.address);lua_pop(L, 1);}
-      lua_getfield(L, -1, "port");
-      {load(L, value.port);lua_pop(L, 1);}
       lua_getfield(L, -1, "backlog");
       {load(L, value.backlog);lua_pop(L, 1);}
       lua_getfield(L, -1, "reuse_address");
@@ -33,12 +29,8 @@ namespace adata
 
     ADATA_INLINE void push( lua_State * L, ::gce::asio::adl::tcp_option const& value, bool use_adata = true)
     {
-      lua_createtable(L, 0, 9);
+      lua_createtable(L, 0, 7);
       if(use_adata && !set_metatable(L, "ad_mt_gce_asio_adl.tcp_option")){ luaL_error(L,"unknow type: gce_asio_adl.tcp_option"); }
-      {push(L, value.address);}
-      lua_setfield(L, -2, "address");
-      {push(L, value.port);}
-      lua_setfield(L, -2, "port");
       {push(L, value.backlog);}
       lua_setfield(L, -2, "backlog");
       {push(L, value.reuse_address);}

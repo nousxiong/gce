@@ -105,26 +105,21 @@ public:
   }
   
   /// resovlve before connect
-  void async_connect(resolver_t::query const& qry, message const& msg = message(as_conn))
+  void async_connect(resolver_t::iterator itr, message const& msg = message(as_conn))
   {
     GCE_ASSERT(!conning_);
     GCE_ASSERT(!recving_);
     GCE_ASSERT(!sending_);
-    
-    if (resolver_ == boost::none)
-    {
-      resolver_.emplace(boost::ref(snd_.get_io_service()));
-    }
-    
+
     conn_msg_ = msg;
-    resolver_->async_resolve(
-      qry,
+    boost::asio::async_connect(
+      *impl_, itr,
       snd_.wrap(
         gce::detail::make_asio_alloc_handler(
           scp_.get()->get_attachment()[ha_conn],
           boost::bind(
-            &self_t::handle_resolve, scp_.get(),
-            boost::asio::placeholders::error, boost::asio::placeholders::iterator
+            &self_t::handle_connect, scp_.get(),
+            boost::asio::placeholders::error
             )
           )
         )
@@ -357,38 +352,7 @@ private:
     m << ec;
     o->pri_send2actor(m);
   }
-  
-  static void handle_resolve(guard_ptr guard, errcode_t const& ec, resolver_t::iterator eitr)
-  {
-    self_t* o = guard->get();
-    if (!o)
-    {
-      return;
-    }
-    
-    if (ec)
-    {
-      o->conning_ = false;
-      message& m = o->conn_msg_;
-      m << ec;
-      o->pri_send2actor(m);
-      return;
-    }
-    
-    boost::asio::async_connect(
-      *o->impl_, eitr,
-      o->snd_.wrap(
-        gce::detail::make_asio_alloc_handler(
-          o->scp_.get()->get_attachment()[ha_conn],
-          boost::bind(
-            &self_t::handle_connect, o->scp_.get(),
-            boost::asio::placeholders::error
-            )
-          )
-        )
-      );
-  }
-  
+
   static void handle_recv(guard_ptr guard, errcode_t const& ec, size_t bytes_transferred)
   {
     self_t* o = guard->get();
@@ -454,7 +418,6 @@ private:
   bool conning_;
   bool recving_;
   bool sending_;
-  boost::optional<resolver_t> resolver_;
   
   message conn_msg_;
   message recv_msg_;

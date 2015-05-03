@@ -24,9 +24,6 @@ namespace asio
 inline void make_libasio(lua_State* L)
 {
   typedef detail::lua::timer<system_timer> lua_system_timer_t;
-  typedef detail::lua::ssl_stream<
-    boost::asio::ip::tcp::socket, boost::asio::ip::tcp::resolver
-    > lua_ssl_stream_t;
   
   /// register libasio
   gce::lualib::open(L)
@@ -47,9 +44,31 @@ inline void make_libasio(lua_State* L)
         .add_function("__gc", detail::lua::signal::gc)
       .end_userdata()
       .add_function("make_tcpopt", detail::lua::tcp_option::make)
+      .add_function("make_tcp_endpoint", detail::lua::tcp_endpoint::make)
+      .begin_userdata("tcp_endpoint")
+        .add_function("gcety", detail::lua::tcp_endpoint::gcety)
+        .add_function("__gc", detail::lua::tcp_endpoint::gc)
+      .end_userdata()
+      .add_function("make_tcp_endpoint_itr", detail::lua::tcp_endpoint_itr::make)
+      .begin_userdata("tcp_endpoint_itr")
+        .add_function("gcety", detail::lua::tcp_endpoint_itr::gcety)
+        .add_function("__gc", detail::lua::tcp_endpoint_itr::gc)
+      .end_userdata()
+      .add_function("make_tcp_socket_impl", detail::lua::tcp_socket_impl::make)
+      .begin_userdata("tcp_socket_impl")
+        .add_function("gcety", detail::lua::tcp_socket_impl::gcety)
+        .add_function("__gc", detail::lua::tcp_socket_impl::gc)
+      .end_userdata()
+      .add_function("make_tcp_resolver", detail::lua::tcp_resolver::make)
+      .begin_userdata("tcp_resolver")
+        .add_function("async_resolve", detail::lua::tcp_resolver::async_resolve)
+        .add_function("close", detail::lua::tcp_resolver::cancel)
+        .add_function("__gc", detail::lua::tcp_resolver::gc)
+      .end_userdata()
       .add_function("make_tcp_acceptor", detail::lua::tcp_acceptor::make)
       .begin_userdata("tcp_acceptor")
         .add_function("async_accept", detail::lua::tcp_acceptor::async_accept)
+        .add_function("bind", detail::lua::tcp_acceptor::bind)
         .add_function("close", detail::lua::tcp_acceptor::close)
         .add_function("__gc", detail::lua::tcp_acceptor::gc)
       .end_userdata()
@@ -63,6 +82,7 @@ inline void make_libasio(lua_State* L)
         .add_function("close", detail::lua::tcp_socket::close)
         .add_function("__gc", detail::lua::tcp_socket::gc)
       .end_userdata()
+#ifdef GCE_OPENSSL
       .add_function("make_sslopt", detail::lua::ssl_option::make)
       .add_function("make_ssl_context", detail::lua::ssl_context::make)
       .begin_userdata("ssl_context")
@@ -70,25 +90,38 @@ inline void make_libasio(lua_State* L)
         .add_function("gcety", detail::lua::ssl_context::gcety)
         .add_function("__gc", detail::lua::ssl_context::gc)
       .end_userdata()
-      .add_function("make_ssl_stream", lua_ssl_stream_t::make)
-      .begin_userdata("ssl_stream")
-        .add_function("async_connect", lua_ssl_stream_t::async_connect)
-        .add_function("async_handshake", lua_ssl_stream_t::async_handshake)
-        .add_function("async_shutdown", lua_ssl_stream_t::async_shutdown)
-        .add_function("async_read", lua_ssl_stream_t::async_read)
-        .add_function("async_read_some", lua_ssl_stream_t::async_read_some)
-        .add_function("async_write", lua_ssl_stream_t::async_write)
-        .add_function("async_write_some", lua_ssl_stream_t::async_write_some)
-        .add_function("set_verify_callback", lua_ssl_stream_t::set_verify_callback)
-        .add_function("close_lowest_layer", lua_ssl_stream_t::close_lowest_layer)
-        .add_function("__gc", lua_ssl_stream_t::gc)
+      .add_function("make_ssl_stream_impl", detail::lua::ssl_stream_impl::make)
+      .begin_userdata("ssl_stream_impl")
+        .add_function("gcety", detail::lua::ssl_stream_impl::gcety)
+        .add_function("__gc", detail::lua::ssl_stream_impl::gc)
       .end_userdata()
+      .add_function("make_ssl_stream", detail::lua::ssl_stream::make)
+      .begin_userdata("ssl_stream")
+        .add_function("set_verify_callback", detail::lua::ssl_stream::set_verify_callback)
+        .add_function("async_connect", detail::lua::ssl_stream::async_connect)
+        .add_function("async_handshake", detail::lua::ssl_stream::async_handshake)
+        .add_function("async_shutdown", detail::lua::ssl_stream::async_shutdown)
+        .add_function("async_read", detail::lua::ssl_stream::async_read)
+        .add_function("async_read_some", detail::lua::ssl_stream::async_read_some)
+        .add_function("async_write", detail::lua::ssl_stream::async_write)
+        .add_function("async_write_some", detail::lua::ssl_stream::async_write_some)
+        .add_function("close_lowest_layer", detail::lua::ssl_stream::close_lowest_layer)
+        .add_function("__gc", detail::lua::ssl_stream::gc)
+      .end_userdata()
+#endif
     .end()
     ;
 
   /// init libasio
   std::ostringstream oss;
   oss << "local libasio = require('libasio')" << std::endl;
+
+  /// types
+  oss << "libasio.ty_ssl_context = " << gce::asio::lua::ty_ssl_context << std::endl;
+  oss << "libasio.ty_ssl_stream_impl = " << gce::asio::lua::ty_ssl_stream_impl << std::endl;
+  oss << "libasio.ty_tcp_endpoint = " << gce::asio::lua::ty_tcp_endpoint << std::endl;
+  oss << "libasio.ty_tcp_endpoint_itr = " << gce::asio::lua::ty_tcp_endpoint_itr << std::endl;
+  oss << "libasio.ty_tcp_socket_impl = " << gce::asio::lua::ty_tcp_socket_impl << std::endl;
 
   /// signals
   oss << "libasio.sigint = " << SIGINT << std::endl;

@@ -14,11 +14,12 @@ namespace gce
 {
 namespace asio
 {
+class ssl_ut
+{
 typedef std::basic_string<byte_t, std::char_traits<byte_t>, std::allocator<byte_t> > bytes_t;
 typedef boost::asio::ip::tcp::socket tcp_socket_t;
 typedef boost::asio::ssl::stream<tcp_socket_t> ssl_socket_t;
-class ssl_ut
-{
+typedef boost::asio::ip::tcp::resolver tcp_resolver_t;
 public:
   static void run()
   {
@@ -48,18 +49,19 @@ private:
     log::logger_t& lg = self.get_context().get_logger();
     try
     {
-      size_t ecount = 3;
-      boost::asio::ssl::context ssl_ctx(boost::asio::ssl::context::sslv23);
-      ssl_ctx.load_verify_file("ssl_pem/ca.pem");
+      size_t ecount = 10;
+      errcode_t ec;
 
-      ssl::stream<> skt(self, ssl_ctx);
+      boost::shared_ptr<tcp_resolver_t::iterator> eitr;
+      boost::shared_ptr<boost::asio::ssl::context> ssl_ctx;
+      self->match("init").recv(eitr, ssl_ctx);
+
+      ssl::stream<> skt(self, *ssl_ctx);
       ssl_socket_t& ssl_skt = skt.get_impl();
       ssl_skt.set_verify_mode(boost::asio::ssl::verify_peer);
       ssl_skt.set_verify_callback(boost::bind(&ssl_ut::verify_certificate, _arg1, _arg2, lg));
 
-      errcode_t ec;
-      boost::asio::ip::tcp::resolver::query qry("127.0.0.1", "23333");
-      skt.async_connect(qry);
+      skt.async_connect(*eitr);
       self->match(ssl::as_conn).recv(ec);
       GCE_VERIFY(!ec).except(ec);
 
@@ -208,11 +210,18 @@ private:
       aid_t sender = self->recv("init");
       
       size_t scount = 0;
-      tcp::acceptor acpr(self);
+      errcode_t ec;
 
-      boost::asio::ip::address addr;
-      addr.from_string("0.0.0.0");
-      boost::asio::ip::tcp::endpoint ep(addr, uint16_t(23333));
+      tcp::resolver rsv(self);
+      tcp_resolver_t::query qry("0.0.0.0", "23333");
+      rsv.async_resolve(qry);
+      boost::shared_ptr<tcp_resolver_t::iterator> eitr;
+      self->match(tcp::as_resolve).recv(ec, eitr);
+      GCE_VERIFY(!ec).except(ec);
+
+      tcp::acceptor acpr(self);
+      boost::asio::ip::tcp::endpoint ep = **eitr;
+
       acpr->open(ep.protocol());
 
       acpr->set_option(boost::asio::socket_base::reuse_address(true));
@@ -282,7 +291,8 @@ private:
 
     try
     {
-      size_t cln_count = 1;
+      size_t cln_count = 10;
+      errcode_t ec;
       attributes attrs;
       attrs.lg_ = lg;
       context ctx_svr(attrs);
@@ -294,10 +304,22 @@ private:
       aid_t svr = spawn(base_svr, boost::bind(&ssl_ut::echo_server, _arg1), monitored);
       base_svr->send(svr, "init");
       base_svr->recv("ready");
+
+      tcp::resolver rsv(base_cln);
+      boost::asio::ip::tcp::resolver::query qry("127.0.0.1", "23333");
+      rsv.async_resolve(qry);
+      boost::shared_ptr<tcp_resolver_t::iterator> eitr;
+      base_cln->match(tcp::as_resolve).recv(ec, eitr);
+      GCE_VERIFY(!ec).except(ec);
+
+      boost::shared_ptr<boost::asio::ssl::context> ssl_ctx = 
+        boost::make_shared<boost::asio::ssl::context>(boost::asio::ssl::context::sslv23);
+      ssl_ctx->load_verify_file("ssl_pem/ca.pem");
       
       for (size_t i=0; i<cln_count; ++i)
       {
-        spawn(base_cln, boost::bind(&ssl_ut::echo_client, _arg1), monitored);
+        aid_t cln = spawn(base_cln, boost::bind(&ssl_ut::echo_client, _arg1), monitored);
+        base_cln->send(cln, "init", eitr, ssl_ctx);
       }
 
       for (size_t i=0; i<cln_count; ++i)

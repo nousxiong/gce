@@ -550,6 +550,13 @@ struct message
     return 1;
   }
 
+  static int size(lua_State* L)
+  {
+    gce::message* o = to_obj<message>(L, 1);
+    lua_pushinteger(L, (lua_Integer)o->size());
+    return 1;
+  }
+
   static gce::message* create(lua_State* L, gce::message const& m = gce::message())
   {
     void* block = lua_newuserdata(L, sizeof(message));
@@ -1102,21 +1109,21 @@ struct chunk
     }
 
     chunk* wrap = new (block) chunk;
-    int luaty = lua_type(L, 2);
+    int luaty = lua_type(L, 1);
     if (luaty == LUA_TNONE || luaty == LUA_TNIL)
     {
       wrap->obj_ = gce::message::chunk();
     }
     else if (luaty == LUA_TSTRING)
     {
-      size_t len = (size_t)lua_tointeger(L, 2);
-      wrap->obj_ = gce::message::chunk(len);
+      size_t len = 0;
+      byte_t const* data = (byte_t const*)lua_tolstring(L, 1, &len);
+      wrap->obj_ = gce::message::chunk(data, len);
     }
     else if (luaty == LUA_TNUMBER)
     {
-      size_t len = 0;
-      byte_t const* data = (byte_t const*)lua_tolstring(L, 2, &len);
-      wrap->obj_ = gce::message::chunk(data, len);
+      size_t len = (size_t)lua_tointeger(L, 1);
+      wrap->obj_ = gce::message::chunk(len);
     }
 
     gce::lualib::setmetatab(L, "chunk");

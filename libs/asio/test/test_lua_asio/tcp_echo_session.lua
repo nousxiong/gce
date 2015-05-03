@@ -18,9 +18,10 @@ gce.actor(
   function ()
     local ec, sender, args, msg, err
 
-    ec, sender, args, msg = gce.match('init').recv(gce.errcode)
+    ec, sender, args = gce.match('init').recv(asio.tcp_socket_impl)
+    local skt_impl = args[1]
 
-    local skt = asio.tcp_socket(msg)
+    local skt = asio.tcp_socket(skt_impl)
     local write_queue = queue.new()
     local write_in_progress = false
     local ty_int = 0

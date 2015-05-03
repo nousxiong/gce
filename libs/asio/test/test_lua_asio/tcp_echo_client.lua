@@ -13,11 +13,13 @@ local asio = require('asio')
 gce.actor(
   function ()
     local ec, sender, args, msg, err
-
     local ecount = 10
-    local skt = asio.tcp_socket()
-    skt:async_connect('127.0.0.1', '23333')
 
+    ec, sender, args = gce.match('init').recv(asio.tcp_endpoint_itr)
+    local eitr = args[1]
+
+    local skt = asio.tcp_socket()
+    skt:async_connect(eitr)
     ec, sender, args = gce.match(asio.as_conn).recv(gce.errcode)
     err = args[1]
     assert (err == gce.err_nil, tostring(err))

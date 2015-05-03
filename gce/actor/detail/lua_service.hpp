@@ -93,6 +93,7 @@ public:
           .add_function("setty", lua::message::setty)
           .add_function("getty", lua::message::getty)
           .add_function("gcety", lua::message::gcety)
+          .add_function("size", lua::message::size)
           .add_function("__tostring", lua::message::tostring)
           .add_function("__gc", lua::message::gc)
         .end_userdata()
@@ -242,6 +243,11 @@ public:
     oss << "libgce.packer = libgce.pkr_amsg" << std::endl;
 #elif GCE_PACKER == GCE_ADATA
     oss << "libgce.packer = libgce.pkr_adata" << std::endl;
+#endif
+#ifdef GCE_OPENSSL
+    oss << "libgce.openssl = 1" << std::endl;
+#else
+    oss << "libgce.openssl = 0" << std::endl;
 #endif
     oss << "libgce.ty_pattern = " << gce::lua::ty_pattern << std::endl;
     oss << "libgce.ty_message = " << gce::lua::ty_message << std::endl;

@@ -12,8 +12,6 @@ namespace = gce.asio.adl;
 // -1 means not set this opt
 tcp_option
 {
-  string address; // ip address, ipv4 or ipv6
-  string port; // port or name
   int32 backlog = -1; // when listen, queued unhandled conn requests
   int8 reuse_address = -1;
   int32 receive_buffer_size = -1;

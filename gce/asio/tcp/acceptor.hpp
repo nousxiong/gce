@@ -11,8 +11,6 @@
 #define GCE_ASIO_ACCEPTOR_HPP
 
 #include <gce/asio/config.hpp>
-#include <gce/asio/tcp/socket.hpp>
-#include <gce/asio/ssl/stream.hpp>
 
 namespace gce
 {
@@ -32,8 +30,6 @@ class acceptor
 
 public:
   typedef boost::asio::ip::tcp::acceptor impl_t;
-  typedef boost::asio::ip::tcp::socket tcp_socket_t;
-  typedef boost::asio::ssl::stream<tcp_socket_t> ssl_socket_t;
 
 public:
   template <typename Actor>
@@ -51,23 +47,6 @@ public:
   }
   
 public:
-  void async_accept(socket& skt, message const& msg = message(as_accept))
-  {
-    start_accept(skt.get_impl(), msg);
-  }
-
-  void async_accept(boost::shared_ptr<tcp_socket_t> skt, message const& msg = message(as_accept))
-  {
-    tcp_skt_ = skt;
-    start_accept(*tcp_skt_, msg);
-  }
-
-  void async_accept(boost::shared_ptr<ssl_socket_t> skt, message const& msg = message(as_accept))
-  {
-    ssl_skt_ = skt;
-    start_accept(ssl_skt_->lowest_layer(), msg);
-  }
-  
   template <typename Socket>
   void async_accept(Socket& skt, message const& msg = message(as_accept))
   {
@@ -86,7 +65,12 @@ public:
     errcode_t ignored_ec;
     impl_.close(ignored_ec);
   }
-  
+
+  impl_t& get_impl()
+  {
+    return impl_;
+  }
+
 private:
   static void handle_accept(guard_ptr guard, errcode_t const& ec)
   {
@@ -99,16 +83,6 @@ private:
     o->accepting_ = false;
     message& m = o->accept_msg_;
     m << ec;
-    if (o->tcp_skt_.get() != 0)
-    {
-      m << o->tcp_skt_;
-      o->tcp_skt_.reset();
-    }
-    else if (o->ssl_skt_.get() != 0)
-    {
-      m << o->ssl_skt_;
-      o->ssl_skt_.reset();
-    }
     o->pri_send2actor(m);
   }
   
@@ -143,8 +117,6 @@ private:
   bool accepting_;
 
   message accept_msg_;
-  boost::shared_ptr<tcp_socket_t> tcp_skt_;
-  boost::shared_ptr<ssl_socket_t> ssl_skt_;
   message const msg_nil_;
 
   /// for quit

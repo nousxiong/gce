@@ -58,7 +58,11 @@ class userlib
 
         luaL_Reg const* lib = &metareg_list_.front();
         luaL_newmetatable(L_, metaname_.c_str());
+#if LUA_VERSION_NUM == 501
         adata::lua::luaL_setfuncs(L_, lib, 0);
+#else
+        luaL_setfuncs(L_, lib, 0);
+#endif
         lua_pushvalue(L_, -1);
         lua_setfield(L_, -2, "__index");
       }

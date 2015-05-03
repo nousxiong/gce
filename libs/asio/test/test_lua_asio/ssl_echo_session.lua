@@ -18,9 +18,10 @@ gce.actor(
   function ()
     local ec, sender, args, msg, err
 
-    ec, sender, args, msg = gce.match('init').recv(gce.errcode)
+    ec, sender, args = gce.match('init').recv(asio.ssl_stream_impl)
+    local skt_impl = args[1]
 
-    local skt = asio.ssl_stream(msg)
+    local skt = asio.ssl_stream(skt_impl)
     skt:async_handshake(asio.server)
     ec, sender, args = gce.match(asio.as_handshake).recv(gce.errcode)
     err = args[1]

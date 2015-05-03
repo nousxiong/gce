@@ -27,10 +27,11 @@ namespace gce
 {
 namespace asio
 {
-typedef std::basic_string<byte_t, std::char_traits<byte_t>, std::allocator<byte_t> > bytes_t;
-typedef boost::asio::ip::tcp::socket tcp_socket_t;
 class tcp_ut
 {
+typedef std::basic_string<byte_t, std::char_traits<byte_t>, std::allocator<byte_t> > bytes_t;
+typedef boost::asio::ip::tcp::socket tcp_socket_t;
+typedef boost::asio::ip::tcp::resolver tcp_resolver_t;
 public:
   static void run()
   {
@@ -50,12 +51,14 @@ private:
     log::logger_t& lg = self.get_context().get_logger();
     try
     {
-      size_t ecount = 1;
-      tcp::socket skt(self);
-      boost::asio::ip::tcp::resolver::query qry("127.0.0.1", "23333");
-      skt.async_connect(qry);
-
+      size_t ecount = 10;
       errcode_t ec;
+
+      boost::shared_ptr<tcp_resolver_t::iterator> eitr;
+      self->match("init").recv(eitr);
+
+      tcp::socket skt(self);
+      skt.async_connect(*eitr);
       self->match(tcp::as_conn).recv(ec);
       GCE_VERIFY(!ec).except(ec);
 
@@ -197,34 +200,37 @@ private:
     try
     {
       aid_t sender = self->recv("init");
-      
+
       size_t scount = 0;
+      errcode_t ec;
+
+      tcp::resolver rsv(self);
+      tcp_resolver_t::query qry("0.0.0.0", "23333");
+      rsv.async_resolve(qry);
+      boost::shared_ptr<tcp_resolver_t::iterator> eitr;
+      self->match(tcp::as_resolve).recv(ec, eitr);
+      GCE_VERIFY(!ec).except(ec);
+
       tcp::acceptor acpr(self);
+      boost::asio::ip::tcp::endpoint ep = **eitr;
 
-      boost::asio::ip::tcp::resolver resolver(ctx.get_io_service());
-      boost::asio::ip::tcp::resolver::query qry("0.0.0.0", "23333");
-      boost::asio::ip::tcp::endpoint ep = *resolver.resolve(qry);
-
-      //boost::asio::ip::address addr;
-      //addr.from_string("0.0.0.0");
-      //boost::asio::ip::tcp::endpoint ep(addr, uint16_t(23333));
       acpr->open(ep.protocol());
 
       acpr->set_option(boost::asio::socket_base::reuse_address(true));
       acpr->bind(ep);
 
-      /*acpr->set_option(boost::asio::socket_base::receive_buffer_size(640000));
-      acpr->set_option(boost::asio::socket_base::send_buffer_size(640000));*/
+      acpr->set_option(boost::asio::socket_base::receive_buffer_size(640000));
+      acpr->set_option(boost::asio::socket_base::send_buffer_size(640000));
 
       acpr->listen(boost::asio::socket_base::max_connections);
 
-      /*acpr->set_option(boost::asio::ip::tcp::no_delay(true));
+      acpr->set_option(boost::asio::ip::tcp::no_delay(true));
       acpr->set_option(boost::asio::socket_base::keep_alive(true));
-      acpr->set_option(boost::asio::socket_base::enable_connection_aborted(true));*/
+      acpr->set_option(boost::asio::socket_base::enable_connection_aborted(true));
 
       self->send(sender, "ready");
 
-      /*while (true)
+      while (true)
       {
         boost::shared_ptr<tcp_socket_t> skt = 
           boost::make_shared<tcp_socket_t>(boost::ref(ctx.get_io_service()));
@@ -246,7 +252,7 @@ private:
           self->send(cln, "init", skt);
           ++scount;
         }
-      }*/
+      }
 
       for (size_t i=0; i<scount; ++i)
       {
@@ -266,7 +272,8 @@ private:
 
     try
     {
-      size_t cln_count = 0;
+      size_t cln_count = 10;
+      errcode_t ec;
       attributes attrs;
       attrs.lg_ = lg;
       context ctx_svr(attrs);
@@ -278,10 +285,18 @@ private:
       aid_t svr = spawn(base_svr, boost::bind(&tcp_ut::echo_server, _arg1), monitored);
       base_svr->send(svr, "init");
       base_svr->recv("ready");
+
+      tcp::resolver rsv(base_cln);
+      boost::asio::ip::tcp::resolver::query qry("127.0.0.1", "23333");
+      rsv.async_resolve(qry);
+      boost::shared_ptr<tcp_resolver_t::iterator> eitr;
+      base_cln->match(tcp::as_resolve).recv(ec, eitr);
+      GCE_VERIFY(!ec).except(ec);
       
       for (size_t i=0; i<cln_count; ++i)
       {
-        spawn(base_cln, boost::bind(&tcp_ut::echo_client, _arg1), monitored);
+        aid_t cln = spawn(base_cln, boost::bind(&tcp_ut::echo_client, _arg1), monitored);
+        base_cln->send(cln, "init", eitr);
       }
 
       for (size_t i=0; i<cln_count; ++i)

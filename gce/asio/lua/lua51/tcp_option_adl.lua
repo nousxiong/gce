@@ -17,12 +17,10 @@ local write_c = adata_m.write;
 local regist_layout_c = adata_m.regist_layout;
 local set_layout_mt_c = adata_m.set_layout_mt;
 
-regist_field('address');
 regist_field('backlog');
 regist_field('enable_connection_aborted');
 regist_field('keep_alive');
 regist_field('no_delay');
-regist_field('port');
 regist_field('receive_buffer_size');
 regist_field('reuse_address');
 regist_field('send_buffer_size');
@@ -36,8 +34,6 @@ local m = {
 
 m.tcp_option = function()
   local obj = {
-    address = '',
-    port = '',
     backlog = -1,
     reuse_address = -1,
     receive_buffer_size = -1,
@@ -51,8 +47,8 @@ m.tcp_option = function()
 end
 
 local layout_gce_asio_adl_tcp_option = regist_layout_c(
-  '\9\0\118\7\97\100\100\114\101\115\115\19\0\0\0\4\112\111\114\116\19\0\0\0\7\98\97\99\107\108\111\103\13\0\0\0\13\114\101\117\115\101\95\97\100\100\114\101\115\115\9\0\0\0\19\114\101\99\101\105\118\101\95\98\117\102\102\101\114\95\115\105\122\101\13\0\0\0\16\115\101\110\100\95\98\117\102\102\101\114\95\115\105\122\101\13\0\0\0\8\110\111\95\100\101\108\97\121\9\0\0\0\10\107\101\101\112\95\97\108\105\118\101\9\0\0\0\25\101\110\97\98\108\101\95\99\111\110\110\101\99\116\105\111\110\95\97\98\111\114\116\101\100\9\0\0\0',
-  {fields.address,fields.port,fields.backlog,fields.reuse_address,fields.receive_buffer_size,fields.send_buffer_size,fields.no_delay,fields.keep_alive,fields.enable_connection_aborted,},
+  '\7\0\105\7\98\97\99\107\108\111\103\13\0\0\0\13\114\101\117\115\101\95\97\100\100\114\101\115\115\9\0\0\0\19\114\101\99\101\105\118\101\95\98\117\102\102\101\114\95\115\105\122\101\13\0\0\0\16\115\101\110\100\95\98\117\102\102\101\114\95\115\105\122\101\13\0\0\0\8\110\111\95\100\101\108\97\121\9\0\0\0\10\107\101\101\112\95\97\108\105\118\101\9\0\0\0\25\101\110\97\98\108\101\95\99\111\110\110\101\99\116\105\111\110\95\97\98\111\114\116\101\100\9\0\0\0',
+  {fields.backlog,fields.reuse_address,fields.receive_buffer_size,fields.send_buffer_size,fields.no_delay,fields.keep_alive,fields.enable_connection_aborted,},
   {});
 layouts.gce_asio_adl_tcp_option = layout_gce_asio_adl_tcp_option
 

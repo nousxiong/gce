@@ -68,7 +68,7 @@ int main()
   try
   {
     /// basic test
-    /*gce::coro_ut::run();
+    gce::coro_ut::run();
     gce::send_recv_ut::run();
     gce::actor_ut::run();
     gce::response_ut::run();
@@ -84,12 +84,12 @@ int main()
     gce::link_ut::run();
     gce::relay_ut::run();
     gce::common_relay_ut::run();
-    gce::message_ut::run();*/
-    /*gce::pointer_ut::run();
-    gce::addon_ut::run();*/
+    gce::message_ut::run();
+    gce::pointer_ut::run();
+    gce::addon_ut::run();
 
     /// remote test
-    /*gce::socket_ut::run();
+    gce::socket_ut::run();
     gce::socket_broken_ut::run();
     gce::remote_ut::run();
     gce::remote_link_ut::run();
@@ -98,7 +98,7 @@ int main()
     gce::router_broken_ut::run();
     gce::remote_relay_ut::run();
     gce::remote_common_relay_ut::run();
-    gce::service_ut::run();*/
+    gce::service_ut::run();
 
     /// script test
 #ifdef GCE_LUA

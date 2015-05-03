@@ -13,14 +13,23 @@ local asio = require('asio')
 gce.actor(
   function ()
     local cln_count = 10
+    local ec, sender, args, msg, err
 
     local svr = gce.spawn('test_lua_asio/tcp_echo_server.lua', gce.monitored)
     gce.send(svr, 'init')
-    local ec = gce.match('ready').guard(svr).recv()
+    ec = gce.match('ready').guard(svr).recv()
     assert(ec == gce.ec_ok, ec)
 
+    local rsv = asio.tcp_resolver()
+    rsv:async_resolve('127.0.0.1', '23333')
+    ec, sender, args = gce.match(asio.as_resolve).recv(gce.errcode, asio.tcp_endpoint_itr)
+    err = args[1]
+    assert(err == gce.err_nil, tostring(err))
+    local eitr = args[2]
+
     for i=1, cln_count do
-      gce.spawn('test_lua_asio/tcp_echo_client.lua', gce.monitored)
+      local cln = gce.spawn('test_lua_asio/tcp_echo_client.lua', gce.monitored)
+      gce.send(cln, 'init', eitr)
     end
 
     for i=1, cln_count do

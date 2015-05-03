@@ -605,6 +605,7 @@ public:
 
   message& operator<<(chunk const& ch)
   {
+    GCE_ASSERT(ch.data() != 0);
     pre_write(ch.size());
     pkr_.write(ch.data(), ch.size());
     end_write();

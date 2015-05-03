@@ -23,7 +23,12 @@ namespace lua
 {
 enum
 {
-  //ty_ssl_context = gce::lua::ty_num,
+  ty_ssl_context = gce::lua::ty_num,
+  ty_ssl_stream_impl,
+
+  ty_tcp_endpoint,
+  ty_tcp_endpoint_itr,
+  ty_tcp_socket_impl,
 
   ty_num
 };

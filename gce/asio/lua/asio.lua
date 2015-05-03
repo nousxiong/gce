@@ -16,10 +16,18 @@ local tcpopt_adl = nil
 local sslopt_adl = nil
 if gce.packer == gce.pkr_adata then
   tcpopt_adl = require('tcp_option_adl')
-  sslopt_adl = require('ssl_option_adl')
+  if gce.openssl ~= 0 then
+    sslopt_adl = require('ssl_option_adl')
+  end
 end
 
 -- enum and constant def
+asio.ty_ssl_context = libasio.ty_ssl_context
+asio.ty_ssl_stream_impl = libasio.ty_ssl_stream_impl
+asio.ty_tcp_endpoint = libasio.ty_tcp_endpoint
+asio.ty_tcp_endpoint_itr = libasio.ty_tcp_endpoint_itr
+asio.ty_tcp_socket_impl = libasio.ty_tcp_socket_impl
+
 asio.sigint = libasio.sigint
 asio.sigterm = libasio.sigterm
 
@@ -64,30 +72,54 @@ function asio.tcp_option()
   return libasio.make_tcpopt()
 end
 
-function asio.ssl_option()
-  return libasio.make_sslopt()
+function asio.tcp_endpoint()
+  return libasio.make_tcp_endpoint()
 end
 
-function asio.tcp_acceptor(opt)
-  return libasio.make_tcp_acceptor(libgce.self, opt)
+function asio.tcp_endpoint_itr()
+  return libasio.make_tcp_endpoint_itr()
 end
 
-function asio.tcp_socket(msg)
-  return libasio.make_tcp_socket(libgce.self, msg)
+function asio.tcp_resolver()
+  return libasio.make_tcp_resolver(libgce.self)
 end
 
-function asio.ssl_context(method, opt, pwdcb)
-  return libasio.make_ssl_context(method, opt, pwdcb)
+function asio.tcp_acceptor()
+  return libasio.make_tcp_acceptor(libgce.self)
 end
 
-function asio.ssl_stream(cfg, opt)
-  -- cfg is ssl_context or message
-  local is_ssl_ctx = cfg:gcety() ~= gce.ty_message
-  return libasio.make_ssl_stream(libgce.self, is_ssl_ctx, cfg, opt)
+function asio.tcp_socket_impl()
+  return libasio.make_tcp_socket_impl(libgce.self)
 end
+
+function asio.tcp_socket(impl)
+  return libasio.make_tcp_socket(libgce.self, impl)
+end
+
+if gce.openssl ~= 0 then
+  function asio.ssl_option()
+    return libasio.make_sslopt()
+  end
+
+  function asio.ssl_stream_impl(ssl_ctx)
+    return libasio.make_ssl_stream_impl(libgce.self, ssl_ctx)
+  end
+
+  function asio.ssl_context(method, opt, pwdcb)
+    return libasio.make_ssl_context(method, opt, pwdcb)
+  end
+
+  function asio.ssl_stream(cfg, opt)
+    -- cfg is ssl_context or ssl_stream_impl
+    local is_ssl_ctx = cfg:gcety() ~= asio.ty_ssl_stream_impl
+    return libasio.make_ssl_stream(libgce.self, is_ssl_ctx, cfg, opt)
+  end
+end
+
 
 asio.as_timeout = gce.atom('as_timeout')
 asio.as_signal = gce.atom('as_signal')
+asio.as_resolve = gce.atom('as_resolve')
 asio.as_accept = gce.atom('as_accept')
 asio.as_conn = gce.atom('as_conn')
 asio.as_handshake = gce.atom('as_handshake')
