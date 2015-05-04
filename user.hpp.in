@@ -26,8 +26,10 @@
 # define BOOST_ASIO_DISABLE_STD_CHRONO
 #endif
 
-#if defined(BOOST_OS_WINDOWS) && !defined(_WIN32_WINNT)
-# define _WIN32_WINNT @GCE_WINVER@
+#if BOOST_OS_WINDOWS
+# ifndef _WIN32_WINNT
+#   define _WIN32_WINNT @GCE_WINVER@
+# endif
 #endif
 
 #cmakedefine GCE_LUA

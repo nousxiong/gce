@@ -21,7 +21,7 @@ namespace gce {namespace asio {namespace adl {
     int8_t private_key_format;
     int8_t rsa_private_key_format;
     int32_t verify_depth;
-    ::std::vector<::std::string> verify_paths;
+    ::std::vector< ::std::string> verify_paths;
     ::std::string certificate_authority;
     ::std::string verify_file;
     ::std::string certificate;
