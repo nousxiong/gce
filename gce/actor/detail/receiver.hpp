@@ -159,11 +159,14 @@ struct receiver<ActorRef, false>
     message msg;
     message* meta_msg = base_t::meta_.msg_;
     std::pair<aid_t, bool> pr = pri_recv(msg);
+    if (meta_msg)
+    {
+      *meta_msg = msg;
+    }
     if (pr.second)
     {
       if (meta_msg)
       {
-        *meta_msg = msg;
         *meta_msg >> a1;
       }
       else
@@ -180,11 +183,14 @@ struct receiver<ActorRef, false>
     message msg;
     message* meta_msg = base_t::meta_.msg_;
     std::pair<aid_t, bool> pr = pri_recv(msg);
+    if (meta_msg)
+    {
+      *meta_msg = msg;
+    }
     if (pr.second)
     {
       if (meta_msg)
       {
-        *meta_msg = msg;
         *meta_msg >> a1 >> a2;
       }
       else
@@ -201,11 +207,14 @@ struct receiver<ActorRef, false>
     message msg;
     message* meta_msg = base_t::meta_.msg_;
     std::pair<aid_t, bool> pr = pri_recv(msg);
+    if (meta_msg)
+    {
+      *meta_msg = msg;
+    }
     if (pr.second)
     {
       if (meta_msg)
       {
-        *meta_msg = msg;
         *meta_msg >> a1 >> a2 >> a3;
       }
       else
@@ -222,11 +231,14 @@ struct receiver<ActorRef, false>
     message msg;
     message* meta_msg = base_t::meta_.msg_;
     std::pair<aid_t, bool> pr = pri_recv(msg);
+    if (meta_msg)
+    {
+      *meta_msg = msg;
+    }
     if (pr.second)
     {
       if (meta_msg)
       {
-        *meta_msg = msg;
         *meta_msg >> a1 >> a2 >> a3 >> a4;
       }
       else
@@ -243,11 +255,14 @@ struct receiver<ActorRef, false>
     message msg;
     message* meta_msg = base_t::meta_.msg_;
     std::pair<aid_t, bool> pr = pri_recv(msg);
+    if (meta_msg)
+    {
+      *meta_msg = msg;
+    }
     if (pr.second)
     {
       if (meta_msg)
       {
-        *meta_msg = msg;
         *meta_msg >> a1 >> a2 >> a3 >> a4 >> a5;
       }
       else
@@ -263,6 +278,10 @@ struct receiver<ActorRef, false>
     message msg;
     message* meta_msg = base_t::meta_.msg_;
     std::pair<aid_t, bool> pr = pri_respond(msg);
+    if (meta_msg)
+    {
+      *meta_msg = msg;
+    }
     return pr.first;
   }
 
@@ -272,11 +291,14 @@ struct receiver<ActorRef, false>
     message msg;
     message* meta_msg = base_t::meta_.msg_;
     std::pair<aid_t, bool> pr = pri_respond(msg);
+    if (meta_msg)
+    {
+      *meta_msg = msg;
+    }
     if (pr.second)
     {
       if (meta_msg)
       {
-        *meta_msg = msg;
         *meta_msg >> a1;
       }
       else
@@ -293,11 +315,14 @@ struct receiver<ActorRef, false>
     message msg;
     message* meta_msg = base_t::meta_.msg_;
     std::pair<aid_t, bool> pr = pri_respond(msg);
+    if (meta_msg)
+    {
+      *meta_msg = msg;
+    }
     if (pr.second)
     {
       if (meta_msg)
       {
-        *meta_msg = msg;
         *meta_msg >> a1 >> a2;
       }
       else
@@ -314,11 +339,14 @@ struct receiver<ActorRef, false>
     message msg;
     message* meta_msg = base_t::meta_.msg_;
     std::pair<aid_t, bool> pr = pri_respond(msg);
+    if (meta_msg)
+    {
+      *meta_msg = msg;
+    }
     if (pr.second)
     {
       if (meta_msg)
       {
-        *meta_msg = msg;
         *meta_msg >> a1 >> a2 >> a3;
       }
       else
@@ -335,11 +363,14 @@ struct receiver<ActorRef, false>
     message msg;
     message* meta_msg = base_t::meta_.msg_;
     std::pair<aid_t, bool> pr = pri_respond(msg);
+    if (meta_msg)
+    {
+      *meta_msg = msg;
+    }
     if (pr.second)
     {
       if (meta_msg)
       {
-        *meta_msg = msg;
         *meta_msg >> a1 >> a2 >> a3 >> a4;
       }
       else
@@ -356,11 +387,14 @@ struct receiver<ActorRef, false>
     message msg;
     message* meta_msg = base_t::meta_.msg_;
     std::pair<aid_t, bool> pr = pri_respond(msg);
+    if (meta_msg)
+    {
+      *meta_msg = msg;
+    }
     if (pr.second)
     {
       if (meta_msg)
       {
-        *meta_msg = msg;
         *meta_msg >> a1 >> a2 >> a3 >> a4 >> a5;
       }
       else
