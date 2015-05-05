@@ -230,7 +230,7 @@ namespace adata
     {
       int32_t len = (int32_t)(value.verify_paths).size();
       size += size_of(len);
-      for (::std::vector<::std::string>::const_iterator i = value.verify_paths.begin() ; i != value.verify_paths.end() ; ++i)
+      for (::std::vector< ::std::string>::const_iterator i = value.verify_paths.begin() ; i != value.verify_paths.end() ; ++i)
       {
         int32_t len = (int32_t)(*i).size();
         size += size_of(len);
@@ -385,7 +385,7 @@ namespace adata
       uint32_t len = (uint32_t)(value.verify_paths).size();
       write(stream,len);
       int32_t count = 0;
-      for (::std::vector<::std::string>::const_iterator i = value.verify_paths.begin() ; i != value.verify_paths.end() ; ++i, ++count)
+      for (::std::vector< ::std::string>::const_iterator i = value.verify_paths.begin() ; i != value.verify_paths.end() ; ++i, ++count)
       {
         {
           uint32_t len = (uint32_t)(*i).size();

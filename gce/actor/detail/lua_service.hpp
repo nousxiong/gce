@@ -285,8 +285,6 @@ public:
     oss << "libgce.luaver = '5.2'" << std::endl;
 #elif GCE_LUA_VERSION == GCE_LUA53
     oss << "libgce.luaver = '5.3'" << std::endl;
-#elif GCE_LUA_VERSION == GCE_LUAJIT2
-    oss << "libgce.luaver = 'jit2'" << std::endl;
 #endif
 
     std::string init_libgce_script = oss.str();

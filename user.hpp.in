@@ -39,7 +39,6 @@
 # define GCE_LUA51 @GCE_LUA51@
 # define GCE_LUA52 @GCE_LUA52@
 # define GCE_LUA53 @GCE_LUA53@
-# define GCE_LUAJIT2 @GCE_LUAJIT2@
 # define GCE_LUA_VERSION @GCE_LUA_VERSION@
 #endif
 
