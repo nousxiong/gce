@@ -205,7 +205,7 @@ private:
       char const* member = luaL_checkstring(L, 2);
       if (strcmp(member, "id_") == 0)
       {
-        o->id_ = luaL_checkint(L, 3);
+        o->id_ = (int)luaL_checkinteger(L, 3);
       }
       else if (strcmp(member, "name_") == 0)
       {
@@ -506,7 +506,7 @@ private:
 
       gce::lualib::get_ref(L, "libmeta", k);
 
-      int i = luaL_checkint(L, -1);
+      int i = (int)luaL_checkinteger(L, -1);
       BOOST_ASSERT(i == 13);
       std::cout << "ref<key:" << k << "><value:" << i << ">" << std::endl;
 
@@ -514,7 +514,7 @@ private:
       BOOST_ASSERT(begin_stack == lua_gettop(L));
 
       gce::lualib::get_ref(L, "libmeta", k);
-      i = luaL_checkint(L, -1);
+      i = (int)luaL_checkinteger(L, -1);
       BOOST_ASSERT(i == 13);
       lua_pop(L, 1);
 
@@ -557,7 +557,7 @@ private:
          libmeta.func(m) \
          libmeta.func(m) \
          libmeta.test_ref() \
-         print('done.')\
+         print('all done.')\
          ";
 
       if (luaL_dostring(L, scr) != 0)

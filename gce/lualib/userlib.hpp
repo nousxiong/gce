@@ -11,6 +11,8 @@
 #define GCE_LUALIB_USERLIB_HPP
 
 #include <gce/lualib/config.hpp>
+#include <boost/thread/tss.hpp>
+#include <boost/bind.hpp>
 #include <vector>
 #include <string>
 
@@ -104,6 +106,26 @@ public:
     return *this;
   }
 
+#if LUA_VERSION_NUM > 501
+  struct lua_reg_ptr
+  {
+    explicit lua_reg_ptr(luaL_Reg* p)
+      : p_(p)
+    {
+    }
+
+    luaL_Reg* p_;
+  };
+
+  static int regist_lib(lua_State * L)
+  {
+    lua_reg_ptr* lib = lib_.get();
+    luaL_checkversion(L);
+    luaL_newlib(L, lib->p_);
+    return 1;
+  }
+#endif
+
   void end()
   {
     if (!reg_list_.empty())
@@ -113,11 +135,12 @@ public:
       reg.func = 0;
       reg_list_.push_back(reg);
 
-      luaL_Reg const* lib = &reg_list_.front();
+      luaL_Reg* lib = &reg_list_.front();
 #if LUA_VERSION_NUM == 501
       luaL_register(L_, name_.c_str(), lib);
 #else
-      luaL_requiref(L_, name_.c_str(), lib, 1);
+      lib_.reset(new lua_reg_ptr(lib));
+      luaL_requiref(L_, name_.c_str(), userlib::regist_lib, 1);
 #endif
       lua_newtable(L_);
       lua_setfield(L_, -2, "reftab");
@@ -128,7 +151,16 @@ private:
   lua_State* L_;
   std::string name_;
   std::vector<luaL_Reg> reg_list_;
+
+#if LUA_VERSION_NUM > 501
+public:
+  static boost::thread_specific_ptr<lua_reg_ptr> lib_;
+#endif
 };
+
+#if LUA_VERSION_NUM > 501
+boost::thread_specific_ptr<userlib::lua_reg_ptr> userlib::lib_;
+#endif
 
 /// open a userlib
 inline userlib open(lua_State* L)

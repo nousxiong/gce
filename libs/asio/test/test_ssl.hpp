@@ -57,9 +57,8 @@ private:
       self->match("init").recv(eitr, ssl_ctx);
 
       ssl::stream<> skt(self, *ssl_ctx);
-      ssl_socket_t& ssl_skt = skt.get_impl();
-      ssl_skt.set_verify_mode(boost::asio::ssl::verify_peer);
-      ssl_skt.set_verify_callback(boost::bind(&ssl_ut::verify_certificate, _arg1, _arg2, lg));
+      skt->set_verify_mode(boost::asio::ssl::verify_peer);
+      skt->set_verify_callback(boost::bind(&ssl_ut::verify_certificate, _arg1, _arg2, lg));
 
       skt.async_connect(*eitr);
       self->match(ssl::as_conn).recv(ec);
@@ -109,6 +108,9 @@ private:
       skt.async_write(boost::asio::buffer(buff, hdr_len + hdr.size_));
       self->match(ssl::as_send).recv(ec);
       GCE_VERIFY(!ec).except(ec);
+
+      skt.async_shutdown();
+      self->match(ssl::as_shutdown).recv();
     }
     catch (std::exception& ex)
     {
@@ -189,6 +191,9 @@ private:
           }
         }
       }
+
+      skt.async_shutdown();
+      self->match(ssl::as_shutdown).recv();
     }
     catch (std::exception& ex)
     {
@@ -291,7 +296,7 @@ private:
 
     try
     {
-      size_t cln_count = 10;
+      size_t cln_count = 100;
       errcode_t ec;
       attributes attrs;
       attrs.lg_ = lg;
@@ -302,7 +307,7 @@ private:
       threaded_actor base_cln = spawn(ctx_cln);
 
       aid_t svr = spawn(base_svr, boost::bind(&ssl_ut::echo_server, _arg1), monitored);
-      base_svr->send(svr, "init");
+      base_svr->send(svr, "init"); 
       base_svr->recv("ready");
 
       tcp::resolver rsv(base_cln);

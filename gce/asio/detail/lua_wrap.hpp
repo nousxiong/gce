@@ -1173,11 +1173,13 @@ struct tcp_acceptor
       tcp_socket_impl* skt = boost::polymorphic_downcast<tcp_socket_impl*>(bo);
       o->async_accept(*skt->object()->get(), *msg);
     }break;
+#ifdef GCE_OPENSSL
     case gce::asio::lua::ty_ssl_stream_impl:
     {
       ssl_stream_impl* skt = boost::polymorphic_downcast<ssl_stream_impl*>(bo);
       o->async_accept((*skt->object())->lowest_layer(), *msg);
     }break;
+#endif
     default: return luaL_error(L, "accept socket type error"); break;
     }
     return 0;
@@ -1477,7 +1479,7 @@ struct ssl_stream
   static int async_handshake(lua_State* L)
   {
     ssl_stream::object_t* o = gce::lua::from_lua<ssl_stream>(L, 1);
-    int shakety = luaL_checkint(L, 2);
+    int shakety = (int)luaL_checkinteger(L, 2);
     if (lua_type(L, 3) == LUA_TUSERDATA)
     {
       gce::message* msg = gce::lua::from_lua<gce::lua::message>(L, 3);

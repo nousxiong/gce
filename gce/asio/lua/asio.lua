@@ -31,33 +31,35 @@ asio.ty_tcp_socket_impl = libasio.ty_tcp_socket_impl
 asio.sigint = libasio.sigint
 asio.sigterm = libasio.sigterm
 
-asio.sslv2 = libasio.sslv2
-asio.sslv2_client = libasio.sslv2_client
-asio.sslv2_server = libasio.sslv2_server
-asio.sslv3 = libasio.sslv3
-asio.sslv3_client = libasio.sslv3_client
-asio.sslv3_server = libasio.sslv3_server
-asio.tlsv1 = libasio.tlsv1
-asio.tlsv1_client = libasio.tlsv1_client
-asio.tlsv1_server = libasio.tlsv1_server
-asio.sslv23 = libasio.sslv23
-asio.sslv23_client = libasio.sslv23_client
-asio.sslv23_server = libasio.sslv23_server
-asio.tlsv11 = libasio.tlsv11
-asio.tlsv11_client = libasio.tlsv11_client
-asio.tlsv11_server = libasio.tlsv11_server
-asio.tlsv12 = libasio.tlsv12
-asio.tlsv12_client = libasio.tlsv12_client
-asio.tlsv12_server = libasio.tlsv12_server
+if gce.openssl ~= 0 then
+  asio.sslv2 = libasio.sslv2
+  asio.sslv2_client = libasio.sslv2_client
+  asio.sslv2_server = libasio.sslv2_server
+  asio.sslv3 = libasio.sslv3
+  asio.sslv3_client = libasio.sslv3_client
+  asio.sslv3_server = libasio.sslv3_server
+  asio.tlsv1 = libasio.tlsv1
+  asio.tlsv1_client = libasio.tlsv1_client
+  asio.tlsv1_server = libasio.tlsv1_server
+  asio.sslv23 = libasio.sslv23
+  asio.sslv23_client = libasio.sslv23_client
+  asio.sslv23_server = libasio.sslv23_server
+  asio.tlsv11 = libasio.tlsv11
+  asio.tlsv11_client = libasio.tlsv11_client
+  asio.tlsv11_server = libasio.tlsv11_server
+  asio.tlsv12 = libasio.tlsv12
+  asio.tlsv12_client = libasio.tlsv12_client
+  asio.tlsv12_server = libasio.tlsv12_server
 
-asio.asn1 = libasio.asn1
-asio.pem = libasio.pem
+  asio.asn1 = libasio.asn1
+  asio.pem = libasio.pem
 
-asio.for_reading = libasio.for_reading
-asio.for_writing = libasio.for_writing
+  asio.for_reading = libasio.for_reading
+  asio.for_writing = libasio.for_writing
 
-asio.client = libasio.client
-asio.server = libasio.server
+  asio.client = libasio.client
+  asio.server = libasio.server
+end
 
 
 function asio.timer()

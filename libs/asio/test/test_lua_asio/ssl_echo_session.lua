@@ -86,4 +86,7 @@ gce.actor(
         end
       end
     end
+
+    skt:async_shutdown()
+    gce.match(asio.as_shutdown).recv()
   end)

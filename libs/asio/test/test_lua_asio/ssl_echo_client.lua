@@ -70,4 +70,7 @@ gce.actor(
     ec, sender, args = gce.match(asio.as_send).recv(ty_int, ch, gce.errcode)
     err = args[3]
     assert (err == gce.err_nil, tostring(err))
+
+    skt:async_shutdown()
+    gce.match(asio.as_shutdown).recv()
   end)

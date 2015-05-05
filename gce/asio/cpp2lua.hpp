@@ -31,6 +31,7 @@ inline void push(lua_State* L, tcpopt_t const& opt)
 {
   detail::lua::push(L, opt);
 }
+#ifdef GCE_OPENSSL
 ///------------------------------------------------------------------------------
 /// ssl_option
 ///------------------------------------------------------------------------------
@@ -43,6 +44,7 @@ inline void push(lua_State* L, sslopt_t const& opt)
 {
   detail::lua::push(L, opt);
 }
+#endif
 } /// namespace lua
 } /// namespace asio
 } /// namespace gce

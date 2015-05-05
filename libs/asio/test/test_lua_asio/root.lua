@@ -25,5 +25,7 @@ gce.actor(
 		test('timer_ut')
 		test('signal_ut')
 		test('tcp_ut')
-		test('ssl_ut')
+		if gce.openssl ~= 0 then
+			test('ssl_ut')
+		end
   end)

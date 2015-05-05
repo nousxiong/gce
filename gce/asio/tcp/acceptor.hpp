@@ -11,6 +11,7 @@
 #define GCE_ASIO_ACCEPTOR_HPP
 
 #include <gce/asio/config.hpp>
+#include <boost/bind.hpp>
 
 namespace gce
 {
@@ -26,7 +27,8 @@ class acceptor
 {
   typedef addon_t base_t;
   typedef acceptor self_t;
-  typedef base_t::scope<self_t>::guard_ptr guard_ptr;
+  typedef base_t::scope<self_t, gce::detail::handler_allocator_t> scope_t;
+  typedef scope_t::guard_ptr guard_ptr;
 
 public:
   typedef boost::asio::ip::tcp::acceptor impl_t;
@@ -94,9 +96,12 @@ private:
     impl_.async_accept(
       skt,
       snd_.wrap(
-        boost::bind(
-          &self_t::handle_accept, scp_.get(),
-          boost::asio::placeholders::error
+        gce::detail::make_asio_alloc_handler(
+          scp_.get()->get_attachment(),
+          boost::bind(
+            &self_t::handle_accept, scp_.get(),
+            boost::asio::placeholders::error
+            )
           )
         )
       );
@@ -120,7 +125,7 @@ private:
   message const msg_nil_;
 
   /// for quit
-  base_t::scope<self_t> scp_;
+  scope_t scp_;
 };
 } /// namespace tcp
 } /// namespace asio

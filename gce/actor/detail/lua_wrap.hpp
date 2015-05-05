@@ -107,6 +107,11 @@ struct service_id
     return &obj_;
   }
 
+  static char const* name()
+  {
+    return "service_id";
+  }
+
   virtual void pack(gce::message& msg)
   {
     msg << obj_;
@@ -238,6 +243,11 @@ struct actor_id
   object_t* object()
   {
     return &obj_;
+  }
+
+  static char const* name()
+  {
+    return "actor_id";
   }
 
   virtual void pack(gce::message& msg)
@@ -372,6 +382,11 @@ struct match
   object_t* object()
   {
     return &obj_;
+  }
+
+  static char const* name()
+  {
+    return "match";
   }
 
   virtual void pack(gce::message& msg)
@@ -677,6 +692,11 @@ struct duration
     return &obj_;
   }
 
+  static char const* name()
+  {
+    return "duration";
+  }
+
   virtual void pack(gce::message& msg)
   {
     msg << obj_;
@@ -918,7 +938,7 @@ struct duration
 #if GCE_PACKER == GCE_AMSG
 static void load(lua_State* L, int arg, gce::duration_t& dur)
 {
-  dur = *to_obj<duration>(L, 1);
+  dur = *to_obj<duration>(L, arg);
 }
 #endif
 
@@ -1663,7 +1683,7 @@ struct actor
     luaL_argcheck(L, lua_isboolean(L, 3), 3, "'boolean' expected");
     bool sync_sire = lua_toboolean(L, 3) != 0;
 
-    int type = luaL_checkint(L, 4);
+    int type = (int)luaL_checkinteger(L, 4);
 
     proxy_t& a = *o;
 
@@ -1676,7 +1696,7 @@ struct actor
   {
     proxy_t* o = to_obj<proxy_t>(L, 1, "actor");
 
-    spawn_type sty = (spawn_type)luaL_checkint(L, 2);
+    spawn_type sty = (spawn_type)luaL_checkinteger(L, 2);
 
     size_t len = 0;
     char const* func = luaL_checklstring(L, 3, &len);
@@ -1684,7 +1704,7 @@ struct actor
     match_t ctxid;
     load(L, 4, ctxid);
 
-    int type = luaL_checkint(L, 5);
+    int type = (int)luaL_checkinteger(L, 5);
 
     size_t stack_size = luaL_checkinteger(L, 6);
 

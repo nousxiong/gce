@@ -1027,7 +1027,7 @@ namespace adata {
     inline bool set_metatable(lua_State * L, const char * name)
     {
       lua_getfield(L, LUA_REGISTRYINDEX, name);
-      if (lua_type(L, -1) != LUA_TNONE)
+      if (lua_type(L, -1) != LUA_TNIL)
       {
         lua_setmetatable(L, -2);
         return true;

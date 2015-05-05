@@ -127,6 +127,7 @@ inline void make_libasio(lua_State* L)
   oss << "libasio.sigint = " << SIGINT << std::endl;
   oss << "libasio.sigterm = " << SIGTERM << std::endl;
 
+#ifdef GCE_OPENSSL
   /// method
   oss << "libasio.sslv2 = " << boost::asio::ssl::context::sslv2 << std::endl;
   oss << "libasio.sslv2_client = " << boost::asio::ssl::context::sslv2_client << std::endl;
@@ -158,6 +159,7 @@ inline void make_libasio(lua_State* L)
   /// handshake_type
   oss << "libasio.client = " << boost::asio::ssl::stream_base::client << std::endl;
   oss << "libasio.server = " << boost::asio::ssl::stream_base::server << std::endl;
+#endif
 
   std::string init_libasio_script = oss.str();
   if (luaL_dostring(L, init_libasio_script.c_str()) != 0)

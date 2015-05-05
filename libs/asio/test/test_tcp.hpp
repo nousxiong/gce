@@ -103,7 +103,7 @@ private:
       amsg::write(zbuf, hdr);
       amsg::write(zbuf, str);
       skt.async_write(boost::asio::buffer(buff, hdr_len + hdr.size_));
-      self->match(ssl::as_send).recv(ec);
+      self->match(tcp::as_send).recv(ec);
       GCE_VERIFY(!ec).except(ec);
     }
     catch (std::exception& ex)
@@ -272,7 +272,7 @@ private:
 
     try
     {
-      size_t cln_count = 10;
+      size_t cln_count = 100;
       errcode_t ec;
       attributes attrs;
       attrs.lg_ = lg;
