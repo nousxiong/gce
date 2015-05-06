@@ -48,6 +48,7 @@ static std::size_t const test_count = 1;
 #include "test_addon.hpp"
 #include "test_socket.hpp"
 #include "test_socket_broken.hpp"
+#include "test_big_msg.hpp"
 #include "test_remote_link.hpp"
 #include "test_router.hpp"
 #include "test_router_link.hpp"
@@ -91,6 +92,7 @@ int main()
     /// remote test
     gce::socket_ut::run();
     gce::socket_broken_ut::run();
+    gce::big_msg_ut::run();
     gce::remote_ut::run();
     gce::remote_link_ut::run();
     gce::router_ut::run();

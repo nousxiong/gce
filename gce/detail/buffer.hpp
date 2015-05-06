@@ -65,8 +65,8 @@ public:
         throw std::bad_alloc();
       }
       data_ = (byte_t*)p;
-      size_ = size;
     }
+    size_ = size;
   }
 
   void free()
