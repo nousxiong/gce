@@ -133,29 +133,35 @@ void mirror(gce::stackful_actor self)
 
 int main()
 {
-  /// everything begin here
-  gce::context ctx;
+  try
+  {
+    /// everything begin here
+    gce::context ctx;
 
-  /// create a hello_world actor, using thread-base actor
-  gce::threaded_actor hello_world = gce::spawn(ctx);
+    /// create a hello_world actor, using thread-base actor
+    gce::threaded_actor hello_world = gce::spawn(ctx);
 
-  /// create a new actor that calls ’mirror(gce::self_t)’, using coroutine-base actor
-  gce::aid_t mirror_actor = gce::spawn(hello_world, boost::bind(&mirror, _1));
+    /// create a new actor that calls ’mirror(gce::self_t)’, using coroutine-base actor
+    gce::aid_t mirror_actor = gce::spawn(hello_world, boost::bind(&mirror, _1));
 
-  /// send "Hello World!" to mirror
-  gce::message m;
-  m << std::string("Hello World!");
-  gce::response_t res = hello_world.request(mirror_actor, m);
+    /// send "Hello World!" to mirror
+    gce::message m;
+    m << std::string("Hello World!");
+    gce::response_t res = hello_world.request(mirror_actor, m);
 
-  /// ... and wait for a response
-  gce::message msg;
-  hello_world.recv(res, msg);
-  std::string reply_str;
-  msg >> reply_str;
+    /// ... and wait for a response
+    gce::message msg;
+    hello_world.respond(res, msg);
+    std::string reply_str;
+    msg >> reply_str;
 
-  /// prints "!dlroW olleH"
-  std::cout << reply_str << std::endl;
-
+    /// prints "!dlroW olleH"
+    std::cout << reply_str << std::endl;
+  }
+  catch (std::exception& ex)
+  {
+    std::cerr << ex.what() << std::endl;
+  }
   return 0;
 }
 ```
@@ -185,21 +191,27 @@ void echo(gce::stackful_actor self)
 
 int main()
 {
-  gce::context ctx;
+  try
+  {
+    gce::context ctx;
 
-  gce::threaded_actor base = gce::spawn(ctx);
+    gce::threaded_actor base = gce::spawn(ctx);
 
-  gce::aid_t echo_actor = gce::spawn(base, boost::bind(&echo, _1));
+    gce::aid_t echo_actor = gce::spawn(base, boost::bind(&echo, _1));
 
-  /// send "hi" message to echo
-  base->send(echo_actor, "hi");
+    /// send "hi" message to echo
+    base->send(echo_actor, "hi");
 
-  /// send "start" message to echo, after "hi" message
-  base->send(echo_actor, "start");
+    /// send "start" message to echo, after "hi" message
+    base->send(echo_actor, "start");
 
-  /// ... and wait for a response
-  base->recv();
-
+    /// ... and wait for a response
+    base->recv();
+  }
+  catch (std::exception& ex)
+  {
+    std::cerr << ex.what() << std::endl;
+  }
   return 0;
 }
 ```
@@ -231,18 +243,24 @@ void link(gce::stackful_actor self)
 
 int main()
 {
-  gce::context ctx;
+  try
+  {
+    gce::context ctx;
 
-  gce::threaded_actor base = gce::spawn(ctx);
+    gce::threaded_actor base = gce::spawn(ctx);
 
-  /// create a link actor and monitor it.
-  gce::spawn(base, boost::bind(&link, _1), gce::monitored);
+    /// create a link actor and monitor it.
+    gce::spawn(base, boost::bind(&link, _1), gce::monitored);
 
-  /// wait for gce::exit message
-  base->recv();
+    /// wait for gce::exit message
+    base->recv();
 
-  std::cout << "end" << std::endl;
-
+    std::cout << "end" << std::endl;
+  }
+  catch (std::exception& ex)
+  {
+    std::cerr << ex.what() << std::endl;
+  }
   return 0;
 }
 ```
