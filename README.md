@@ -269,6 +269,8 @@ Changelog
 ---------------
 v1.2
 * GCE.Actor change to header only
+* Add addon system to cooperate with any async code
+* Add GCE.Asio that using addon system to thin wrap Boost.Asio
 * add lua, now user can use lua to write gce code
 * gce::actor<gce::threaded> change to gce::threaded_actor
 * gce::actor<gce::stackful> change to gce::stackful_actor
