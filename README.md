@@ -1,4 +1,4 @@
-GCE v1.1
+GCE v1.2
 =======
 
 GCE is an actor model implementation featuring lightweight & fast
@@ -16,6 +16,7 @@ Features Overview
 * Thread-base and on-the-fly coroutine-base actors, "Write async code like sync"
 * Seamless cooperate with Boost.Asio
 * Lightweight cluster support
+* Lua support, including lua5.1,5.2,5.3 and luajit2.0
 
 Manual
 ---------------
@@ -33,8 +34,8 @@ or
 Dependencies
 ------------
 
-* CMake 2.8 and newer
-* Boost 1.55.0 and newer
+* CMake 3.0 and newer
+* Boost 1.57.0 and newer
 
 Need build sub librares:
 
@@ -50,6 +51,12 @@ Need build sub librares:
 
 Please build boost with stage mode (for example: b2 ... stage)
 
+Optional Dependencies
+------------
+
+* Lua (5.1, 5.2, 5.3 or luajit2.0)
+* Openssl (>=1.0)
+
 Supported Compilers
 -------------------
 
@@ -63,7 +70,7 @@ Build (Linux)
 * cd ..
 * mkdir gce_build
 * cd gce_build
-* cmake -G "Unix Makefiles" -DCMAKE_BUILD_TYPE=Release -DBOOST_ROOT=your_boost_root_dir -DSUB_LIBRARYS="actor amsg" ../gce
+* cmake -G "Unix Makefiles" -DCMAKE_BUILD_TYPE=Release -DBOOST_ROOT=your_boost_root_dir -DSUB_LIBRARYS="actor amsg adata asio log assert" ../gce
 * make
 * *Optional:* make install (if set CMAKE_INSTALL_PREFIX when run cmake, for example: -DCMAKE_INSTALL_PREFIX=../install)
 
@@ -74,9 +81,30 @@ Build (Windows)
 * cd ..
 * mkdir gce_build
 * cd gce_build
-* cmake -G "Visual Studio 9 2008" -DBOOST_ROOT=your_boost_root_dir -DSUB_LIBRARYS="actor amsg" ..\gce
+* cmake -G "Visual Studio 12 2013" -DBOOST_ROOT=your_boost_root_dir -DSUB_LIBRARYS="actor amsg adata asio log assert" ..\gce
 * (open generated vc sln, and build ALL_BUILD project)
 * *Optional:* (build INSTALL project)(if set CMAKE_INSTALL_PREFIX when run cmake, for example: -DCMAKE_INSTALL_PREFIX=..\install)
+
+CMake Options
+-----------
+
+The main build options you will want to configure are as follows:
+
+* SUB_LIBRARYS: GCE's sublibraries. default: "actor amsg adata asio log assert"
+* GCE_LUA: Enable or disable lua support. default: OFF
+* GCE_LUA_VERSION: Lua version string, options: "5.1" "5.2" "5.3". default: "5.1"
+* GCE_PACKER: GCE serilization's way, options: "amsg" "adata". default: "adata"
+* GCE_OPENSSL: Enable or disable openssl support. default: OFF
+* LUA_INCLUDEDIR: Tell gce where to find lua's include headers. default: ""
+* LUA_LIBRARYDIR: Tell gce where to find lua's lib. default: ""
+* OPENSSL_INCLUDEDIR: Tell gce where to find openssl's include headers. default: ""
+* OPENSSL_LIBRARYDIR: Tell gce where to find openssl's lib. default: ""
+* GCE_[xxx]_BUILD_EXAMPLE: Enable or disable build xxx's example. default: OFF
+* GCE_[xxx]_BUILD_TEST: Enable or disable build xxx's test. default: OFF
+
+There is a example for using luajit2.0 and openssl under windows:
+
+cmake -G "Visual Studio 12 2013" -DCMAKE_INSTALL_PREFIX=..\install -DBOOST_ROOT=h:\data\src\boost_1_57_0 -DSUB_LIBRARYS="actor amsg adata asio log assert lualib" -DGCE_LUA=ON -DGCE_LUA_VERSION="5.1" -DGCE_PACKER="adata" -DGCE_OPENSSL=ON -DOPENSSL_INCLUDEDIR=h:\data\src\openssl\include -DOPENSSL_LIBRARYDIR=h:\data\src\openssl\lib -DLUA_INCLUDEDIR=h:\data\src\lua\jit\include -DLUA_LIBRARYDIR=h:\data\src\lua\jit ..\gce
 
 Hello world
 -----------
@@ -86,7 +114,7 @@ Hello world
 #include <iostream>
 #include <string>
 
-void mirror(gce::actor<gce::stackful>& self)
+void mirror(gce::stackful_actor self)
 {
   /// wait for messages
   gce::message msg;
@@ -109,7 +137,7 @@ int main()
   gce::context ctx;
 
   /// create a hello_world actor, using thread-base actor
-  gce::actor<gce::threaded> hello_world = gce::spawn(ctx);
+  gce::threaded_actor hello_world = gce::spawn(ctx);
 
   /// create a new actor that calls ’mirror(gce::self_t)’, using coroutine-base actor
   gce::aid_t mirror_actor = gce::spawn(hello_world, boost::bind(&mirror, _1));
@@ -139,11 +167,11 @@ Type matching
 #include <gce/actor/all.hpp>
 #include <iostream>
 
-void echo(gce::actor<gce::stackful>& self)
+void echo(gce::stackful_actor self)
 {
   /// wait for "start" message. 
   /// if and only if after fetch "start", then others
-  gce::recv(self, gce::atom("start"));
+  self->recv("start");
   std::cout << "start!" << std::endl;
 
   /// handle other messages
@@ -152,25 +180,25 @@ void echo(gce::actor<gce::stackful>& self)
   std::cout << "recv message: " << gce::atom(msg.get_type()) << std::endl;
 
   /// reply
-  gce::send(self, sender);
+  self->send(sender);
 }
 
 int main()
 {
   gce::context ctx;
 
-  gce::actor<gce::threaded> base = gce::spawn(ctx);
+  gce::threaded_actor base = gce::spawn(ctx);
 
   gce::aid_t echo_actor = gce::spawn(base, boost::bind(&echo, _1));
 
   /// send "hi" message to echo
-  gce::send(base, echo_actor, gce::atom("hi"));
+  base->send(echo_actor, "hi");
 
   /// send "start" message to echo, after "hi" message
-  gce::send(base, echo_actor, gce::atom("start"));
+  base->send(echo_actor, "start");
 
   /// ... and wait for a response
-  gce::recv(base);
+  base->recv();
 
   return 0;
 }
@@ -183,13 +211,13 @@ Actor link
 #include <gce/actor/all.hpp>
 #include <iostream>
 
-void quiter(gce::actor<gce::stackful>& self)
+void quiter(gce::stackful_actor self)
 {
   /// wait for gce::exit from link actor
-  gce::recv(self);
+  self->recv();
 }
 
-void link(gce::actor<gce::stackful>& self)
+void link(gce::stackful_actor self)
 {
   /// create 10 actor and link with them
   for (std::size_t i=0; i<10; ++i)
@@ -205,13 +233,13 @@ int main()
 {
   gce::context ctx;
 
-  gce::actor<gce::threaded> base = gce::spawn(ctx);
+  gce::threaded_actor base = gce::spawn(ctx);
 
   /// create a link actor and monitor it.
   gce::spawn(base, boost::bind(&link, _1), gce::monitored);
 
   /// wait for gce::exit message
-  gce::recv(base);
+  base->recv();
 
   std::cout << "end" << std::endl;
 
@@ -233,6 +261,8 @@ v1.2
 * atom can optionally be omited, user can use enum, string(limit 13 bytes) or old-atom-style
 * api recv (recv response) change to respond
 * gce::connect and gce::bind remove "is_router_", move to net_option
+* message can now serialize Boost.Shared_ptr, limit local process
+* message max limit removed
 
 v1.1 
 * gce::mixin_t change to gce::actor<gce::threaded>

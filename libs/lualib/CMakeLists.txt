@@ -12,8 +12,8 @@
 if (GCE_LUA)
   # Provide user options to customise the build process.
   option (GCE_LUALIB_DEV "GCE.Lualib dev mode" OFF)
-  option (GCE_LUALIB_BUILD_EXAMPLE "Build GCE.Lualib examples" ON)
-  option (GCE_LUALIB_BUILD_TEST "Build GCE.Lualib tests" ON)
+  option (GCE_LUALIB_BUILD_EXAMPLE "Build GCE.Lualib examples" OFF)
+  option (GCE_LUALIB_BUILD_TEST "Build GCE.Lualib tests" OFF)
 
   set (LINK_LIBS ${Boost_LIBRARIES} ${Lua_LIBRARIES} ${CMAKE_THREAD_LIBS_INIT})
   if (UNIX)

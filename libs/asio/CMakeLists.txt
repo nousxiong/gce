@@ -11,8 +11,8 @@
 
 # Provide user options to customise the build process.
 option (GCE_ASIO_DEV "GCE.Asio dev mode" OFF)
-option (GCE_ASIO_BUILD_EXAMPLE "Build GCE.Asio examples" ON)
-option (GCE_ASIO_BUILD_TEST "Build GCE.Asio tests" ON)
+option (GCE_ASIO_BUILD_EXAMPLE "Build GCE.Asio examples" OFF)
+option (GCE_ASIO_BUILD_TEST "Build GCE.Asio tests" OFF)
 
 set (LINK_LIBS ${Boost_LIBRARIES} ${CMAKE_THREAD_LIBS_INIT})
 if (UNIX)

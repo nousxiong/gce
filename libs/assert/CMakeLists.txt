@@ -12,8 +12,8 @@
 # Provide user options to customise the build process.
 option (GCE_ASSERT_DEV "GCE.Assert dev mode" OFF)
 option (GCE_ENABLE_ASSERT "GCE.Assert explicit define assert" OFF)
-option (GCE_ASSERT_BUILD_EXAMPLE "Build GCE.Assert examples" ON)
-option (GCE_ASSERT_BUILD_TEST "Build GCE.Assert tests" ON)
+option (GCE_ASSERT_BUILD_EXAMPLE "Build GCE.Assert examples" OFF)
+option (GCE_ASSERT_BUILD_TEST "Build GCE.Assert tests" OFF)
 
 set (LINK_LIBS ${Boost_LIBRARIES} ${CMAKE_THREAD_LIBS_INIT})
 if (UNIX)

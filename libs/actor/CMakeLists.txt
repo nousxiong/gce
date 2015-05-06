@@ -11,8 +11,8 @@
 
 # Provide user options to customise the build process.
 option (GCE_ACTOR_DEV "GCE.Actor dev mode" OFF)
-option (GCE_ACTOR_BUILD_EXAMPLE "Build GCE.Actor examples" ON)
-option (GCE_ACTOR_BUILD_TEST "Build GCE.Actor tests" ON)
+option (GCE_ACTOR_BUILD_EXAMPLE "Build GCE.Actor examples" OFF)
+option (GCE_ACTOR_BUILD_TEST "Build GCE.Actor tests" OFF)
 
 set (LINK_LIBS ${Boost_LIBRARIES} ${CMAKE_THREAD_LIBS_INIT})
 if (UNIX)

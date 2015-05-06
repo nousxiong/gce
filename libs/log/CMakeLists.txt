@@ -11,8 +11,8 @@
 
 # Provide user options to customise the build process.
 option (GCE_LOG_DEV "GCE.Log dev mode" OFF)
-option (GCE_LOG_BUILD_EXAMPLE "Build GCE.Log examples" ON)
-option (GCE_LOG_BUILD_TEST "Build GCE.Log tests" ON)
+option (GCE_LOG_BUILD_EXAMPLE "Build GCE.Log examples" OFF)
+option (GCE_LOG_BUILD_TEST "Build GCE.Log tests" OFF)
 
 set (LINK_LIBS ${Boost_LIBRARIES} ${CMAKE_THREAD_LIBS_INIT})
 if (UNIX)

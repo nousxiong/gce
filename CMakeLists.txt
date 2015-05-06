@@ -135,13 +135,13 @@ set (CMAKE_VERBOSE_MAKEFILE true)
 
 # Set >= vc11 SAFESEH to NO
 if (WIN32)
-  if (${CMAKE_GENERATOR} MATCHES "Visual Studio 11 *" OR ${CMAKE_GENERATOR} MATCHES "Visual Studio 12 *")
+  if (${CMAKE_GENERATOR} MATCHES "Visual Studio 1*")
     set (CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} /SAFESEH:NO")
   endif ()
 endif ()
 
 # Select build sub libs.
-set (SUB_LIBRARYS "actor log assert" CACHE STRING "Select build sub libs")
+set (SUB_LIBRARYS "actor amsg adata asio log assert" CACHE STRING "Select build sub libs")
 string (TOLOWER ${SUB_LIBRARYS} SUB_LIBRARYS_TOLOWER)
 string (REGEX MATCHALL "[a-z_]+" SUB_LIB_NAME_LIST ${SUB_LIBRARYS_TOLOWER})
 
