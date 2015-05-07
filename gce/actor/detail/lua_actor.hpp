@@ -178,7 +178,9 @@ public:
     acceptor_service_t& svc = ctx.select_service<acceptor_service_t>();
 
     gce::detail::bind<context_t>(base_t::get_aid(), svc, ep, opt);
-    bool is_yield = recv_match(pattern(msg_new_bind));
+    pattern patt;
+    patt.add_match(msg_new_bind);
+    bool is_yield = recv_match(patt);
     if (!is_yield)
     {
       handle_bind();
@@ -195,7 +197,10 @@ public:
     gce::detail::connect<context_t>(base_t::get_aid(), svc, target, ep, opt);
     message msg;
     aid_t sender;
-    bool is_yield =  pri_recv_match(pattern(msg_new_conn), sender, msg);
+
+    pattern patt;
+    patt.add_match(msg_new_conn);
+    bool is_yield =  pri_recv_match(patt, sender, msg);
     if (!is_yield)
     {
       handle_connect(sender, msg);
@@ -224,7 +229,9 @@ public:
 
     message msg;
     aid_t sender;
-    bool is_yield =  pri_recv_match(pattern(msg_new_actor), sender, msg);
+    pattern patt;
+    patt.add_match(msg_new_actor);
+    bool is_yield =  pri_recv_match(patt, sender, msg);
     if (!is_yield)
     {
       handle_spawn(sender, msg);
@@ -252,7 +259,10 @@ public:
 
     aid_t sender;
     message msg;
-    bool is_yield =  pri_recv_match(pattern(msg_spawn_ret, curr_tmo), sender, msg);
+    pattern patt;
+    patt.add_match(msg_spawn_ret);
+    patt.timeout_ = curr_tmo;
+    bool is_yield =  pri_recv_match(patt, sender, msg);
     if (!is_yield)
     {
       is_yield = pri_handle_remote_spawn(sender, msg);
@@ -776,7 +786,10 @@ private:
         }
 
         begin_tp = boost::chrono::system_clock::now();
-        bool is_yield = pri_recv_match(pattern(msg_spawn_ret, curr_tmo), sender, msg);
+        pattern patt;
+        patt.add_match(msg_spawn_ret);
+        patt.timeout_ = curr_tmo;
+        bool is_yield = pri_recv_match(patt, sender, msg);
         if (is_yield)
         {
           spw_hdr_ = 

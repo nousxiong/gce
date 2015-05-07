@@ -75,7 +75,8 @@ inline Service& select_service(ActorRef sire, bool sync_sire)
 template <typename ActorRef>
 inline aid_t end_spawn(ActorRef sire, link_type type)
 {
-  pattern patt(msg_new_actor);
+  pattern patt;
+  patt.add_match(msg_new_actor);
   message msg;
   aid_t aid = sire.recv(msg, patt);
   GCE_VERIFY(aid != aid_nil)(msg).msg("gce::spawn_exception").except<spawn_exception>();
@@ -199,7 +200,8 @@ inline void spawn(
       )
     );
 
-  pattern patt(detail::msg_new_actor);
+  pattern patt;
+  patt.add_match(detail::msg_new_actor);
   sire.recv(
     boost::bind(
       &handle_spawn<context_t>, _arg1, _arg2, _arg3,
@@ -230,7 +232,8 @@ inline void spawn(
       )
     );
 
-  pattern patt(detail::msg_new_actor);
+  pattern patt;
+  patt.add_match(detail::msg_new_actor);
   sire.recv(
     boost::bind(
       &handle_spawn<context_t>, _arg1, _arg2, _arg3,
@@ -276,7 +279,9 @@ inline void handle_remote_spawn(
     }
 
     begin_tp = boost::chrono::system_clock::now();
-    pattern patt(detail::msg_spawn_ret, curr_tmo);
+    pattern patt;
+    patt.add_match(detail::msg_spawn_ret);
+    patt.timeout_ = curr_tmo;
     self.recv(
       boost::bind(
         &handle_remote_spawn<context_t>, _arg1, _arg2, _arg3,
@@ -430,7 +435,9 @@ inline void spawn_remote(
   duration_t curr_tmo = tmo;
   typedef boost::chrono::system_clock clock_t;
   clock_t::time_point begin_tp = clock_t::now();
-  pattern patt(detail::msg_spawn_ret, curr_tmo);
+  pattern patt;
+  patt.add_match(detail::msg_spawn_ret);
+  patt.timeout_ = curr_tmo;
   sire.recv(
     boost::bind(
       &handle_remote_spawn<context_t>, _arg1, _arg2, _arg3,

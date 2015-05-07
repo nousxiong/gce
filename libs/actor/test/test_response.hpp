@@ -47,7 +47,9 @@ private:
             );
         res_list[i] = self->request(aid);
         message msg;
-        self.recv(msg, pattern("ret"));
+        pattern patt;
+        patt.add_match("ret");
+        self.recv(msg, patt);
       }
 
       timer_t tmr(self.get_context().get_io_service());

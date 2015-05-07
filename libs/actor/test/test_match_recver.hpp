@@ -55,7 +55,10 @@ private:
       spawn(base, boost::bind(&match_recver_ut::my_actor, _arg1, aid_t()), monitored);
 
       message msg;
-      aid_t sender = base.recv(msg, pattern("timeout", millisecs(1)));
+      pattern patt;
+      patt.add_match("timeout");
+      patt.timeout_ = millisecs(1);
+      aid_t sender = base.recv(msg, patt);
       GCE_VERIFY(sender == aid_nil);
 
       int i = -1;
