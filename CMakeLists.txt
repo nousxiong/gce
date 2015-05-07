@@ -133,10 +133,15 @@ find_package (Threads)
 
 set (CMAKE_VERBOSE_MAKEFILE true)
 
-# Set >= vc11 SAFESEH to NO
 if (WIN32)
+  # Set >= vc10 SAFESEH to NO
   if (${CMAKE_GENERATOR} MATCHES "Visual Studio 1*")
     set (CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} /SAFESEH:NO")
+  endif ()
+
+  # Set vc bigobj
+  if (${CMAKE_GENERATOR} MATCHES "Visual Studio *")
+    set (CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /bigobj")
   endif ()
 endif ()
 

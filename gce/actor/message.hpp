@@ -227,7 +227,7 @@ public:
   template <typename T>
   message& operator<<(boost::shared_ptr<T> const& p)
   {
-    uint32_t index = shared_list_.size();
+    uint32_t index = (uint32_t)shared_list_.size();
     size_t size = packer::size_of(index);
     pre_write(size);
     pkr_.write(index);
@@ -260,8 +260,8 @@ public:
   message& operator<<(message const m) /// for self serialize, copy first
   {
     detail::header_t hdr = detail::make_header((uint32_t)m.size(), m.get_type(), m.tag_offset_);
-    uint32_t shared_offset = shared_list_.size();
-    uint32_t shared_size = m.shared_list_.size();
+    uint32_t shared_offset = (uint32_t)shared_list_.size();
+    uint32_t shared_size = (uint32_t)m.shared_list_.size();
 
     size_t size = packer::size_of(hdr);
     size += hdr.size_;
