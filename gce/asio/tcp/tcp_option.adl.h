@@ -14,13 +14,13 @@ namespace gce {namespace asio {namespace adl {
     int32_t receive_buffer_size;
     int32_t send_buffer_size;
     tcp_option()
-    :    backlog(-1),
-    reuse_address(-1),
-    receive_buffer_size(-1),
-    send_buffer_size(-1),
+    :    reuse_address(-1),
     no_delay(-1),
     keep_alive(-1),
-    enable_connection_aborted(-1)
+    enable_connection_aborted(-1),
+    backlog(-1),
+    receive_buffer_size(-1),
+    send_buffer_size(-1)
     {}
   };
 

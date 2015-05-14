@@ -42,14 +42,14 @@ namespace gce {namespace asio {namespace adl {
     no_sslv3(-1),
     no_tlsv1(-1),
     no_compression(-1),
-    verify_depth(-1),
     verify_none(-1),
     verify_peer(-1),
     verify_fail_if_no_peer_cert(-1),
     verify_client_once(-1),
     certificate_format(1),
     private_key_format(1),
-    rsa_private_key_format(1)
+    rsa_private_key_format(1),
+    verify_depth(-1)
     {}
   };
 

@@ -180,11 +180,11 @@ public:
     return cow_.get_buffer_ref().clear_write(len);
   }
 
-  void to_large()
+  void to_large(size_t size = GCE_SMALL_MSG_SIZE + 8)
   {
     if (cow_.is_small())
     {
-      cow_.reserve(GCE_SMALL_MSG_SIZE + 8);
+      cow_.reserve(size);
     }
   }
 

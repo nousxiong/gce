@@ -9,8 +9,8 @@ namespace gce {namespace adl {
     int8_t ty_;
     int64_t val_;
     duration()
-    :    val_(0LL),
-    ty_(0)
+    :    ty_(0),
+    val_(0LL)
     {}
   };
 

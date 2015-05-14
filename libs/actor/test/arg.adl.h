@@ -16,7 +16,7 @@ namespace gce {namespace adl {
   struct arg2_t
   {
     int32_t i_;
-    ::std::vector<int32_t> v_;
+    ::std::vector< int32_t> v_;
     arg2_t()
     :    i_(0)
     {}
@@ -147,7 +147,7 @@ namespace adata
     {
       int32_t len = (int32_t)(value.v_).size();
       size += size_of(len);
-      for (::std::vector<int32_t>::const_iterator i = value.v_.begin() ; i != value.v_.end() ; ++i)
+      for (::std::vector< int32_t>::const_iterator i = value.v_.begin() ; i != value.v_.end() ; ++i)
       {
         size += size_of(*i);
       }
@@ -174,7 +174,7 @@ namespace adata
       uint32_t len = (uint32_t)(value.v_).size();
       write(stream,len);
       int32_t count = 0;
-      for (::std::vector<int32_t>::const_iterator i = value.v_.begin() ; i != value.v_.end() ; ++i, ++count)
+      for (::std::vector< int32_t>::const_iterator i = value.v_.begin() ; i != value.v_.end() ; ++i, ++count)
       {
         {write(stream,*i);}
         {if(stream.error()){stream.trace_error("v_",count);return;}}

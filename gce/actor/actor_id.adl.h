@@ -17,12 +17,12 @@ namespace gce {namespace adl {
     ::gce::adl::match ctxid_;
     ::gce::adl::service_id svc_;
     actor_id()
-    :    timestamp_(0ULL),
-    uintptr_(0ULL),
-    svc_id_(0ULL),
-    type_(0),
+    :    type_(0),
     in_pool_(0),
-    sid_(0)
+    sid_(0),
+    timestamp_(0ULL),
+    uintptr_(0ULL),
+    svc_id_(0ULL)
     {}
   };
 
