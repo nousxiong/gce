@@ -39,6 +39,8 @@
 #define GCE_MSG_HEADER_MAX_SIZE sizeof(gce::detail::header_t) * 3
 #define GCE_SOCKET_RECV_BUFFER_COPY_SIZE GCE_MSG_HEADER_MAX_SIZE * 5
 
+#define GCE_SOCKET_BIG_MSG_SIZE GCE_SMALL_MSG_SIZE * GCE_SOCKET_BIG_MSG_SCALE
+
 namespace gce
 {
 namespace detail
@@ -81,6 +83,7 @@ public:
     , sync_(base_t::ctx_.get_io_service())
     , recv_cache_(recv_buffer_.data(), recv_buffer_.size())
     , recving_header_(true)
+    , recving_msg_(false)
     , conn_(false)
     , curr_reconn_(0)
     , is_router_(false)
@@ -989,16 +992,65 @@ private:
     size_t const remain_size = recv_cache_.remain_read_size();
     if (remain_size < curr_hdr_.size_)
     {
-      if (recv_cache_.size() - recv_cache_.read_size() < curr_hdr_.size_)
+      if (!recving_msg_)
       {
-        adjust_recv_buffer(curr_hdr_.size_);
+        if (curr_hdr_.size_ - remain_size >= GCE_SOCKET_BIG_MSG_SIZE)
+        {
+          msg = message(curr_hdr_.type_, curr_hdr_.tag_offset_);
+
+          /// change msg to large msg
+          msg.to_large(curr_hdr_.size_ + GCE_MSG_HEADER_MAX_SIZE);
+
+          /// copy already recved data to msg
+          msg << message::chunk(recv_cache_.get_read_data(), remain_size);
+
+          /// reset recv_cache_ to msg buffer
+          recv_cache_.clear();
+          recv_cache_.reset(const_cast<byte_t*>(msg.data()), curr_hdr_.size_ + GCE_MSG_HEADER_MAX_SIZE);
+          recv_cache_.write(remain_size);
+
+          /// prepare for writing last data
+          pre_write_size_ = curr_hdr_.size_ - remain_size;
+          msg.pre_write(pre_write_size_);
+
+          /// switch to recving_msg_ mode
+          recving_msg_ = true;
+        }
+      }
+
+      if (!recving_msg_)
+      {
+        if (recv_cache_.size() - recv_cache_.read_size() < curr_hdr_.size_)
+        {
+          adjust_recv_buffer(curr_hdr_.size_);
+        }
       }
       return false;
     }
 
-    byte_t* data = recv_cache_.get_read_data();
-    recv_cache_.read(curr_hdr_.size_);
-    msg = message(curr_hdr_.type_, data, curr_hdr_.size_, curr_hdr_.tag_offset_);
+    if (!recving_msg_)
+    {
+      byte_t* data = recv_cache_.get_read_data();
+      recv_cache_.read(curr_hdr_.size_);
+      msg = message(curr_hdr_.type_, data, curr_hdr_.size_, curr_hdr_.tag_offset_);
+    }
+    else
+    {
+      packer& pkr = msg.get_packer();
+      pkr.skip_write(pre_write_size_);
+      msg.end_write();
+
+      recv_cache_.read(curr_hdr_.size_);
+      byte_t* data = recv_cache_.get_read_data();
+      size_t const remain_size = recv_cache_.remain_read_size();
+      GCE_ASSERT(remain_size < recv_buffer_.size())(remain_size);
+
+      recv_cache_.clear();
+      recv_cache_.reset(recv_buffer_.data(), recv_buffer_.size());
+      std::memcpy(recv_cache_.get_write_data(), data, remain_size);
+      recv_cache_.write(remain_size);
+      recving_msg_ = false;
+    }
     recving_header_ = true;
     return true;
   }
@@ -1040,6 +1092,7 @@ private:
         {
           recv_cache_.clear();
           recving_header_ = true;
+          recving_msg_ = false;
           break;
         }
       }
@@ -1170,6 +1223,8 @@ private:
   recv_buffer recv_buffer_;
   buffer_ref recv_cache_;
   bool recving_header_;
+  bool recving_msg_;
+  size_t pre_write_size_;
   header_t curr_hdr_;
 
   bool conn_;

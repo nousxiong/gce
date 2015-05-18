@@ -29,4 +29,8 @@
 # define GCE_CACHE_LINE_SIZE 64
 #endif
 
+#ifndef GCE_SOCKET_BIG_MSG_SCALE
+# define GCE_SOCKET_BIG_MSG_SCALE 1000
+#endif
+
 #endif /// GCE_ACTOR_CONFIG_HPP

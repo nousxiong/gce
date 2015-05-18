@@ -30,7 +30,7 @@ public:
     try
     {
       gce::log::asio_logger lg;
-      std::size_t echo_num = 10;
+      std::size_t echo_num = 100;
 
       attributes attrs;
       attrs.lg_ = boost::bind(&gce::log::asio_logger::output, &lg, _arg1, "");
@@ -60,12 +60,7 @@ public:
       std::string big_msg(GCE_SOCKET_RECV_BUFFER_MIN_SIZE, 'c');
       uint64_t u64 = 3233332211;
 
-      for (std::size_t i=0; i<echo_num; ++i)
-      {
-        base1->send(echo_aid, "echo", big_msg, u64);
-        base1->recv("echo");
-      }
-
+      boost::timer::auto_cpu_timer t;
       size_t const max_times = 5;
       for (std::size_t i=0, n=0; i<echo_num; ++i, ++n)
       {
@@ -73,8 +68,8 @@ public:
         {
           n = 0;
         }
-        big_msg.resize(GCE_SOCKET_RECV_BUFFER_MIN_SIZE * (n+1));
-        base1->send(echo_aid, "echo", big_msg, u64);
+        big_msg.resize(GCE_SOCKET_RECV_BUFFER_MIN_SIZE * (n+2));
+        base1->send(echo_aid, "echo", u64, big_msg);
         base1->recv("echo");
       }
       base1->send(echo_aid, "end");
@@ -100,7 +95,7 @@ public:
         match_t type = msg.get_type();
         if (type == atom("echo"))
         {
-          msg >> big_msg >> u64;
+          msg >> u64;
           GCE_VERIFY(u64 == 3233332211)(u64);
           self.send(sender, msg);
         }

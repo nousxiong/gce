@@ -117,9 +117,9 @@ public:
   }
 
   template <typename Match>
-  message(Match type)
+  message(Match type, uint32_t tag_offset = u32_nil)
     : type_(to_match(type))
-    , tag_offset_(u32_nil)
+    , tag_offset_(tag_offset)
   {
   }
 
