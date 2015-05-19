@@ -12,6 +12,7 @@
 
 #include <gce/actor/config.hpp>
 #include <gce/actor/asio.hpp>
+#include <gce/actor/message.hpp>
 #include <gce/actor/detail/basic_socket.hpp>
 #include <gce/detail/asio_alloc_handler.hpp>
 #include <gce/detail/bytes.hpp>
@@ -23,6 +24,9 @@
 #include <boost/bind.hpp>
 #include <boost/array.hpp>
 #include <string>
+#include <deque>
+
+#define GCE_SOCKET_BIG_MSG_SIZE GCE_SMALL_MSG_SIZE * GCE_SOCKET_BIG_MSG_SCALE
 
 namespace gce
 {
@@ -41,11 +45,9 @@ public:
     , sock_(ios)
     , closed_(false)
     , reconn_(false)
-    , sending_(false)
-    , sending_buffer_(0)
-    , standby_buffer_(1)
     , sync_(ios)
     , waiting_end_(false)
+
   {
   }
 
@@ -57,9 +59,6 @@ public:
     , port_(port)
     , closed_(false)
     , reconn_(false)
-    , sending_(false)
-    , sending_buffer_(0)
-    , standby_buffer_(1)
     , sync_(ios)
     , waiting_end_(false)
   {
@@ -73,20 +72,32 @@ public:
   void init(strand_t& snd)
   {
     snd_ = &snd;
+    gather_buffer_.reserve(GCE_IOV_MAX);
   }
 
-  void send(
-    byte_t const* header, size_t header_size,
-    byte_t const* body, size_t body_size
-    )
+  void send(message const& m)
   {
     if (!waiting_end_)
     {
-      gce::detail::bytes_t& send_buf = send_buffer_[standby_buffer_];
-      send_buf.append(header, header_size);
-      send_buf.append(body, body_size);
+      GCE_ASSERT(gather_buffer_.size() <= send_que_.size());
+      if (gather_buffer_.size() == send_que_.size())
+      {
+        send_que_.push_back(msg_nil_);
+      }
 
-      if (!sending_)
+      header_t hdr = make_header((uint32_t)m.size(), m.get_type(), m.get_tag_offset());
+      message& msg = send_que_.back();
+      msg << hdr;
+      if (m.size() < GCE_SOCKET_BIG_MSG_SIZE)
+      {
+        msg << message::chunk(m.data(), m.size());
+      }
+      else
+      {
+        send_que_.push_back(m);
+      }
+
+      if (!is_sending())
       {
         begin_send();
       }
@@ -100,7 +111,7 @@ public:
 
   void connect(yield_t yield)
   {
-    if (sending_)
+    if (is_sending())
     {
       reconn_ = true;
     }
@@ -117,7 +128,7 @@ public:
   void close()
   {
     closed_ = true;
-    if (!sending_)
+    if (!is_sending())
     {
       close_socket();
     }
@@ -126,7 +137,7 @@ public:
   void wait_end(yield_t yield)
   {
     waiting_end_ = true;
-    if (sending_)
+    if (is_sending())
     {
       errcode_t ec;
       sync_.expires_from_now(to_chrono(infin));
@@ -145,6 +156,11 @@ public:
   }
 
 private:
+  bool is_sending() const
+  {
+    return !gather_buffer_.empty();
+  }
+
   void close_socket()
   {
     errcode_t ignore_ec;
@@ -153,14 +169,16 @@ private:
 
   void begin_send()
   {
-    sending_ = true;
+    for (size_t i=0, size=(std::min)((size_t)GCE_IOV_MAX, send_que_.size()); i<size; ++i)
+    {
+      message const& msg = send_que_[i];
+      gather_buffer_.push_back(boost::asio::buffer(msg.data(), msg.size()));
+    }
     strand_t& snd = *snd_;
-    std::swap(sending_buffer_, standby_buffer_);
-    gce::detail::bytes_t const& bytes = send_buffer_[sending_buffer_];
 
     boost::asio::async_write(
       sock_,
-      boost::asio::buffer(bytes.data(), bytes.size()),
+      gather_buffer_,
       snd.wrap(
         make_asio_alloc_handler(
           ha_,
@@ -175,10 +193,13 @@ private:
 
   void end_send(errcode_t const& errc)
   {
-    sending_ = false;
-    send_buffer_[sending_buffer_].clear();
+    for (size_t i=0, size=gather_buffer_.size(); i<size; ++i)
+    {
+      send_que_.pop_front();
+    }
+    gather_buffer_.clear();
 
-    if (!errc && !send_buffer_[standby_buffer_].empty())
+    if (!errc && !send_que_.empty())
     {
       begin_send();
     }
@@ -187,7 +208,7 @@ private:
       close();
     }
 
-    if (closed_ && !sending_)
+    if (closed_ && !is_sending())
     {
       errcode_t ignore_ec;
       sync_.cancel(ignore_ec);
@@ -205,10 +226,10 @@ private:
 
   bool closed_;
   bool reconn_;
-  bool sending_;
-  size_t sending_buffer_;
-  size_t standby_buffer_;
-  boost::array<gce::detail::bytes_t, 2> send_buffer_;
+
+  std::deque<message> send_que_;
+  std::vector<boost::asio::const_buffer> gather_buffer_;
+  message const msg_nil_;
 
   timer_t sync_;
   bool waiting_end_;

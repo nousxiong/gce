@@ -15,6 +15,7 @@
 
 namespace gce
 {
+class message;
 namespace detail
 {
 class basic_socket
@@ -25,7 +26,7 @@ public:
 
 public:
   virtual void init(strand_t&) = 0;
-  virtual void send(byte_t const*, size_t, byte_t const*, size_t) = 0;
+  virtual void send(message const&) = 0;
   virtual size_t recv(byte_t*, size_t, yield_t) = 0;
   virtual void connect(yield_t) = 0;
   virtual void close() = 0;

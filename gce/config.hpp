@@ -17,8 +17,18 @@
 #include <boost/bind/placeholders.hpp>
 
 /// Suppress some vc warnings.
-#ifdef BOOST_COMP_MSVC
+#if BOOST_COMP_MSVC
 # pragma warning(disable : 4251 4231 4660 4275 4355 4244 4307 4996)
+#endif
+
+#if BOOST_OS_WINDOWS
+# define GCE_IOV_MAX 64 /// suppose >= winnt
+#else
+# if IOV_MAX < 64
+#   define GCE_IOV_MAX IOV_MAX
+# else
+#   define GCE_IOV_MAX 64
+# endif
 #endif
 
 /// Ensure occupy entire cache(s) line.

@@ -163,6 +163,7 @@ public:
   size_t size() const { return cow_.get_buffer_ref().write_size(); }
   match_t get_type() const { return type_; }
   uint32_t get_tag_offset() const { return tag_offset_; }
+  size_t shared_size() const { return shared_list_.size(); }
 
   template <typename Match>
   void set_type(Match type)

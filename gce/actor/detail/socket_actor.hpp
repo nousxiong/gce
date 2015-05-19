@@ -39,8 +39,6 @@
 #define GCE_MSG_HEADER_MAX_SIZE sizeof(gce::detail::header_t) * 3
 #define GCE_SOCKET_RECV_BUFFER_COPY_SIZE GCE_MSG_HEADER_MAX_SIZE * 5
 
-#define GCE_SOCKET_BIG_MSG_SIZE GCE_SMALL_MSG_SIZE * GCE_SOCKET_BIG_MSG_SCALE
-
 namespace gce
 {
 namespace detail
@@ -460,6 +458,7 @@ private:
 
   void send(message const& m)
   {
+    GCE_ASSERT(m.shared_size() == 0)(m);
     if (conn_)
     {
       GCE_ASSERT(skt_)(m);
@@ -480,22 +479,7 @@ private:
   void send_msg(message const& m)
   {
     GCE_ASSERT(skt_)(m);
-
-    header_t hdr = make_header((uint32_t)m.size(), m.get_type(), m.get_tag_offset());
-
-    /// shouldn't greater than this...
-    BOOST_ASSERT(packer::size_of(hdr) <= GCE_MSG_HEADER_MAX_SIZE);
-
-    byte_t buf[GCE_MSG_HEADER_MAX_SIZE];
-    size_t len = packer::size_of(hdr);
-    pkr_.set_write(buf, packer::size_of(hdr));
-    pkr_.write(hdr);
-    size_t wt_len = pkr_.write_length();
-
-    skt_->send(
-      buf, pkr_.write_length(),
-      m.data(), hdr.size_
-      );
+    skt_->send(m);
   }
 
   void send_msg_hb()
