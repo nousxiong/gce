@@ -534,6 +534,13 @@ private:
               close();
               break;
             }
+
+            /// remove self from socket list
+            aid_t skt = base_t::get_aid();
+            svc_.deregister_socket(curr_pr, skt);
+            ctx.deregister_socket(curr_pr, skt, actor_socket, svc_.get_index());
+
+            /// try reconnect
             connect(yield);
           }
           else
