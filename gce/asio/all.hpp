@@ -14,6 +14,7 @@
 #include <gce/asio/asio.hpp>
 #include <gce/asio/signal.hpp>
 #include <gce/asio/timer.hpp>
+#include <gce/asio/serial_port.hpp>
 #include <gce/asio/tcp/resolver.hpp>
 #include <gce/asio/tcp/acceptor.hpp>
 #include <gce/asio/tcp/socket.hpp>

@@ -1,0 +1,20 @@
+//
+// Copyright (c) 2009-2015 Nous Xiong (348944179 at qq dot com)
+//
+// Distributed under the Boost Software License, Version 1.0. (See accompanying
+// file LICENSE_1_0.txt or copy at http://www.boost.org/LICENSE_1_0.txt)
+//
+// See https://github.com/nousxiong/gce for latest version.
+//
+
+namespace = gce.asio.adl;
+
+// serial_port options, -1 means not set this opt
+spt_option
+{
+  int32 baud_rate = -1;
+  int32 flow_control = -1; // 0 none, 1 software, 2 hardware
+  int32 parity = -1; // 0 none, 1 odd, 2 even
+  int32 stop_bits = -1; // 0 one, 1 onepointfive, 2 two
+  int32 character_size = -1;
+}

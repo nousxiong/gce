@@ -31,6 +31,15 @@ asio.ty_tcp_socket_impl = libasio.ty_tcp_socket_impl
 asio.sigint = libasio.sigint
 asio.sigterm = libasio.sigterm
 
+asio.none = 0
+asio.software = 1
+asio.hardware = 2
+asio.odd = 1
+asio.even = 2
+asio.one = 0
+asio.onepointfive = 1
+asio.two = 2
+
 if gce.openssl ~= 0 then
   asio.sslv2 = libasio.sslv2
   asio.sslv2_client = libasio.sslv2_client
@@ -68,6 +77,14 @@ end
 
 function asio.signal(sig1, sig2, sig3)
   return libasio.make_signal(libgce.self, sig1, sig2, sig3)
+end
+
+function asio.spt_option()
+  return libasio.make_sptopt()
+end
+
+function asio.serial_port(device, opt)
+  return libasio.make_serial_port(libgce.self, device, opt)
 end
 
 function asio.tcp_option()
@@ -131,16 +148,16 @@ asio.as_recv_some = gce.atom('as_recv_some')
 asio.as_send = gce.atom('as_send')
 asio.as_send_some = gce.atom('as_send_some')
 
-function asio.async_read(skt, length, ty)
+function asio.async_read(s, length, ty)
   ty = ty or asio.as_recv
   local m = gce.message(ty)
-  skt:async_read(length, m)
+  s:async_read(length, m)
 end
 
-function asio.async_write(skt, ch, ty)
+function asio.async_write(s, ch, ty)
   ty = ty or asio.as_send
   local m = gce.message(ty, ch)
-  skt:async_write(m)
+  s:async_write(m)
 end
 
 return asio

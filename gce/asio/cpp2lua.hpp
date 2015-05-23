@@ -20,6 +20,18 @@ namespace asio
 namespace lua
 {
 ///------------------------------------------------------------------------------
+/// spt_option
+///------------------------------------------------------------------------------
+inline void load(lua_State* L, int arg, sptopt_t& opt)
+{
+  detail::lua::load(L, arg, opt);
+}
+
+inline void push(lua_State* L, sptopt_t const& opt)
+{
+  detail::lua::push(L, opt);
+}
+///------------------------------------------------------------------------------
 /// tcp_option
 ///------------------------------------------------------------------------------
 inline void load(lua_State* L, int arg, tcpopt_t& opt)

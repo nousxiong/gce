@@ -13,12 +13,15 @@
 #include <gce/asio/config.hpp>
 #include <gce/asio/timer.hpp>
 #include <gce/asio/signal.hpp>
+#include <gce/asio/serial_port.hpp>
 #include <gce/asio/tcp/resolver.hpp>
 #include <gce/asio/tcp/acceptor.hpp>
 #include <gce/asio/tcp/socket.hpp>
 #ifdef GCE_OPENSSL
 # include <gce/asio/ssl/stream.hpp>
 #endif 
+#include <gce/asio/spt_option.hpp>
+#include <gce/asio/spt_option.adl.c2l.h>
 #include <gce/asio/tcp/option.hpp>
 #include <gce/asio/tcp/tcp_option.adl.c2l.h>
 #ifdef GCE_OPENSSL
@@ -234,6 +237,233 @@ struct signal
     
     lua_pushinteger(L, ec.value());
     return 1;
+  }
+};
+///------------------------------------------------------------------------------
+/// spt_option
+///------------------------------------------------------------------------------
+struct spt_option
+{
+  static int make(lua_State* L)
+  {
+    create(L);
+    return 1;
+  }
+
+  static void create(lua_State* L, sptopt_t const& opt = make_sptopt())
+  {
+#if GCE_PACKER == GCE_AMSG
+    adata::lua::push(L, opt, false);
+#elif GCE_PACKER == GCE_ADATA
+    adata::lua::push(L, opt);
+#endif
+  }
+};
+
+static void load(lua_State* L, int arg, sptopt_t& opt)
+{
+  if (arg != -1)
+  {
+    lua_pushvalue(L, arg);
+  }
+  adata::lua::load(L, opt);
+  if (arg != -1)
+  {
+    lua_pop(L, 1);
+  }
+}
+
+static void push(lua_State* L, sptopt_t const& opt)
+{
+  spt_option::create(L, opt);
+}
+///------------------------------------------------------------------------------
+/// serial_port
+///------------------------------------------------------------------------------
+struct serial_port
+{
+  static int make(lua_State* L)
+  {
+    try
+    {
+      gce::lua::actor_proxy* a = gce::lua::from_lua<gce::lua::actor_proxy>(L, 1, "actor");
+      void* block = lua_newuserdata(L, sizeof(asio::serial_port));
+      if (!block)
+      {
+        return luaL_error(L, "lua_newuserdata for serial_port failed");
+      }
+
+      asio::serial_port* o = 0;
+      if (lua_type(L, 2) == LUA_TSTRING)
+      {
+        char const* device = lua_tostring(L, 2);
+        o = new (block) asio::serial_port(*a, device);
+
+        int ty = lua_type(L, 3);
+        if (ty != LUA_TNONE || ty != LUA_TNIL)
+        {
+          sptopt_t opt;
+          load(L, 3, opt);
+
+          typedef boost::asio::serial_port_base spt_base_t;
+          if (opt.baud_rate != -1)
+          {
+            (*o)->set_option(spt_base_t::baud_rate((unsigned int)opt.baud_rate));
+          }
+          if (opt.flow_control != -1)
+          {
+            (*o)->set_option(spt_base_t::flow_control((spt_base_t::flow_control::type)opt.flow_control));
+          }
+          if (opt.parity != -1)
+          {
+            (*o)->set_option(spt_base_t::parity((spt_base_t::parity::type)opt.parity));
+          }
+          if (opt.stop_bits != -1)
+          {
+            (*o)->set_option(spt_base_t::stop_bits((spt_base_t::stop_bits::type)opt.stop_bits));
+          }
+          if (opt.character_size != -1)
+          {
+            (*o)->set_option(spt_base_t::character_size((unsigned int)opt.character_size));
+          }
+        }
+      }
+      else
+      {
+        o = new (block) asio::serial_port(*a);
+      }
+
+      lua_pushvalue(L, -1);
+      int k = gce::lualib::make_ref(L, "libasio");
+      (*a)->add_addon("libasio", k, o);
+      gce::lualib::setmetatab(L, "serial_port");
+    }
+    catch (std::exception& ex)
+    {
+      return luaL_error(L, ex.what());
+    }
+    return 1;
+  }
+
+  static int gc(lua_State* L)
+  {
+    asio::serial_port* o = static_cast<asio::serial_port*>(lua_touserdata(L, 1));
+    if (o)
+    {
+      o->~serial_port();
+    }
+    return 0;
+  }
+
+  static int async_read(lua_State* L)
+  {
+    asio::serial_port* o = gce::lua::from_lua<asio::serial_port>(L, 1, "serial_port");
+    size_t length = (size_t)luaL_checkinteger(L, 2);
+    if (lua_type(L, 3) == LUA_TUSERDATA)
+    {
+      gce::message* msg = gce::lua::from_lua<gce::lua::message>(L, 3);
+      o->async_read(length, *msg);
+    }
+    else
+    {
+      o->async_read(length);
+    }
+    return 0;
+  }
+
+  static int async_read_some(lua_State* L)
+  {
+    asio::serial_port* o = gce::lua::from_lua<asio::serial_port>(L, 1, "serial_port");
+    size_t length = (size_t)luaL_checkinteger(L, 2);
+    if (lua_type(L, 3) == LUA_TUSERDATA)
+    {
+      gce::message* msg = gce::lua::from_lua<gce::lua::message>(L, 3);
+      o->async_read_some(length, *msg);
+    }
+    else
+    {
+      o->async_read_some(length);
+    }
+    return 0;
+  }
+
+  static int async_write(lua_State* L)
+  {
+    asio::serial_port* o = gce::lua::from_lua<asio::serial_port>(L, 1, "serial_port");
+    gce::message* msg = gce::lua::from_lua<gce::lua::message>(L, 2);
+    if (lua_type(L, 3) == LUA_TNUMBER)
+    {
+      size_t length = (size_t)luaL_checkinteger(L, 3);
+      o->async_write(*msg, length);
+    }
+    else
+    {
+      o->async_write(*msg);
+    }
+    return 0;
+  }
+
+  static int async_write_some(lua_State* L)
+  {
+    asio::serial_port* o = gce::lua::from_lua<asio::serial_port>(L, 1, "serial_port");
+    gce::message* msg = gce::lua::from_lua<gce::lua::message>(L, 2);
+    size_t offset = 0;
+    size_t length = size_nil;
+
+    if (lua_type(L, 3) == LUA_TNUMBER)
+    {
+      offset = (size_t)luaL_checkinteger(L, 3);
+    }
+    if (lua_type(L, 4) == LUA_TNUMBER)
+    {
+      length = (size_t)luaL_checkinteger(L, 4);
+    }
+
+    o->async_write_some(*msg, offset, length);
+    return 0;
+  }
+
+  static int open(lua_State* L)
+  {
+    asio::serial_port* o = gce::lua::from_lua<asio::serial_port>(L, 1, "serial_port");
+    char const* device = luaL_checkstring(L, 2);
+    gce::errcode_t ec;
+    (*o)->open(device, ec);
+    lua_pushinteger(L, ec.value());
+    return 1;
+  }
+
+  static int is_open(lua_State* L)
+  {
+    asio::serial_port* o = gce::lua::from_lua<asio::serial_port>(L, 1, "serial_port");
+    bool rt = (*o)->is_open();
+    lua_pushboolean(L, rt != 0);
+    return 1;
+  }
+
+  static int send_break(lua_State* L)
+  {
+    asio::serial_port* o = gce::lua::from_lua<asio::serial_port>(L, 1, "serial_port");
+    gce::errcode_t ec;
+    (*o)->send_break(ec);
+    lua_pushinteger(L, ec.value());
+    return 1;
+  }
+
+  static int cancel(lua_State* L)
+  {
+    asio::serial_port* o = gce::lua::from_lua<asio::serial_port>(L, 1, "serial_port");
+    gce::errcode_t ignored_ec;
+    (*o)->cancel(ignored_ec);
+    return 0;
+  }
+
+  static int close(lua_State* L)
+  {
+    asio::serial_port* o = gce::lua::from_lua<asio::serial_port>(L, 1, "serial_port");
+    gce::errcode_t ignored_ec;
+    (*o)->close(ignored_ec);
+    return 0;
   }
 };
 ///------------------------------------------------------------------------------
