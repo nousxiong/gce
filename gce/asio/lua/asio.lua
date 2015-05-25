@@ -31,14 +31,14 @@ asio.ty_tcp_socket_impl = libasio.ty_tcp_socket_impl
 asio.sigint = libasio.sigint
 asio.sigterm = libasio.sigterm
 
-asio.none = 0
-asio.software = 1
-asio.hardware = 2
-asio.odd = 1
-asio.even = 2
-asio.one = 0
-asio.onepointfive = 1
-asio.two = 2
+asio.none = libasio.none
+asio.software = libasio.software
+asio.hardware = libasio.hardware
+asio.odd = libasio.odd
+asio.even = libasio.even
+asio.one = libasio.one
+asio.onepointfive = libasio.onepointfive
+asio.two = libasio.two
 
 if gce.openssl ~= 0 then
   asio.sslv2 = libasio.sslv2

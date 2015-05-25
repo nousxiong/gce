@@ -141,6 +141,16 @@ inline void make_libasio(lua_State* L)
   oss << "libasio.sigint = " << SIGINT << std::endl;
   oss << "libasio.sigterm = " << SIGTERM << std::endl;
 
+  /// serial_port
+  oss << "libasio.none = " << boost::asio::serial_port_base::flow_control::none << std::endl;
+  oss << "libasio.software = " << boost::asio::serial_port_base::flow_control::software << std::endl;
+  oss << "libasio.hardware = " << boost::asio::serial_port_base::flow_control::hardware << std::endl;
+  oss << "libasio.odd = " << boost::asio::serial_port_base::parity::odd << std::endl;
+  oss << "libasio.even = " << boost::asio::serial_port_base::parity::even << std::endl;
+  oss << "libasio.one = " << boost::asio::serial_port_base::stop_bits::one << std::endl;
+  oss << "libasio.onepointfive = " << boost::asio::serial_port_base::stop_bits::onepointfive << std::endl;
+  oss << "libasio.two = " << boost::asio::serial_port_base::stop_bits::two << std::endl;
+
 #ifdef GCE_OPENSSL
   /// method
   oss << "libasio.sslv2 = " << boost::asio::ssl::context::sslv2 << std::endl;
