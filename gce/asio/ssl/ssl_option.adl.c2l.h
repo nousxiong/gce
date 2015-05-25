@@ -9,7 +9,7 @@ namespace adata
 {
   namespace lua
   {
-    void load( lua_State * L, ::gce::asio::adl::ssl_option& value)
+    ADATA_INLINE void load( lua_State * L, ::gce::asio::adl::ssl_option& value)
     {
       lua_getfield(L, -1, "verify_paths");
       {
@@ -78,7 +78,7 @@ namespace adata
       {load(L, value.tmp_dh_file);lua_pop(L, 1);}
     }
 
-    void push( lua_State * L, ::gce::asio::adl::ssl_option const& value, bool use_adata = true)
+    ADATA_INLINE void push( lua_State * L, ::gce::asio::adl::ssl_option const& value, bool use_adata = true)
     {
       lua_createtable(L, 0, 28);
       if(use_adata && !set_metatable(L, "ad_mt_gce_asio_adl.ssl_option")){ luaL_error(L,"unknow type: gce_asio_adl.ssl_option"); }
