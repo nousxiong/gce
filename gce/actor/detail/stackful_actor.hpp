@@ -250,10 +250,6 @@ public:
     {
       stack_size = minimum_stacksize();
     }
-    else if (stack_size > default_stacksize())
-    {
-      stack_size = default_stacksize();
-    }
 
     boost::asio::spawn(
       base_t::snd_,
