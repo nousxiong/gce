@@ -138,6 +138,7 @@ public:
       else if (aid_t const* aid = m.get_relay<aid_t>())
       {
         GCE_ASSERT(*aid != aid_nil)(recver);
+        GCE_ASSERT(aid->type_ != (byte_t)actor_addon)(recver);
         pk.tag_ = *aid;
         m.clear_relay();
       }
@@ -174,6 +175,7 @@ public:
       else if (aid_t const* aid = m.get_relay<aid_t>())
       {
         GCE_ASSERT(*aid != aid_nil)(recver);
+        GCE_ASSERT(aid->type_ != (byte_t)actor_addon)(recver);
         pk.tag_ = *aid;
         m.clear_relay();
       }

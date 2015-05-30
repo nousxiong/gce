@@ -50,7 +50,7 @@ public:
 
   void send(aid_t const& recver, pack& pk)
   {
-    BOOST_ASSERT(recver.type_ != (byte_t)actor_addon);
+    GCE_ASSERT(recver.type_ != (byte_t)actor_addon);
     pk.concurrency_index_ = index_;
     pk.type_ = type_;
     bool already_exit = true;
@@ -120,7 +120,12 @@ public:
 public:
   void register_service(match_t name, aid_t const& svc)
   {
-    service_list_.insert(std::make_pair(name, svc));
+    std::pair<service_list_t::iterator, bool> pr = 
+      service_list_.insert(std::make_pair(name, svc));
+    if (!pr.second && pr.first->second != svc)
+    {
+      pr.first->second = svc;
+    }
   }
 
   aid_t find_service(match_t name)

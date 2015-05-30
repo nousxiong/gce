@@ -110,6 +110,17 @@ public:
     size_t len_;
   };
 
+  typedef detail::header_t header;
+
+  static header make_header(
+    uint32_t size = 0, 
+    match_t type = match_nil, 
+    uint32_t tag_offset = u32_nil
+    )
+  {
+    return detail::make_header(size, type, tag_offset);
+  }
+
 public:
   message()
     : tag_offset_(u32_nil)
