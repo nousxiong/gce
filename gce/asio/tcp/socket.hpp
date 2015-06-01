@@ -169,7 +169,7 @@ public:
           scp_.get()->get_attachment()[ha_recv],
           boost::bind(
             &self_t::handle_recv_length, scp_.get(),
-            boost::asio::placeholders::error, boost::asio::placeholders::bytes_transferred, length
+            boost::asio::placeholders::error, boost::asio::placeholders::bytes_transferred
             )
           )
         )
@@ -219,7 +219,7 @@ public:
           scp_.get()->get_attachment()[ha_recv],
           boost::bind(
             &self_t::handle_recv_length, scp_.get(),
-            boost::asio::placeholders::error, boost::asio::placeholders::bytes_transferred, length
+            boost::asio::placeholders::error, boost::asio::placeholders::bytes_transferred
             )
           )
         )
@@ -367,7 +367,7 @@ private:
     o->pri_send2actor(m);
   }
   
-  static void handle_recv_length(guard_ptr guard, errcode_t const& ec, size_t bytes_transferred, size_t length)
+  static void handle_recv_length(guard_ptr guard, errcode_t const& ec, size_t bytes_transferred)
   {
     self_t* o = guard->get();
     if (!o)
@@ -379,11 +379,11 @@ private:
 
     message& m = o->recv_msg_;
     packer& pkr = m.get_packer();
-    pkr.skip_write(length);
+    pkr.skip_write(bytes_transferred);
     m.end_write();
 
-    m.reset_write(packer::size_of(gce::adl::detail::errcode()) + length);
-    m << ec << message::skip(length) << bytes_transferred;
+    m.reset_write(packer::size_of(gce::adl::detail::errcode()) + bytes_transferred);
+    m << ec << message::skip(bytes_transferred);
 
     o->pri_send2actor(m);
   }
