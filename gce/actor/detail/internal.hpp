@@ -44,5 +44,10 @@ inline gce::adl::detail::errcode make_errcode(uint32_t code = 0, uint64_t errcat
 
 GCE_PACK(gce::detail::header_t, (v.size_)(v.type_)(v.tag_offset_));
 GCE_PACK(gce::adl::detail::errcode, (v.code_&sfix)(v.errcat_&sfix));
+GCE_PACK(gce::adl::detail::ctxid_list, (v.list_));
+GCE_PACK(gce::adl::detail::global_service_list, (v.list_));
+GCE_PACK(gce::adl::detail::svc_pair, (v.name_)(v.ctxid_));
+GCE_PACK(gce::adl::detail::add_svc, (v.svcs_));
+GCE_PACK(gce::adl::detail::rmv_svc, (v.ctxid_)(v.names_));
 
 #endif /// GCE_ACTOR_DETAIL_INTERNAL_HPP

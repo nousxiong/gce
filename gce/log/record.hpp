@@ -18,6 +18,11 @@
 
 namespace gce
 {
+template <typename T>
+struct tostring
+{
+};
+
 namespace log
 {
 class record
@@ -162,6 +167,13 @@ public:
   record& operator<<(T const* v)
   {
     str_.append(boost::lexical_cast<strbuf_t>(v).cbegin());
+    return *this;
+  }
+
+  template <typename T>
+  record& operator<<(T const& v)
+  {
+    str_.append(tostring<T>::convert(v));
     return *this;
   }
 

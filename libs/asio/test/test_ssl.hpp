@@ -88,8 +88,7 @@ private:
 
         skt.async_read(hdr_len + hdr.size_);
         message::chunk ch(hdr_len + hdr.size_);
-        size_t bytes_transferred = 0;
-        self->match(ssl::as_recv).recv(ec, ch, bytes_transferred);
+        self->match(ssl::as_recv).recv(ec, ch);
 
         zbuf.set_read(ch.data(), hdr_len + hdr.size_);
         std::string echo_str;

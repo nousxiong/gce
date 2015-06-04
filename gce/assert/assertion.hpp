@@ -25,11 +25,6 @@
 
 namespace gce
 {
-template <typename T>
-struct tostring
-{
-};
-
 class assert_except
   : public virtual std::exception
 {

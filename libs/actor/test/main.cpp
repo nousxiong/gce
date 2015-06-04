@@ -58,10 +58,12 @@ static std::size_t const test_count = 1;
 #include "test_remote_common_relay.hpp"
 #include "test_send_recv.hpp"
 #include "test_service.hpp"
+#include "test_services.hpp"
 #ifdef GCE_LUA
 # include "test_lua_actor.hpp"
 # include "test_lua_socket.hpp"
 # include "test_lua_service.hpp"
+# include "test_lua_services.hpp"
 #endif
 
 int main()
@@ -101,12 +103,14 @@ int main()
     gce::remote_relay_ut::run();
     gce::remote_common_relay_ut::run();
     gce::service_ut::run();
+    gce::services_ut::run();
 
     /// script test
 #ifdef GCE_LUA
     gce::lua_actor_ut::run();
     gce::lua_socket_ut::run();
     gce::lua_service_ut::run();
+    gce::lua_services_ut::run();
 #endif
   }
   catch (std::exception& ex)

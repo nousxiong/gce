@@ -199,22 +199,30 @@ inline detail::actor_index get_actor_index(adl::actor_id const& aid, ctxid_t ctx
   return ret;
 }
 
+/// actor nil value
+static adl::actor_id const aid_nil = adl::actor_id();
+
 namespace detail
 {
 inline bool check_local(gce::adl::actor_id const& aid, gce::ctxid_t ctxid)
 {
+  if (aid == aid_nil)
+  {
+    return false;
+  }
   return aid.ctxid_ == ctxid;
 }
 
 inline bool check_local_valid(gce::adl::actor_id const& aid, gce::ctxid_t ctxid, gce::timestamp_t timestamp)
 {
+  if (aid == aid_nil)
+  {
+    return false;
+  }
   GCE_ASSERT(aid.ctxid_ == ctxid)(ctxid)(aid);
   return aid.timestamp_ == timestamp;
 }
 } /// namespace detail
-
-/// actor nil value
-static adl::actor_id const aid_nil = adl::actor_id();
 
 typedef adl::actor_id aid_t;
 typedef adl::actor_id sktaid_t;

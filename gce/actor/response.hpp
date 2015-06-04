@@ -39,6 +39,12 @@ public:
     return boost::get<T>(&recver_);
   }
 
+  template <typename T>
+  void set_recver(T const& t)
+  {
+    recver_ = t;
+  }
+
 private:
   sid_t id_;
   aid_t aid_;

@@ -82,8 +82,7 @@ private:
 
         skt.async_read(hdr_len + hdr.size_);
         message::chunk ch(hdr_len + hdr.size_);
-        size_t bytes_transferred = 0;
-        self->match(tcp::as_recv).recv(ec, ch, bytes_transferred);
+        self->match(tcp::as_recv).recv(ec, ch);
 
         zbuf.set_read(ch.data(), hdr_len + hdr.size_);
         std::string echo_str;
@@ -272,7 +271,7 @@ private:
 
     try
     {
-      size_t cln_count = 100;
+      size_t cln_count = 1;
       errcode_t ec;
       attributes attrs;
       attrs.lg_ = lg;

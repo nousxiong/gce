@@ -116,6 +116,12 @@ public:
     base_t::pri_send_svc(recver, m);
   }
 
+  template <typename Recver>
+  void send(Recver recver, message const& m)
+  {
+    base_t::pri_send_svcs(recver, m);
+  }
+
   void relay(aid_t const& des, message& m)
   {
     base_t::pri_relay(des, m);
@@ -124,6 +130,12 @@ public:
   void relay(svcid_t const& des, message& m)
   {
     base_t::pri_relay_svc(des, m);
+  }
+
+  template <typename Recver>
+  void relay(Recver des, message& m)
+  {
+    base_t::pri_relay_svcs(des, m);
   }
 
   resp_t request(aid_t const& recver, message const& m)
@@ -137,6 +149,14 @@ public:
   {
     resp_t res(base_t::new_request(), base_t::get_aid(), recver);
     base_t::pri_request_svc(res, recver, m);
+    return res;
+  }
+
+  template <typename Recver>
+  resp_t request(Recver recver, message const& m)
+  {
+    resp_t res(base_t::new_request(), base_t::get_aid());
+    base_t::pri_request_svcs(res, recver, m);
     return res;
   }
 
@@ -252,7 +272,7 @@ public:
 
   void register_service(match_t name, aid_t const& svc, actor_type type, size_t concurrency_index)
   {
-    pack pk = make_register_pack(type, concurrency_index);
+    pack pk = make_pack(type, concurrency_index);
     message m(msg_reg_svc);
     m << name << svc;
     pk.msg_ = m;
@@ -261,16 +281,34 @@ public:
 
   void deregister_service(match_t name, aid_t const& svc, actor_type type, size_t concurrency_index)
   {
-    pack pk = make_register_pack(type, concurrency_index);
+    pack pk = make_pack(type, concurrency_index);
     message m(msg_dereg_svc);
     m << name << svc;
     pk.msg_ = m;
     on_recv(pk);
   }
 
+  void add_service(match_t name, ctxid_t ctxid, actor_type type, size_t concurrency_index)
+  {
+    pack pk = make_pack(type, concurrency_index);
+    message m(msg_add_svc);
+    m << name << ctxid;
+    pk.msg_ = m;
+    on_recv(pk);
+  }
+
+  void rmv_service(match_t name, ctxid_t ctxid, actor_type type, size_t concurrency_index)
+  {
+    pack pk = make_pack(type, concurrency_index);
+    message m(msg_rmv_svc);
+    m << name << ctxid;
+    pk.msg_ = m;
+    on_recv(pk);
+  }
+
   void register_socket(ctxid_pair_t ctxid_pr, aid_t const& skt, actor_type type, size_t concurrency_index)
   {
-    pack pk = make_register_pack(type, concurrency_index);
+    pack pk = make_pack(type, concurrency_index);
     message m(msg_reg_skt);
     m << ctxid_pr << skt;
     pk.msg_ = m;
@@ -279,7 +317,7 @@ public:
 
   void deregister_socket(ctxid_pair_t ctxid_pr, aid_t const& skt, actor_type type, size_t concurrency_index)
   {
-    pack pk = make_register_pack(type, concurrency_index);
+    pack pk = make_pack(type, concurrency_index);
     message m(msg_dereg_skt);
     m << ctxid_pr << skt;
     pk.msg_ = m;
@@ -320,7 +358,7 @@ private:
     }
   }
 
-  pack make_register_pack(actor_type type, size_t concurrency_index)
+  pack make_pack(actor_type type, size_t concurrency_index)
   {
     pack pk;
     pk.concurrency_index_ = concurrency_index;
@@ -364,6 +402,20 @@ private:
         aid_t svc;
         pk.msg_ >> name >> svc;
         base_t::basic_svc_.deregister_service(name, svc);
+      }
+      else if (type == msg_add_svc)
+      {
+        match_t name;
+        ctxid_t ctxid;
+        pk.msg_ >> name >> ctxid;
+        base_t::basic_svc_.add_service(name, ctxid);
+      }
+      else if (type == msg_rmv_svc)
+      {
+        match_t name;
+        ctxid_t ctxid;
+        pk.msg_ >> name >> ctxid;
+        base_t::basic_svc_.rmv_service(name, ctxid);
       }
       else
       {

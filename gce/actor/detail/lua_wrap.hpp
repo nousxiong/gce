@@ -1419,6 +1419,28 @@ struct actor
     a->send(svcid, *msg);
     return 0;
   }
+  
+  static int send2svcs(lua_State* L)
+  {
+    proxy_t* o = to_obj<proxy_t>(L, 1, "actor");
+
+#if GCE_PACKER == GCE_AMSG
+    int arg2check = lua_isuserdata(L, 2);
+#elif GCE_PACKER == GCE_ADATA
+    int arg2check = lua_istable(L, 2);
+#endif
+    luaL_argcheck(L, arg2check, 2, "'match' expected");
+
+    gce::message* msg = to_obj<message>(L, 3);
+
+    gce::match_t name;
+    load(L, 2, name);
+
+    proxy_t& a = *o;
+
+    a->send(name, *msg);
+    return 0;
+  }
 
   static int relay(lua_State* L)
   {
@@ -1461,6 +1483,28 @@ struct actor
     proxy_t& a = *o;
 
     a->relay(svcid, *msg);
+    return 0;
+  }
+  
+  static int relay2svcs(lua_State* L)
+  {
+    proxy_t* o = to_obj<proxy_t>(L, 1, "actor");
+
+#if GCE_PACKER == GCE_AMSG
+    int arg2check = lua_isuserdata(L, 2);
+#elif GCE_PACKER == GCE_ADATA
+    int arg2check = lua_istable(L, 2);
+#endif
+    luaL_argcheck(L, arg2check, 2, "'match' expected");
+
+    gce::message* msg = to_obj<message>(L, 3);
+
+    gce::match_t name;
+    load(L, 2, name);
+
+    proxy_t& a = *o;
+
+    a->relay(name, *msg);
     return 0;
   }
 
@@ -1506,6 +1550,29 @@ struct actor
     proxy_t& a = *o;
 
     gce::resp_t resp = a->request(svcid, *msg);
+    response::create(L, resp);
+    return 1;
+  }
+  
+  static int request2svcs(lua_State* L)
+  {
+    proxy_t* o = to_obj<proxy_t>(L, 1, "actor");
+
+#if GCE_PACKER == GCE_AMSG
+    int arg2check = lua_isuserdata(L, 2);
+#elif GCE_PACKER == GCE_ADATA
+    int arg2check = lua_istable(L, 2);
+#endif
+    luaL_argcheck(L, arg2check, 2, "'match' expected");
+
+    gce::message* msg = to_obj<message>(L, 3);
+
+    gce::match_t name;
+    load(L, 2, name);
+
+    proxy_t& a = *o;
+
+    gce::resp_t resp = a->request(name, *msg);
     response::create(L, resp);
     return 1;
   }

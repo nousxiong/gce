@@ -7,36 +7,34 @@
 /// See https://github.com/nousxiong/gce for latest version.
 ///
 
-#include <gce/detail/scope.hpp>
-
 namespace gce
 {
-class service_ut
+class lua_services_ut
 {
 public:
   static void run()
   {
-    std::cout << "service_ut begin." << std::endl;
+    std::cout << "lua lua_services_ut begin." << std::endl;
     for (std::size_t i=0; i<test_count; ++i)
     {
-      test_common();
+      test_base();
       if (test_count > 1) std::cout << "\r" << i;
     }
     if (test_count > 1) std::cout << std::endl;
-    std::cout << "service_ut end." << std::endl;
+    std::cout << "lua lua_services_ut end." << std::endl;
   }
 
 private:
-  static void test_common()
+  static void test_base()
   {
-    log::asio_logger lgr;
-    log::logger_t lg = boost::bind(&gce::log::asio_logger::output, &lgr, _arg1, "");
     try
     {
-      std::size_t echo_num = 100;
+      std::size_t echo_num = 10;
 
+      gce::log::asio_logger lg;
       attributes attrs;
-      attrs.lg_ = lg;
+      attrs.lg_ = boost::bind(&gce::log::asio_logger::output, &lg, _arg1, "");
+      
       attrs.id_ = atom("router");
       context ctx(attrs);
       attrs.id_ = atom("one");
@@ -52,60 +50,29 @@ private:
       opt.is_router = 1;
       gce::bind(base, "tcp://127.0.0.1:14923", remote_func_list_t(), opt);
 
-      spawn(
-        base2,
-        boost::bind(
-          &service_ut::echo_service, _arg1
-          ),
-        monitored
-        );
-      svcid_t echo_svc = make_svcid("two", "echo_svc");
+      spawn(base1, "test_lua_actor/services.lua", monitored);
+      spawn(base2, "test_lua_actor/services.lua", monitored);
 
       opt.reconn_period = seconds(1);
       connect(base1, "router", "tcp://127.0.0.1:14923", opt);
       connect(base2, "router", "tcp://127.0.0.1:14923", opt);
-      base2.sleep_for(millisecs(100));
+      base2.sleep_for(millisecs(200));
 
       for (std::size_t i=0; i<echo_num; ++i)
       {
-        base1->send(echo_svc, "echo");
+        base1->send("echo_svc", "echo");
         base1->recv("echo");
       }
-      base1->send(echo_svc, "end");
 
+      base1->send(make_svcid("one", "echo_svc"), "end");
+      base1->send(make_svcid("two", "echo_svc"), "end");
+
+      base1->recv(exit);
       base2->recv(exit);
     }
     catch (std::exception& ex)
     {
       std::cerr << ex.what() << std::endl;
-    }
-  }
-
-  static void echo_service(stackful_actor self)
-  {
-    try
-    {
-      register_service(self, "echo_svc");
-
-      while (true)
-      {
-        message msg;
-        aid_t sender = self.recv(msg);
-        match_t type = msg.get_type();
-        if (type == atom("echo"))
-        {
-          self.send(sender, msg);
-        }
-        else
-        {
-          break;
-        }
-      }
-      deregister_service(self, "echo_svc");
-    }
-    catch (std::exception& ex)
-    {
-      std::cerr << "echo except: " << ex.what() << std::endl;
     }
   }
 };

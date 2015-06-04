@@ -11,19 +11,19 @@
 
 namespace gce
 {
-class service_ut
+class services_ut
 {
 public:
   static void run()
   {
-    std::cout << "service_ut begin." << std::endl;
+    std::cout << "services_ut begin." << std::endl;
     for (std::size_t i=0; i<test_count; ++i)
     {
       test_common();
       if (test_count > 1) std::cout << "\r" << i;
     }
     if (test_count > 1) std::cout << std::endl;
-    std::cout << "service_ut end." << std::endl;
+    std::cout << "services_ut end." << std::endl;
   }
 
 private:
@@ -33,47 +33,62 @@ private:
     log::logger_t lg = boost::bind(&gce::log::asio_logger::output, &lgr, _arg1, "");
     try
     {
-      std::size_t echo_num = 100;
+      size_t ctx_num = 5;
+      size_t echo_num = 100;
+      typedef boost::shared_ptr<context> context_ptr;
 
       attributes attrs;
-      attrs.lg_ = lg;
       attrs.id_ = atom("router");
       context ctx(attrs);
-      attrs.id_ = atom("one");
-      context ctx1(attrs);
-      attrs.id_ = atom("two");
-      context ctx2(attrs);
-      
+
+      std::vector<context_ptr> ctx_list(ctx_num);
+      for (size_t i=0; i<ctx_num; ++i)
+      {
+        attrs.id_ = to_match(i);
+        ctx_list[i] = boost::make_shared<context>(attrs);
+      }
+
       threaded_actor base = spawn(ctx);
-      threaded_actor base1 = spawn(ctx1);
-      threaded_actor base2 = spawn(ctx2);
+
+      std::deque<threaded_actor> base_list(ctx_num);
+      for (size_t i=0; i<ctx_num; ++i)
+      {
+        base_list[i] = spawn(*ctx_list[i]);
+      }
       
       netopt_t opt = make_netopt();
       opt.is_router = 1;
       gce::bind(base, "tcp://127.0.0.1:14923", remote_func_list_t(), opt);
 
-      spawn(
-        base2,
-        boost::bind(
-          &service_ut::echo_service, _arg1
-          ),
-        monitored
-        );
-      svcid_t echo_svc = make_svcid("two", "echo_svc");
+      BOOST_FOREACH(threaded_actor& base, base_list)
+      {
+        spawn(base, boost::bind(&services_ut::echo_service, _arg1), monitored);
+      }
 
       opt.reconn_period = seconds(1);
-      connect(base1, "router", "tcp://127.0.0.1:14923", opt);
-      connect(base2, "router", "tcp://127.0.0.1:14923", opt);
-      base2.sleep_for(millisecs(100));
+      BOOST_FOREACH(threaded_actor& base, base_list)
+      {
+        connect(base, "router", "tcp://127.0.0.1:14923", opt);
+      }
+      base.sleep_for(millisecs(200));
 
+      threaded_actor& base1 = base_list[0];
+      ctxid_t curr = ctxid_nil;
       for (std::size_t i=0; i<echo_num; ++i)
       {
-        base1->send(echo_svc, "echo");
-        base1->recv("echo");
+        base1->send("echo_svc", "echo");
+        aid_t sender = base1->recv("echo");
+        GCE_VERIFY(curr != sender.ctxid_);
+        curr = sender.ctxid_;
       }
-      base1->send(echo_svc, "end");
 
-      base2->recv(exit);
+      for (std::size_t i=0; i<ctx_num; ++i)
+      {
+        svcid_t svcid = make_svcid(i, "echo_svc");
+        threaded_actor& base = base_list[i];
+        base->send(svcid, "end");
+        base->recv(exit);
+      }
     }
     catch (std::exception& ex)
     {

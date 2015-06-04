@@ -79,6 +79,16 @@ public:
       );
   }
 
+  template <typename Recver>
+  void send(Recver recver, message const& m)
+  {
+    base_t::snd_.post(
+      boost::bind(
+        &base_t::pri_send_svcs, this, to_match(recver), m
+        )
+      );
+  }
+
   void relay(aid_t const& des, message& m)
   {
     base_t::snd_.post(
@@ -93,6 +103,16 @@ public:
     base_t::snd_.post(
       boost::bind(
         &base_t::pri_relay_svc, this, des, m
+        )
+      );
+  }
+
+  template <typename Recver>
+  void relay(Recver des, message const& m)
+  {
+    base_t::snd_.post(
+      boost::bind(
+        &base_t::pri_relay_svcs, this, to_match(des), m
         )
       );
   }
@@ -116,6 +136,19 @@ public:
       boost::bind(
         &base_t::pri_request_svc, this,
         res, recver, m
+        )
+      );
+    return res;
+  }
+
+  template <typename Recver>
+  resp_t request(Recver recver, message const& m)
+  {
+    resp_t res(base_t::new_request(), base_t::get_aid());
+    base_t::snd_.post(
+      boost::bind(
+        &base_t::pri_request_svcs, this,
+        res, to_match(recver), m
         )
       );
     return res;

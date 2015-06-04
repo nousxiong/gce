@@ -117,9 +117,7 @@ public:
         );
     svc_.register_socket(ctxid_pr, base_t::get_aid());
 
-    message m(msg_login);
-    m << base_t::ctxid_;
-    send(m);
+    send_login();
 
     boost::asio::spawn(
       base_t::snd_,
@@ -195,6 +193,63 @@ private:
     pack& pk = base_t::basic_svc_.alloc_pack(target);
     pk = src;
     svc_.send(target, pk);
+  }
+
+  void handle_svc_msg(message& msg)
+  {
+    match_t ty = msg.get_type();
+    if (ty == msg_add_svc)
+    {
+      adl::detail::add_svc svcs;
+      msg >> svcs;
+
+      tmp_add_svc_.svcs_.clear();
+      BOOST_FOREACH(adl::detail::svc_pair const& sp, svcs.svcs_)
+      {
+        match_t name = sp.name_;
+        ctxid_t ctxid = sp.ctxid_;
+        /// only deal with none self ctx 's svcs
+        if (ctxid != base_t::ctxid_)
+        {
+          if (!base_t::basic_svc_.has_service(name, ctxid))
+          {
+            base_t::ctx_.add_service(name, ctxid, base_t::basic_svc_.get_type(), base_t::basic_svc_.get_index());
+            tmp_add_svc_.svcs_.push_back(sp);
+          }
+        }
+      }
+
+      if (!tmp_add_svc_.svcs_.empty())
+      {
+        base_t::basic_svc_.broadcast_add_service(base_t::get_aid(), tmp_add_svc_);
+      }
+    }
+    else if (ty == msg_rmv_svc)
+    {
+      adl::detail::rmv_svc svcs;
+      msg >> svcs;
+      ctxid_t ctxid = svcs.ctxid_;
+
+      /// only deal with none self ctx 's svcs
+      if (ctxid != base_t::ctxid_)
+      {
+        tmp_rmv_svc_.ctxid_ = ctxid;
+        tmp_rmv_svc_.names_.clear();
+        BOOST_FOREACH(match_t const& name, svcs.names_)
+        {
+          if (base_t::basic_svc_.has_service(name, ctxid))
+          {
+            base_t::ctx_.rmv_service(name, ctxid, base_t::basic_svc_.get_type(), base_t::basic_svc_.get_index());
+            tmp_rmv_svc_.names_.push_back(name);
+          }
+        }
+
+        if (!tmp_rmv_svc_.names_.empty())
+        {
+          base_t::basic_svc_.broadcast_rmv_service(base_t::get_aid(), tmp_rmv_svc_);
+        }
+      }
+    }
   }
 
   void handle_net_msg(message& msg)
@@ -526,6 +581,7 @@ private:
           if (ec)
           {
             on_neterr(base_t::get_aid(), ec);
+            base_t::basic_svc_.rmv_peer_services(base_t::get_aid(), curr_pr.first);
             --curr_reconn_;
             if (curr_reconn_ == 0)
             {
@@ -549,8 +605,14 @@ private:
             if (type == msg_login_ret)
             {
               ctxid_pair_t ctxid_pr;
-              msg >> ctxid_pr;
+              adl::detail::global_service_list glb_svc_list;
+              msg >> ctxid_pr >> glb_svc_list;
               curr_pr = sync_ctxid(ctxid_pr, curr_pr);
+              base_t::basic_svc_.merge_global_service_list(base_t::get_aid(), glb_svc_list);
+            }
+            else if (type == msg_add_svc || type == msg_rmv_svc)
+            {
+              handle_svc_msg(msg);
             }
             else if (type != msg_hb)
             {
@@ -614,6 +676,7 @@ private:
           if (ec)
           {
             on_neterr(base_t::get_aid(), ec);
+            base_t::basic_svc_.rmv_peer_services(base_t::get_aid(), curr_pr.first);
             close();
             exc = exit_neterr;
             exit_msg = ec.message();
@@ -624,19 +687,31 @@ private:
             match_t type = msg.get_type();
             if (type == msg_login)
             {
+              adl::detail::global_service_list peer_glb_svc_list;
               ctxid_pair_t ctxid_pr =
                 std::make_pair(
                   ctxid_nil,
                   is_router_ ? socket_joint : socket_comm
                   );
-              msg >> ctxid_pr.first;
+              msg >> ctxid_pr.first >> peer_glb_svc_list;
               curr_pr = sync_ctxid(ctxid_pr, curr_pr);
+
+              base_t::basic_svc_.merge_global_service_list(base_t::get_aid(), peer_glb_svc_list);
+
               message m(msg_login_ret);
               m << std::make_pair(
                 base_t::ctxid_,
                 is_router_ ? socket_router : socket_comm
                 );
+              adl::detail::global_service_list glb_svc_list;
+              base_t::basic_svc_.get_global_service_list(glb_svc_list);
+              m << glb_svc_list;
+
               send(m);
+            }
+            else if (type == msg_add_svc || type == msg_rmv_svc)
+            {
+              handle_svc_msg(msg);
             }
             else if (type != msg_hb)
             {
@@ -709,29 +784,33 @@ private:
 
   void handle_recv(pack& pk)
   {
-    GCE_ASSERT(!check_local(pk.recver_, base_t::ctxid_))(pk.recver_)(base_t::ctxid_);
-    if (link_t* link = boost::get<link_t>(&pk.tag_))
+    match_t ty = pk.msg_.get_type();
+    if (ty != msg_add_svc && ty != msg_rmv_svc)
     {
-      add_straight_link(link->get_aid(), pk.recver_);
+      GCE_ASSERT(!check_local(pk.recver_, base_t::ctxid_))(pk.recver_)(base_t::ctxid_);
+      if (link_t* link = boost::get<link_t>(&pk.tag_))
+      {
+        add_straight_link(link->get_aid(), pk.recver_);
+      }
+      else if (exit_t* ex = boost::get<exit_t>(&pk.tag_))
+      {
+        remove_straight_link(ex->get_aid(), pk.recver_);
+      }
+      else if (fwd_link_t* link = boost::get<fwd_link_t>(&pk.tag_))
+      {
+        add_router_link(link->get_aid(), pk.recver_, link->get_skt());
+        pk.tag_ = link_t(link->get_type(), link->get_aid());
+      }
+      else if (fwd_exit_t* ex = boost::get<fwd_exit_t>(&pk.tag_))
+      {
+        remove_router_link(ex->get_aid(), pk.recver_);
+        pk.tag_ = exit_t(ex->get_code(), ex->get_aid());
+      }
+      pk.msg_.push_tag(
+        pk.tag_, pk.recver_, pk.svc_,
+        pk.skt_, pk.is_err_ret_
+        );
     }
-    else if (exit_t* ex = boost::get<exit_t>(&pk.tag_))
-    {
-      remove_straight_link(ex->get_aid(), pk.recver_);
-    }
-    else if (fwd_link_t* link = boost::get<fwd_link_t>(&pk.tag_))
-    {
-      add_router_link(link->get_aid(), pk.recver_, link->get_skt());
-      pk.tag_ = link_t(link->get_type(), link->get_aid());
-    }
-    else if (fwd_exit_t* ex = boost::get<fwd_exit_t>(&pk.tag_))
-    {
-      remove_router_link(ex->get_aid(), pk.recver_);
-      pk.tag_ = exit_t(ex->get_code(), ex->get_aid());
-    }
-    pk.msg_.push_tag(
-      pk.tag_, pk.recver_, pk.svc_,
-      pk.skt_, pk.is_err_ret_
-      );
     send(pk.msg_);
   }
 
@@ -1098,9 +1177,7 @@ private:
       conn_ = true;
       start_heartbeat(boost::bind(&self_t::reconn, this));
 
-      message m(msg_login);
-      m << base_t::ctxid_;
-      send(m);
+      send_login();
     }
     return ec;
   }
@@ -1133,6 +1210,20 @@ private:
     }
 
     return ec;
+  }
+
+  void send_login()
+  {
+    message m(msg_login);
+    m << base_t::ctxid_;
+
+    /// send self global service list to remote
+    adl::detail::global_service_list glb_svc_list;
+    base_t::basic_svc_.get_global_service_list(glb_svc_list);
+
+    m << glb_svc_list;
+
+    send(m);
   }
 
   void close()
@@ -1238,6 +1329,8 @@ private:
   log::logger_t& lg_;
 
   packer pkr_;
+  adl::detail::add_svc tmp_add_svc_;
+  adl::detail::rmv_svc tmp_rmv_svc_;
 };
 }
 }

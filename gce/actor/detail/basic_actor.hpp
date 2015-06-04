@@ -122,6 +122,15 @@ public:
     }
   }
 
+  void pri_send_svcs(match_t recver, message const& m)
+  {
+    svcid_t svcid = basic_svc_.filter_svcid(recver);
+    if (svcid != svcid_nil)
+    {
+      pri_send_svc(svcid, m);
+    }
+  }
+
   void pri_relay(aid_t const& recver, message& m)
   {
     aid_t target = basic_svc_.filter_aid(recver);
@@ -197,6 +206,15 @@ public:
     }
   }
 
+  void pri_relay_svcs(match_t recver, message& m)
+  {
+    svcid_t svcid = basic_svc_.filter_svcid(recver);
+    if (svcid != svcid_nil)
+    {
+      pri_relay_svc(svcid, m);
+    }
+  }
+
   void pri_request(resp_t const& res, aid_t recver, message const& m)
   {
     aid_t target = basic_svc_.filter_aid(recver);
@@ -239,6 +257,16 @@ public:
       pk.msg_ = m;
 
       basic_svc_.send(target, pk);
+    }
+  }
+
+  void pri_request_svcs(resp_t& res, match_t recver, message const& m)
+  {
+    svcid_t svcid = basic_svc_.filter_svcid(recver);
+    if (svcid != svcid_nil)
+    {
+      res.set_recver(svcid);
+      pri_request_svc(res, svcid, m);
     }
   }
 
