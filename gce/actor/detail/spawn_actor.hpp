@@ -24,7 +24,7 @@ namespace detail
 template <typename Context>
 inline aid_t make_stackful_actor(
   aid_t const& sire, typename Context::stackful_service_t& svc,
-  actor_func<stackful, Context> const& f, size_t stack_size
+  actor_func<stackful, Context> const& f, size_t stack_size, link_type type
   )
 {
   typedef Context context_t;
@@ -32,7 +32,7 @@ inline aid_t make_stackful_actor(
   a->init(f.f_);
   if (sire != aid_nil)
   {
-    send(*a, sire, msg_new_actor);
+    send(*a, sire, msg_new_actor, (uint16_t)type);
   }
   aid_t aid = a->get_aid();
   a->start(stack_size);
@@ -42,7 +42,7 @@ inline aid_t make_stackful_actor(
 template <typename Context>
 inline aid_t make_stackless_actor(
   aid_t const& sire, typename Context::stackless_service_t& svc,
-  actor_func<stackless, Context> const& f
+  actor_func<stackless, Context> const& f, link_type type
   )
 {
   typedef Context context_t;
@@ -50,7 +50,7 @@ inline aid_t make_stackless_actor(
   a->init(f.f_);
   if (sire != aid_nil)
   {
-    send(*a, sire, msg_new_actor);
+    send(*a, sire, msg_new_actor, (uint16_t)type);
   }
   aid_t aid = a->get_aid();
   a->start();
@@ -129,7 +129,7 @@ inline aid_t spawn(
     boost::bind(
       &make_stackful_actor<context_t>,
       sire.get_aid(), boost::ref(svc),
-      make_actor_func<stackful, context_t>(f), stack_size
+      make_actor_func<stackful, context_t>(f), stack_size, type
       )
     );
   return end_spawn(sire, type);
@@ -151,7 +151,7 @@ inline aid_t spawn(
     boost::bind(
       &make_stackless_actor<context_t>,
       sire.get_aid(), boost::ref(svc),
-      make_actor_func<stackless, context_t>(f)
+      make_actor_func<stackless, context_t>(f), type
       )
     );
   return end_spawn(sire, type);
@@ -196,7 +196,7 @@ inline void spawn(
     boost::bind(
       &make_stackless_actor<context_t>,
       sire.get_aid(), boost::ref(svc),
-      make_actor_func<stackless, context_t>(f)
+      make_actor_func<stackless, context_t>(f), type
       )
     );
 

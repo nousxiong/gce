@@ -60,6 +60,10 @@ gce.no_link = libgce.no_link
 gce.linked = libgce.linked
 gce.monitored = libgce.monitored
 
+gce.stackful = libgce.stackful
+gce.stackless = libgce.stackless
+gce.luaed = libgce.luaed
+
 gce.luaver = libgce.luaver
 
 gce.infin = libgce.infin
@@ -290,14 +294,25 @@ function gce.connect(target, ep, opt)
 	return libgce.conn_ret, libgce.conn_errmsg
 end
 
-function gce.spawn(script, link_type, sync_sire)
+function gce.spawn(func, link_type, sync_sire)
 	link_type = link_type or gce.no_link
 	sync_sire = sync_sire or false
-	local co = libgce.self:spawn(script, sync_sire, link_type)
+	local co = libgce.self:spawn(gce.luaed, func, sync_sire, link_type, gce.stacksize())
 	if co ~= nil then
 		coroutine.yield(co)
 	end
 	return libgce.spawn_aid
+end
+
+function gce.spawn_native(spw_type, func, link_type, sync_sire, stack_size)
+  link_type = link_type or gce.no_link
+  sync_sire = sync_sire or false
+  stack_size = stack_size or gce.stacksize()
+  local co = libgce.self:spawn(spw_type, func, sync_sire, link_type, stack_size)
+  if co ~= nil then
+    coroutine.yield(co)
+  end
+  return libgce.spawn_aid
 end
 
 function gce.spawn_remote(spw_type, func, ctxid, link_type, stack_size, tmo)
@@ -348,7 +363,7 @@ function gce.duration(v)
 		dur.ty_ = gce.dur_raw
 		return dur
 	else
-		error("gce.packer invalid")
+		error('gce.packer invalid')
 	end
 end
 
@@ -362,7 +377,7 @@ function gce.millisecs(v)
 		dur.ty_ = gce.dur_millisec
 		return dur
 	else
-		error("gce.packer invalid")
+		error('gce.packer invalid')
 	end
 end
 
@@ -376,7 +391,7 @@ function gce.seconds(v)
 		dur.ty_ = gce.dur_second
 		return dur
 	else
-		error("gce.packer invalid")
+		error('gce.packer invalid')
 	end
 end
 
@@ -390,7 +405,7 @@ function gce.minutes(v)
 		dur.ty_ = gce.dur_minute
 		return dur
 	else
-		error("gce.packer invalid")
+		error('gce.packer invalid')
 	end
 end
 
@@ -404,7 +419,7 @@ function gce.hours(v)
 		dur.ty_ = gce.dur_hour
 		return dur
 	else
-		error("gce.packer invalid")
+		error('gce.packer invalid')
 	end
 end
 
@@ -448,7 +463,7 @@ function gce.actor_id()
 	elseif gce.packer == gce.pkr_adata then
 		return aid_adl.actor_id()
 	else
-		error("gce.packer invalid")
+		error('gce.packer invalid')
 	end
 end
 
@@ -458,7 +473,7 @@ function gce.service_id()
 	elseif gce.packer == gce.pkr_adata then
 		return svcid_adl.service_id()
 	else
-		error("gce.packer invalid")
+		error('gce.packer invalid')
 	end
 end
 
@@ -493,7 +508,7 @@ function gce.atom(v)
       assert (v.adtype ~= nil)
       assert (v:adtype() == mt_adl.match)
     else
-      error("gce.packer invalid")
+      error('gce.packer invalid')
     end
     return v
 	end
@@ -569,7 +584,7 @@ function gce.make_match(v)
     mt.val_ = v
     return mt
   else
-    error("gce.packer invalid")
+    error('gce.packer invalid')
   end
 end
 
@@ -670,7 +685,7 @@ if gce.packer == gce.pkr_adata then
   set_method(tmp_dur, '__add', libgce.dur_add)
   set_method(tmp_dur, '__sub', libgce.dur_sub)
   set_method(tmp_dur, '__tostring', libgce.dur_tostring)
-	set_method(tmp_dur, "type", function (dur) return dur.ty_ end)
+	set_method(tmp_dur, 'type', function (dur) return dur.ty_ end)
 end
 
 function libgce.typeof(o)

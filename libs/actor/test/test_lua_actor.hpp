@@ -36,17 +36,31 @@ private:
     }
   }
 
+  static void native_actor(stackful_actor self)
+  {
+    try
+    {
+      aid_t sender = self->recv();
+      self->reply(sender);
+    }
+    catch (std::exception& ex)
+    {
+      std::cerr << "native_actor except: " << ex.what() << std::endl;
+    }
+  }
+
   static void test_base()
   {
     try
     {
       gce::log::asio_logger lg;
-      attributes attrs;
-      attrs.lg_ = boost::bind(&gce::log::asio_logger::output, &lg, _arg1, "");
+      context::init_t init;
+      init.attrs_.lg_ = boost::bind(&gce::log::asio_logger::output, &lg, _arg1, "");
+      init.add_native_func<stackful>("my_native", boost::bind(&lua_actor_ut::native_actor, _arg1));
       std::size_t free_actor_num = 10;
       std::size_t user_thr_num = 5;
       std::size_t my_actor_size = free_actor_num + user_thr_num * 2;
-      context ctx(attrs);
+      context ctx(init);
       threaded_actor base = spawn(ctx);
 
       aid_t base_aid = base.get_aid();

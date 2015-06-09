@@ -18,6 +18,12 @@ set (LINK_LIBS ${Boost_LIBRARIES} ${CMAKE_THREAD_LIBS_INIT})
 if (UNIX)
   set (LINK_LIBS ${LINK_LIBS} rt)
 endif ()
+if (GCE_LUA)
+  set(LINK_LIBS ${LINK_LIBS} ${Lua_LIBRARIES})
+  if (UNIX)
+    set (LINK_LIBS ${LINK_LIBS} dl)
+  endif ()
+endif ()
 
 # Not only x64 linux need this, but all linux gcc, we need this.
 if (CMAKE_COMPILER_IS_GNUCXX AND NOT MINGW)

@@ -17,7 +17,12 @@ gce.actor(
 		local base_id = args[1]
 
 		for i=1, size do
-			local sender = gce.spawn('test_lua_actor/my_child.lua')
+			local sender
+			if i % 2 == 0 then
+				sender = gce.spawn('test_lua_actor/my_child.lua')
+			else
+				sender = gce.spawn_native(gce.stackful, 'my_native')
+			end
 			res_list[i] = gce.request(sender)
 		end
 

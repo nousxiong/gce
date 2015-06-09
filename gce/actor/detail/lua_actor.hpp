@@ -14,6 +14,7 @@
 #include <gce/actor/message.hpp>
 #include <gce/actor/net_option.hpp>
 #include <gce/actor/exception.hpp>
+#include <gce/actor/detail/spawn_actor.hpp>
 #include <gce/actor/detail/basic_addon.hpp>
 #include <gce/actor/detail/remote.hpp>
 #include <gce/actor/detail/service.hpp>
@@ -38,6 +39,8 @@ private:
   typedef basic_actor<context_t> base_t;
   typedef lua_actor<context_t> self_t;
   typedef lua_service<self_t> service_t;
+  typedef typename context_t::stackful_service_t stackful_service_t;
+  typedef typename context_t::stackless_service_t stackless_service_t;
 
   struct addon
   {
@@ -225,24 +228,82 @@ public:
     return is_yield;
   }
 
-  bool spawn(std::string const& script, bool sync_sire, int type)
+  bool spawn(int spw_ty, std::string const& func, bool sync_sire, int type, size_t stack_size)
   {
-    service_t* svc = 0;
-    if (sync_sire)
+    spawn_type spw_type = (spawn_type)spw_ty;
+    if (spw_type == spw_stackful)
     {
-      svc = &svc_;
+      stackful_service_t* svc = 0;
+      if (sync_sire)
+      {
+        svc = &base_t::ctx_.select_service<stackful_service_t>(svc_.get_index());
+      }
+      else
+      {
+        svc = &base_t::ctx_.select_service<stackful_service_t>();
+      }
+
+      remote_func<context_t>* f = svc_.get_native_func(func);
+      if (f == 0)
+      {
+        message msg;
+        handle_spawn(aid_nil, msg);
+        return false;
+      }
+
+      svc->get_strand().post(
+        boost::bind(
+          &self_t::spawn_stackful,
+          base_t::get_aid(), svc, f, stack_size, (link_type)type
+          )
+        );
+    }
+    else if (spw_type == spw_stackless)
+    {
+      stackless_service_t* svc = 0;
+      if (sync_sire)
+      {
+        svc = &base_t::ctx_.select_service<stackless_service_t>(svc_.get_index());
+      }
+      else
+      {
+        svc = &base_t::ctx_.select_service<stackless_service_t>();
+      }
+
+      remote_func<context_t>* f = svc_.get_native_func(func);
+      if (f == 0)
+      {
+        message msg;
+        handle_spawn(aid_nil, msg);
+        return false;
+      }
+
+      svc->get_strand().post(
+        boost::bind(
+          &self_t::spawn_stackless,
+          base_t::get_aid(), svc, f, (link_type)type
+          )
+        );
     }
     else
     {
-      svc = &base_t::ctx_.select_service<service_t>();
-    }
+      service_t* svc = 0;
+      if (sync_sire)
+      {
+        svc = &svc_;
+      }
+      else
+      {
+        svc = &base_t::ctx_.select_service<service_t>();
+      }
 
-    svc->get_strand().post(
-      boost::bind(
-        &service_t::spawn_actor, svc, 
-        script, base_t::get_aid(), (link_type)type
-        )
-      );
+      svc->get_strand().post(
+        boost::bind(
+          &service_t::spawn_actor, svc, 
+          func, base_t::get_aid(), (link_type)type
+          )
+        );
+    }
 
     message msg;
     aid_t sender;
@@ -480,6 +541,22 @@ private:
       return lua::ec_guard;
     }
     return lua::ec_ok;
+  }
+
+  static void spawn_stackful(
+    aid_t const& sire, stackful_service_t* svc, 
+    remote_func<context_t>* f, size_t stack_size, link_type type
+    )
+  {
+    make_stackful_actor<context_t>(sire, *svc, f->af_, stack_size, type);
+  }
+
+  static void spawn_stackless(
+    aid_t const& sire, stackless_service_t* svc, 
+    remote_func<context_t>* f, link_type type
+    )
+  {
+    make_stackless_actor<context_t>(sire, *svc, f->ef_, type);
   }
 
   bool pri_recv_match(pattern const& patt, aid_t& sender, message& msg)
@@ -753,12 +830,12 @@ private:
 
   void handle_spawn(aid_t aid, message& msg)
   {
-    uint16_t ty = u16_nil;
-    msg >> ty;
-    link_type type = (link_type)ty;
-
     if (aid != aid_nil)
     {
+      uint16_t ty = u16_nil;
+      msg >> ty;
+      link_type type = (link_type)ty;
+
       if (type == linked)
       {
         link(aid);

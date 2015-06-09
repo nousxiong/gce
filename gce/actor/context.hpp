@@ -22,6 +22,7 @@
 #endif
 #include <gce/actor/detail/socket_actor.hpp>
 #include <gce/actor/detail/acceptor_actor.hpp>
+#include <gce/actor/detail/actor_function.hpp>
 #include <gce/detail/dynarray.hpp>
 #include <gce/detail/unique_ptr.hpp>
 #include <boost/atomic.hpp>
@@ -56,8 +57,31 @@ public:
   typedef detail::acceptor_actor<context> acceptor_actor_t;
   typedef detail::network_service<acceptor_actor_t> acceptor_service_t;
 
+  typedef std::map<match_t, detail::remote_func<context> > native_func_list_t;
+
+  struct init_t
+  {
+    init_t()
+    {
+    }
+
+    template <typename Tag, typename Match, typename F>
+    void add_native_func(Match type, F f)
+    {
+      native_func_list_.insert(
+        std::make_pair(
+          to_match(type), 
+          detail::make_actor_func<Tag, context>(f)
+          )
+        );
+    }
+
+    attributes attrs_;
+    native_func_list_t native_func_list_;
+  };
+
 public:
-  explicit context(attributes attrs = attributes())
+  explicit context(attributes const& attrs = attributes())
     : attrs_(attrs)
     , timestamp_((timestamp_t)boost::chrono::system_clock::now().time_since_epoch().count())
     , stopped_(false)
@@ -86,87 +110,43 @@ public:
     , acceptor_service_list_(service_size_)
     , curr_acceptor_svc_(0)
     , threaded_actor_list_(service_size_)
-    , lg_(attrs.lg_)
+    , lg_(attrs_.lg_)
   {
-    if (attrs_.ios_)
-    {
-      ios_.reset(attrs_.ios_, boost::null_deleter());
-    }
-    else
-    {
-      ios_.reset(new io_service_t(attrs_.thread_num_));
-    }
-    work_ = boost::in_place(boost::ref(*ios_));
+    init();
+  }
 
-    try
-    {
-      size_t index = 0;
-      for (size_t i=0; i<service_size_; ++i, ++index)
-      {
-        strand_list_.emplace_back(boost::ref(*ios_));
-        strand_t& snd = strand_list_.back();
-        threaded_service_list_.emplace_back(boost::ref(*this), boost::ref(snd), index);
-        stackful_service_list_.emplace_back(boost::ref(*this), boost::ref(snd), index);
-        stackless_service_list_.emplace_back(boost::ref(*this), boost::ref(snd), index);
+  explicit context(init_t const& in)
+    : attrs_(in.attrs_)
+    , timestamp_((timestamp_t)boost::chrono::system_clock::now().time_since_epoch().count())
+    , stopped_(false)
+    , service_size_(
+        attrs_.thread_num_ == 0 ? 
+          attrs_.per_thread_service_num_ : 
+          attrs_.thread_num_ * attrs_.per_thread_service_num_
+        )
+    , concurrency_size_(service_size_ + attrs_.nonblocked_num_)
+    , strand_list_(concurrency_size_)
+    , threaded_service_list_(service_size_)
+    , curr_threaded_svc_(0)
+    , stackful_service_list_(service_size_)
+    , curr_stackful_svc_(0)
+    , stackless_service_list_(service_size_)
+    , curr_stackless_svc_(0)
 #ifdef GCE_LUA
-        lua_service_list_.emplace_back(boost::ref(*this), boost::ref(snd), index);
+    , lua_service_list_(service_size_)
+    , curr_lua_svc_(0)
 #endif
-        socket_service_list_.emplace_back(boost::ref(*this), boost::ref(snd), index);
-        acceptor_service_list_.emplace_back(boost::ref(*this), boost::ref(snd), index);
-      }
-
-      for (size_t i=0; i<attrs_.nonblocked_num_; ++i, ++index)
-      {
-        strand_list_.emplace_back(boost::ref(*ios_));
-        strand_t& snd = strand_list_.back();
-        nonblocked_service_list_.emplace_back(boost::ref(*this), boost::ref(snd), index);
-        nonblocked_actor_list_.emplace_back(boost::ref(*this), boost::ref(nonblocked_service_list_[i]), index);
-      }
-
-#ifdef GCE_LUA
-      if (attrs_.lua_gce_path_list_.empty())
-      {
-        attrs_.lua_gce_path_list_.push_back(".");
-      }
-      std::string lua_gce_path;
-      BOOST_FOREACH(std::string& path, attrs_.lua_gce_path_list_)
-      {
-        path += "?.lua";
-        lua_gce_path += path;
-        lua_gce_path += ";";
-      }
-      lua_gce_path.erase(--lua_gce_path.end());
-
-      std::vector<lua_register_t>& lua_reg_list = attrs_.lua_reg_list_;
-      for (size_t i=0; i<service_size_; ++i)
-      {
-        lua_service_list_[i].make_libgce(lua_gce_path);
-        lua_State* L = lua_service_list_[i].get_lua_state();
-        BOOST_FOREACH(lua_register_t& lua_reg, lua_reg_list)
-        {
-          lua_reg(L);
-        }
-      }
-#endif
-
-      for (size_t i=0; i<attrs_.thread_num_; ++i)
-      {
-        thread_group_.create_thread(
-          boost::bind(
-            &context::run, this, i,
-            attrs_.thread_begin_cb_list_,
-            attrs_.thread_end_cb_list_
-            )
-          );
-      }
-    }
-    catch (...)
-    {
-      GCE_ERROR(lg_)(__FILE__)(__LINE__) << 
-        boost::current_exception_diagnostic_information();
-      stop();
-      throw;
-    }
+    , nonblocked_service_list_(attrs_.nonblocked_num_)
+    , nonblocked_actor_list_(attrs_.nonblocked_num_)
+    , curr_nonblocked_actor_(0)
+    , socket_service_list_(service_size_)
+    , curr_socket_svc_(0)
+    , acceptor_service_list_(service_size_)
+    , curr_acceptor_svc_(0)
+    , threaded_actor_list_(service_size_)
+    , lg_(attrs_.lg_)
+  {
+    init(in.native_func_list_);
   }
 
   ~context()
@@ -408,6 +388,89 @@ public:
 #endif
 
 private:
+  void init(native_func_list_t const& native_func_list = native_func_list_t())
+  {
+    if (attrs_.ios_)
+    {
+      ios_.reset(attrs_.ios_, boost::null_deleter());
+    }
+    else
+    {
+      ios_.reset(new io_service_t(attrs_.thread_num_));
+    }
+    work_ = boost::in_place(boost::ref(*ios_));
+
+    try
+    {
+      size_t index = 0;
+      for (size_t i=0; i<service_size_; ++i, ++index)
+      {
+        strand_list_.emplace_back(boost::ref(*ios_));
+        strand_t& snd = strand_list_.back();
+        threaded_service_list_.emplace_back(boost::ref(*this), boost::ref(snd), index);
+        stackful_service_list_.emplace_back(boost::ref(*this), boost::ref(snd), index);
+        stackless_service_list_.emplace_back(boost::ref(*this), boost::ref(snd), index);
+#ifdef GCE_LUA
+        lua_service_list_.emplace_back(boost::ref(*this), boost::ref(snd), index, native_func_list);
+#endif
+        socket_service_list_.emplace_back(boost::ref(*this), boost::ref(snd), index);
+        acceptor_service_list_.emplace_back(boost::ref(*this), boost::ref(snd), index);
+      }
+
+      for (size_t i=0; i<attrs_.nonblocked_num_; ++i, ++index)
+      {
+        strand_list_.emplace_back(boost::ref(*ios_));
+        strand_t& snd = strand_list_.back();
+        nonblocked_service_list_.emplace_back(boost::ref(*this), boost::ref(snd), index);
+        nonblocked_actor_list_.emplace_back(boost::ref(*this), boost::ref(nonblocked_service_list_[i]), index);
+      }
+
+#ifdef GCE_LUA
+      if (attrs_.lua_gce_path_list_.empty())
+      {
+        attrs_.lua_gce_path_list_.push_back(".");
+      }
+      std::string lua_gce_path;
+      BOOST_FOREACH(std::string& path, attrs_.lua_gce_path_list_)
+      {
+        path += "?.lua";
+        lua_gce_path += path;
+        lua_gce_path += ";";
+      }
+      lua_gce_path.erase(--lua_gce_path.end());
+
+      std::vector<lua_register_t>& lua_reg_list = attrs_.lua_reg_list_;
+      for (size_t i=0; i<service_size_; ++i)
+      {
+        lua_service_list_[i].make_libgce(lua_gce_path);
+        lua_State* L = lua_service_list_[i].get_lua_state();
+        BOOST_FOREACH(lua_register_t& lua_reg, lua_reg_list)
+        {
+          lua_reg(L);
+        }
+      }
+#endif
+
+      for (size_t i=0; i<attrs_.thread_num_; ++i)
+      {
+        thread_group_.create_thread(
+          boost::bind(
+            &context::run, this, i,
+            attrs_.thread_begin_cb_list_,
+            attrs_.thread_end_cb_list_
+            )
+          );
+      }
+    }
+    catch (...)
+    {
+      GCE_ERROR(lg_)(__FILE__)(__LINE__) << 
+        boost::current_exception_diagnostic_information();
+      stop();
+      throw;
+    }
+  }
+
   void run(
     thrid_t id,
     std::vector<thread_callback_t> const& begin_cb_list,

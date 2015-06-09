@@ -1744,17 +1744,20 @@ struct actor
   {
     proxy_t* o = to_obj<proxy_t>(L, 1, "actor");
 
+    int spw_ty = (int)luaL_checkinteger(L, 2);
+
     size_t len = 0;
-    char const* scr = luaL_checklstring(L, 2, &len);
+    char const* func = luaL_checklstring(L, 3, &len);
 
-    luaL_argcheck(L, lua_isboolean(L, 3), 3, "'boolean' expected");
-    bool sync_sire = lua_toboolean(L, 3) != 0;
+    luaL_argcheck(L, lua_isboolean(L, 4), 4, "'boolean' expected");
+    bool sync_sire = lua_toboolean(L, 4) != 0;
 
-    int type = (int)luaL_checkinteger(L, 4);
+    int type = (int)luaL_checkinteger(L, 5);
+    size_t stack_size = (size_t)luaL_checkinteger(L, 6);
 
     proxy_t& a = *o;
 
-    bool r = a->spawn(std::string(scr, len), sync_sire, type);
+    bool r = a->spawn(spw_ty, std::string(func, len), sync_sire, type, stack_size);
     push_coro(L, a, r);
     return 1;
   }

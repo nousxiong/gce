@@ -450,7 +450,7 @@ private:
   {
     spawn_type type = spw.get_type();
     GCE_ASSERT(type == spw_stackful)(type);
-    aid_t aid = make_stackful_actor<context_t>(aid_nil, svc, f.af_, spw.get_stack_size());
+    aid_t aid = make_stackful_actor<context_t>(aid_nil, svc, f.af_, spw.get_stack_size(), no_link);
     base_t::snd_.post(
       boost::bind(
         &self_t::end_spawn_remote_actor, this, spw, aid
@@ -464,7 +464,7 @@ private:
   {
     spawn_type type = spw.get_type();
     GCE_ASSERT(type == spw_stackless)(type);
-    aid_t aid = make_stackless_actor<context_t>(aid_nil, svc, f.ef_);
+    aid_t aid = make_stackless_actor<context_t>(aid_nil, svc, f.ef_, no_link);
     base_t::snd_.post(
       boost::bind(
         &self_t::end_spawn_remote_actor, this, spw, aid

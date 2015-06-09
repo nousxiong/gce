@@ -17,6 +17,7 @@
 #include <gce/actor/detail/inpool_service.hpp>
 #include <gce/actor/detail/actor_pool.hpp>
 #include <gce/actor/detail/send.hpp>
+#include <gce/actor/detail/actor_function.hpp>
 #include <gce/detail/unique_ptr.hpp>
 #include <sstream>
 #include <map>
@@ -51,9 +52,15 @@ class lua_service
 public:
   typedef typename actor_t::type type;
   typedef typename actor_t::context_t context_t;
+  typedef std::map<match_t, remote_func<context_t> > native_func_list_t;
 
 public:
-  lua_service(context_t& ctx, strand_t& snd, size_t index)
+  lua_service(
+    context_t& ctx, 
+    strand_t& snd, 
+    size_t index, 
+    native_func_list_t const& native_func_list = native_func_list_t()
+    )
     : base_t(ctx, snd, index)
     , init_lua_script_("\
         local p = gce_path \
@@ -66,6 +73,7 @@ public:
         actor_t::get_pool_reserve_size(base_t::ctx_.get_attributes())
         )
     , lg_(ctx.get_logger())
+    , native_func_list_(native_func_list)
   {
   }
 
@@ -280,6 +288,10 @@ public:
     oss << "libgce.linked = " << gce::linked << std::endl;
     oss << "libgce.monitored = " << gce::monitored << std::endl;
 
+    oss << "libgce.stackful = " << gce::detail::spw_stackful << std::endl;
+    oss << "libgce.stackless = " << gce::detail::spw_stackless << std::endl;
+    oss << "libgce.luaed = " << gce::detail::spw_luaed<< std::endl;
+
     oss << "libgce.stacksize = " << default_stacksize() << std::endl;
 
 #if GCE_LUA_VERSION == GCE_LUA51
@@ -375,10 +387,10 @@ public:
     return L_.get();
   }
 
-  aid_t spawn_actor(std::string const& script, aid_t sire, link_type type)
+  aid_t spawn_actor(std::string const& func, aid_t sire, link_type type)
   {
     actor_t* a = make_actor();
-    a->init(script);
+    a->init(func);
     if (sire != aid_nil)
     {
       gce::detail::send(*a, sire, msg_new_actor, (uint16_t)type);
@@ -386,6 +398,17 @@ public:
     aid_t aid = a->get_aid();
     a->start();
     return aid;
+  }
+
+  remote_func<context_t>* get_native_func(std::string const& func)
+  {
+    typename native_func_list_t::iterator itr(native_func_list_.find(to_match(func)));
+    if (itr == native_func_list_.end())
+    {
+      return 0;
+    }
+
+    return &itr->second;
   }
 
 protected:
@@ -402,6 +425,8 @@ private:
   typedef std::map<std::string, int> script_list_t;
   script_list_t script_list_;
   log::logger_t& lg_;
+
+  native_func_list_t native_func_list_;
 };
 }
 }
