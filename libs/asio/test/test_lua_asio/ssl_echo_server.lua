@@ -44,9 +44,9 @@ gce.actor(
     ssl_opt.default_workarounds = 1
     ssl_opt.no_sslv2 = 1
     ssl_opt.single_dh_use = 1
-    ssl_opt.certificate_chain_file = 'ssl_pem/server.pem'
-    ssl_opt.private_key_file = 'ssl_pem/server.pem'
-    ssl_opt.tmp_dh_file = 'ssl_pem/dh512.pem'
+    ssl_opt.certificate_chain_file = 'test_ssl_asio/server.pem'
+    ssl_opt.private_key_file = 'test_ssl_asio/server.pem'
+    ssl_opt.tmp_dh_file = 'test_ssl_asio/dh512.pem'
     local ssl_ctx = asio.ssl_context(asio.sslv23, ssl_opt, pwd_cb)
 
     gce.send(base_aid, 'ready')

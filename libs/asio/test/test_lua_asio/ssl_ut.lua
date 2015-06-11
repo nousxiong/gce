@@ -28,7 +28,7 @@ gce.actor(
     local eitr = args[2]
 
     local ssl_opt = asio.ssl_option()
-    ssl_opt.verify_file = 'ssl_pem/ca.pem'
+    ssl_opt.verify_file = 'test_ssl_asio/ca.pem'
     local ssl_ctx = asio.ssl_context(asio.sslv23, ssl_opt)
 
     for i=1, cln_count do
