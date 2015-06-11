@@ -54,8 +54,8 @@ if (GCE_OPENSSL)
   add_custom_command (
     TARGET gce_asio_ut
     POST_BUILD
-    COMMAND ${CMAKE_COMMAND} -E echo "copy test used openssl files to build dir..."
-    COMMAND ${CMAKE_COMMAND} -E copy_directory ${CMAKE_CURRENT_SOURCE_DIR}/ssl_pem ${PROJECT_BINARY_DIR}/libs/asio/test/ssl_pem
+    COMMAND ${CMAKE_COMMAND} -E echo "copy openssl files to gce.asio.test build dir..."
+    COMMAND ${CMAKE_COMMAND} -E copy_directory ${CMAKE_CURRENT_SOURCE_DIR}/test_ssl_asio ${PROJECT_BINARY_DIR}/libs/asio/test/test_ssl_asio
     COMMAND ${CMAKE_COMMAND} -E echo "done."
     VERBATIM
     )
@@ -74,5 +74,5 @@ if (GCE_LUA)
   install (DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/test_lua_asio DESTINATION bin)
 endif ()
 if (GCE_OPENSSL)
-  install (DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/ssl_pem DESTINATION bin)
+  install (DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/test_ssl_asio DESTINATION bin)
 endif ()

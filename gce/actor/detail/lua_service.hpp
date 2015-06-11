@@ -190,6 +190,7 @@ public:
 #endif
         .begin_userdata("actor")
           .add_function("get_aid", lua_actor_t::get_aid)
+          .add_function("get_ctxid", lua_actor_t::get_ctxid)
           .add_function("init_coro", lua_actor_t::init_coro)
           .add_function("send", lua_actor_t::send)
           .add_function("send2svc", lua_actor_t::send2svc)

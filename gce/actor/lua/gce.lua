@@ -353,6 +353,10 @@ function gce.get_aid()
 	return libgce.self:get_aid()
 end
 
+function gce.get_ctxid()
+  return libgce.self:get_ctxid()
+end
+
 function gce.duration(v)
 	v = v or 0
 	if gce.packer == gce.pkr_amsg then

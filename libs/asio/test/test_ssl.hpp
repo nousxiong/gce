@@ -249,9 +249,9 @@ private:
           | boost::asio::ssl::context::no_sslv2
           | boost::asio::ssl::context::single_dh_use);
       ssl_ctx.set_password_callback(boost::bind(&ssl_ut::get_password));
-      ssl_ctx.use_certificate_chain_file("ssl_pem/server.pem");
-      ssl_ctx.use_private_key_file("ssl_pem/server.pem", boost::asio::ssl::context::pem);
-      ssl_ctx.use_tmp_dh_file("ssl_pem/dh512.pem");
+      ssl_ctx.use_certificate_chain_file("test_ssl_asio/server.pem");
+      ssl_ctx.use_private_key_file("test_ssl_asio/server.pem", boost::asio::ssl::context::pem);
+      ssl_ctx.use_tmp_dh_file("test_ssl_asio/dh512.pem");
 
       while (true)
       {
@@ -318,7 +318,7 @@ private:
 
       boost::shared_ptr<boost::asio::ssl::context> ssl_ctx = 
         boost::make_shared<boost::asio::ssl::context>(boost::asio::ssl::context::sslv23);
-      ssl_ctx->load_verify_file("ssl_pem/ca.pem");
+      ssl_ctx->load_verify_file("test_ssl_asio/ca.pem");
       
       for (size_t i=0; i<cln_count; ++i)
       {

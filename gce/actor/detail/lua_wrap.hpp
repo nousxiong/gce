@@ -1360,6 +1360,17 @@ struct actor
     return 1;
   }
 
+  static int get_ctxid(lua_State* L)
+  {
+    proxy_t* o = to_obj<proxy_t>(L, 1, "actor");
+
+    proxy_t& a = *o;
+
+    ctxid_t ctxid = a->get_context().get_ctxid();
+    push(L, ctxid);
+    return 1;
+  }
+
   static int init_coro(lua_State* L)
   {
     proxy_t* o = to_obj<proxy_t>(L, 1, "actor");
