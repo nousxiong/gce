@@ -22,11 +22,11 @@ local netopt_adl = nil
 local aid_adl = nil
 local svcid_adl = nil
 if gce.packer == gce.pkr_adata then
-	mt_adl = require('match_adl')
+  mt_adl = require('match_adl')
   aid_adl = require('actor_id_adl')
-	svcid_adl = require('service_id_adl')
-	dur_adl = require('duration_adl')
-	netopt_adl = require('net_option_adl')
+  svcid_adl = require('service_id_adl')
+  dur_adl = require('duration_adl')
+  netopt_adl = require('net_option_adl')
 end
 
 libgce.init_nil()
@@ -76,69 +76,69 @@ gce.err_nil = libgce.err_nil
 -- functions
 function gce.actor(f)
   local co = coroutine.create(f)
-	libgce.self:init_coro(co, gce.resume)
+  libgce.self:init_coro(co, gce.resume)
   gce.resume(co)
 end
 
 function gce.resume(co)
-	local rt, err = coroutine.resume(co)
+  local rt, err = coroutine.resume(co)
   if not rt then
-  	error(err)
+    error(err)
   end
 end
 
 function gce.send(target, cfg, ...)
-	local oty = libgce.typeof(target)
-	local m = gce.message(cfg, ...)
-	if oty == gce.ty_actor_id then
-		libgce.self:send(target, m)
-	elseif oty == gce.ty_service_id then
-		libgce.self:send2svc(target, m)
-	else
-		local name = gce.atom(target)
-		libgce.self:send2svcs(name, m)
-	end
+  local oty = libgce.typeof(target)
+  local m = gce.message(cfg, ...)
+  if oty == gce.ty_actor_id then
+    libgce.self:send(target, m)
+  elseif oty == gce.ty_service_id then
+    libgce.self:send2svc(target, m)
+  else
+    local name = gce.atom(target)
+    libgce.self:send2svcs(name, m)
+  end
 end
 
 function gce.relay(target, m)
-	local oty = libgce.typeof(target)
-	if oty == gce.ty_actor_id then
-		libgce.self:relay(target, m)
-	elseif oty == gce.ty_service_id then
-		libgce.self:relay2svc(target, m)
-	else
-		local name = gce.atom(target)
-		libgce.self:relay2svcs(name, m)
-	end
+  local oty = libgce.typeof(target)
+  if oty == gce.ty_actor_id then
+    libgce.self:relay(target, m)
+  elseif oty == gce.ty_service_id then
+    libgce.self:relay2svc(target, m)
+  else
+    local name = gce.atom(target)
+    libgce.self:relay2svcs(name, m)
+  end
 end
 
 function gce.request(target, cfg, ...)
   local oty = libgce.typeof(target)
-	local m = gce.message(cfg, ...)
-	if oty == gce.ty_actor_id then
-		return libgce.self:request(target, m)
-	elseif oty == gce.ty_service_id then
-		return libgce.self:request2svc(target, m)
-	else
-		local name = gce.atom(target)
-		return libgce.self:request2svcs(name, m)
-	end
+  local m = gce.message(cfg, ...)
+  if oty == gce.ty_actor_id then
+    return libgce.self:request(target, m)
+  elseif oty == gce.ty_service_id then
+    return libgce.self:request2svc(target, m)
+  else
+    local name = gce.atom(target)
+    return libgce.self:request2svcs(name, m)
+  end
 end
 
 function gce.reply(target, cfg, ...)
-	local m = gce.message(cfg, ...)
-	assert (libgce.typeof(target) == gce.ty_actor_id)
-	libgce.self:reply(target, m)
+  local m = gce.message(cfg, ...)
+  assert (libgce.typeof(target) == gce.ty_actor_id)
+  libgce.self:reply(target, m)
 end
 
 function gce.link(target)
-	assert (libgce.typeof(target) == gce.ty_actor_id)
-	libgce.self:link(target)
+  assert (libgce.typeof(target) == gce.ty_actor_id)
+  libgce.self:link(target)
 end
 
 function gce.monitor(target)
-	assert (libgce.typeof(target) == gce.ty_actor_id)
-	libgce.self:monitor(target)
+  assert (libgce.typeof(target) == gce.ty_actor_id)
+  libgce.self:monitor(target)
 end
 
 function gce.match(...)
@@ -149,7 +149,7 @@ function gce.match(...)
   end
   local matches = receiver.matches
   if receiver.resp == nil then
-  	receiver.resp = {}
+    receiver.resp = {}
   end
 
   local resp = receiver.resp
@@ -175,48 +175,48 @@ function gce.match(...)
 end
 
 function gce.recv(cfg, ...)
-	local co = nil
-	if cfg == nil then
-  	co = libgce.self:recv()
-	else
-		local ty = type(cfg)
-		local patt
-		if ty == 'table' and cfg.adtype == nil then
-			-- match_t*N + [aid/svcid] + [timeout] (N >= 0)
-			local tmo, recver
-			local last_idx = #cfg
-			assert (last_idx >= 1)
+  local co = nil
+  if cfg == nil then
+    co = libgce.self:recv()
+  else
+    local ty = type(cfg)
+    local patt
+    if ty == 'table' and cfg.adtype == nil then
+      -- match_t*N + [aid/svcid] + [timeout] (N >= 0)
+      local tmo, recver
+      local last_idx = #cfg
+      assert (last_idx >= 1)
 
       local last = cfg[last_idx]
       local last_ty = libgce.typeof(last)
       if last_ty ~= gce.ty_match then
-      	if last_ty == gce.ty_duration then
-      		tmo = last
-					cfg[last_idx] = nil
-					if last_idx - 1 >= 1 then
-						local last_sec = cfg[last_idx - 1]
-						local last_sec_ty = libgce.typeof(last_sec)
-						if last_sec_ty == gce.ty_actor_id or last_sec_ty == gce.ty_service_id then
-							recver = last_sec
-							cfg[last_idx - 1] = nil
-						end
-					end
-				else
-					recver = last
-					cfg[last_idx] = nil
-				end
-			end
+        if last_ty == gce.ty_duration then
+          tmo = last
+          cfg[last_idx] = nil
+          if last_idx - 1 >= 1 then
+            local last_sec = cfg[last_idx - 1]
+            local last_sec_ty = libgce.typeof(last_sec)
+            if last_sec_ty == gce.ty_actor_id or last_sec_ty == gce.ty_service_id then
+              recver = last_sec
+              cfg[last_idx - 1] = nil
+            end
+          end
+        else
+          recver = last
+          cfg[last_idx] = nil
+        end
+      end
 
-		  patt = gce.pattern(libgce.unpack(cfg))
-		  if tmo ~= nil then
-		  	patt:set_timeout(tmo)
-		  end
-		  if recver ~= nil then
-		  	gce.set_match_recver(patt, recver)
-		  end
-		elseif ty == 'string' or ty == 'number' then
-			patt = gce.pattern(cfg)
-		else
+      patt = gce.pattern(libgce.unpack(cfg))
+      if tmo ~= nil then
+        patt:set_timeout(tmo)
+      end
+      if recver ~= nil then
+        gce.set_match_recver(patt, recver)
+      end
+    elseif ty == 'string' or ty == 'number' then
+      patt = gce.pattern(cfg)
+    else
       local oty = libgce.typeof(cfg)
       if oty == gce.ty_pattern then
         patt = cfg
@@ -227,13 +227,13 @@ function gce.recv(cfg, ...)
         patt = libgce.make_patt()
         patt:set_timeout(cfg)
       end
-		end
-		co = libgce.self:recv_match(patt)
-	end
-	if co ~= nil then
-		coroutine.yield(co)
-	end
-	local args = nil
+    end
+    co = libgce.self:recv_match(patt)
+  end
+  if co ~= nil then
+    coroutine.yield(co)
+  end
+  local args = nil
   if libgce.recv_ec == gce.ec_ok then
     args = gce.unpack(libgce.recv_msg, ...)
   end
@@ -241,28 +241,28 @@ function gce.recv(cfg, ...)
 end
 
 function gce.respond(cfg, ...)
-	assert (cfg ~= nil)
-	local ty = type(cfg)
-	local res, tmo
-	if ty == 'table' then
-		res = cfg[1]
-		tmo = cfg[2]
-	else
-		assert (ty == 'userdata')
-		res = cfg
-		tmo = nil
-	end
+  assert (cfg ~= nil)
+  local ty = type(cfg)
+  local res, tmo
+  if ty == 'table' then
+    res = cfg[1]
+    tmo = cfg[2]
+  else
+    assert (ty == 'userdata')
+    res = cfg
+    tmo = nil
+  end
 
-	local co = nil
-	if tmo == nil then
-		co = libgce.self:recv_response(res)
-	else
-		co = libgce.self:recv_response_timeout(res, tmo)
-	end
-	if co ~= nil then
-		coroutine.yield(co)
-	end
-	local args = nil
+  local co = nil
+  if tmo == nil then
+    co = libgce.self:recv_response(res)
+  else
+    co = libgce.self:recv_response_timeout(res, tmo)
+  end
+  if co ~= nil then
+    coroutine.yield(co)
+  end
+  local args = nil
   if libgce.recv_ec == gce.ec_ok then
     args = gce.unpack(libgce.recv_msg, ...)
   end
@@ -270,38 +270,38 @@ function gce.respond(cfg, ...)
 end
 
 function gce.sleep_for(dur)
-	local co = libgce.self:sleep_for(dur)
-	if co ~= nil then
-		coroutine.yield(co)
-	end
+  local co = libgce.self:sleep_for(dur)
+  if co ~= nil then
+    coroutine.yield(co)
+  end
 end
 
 function gce.bind(ep, opt)
   opt = opt or gce.net_option()
-	local co = libgce.self:bind(ep, opt)
-	if co ~= nil then
-		coroutine.yield(co)
-	end
+  local co = libgce.self:bind(ep, opt)
+  if co ~= nil then
+    coroutine.yield(co)
+  end
 end
 
 function gce.connect(target, ep, opt)
   opt = opt or gce.net_option()
-	target = gce.atom(target)
-	local co = libgce.self:connect(target, ep, opt)
-	if co ~= nil then
-		coroutine.yield(co)
-	end
-	return libgce.conn_ret, libgce.conn_errmsg
+  target = gce.atom(target)
+  local co = libgce.self:connect(target, ep, opt)
+  if co ~= nil then
+    coroutine.yield(co)
+  end
+  return libgce.conn_ret, libgce.conn_errmsg
 end
 
 function gce.spawn(func, link_type, sync_sire)
-	link_type = link_type or gce.no_link
-	sync_sire = sync_sire or false
-	local co = libgce.self:spawn(gce.luaed, func, sync_sire, link_type, gce.stacksize())
-	if co ~= nil then
-		coroutine.yield(co)
-	end
-	return libgce.spawn_aid
+  link_type = link_type or gce.no_link
+  sync_sire = sync_sire or false
+  local co = libgce.self:spawn(gce.luaed, func, sync_sire, link_type, gce.stacksize())
+  if co ~= nil then
+    coroutine.yield(co)
+  end
+  return libgce.spawn_aid
 end
 
 function gce.spawn_native(spw_type, func, link_type, sync_sire, stack_size)
@@ -316,41 +316,41 @@ function gce.spawn_native(spw_type, func, link_type, sync_sire, stack_size)
 end
 
 function gce.spawn_remote(spw_type, func, ctxid, link_type, stack_size, tmo)
-	link_type = link_type or gce.no_link
-	stack_size = stack_size or gce.stacksize()
-	tmo = tmo or gce.seconds(180)
-	local co = libgce.self:spawn_remote(spw_type, func, ctxid, link_type, stack_size, tmo)
-	if co ~= nil then
-		coroutine.yield(co)
-	end
-	return libgce.spawn_aid
+  link_type = link_type or gce.no_link
+  stack_size = stack_size or gce.stacksize()
+  tmo = tmo or gce.seconds(180)
+  local co = libgce.self:spawn_remote(spw_type, func, ctxid, link_type, stack_size, tmo)
+  if co ~= nil then
+    coroutine.yield(co)
+  end
+  return libgce.spawn_aid
 end
 
 function gce.register_service(name)
-	assert (name ~= nil)
-	name = gce.atom(name)
-	libgce.self:register_service(name)
+  assert (name ~= nil)
+  name = gce.atom(name)
+  libgce.self:register_service(name)
 end
 
 function gce.deregister_service(name)
-	assert (name ~= nil)
-	name = gce.atom(name)
-	libgce.self:deregister_service(name)
+  assert (name ~= nil)
+  name = gce.atom(name)
+  libgce.self:deregister_service(name)
 end
 
 function gce.set_match_recver(patt, recver)
-	assert (patt:gcety() == gce.ty_pattern)
-	local oty = libgce.typeof(recver)
-	assert (oty == gce.ty_actor_id or oty == gce.ty_service_id)
-	if oty == gce.ty_actor_id then
-		patt:set_match_aid(recver)
-	else
-		patt:set_match_svcid(recver)
-	end
+  assert (patt:gcety() == gce.ty_pattern)
+  local oty = libgce.typeof(recver)
+  assert (oty == gce.ty_actor_id or oty == gce.ty_service_id)
+  if oty == gce.ty_actor_id then
+    patt:set_match_aid(recver)
+  else
+    patt:set_match_svcid(recver)
+  end
 end
 
 function gce.get_aid()
-	return libgce.self:get_aid()
+  return libgce.self:get_aid()
 end
 
 function gce.get_ctxid()
@@ -358,73 +358,73 @@ function gce.get_ctxid()
 end
 
 function gce.duration(v)
-	v = v or 0
-	if gce.packer == gce.pkr_amsg then
-		return libgce.make_dur(v)
-	elseif gce.packer == gce.pkr_adata then
-		local dur = dur_adl.duration()
-		dur.val_ = v
-		dur.ty_ = gce.dur_raw
-		return dur
-	else
-		error('gce.packer invalid')
-	end
+  v = v or 0
+  if gce.packer == gce.pkr_amsg then
+    return libgce.make_dur(v)
+  elseif gce.packer == gce.pkr_adata then
+    local dur = dur_adl.duration()
+    dur.val_ = v
+    dur.ty_ = gce.dur_raw
+    return dur
+  else
+    error('gce.packer invalid')
+  end
 end
 
 function gce.millisecs(v)
-	v = v or 0
-	if gce.packer == gce.pkr_amsg then
-		return libgce.make_millisecs(v)
-	elseif gce.packer == gce.pkr_adata then
-		local dur = dur_adl.duration()
-		dur.val_ = v
-		dur.ty_ = gce.dur_millisec
-		return dur
-	else
-		error('gce.packer invalid')
-	end
+  v = v or 0
+  if gce.packer == gce.pkr_amsg then
+    return libgce.make_millisecs(v)
+  elseif gce.packer == gce.pkr_adata then
+    local dur = dur_adl.duration()
+    dur.val_ = v
+    dur.ty_ = gce.dur_millisec
+    return dur
+  else
+    error('gce.packer invalid')
+  end
 end
 
 function gce.seconds(v)
-	v = v or 0
-	if gce.packer == gce.pkr_amsg then
-		return libgce.make_seconds(v)
-	elseif gce.packer == gce.pkr_adata then
-		local dur = dur_adl.duration()
-		dur.val_ = v
-		dur.ty_ = gce.dur_second
-		return dur
-	else
-		error('gce.packer invalid')
-	end
+  v = v or 0
+  if gce.packer == gce.pkr_amsg then
+    return libgce.make_seconds(v)
+  elseif gce.packer == gce.pkr_adata then
+    local dur = dur_adl.duration()
+    dur.val_ = v
+    dur.ty_ = gce.dur_second
+    return dur
+  else
+    error('gce.packer invalid')
+  end
 end
 
 function gce.minutes(v)
-	v = v or 0
-	if gce.packer == gce.pkr_amsg then
-		return libgce.make_minutes(v)
-	elseif gce.packer == gce.pkr_adata then
-		local dur = dur_adl.duration()
-		dur.val_ = v
-		dur.ty_ = gce.dur_minute
-		return dur
-	else
-		error('gce.packer invalid')
-	end
+  v = v or 0
+  if gce.packer == gce.pkr_amsg then
+    return libgce.make_minutes(v)
+  elseif gce.packer == gce.pkr_adata then
+    local dur = dur_adl.duration()
+    dur.val_ = v
+    dur.ty_ = gce.dur_minute
+    return dur
+  else
+    error('gce.packer invalid')
+  end
 end
 
 function gce.hours(v)
-	v = v or 0
-	if gce.packer == gce.pkr_amsg then
-		return libgce.make_hours(v)
-	elseif gce.packer == gce.pkr_adata then
-		local dur = dur_adl.duration()
-		dur.val_ = v
-		dur.ty_ = gce.dur_hour
-		return dur
-	else
-		error('gce.packer invalid')
-	end
+  v = v or 0
+  if gce.packer == gce.pkr_amsg then
+    return libgce.make_hours(v)
+  elseif gce.packer == gce.pkr_adata then
+    local dur = dur_adl.duration()
+    dur.val_ = v
+    dur.ty_ = gce.dur_hour
+    return dur
+  else
+    error('gce.packer invalid')
+  end
 end
 
 function gce.chunk(cfg)
@@ -436,61 +436,61 @@ function gce.errcode()
 end
 
 function gce.message(cfg, ...)
-	local m = nil
-	if cfg ~= nil then
+  local m = nil
+  if cfg ~= nil then
     local oty = libgce.typeof(cfg)
-		if oty == gce.ty_message then
-			m = cfg
-		end
+    if oty == gce.ty_message then
+      m = cfg
+    end
 
-		if m == nil then
-			m = libgce.make_msg()
-		end
+    if m == nil then
+      m = libgce.make_msg()
+    end
 
-		if oty == gce.ty_lua then
-			local mt = gce.atom(cfg)
-			m:setty(mt)
-		elseif oty == gce.ty_match then
-			m:setty(cfg)
-		end
-	end
+    if oty == gce.ty_lua then
+      local mt = gce.atom(cfg)
+      m:setty(mt)
+    elseif oty == gce.ty_match then
+      m:setty(cfg)
+    end
+  end
   if m == nil then
     m = libgce.make_msg()
   end
-	gce.pack(m, ...)
-	return m
+  gce.pack(m, ...)
+  return m
 end
 
 function gce.actor_id()
-	if gce.packer == gce.pkr_amsg then
-		return libgce.make_aid()
-	elseif gce.packer == gce.pkr_adata then
-		return aid_adl.actor_id()
-	else
-		error('gce.packer invalid')
-	end
+  if gce.packer == gce.pkr_amsg then
+    return libgce.make_aid()
+  elseif gce.packer == gce.pkr_adata then
+    return aid_adl.actor_id()
+  else
+    error('gce.packer invalid')
+  end
 end
 
 function gce.service_id()
-	if gce.packer == gce.pkr_amsg then
-		return libgce.make_svcid()
-	elseif gce.packer == gce.pkr_adata then
-		return svcid_adl.service_id()
-	else
-		error('gce.packer invalid')
-	end
+  if gce.packer == gce.pkr_amsg then
+    return libgce.make_svcid()
+  elseif gce.packer == gce.pkr_adata then
+    return svcid_adl.service_id()
+  else
+    error('gce.packer invalid')
+  end
 end
 
 function gce.pattern(...)
-	local rt = libgce.make_patt()
-	for _,v in ipairs{...} do
-		rt:add_match(v)
-	end
-	return rt
+  local rt = libgce.make_patt()
+  for _,v in ipairs{...} do
+    rt:add_match(v)
+  end
+  return rt
 end
 
 function gce.net_option()
-	return libgce.make_netopt()
+  return libgce.make_netopt()
 end
 
 function gce.atom(v)
@@ -499,11 +499,11 @@ function gce.atom(v)
   end
 
   local ty = type(v)
-	if ty == 'string' then
-		return libgce.atom(v)
+  if ty == 'string' then
+    return libgce.atom(v)
   elseif ty == 'number' then
     return gce.make_match(v)
-	else
+  else
     if gce.packer == gce.pkr_amsg then
       assert (ty == 'userdata')
       assert (v:gcety() == gce.ty_match)
@@ -515,40 +515,40 @@ function gce.atom(v)
       error('gce.packer invalid')
     end
     return v
-	end
+  end
 end
 
 function gce.deatom(v)
   assert (libgce.typeof(v) == gce.ty_match)
-	return libgce.deatom(v)
+  return libgce.deatom(v)
 end
 
 function gce.stacksize()
-	return libgce.stacksize
+  return libgce.stacksize
 end
 
 function gce.print(...)
-	libgce.print(gce.concat(...))
+  libgce.print(gce.concat(...))
 end
 
 function gce.debug(...)
-	libgce.self:log_debug(gce.concat(...))
+  libgce.self:log_debug(gce.concat(...))
 end
 
 function gce.info(...)
-	libgce.self:log_info(gce.concat(...))
+  libgce.self:log_info(gce.concat(...))
 end
 
 function gce.warn(...)
-	libgce.self:log_warn(gce.concat(...))
+  libgce.self:log_warn(gce.concat(...))
 end
 
 function gce.error(...)
-	libgce.self:log_error(gce.concat(...))
+  libgce.self:log_error(gce.concat(...))
 end
 
 function gce.fatal(...)
-	libgce.self:log_fatal(gce.concat(...))
+  libgce.self:log_fatal(gce.concat(...))
 end
 
 function gce.pack(m, ...)
@@ -569,7 +569,6 @@ function gce.check_exit(pre, printer)
   pre = pre or ''
   printer = printer or gce.print
   local ec, sender, args = gce.match(gce.exit).recv(gce.atom, '')
-  assert(ec == gce.ec_ok, ec)
   local mt = args[1]
   if mt ~= gce.exit_normal then
     printer(pre, ' ', gce.deatom(mt), ': ', args[2])
@@ -593,53 +592,53 @@ function gce.make_match(v)
 end
 
 function gce.concat(...)
-	local t = {}
-	for _,v in ipairs{...} do
-		t[#t + 1] = tostring(v)
-	end
-	return table.concat(t)
+  local t = {}
+  for _,v in ipairs{...} do
+    t[#t + 1] = tostring(v)
+  end
+  return table.concat(t)
 end
 
 function gce.serialize(m, o)
-	ty = type(o)
-	if ty == 'number' then
-		libgce.pack_number(m, o)
-	elseif ty == 'string' then
-		libgce.pack_string(m, o)
-	elseif ty == 'boolean' then
-		libgce.pack_boolean(m, o)
-	else
+  ty = type(o)
+  if ty == 'number' then
+    libgce.pack_number(m, o)
+  elseif ty == 'string' then
+    libgce.pack_string(m, o)
+  elseif ty == 'boolean' then
+    libgce.pack_boolean(m, o)
+  else
     libgce.pack_object(m, o)
-	end
+  end
 end
 
 function gce.deserialize(m, o)
-	ty = type(o)
-	if ty == 'number' then
-		return libgce.unpack_number(m)
-	elseif ty == 'string' then
-		return libgce.unpack_string(m)
-	elseif ty == 'boolean' then
-		return libgce.unpack_boolean(m)
-	else
-		if ty == 'function' then
-			o = o()
-			if (type(o) == 'function') then
-				o = o()
-			end
-		end
-		libgce.unpack_object(m, o)
+  ty = type(o)
+  if ty == 'number' then
+    return libgce.unpack_number(m)
+  elseif ty == 'string' then
+    return libgce.unpack_string(m)
+  elseif ty == 'boolean' then
+    return libgce.unpack_boolean(m)
+  else
+    if ty == 'function' then
+      o = o()
+      if (type(o) == 'function') then
+        o = o()
+      end
+    end
+    libgce.unpack_object(m, o)
     return o
-	end
+  end
 end
 
 if gce.packer == gce.pkr_adata then
-	-- set object's method (through metatable)
-	local set_method = function (o, name, f)
-		local mt = getmetatable(o)
-	  if rawequal(mt, nil) then error('obj must have a metatable!') end
-	  mt[name] = f
-	end
+  -- set object's method (through metatable)
+  local set_method = function (o, name, f)
+    local mt = getmetatable(o)
+    if rawequal(mt, nil) then error('obj must have a metatable!') end
+    mt[name] = f
+  end
 
   local mt_eq = function(lhs, rhs)
     if rawequal(lhs, nil) or rawequal(rhs, nil) then return false end
@@ -648,78 +647,78 @@ if gce.packer == gce.pkr_adata then
     return lhs.val_ == rhs.val_
   end
 
-	local svcid_eq = function(lhs, rhs)
-	  if rawequal(lhs, nil) or rawequal(rhs, nil) then return false end
-		if rawequal(lhs, rhs) then return true end
+  local svcid_eq = function(lhs, rhs)
+    if rawequal(lhs, nil) or rawequal(rhs, nil) then return false end
+    if rawequal(lhs, rhs) then return true end
 
-	  return 
-	  	lhs.nil_ == rhs.nil_ and
-	  	lhs.ctxid_ == rhs.ctxid_ and
-	  	lhs.name_ == rhs.name_
-	end
+    return 
+      lhs.nil_ == rhs.nil_ and
+      lhs.ctxid_ == rhs.ctxid_ and
+      lhs.name_ == rhs.name_
+  end
 
-	local aid_eq = function(lhs, rhs)
-	  if rawequal(lhs, nil) or rawequal(rhs, nil) then return false end
-		if rawequal(lhs, rhs) then return true end
+  local aid_eq = function(lhs, rhs)
+    if rawequal(lhs, nil) or rawequal(rhs, nil) then return false end
+    if rawequal(lhs, rhs) then return true end
 
-	  return 
-	  	lhs.ctxid_ == rhs.ctxid_ and
-	  	lhs.timestamp_ == rhs.timestamp_ and
-	  	lhs.uintptr_ == rhs.uintptr_ and
-	  	lhs.svc_id_ == rhs.svc_id_ and
-	  	lhs.type_ == rhs.type_ and
-	  	lhs.in_pool_ == rhs.in_pool_ and
-	  	lhs.sid_ == rhs.sid_ -- no svc_, bcz no need
-	end
+    return 
+      lhs.ctxid_ == rhs.ctxid_ and
+      lhs.timestamp_ == rhs.timestamp_ and
+      lhs.uintptr_ == rhs.uintptr_ and
+      lhs.svc_id_ == rhs.svc_id_ and
+      lhs.type_ == rhs.type_ and
+      lhs.in_pool_ == rhs.in_pool_ and
+      lhs.sid_ == rhs.sid_ -- no svc_, bcz no need
+  end
 
-	local tmp_svcid = gce.service_id()
-	local tmp_aid = gce.actor_id()
-	local tmp_dur = gce.duration()
+  local tmp_svcid = gce.service_id()
+  local tmp_aid = gce.actor_id()
+  local tmp_dur = gce.duration()
   local tmp_mt = gce.atom()
 
   set_method(tmp_mt, '__eq', mt_eq)
   set_method(tmp_mt, '__tostring', libgce.mt_tostring)
   set_method(tmp_aid, '__eq', aid_eq)
   set_method(tmp_aid, '__tostring', libgce.aid_tostring)
-	set_method(tmp_svcid, '__eq', svcid_eq)
+  set_method(tmp_svcid, '__eq', svcid_eq)
   set_method(tmp_svcid, '__tostring', libgce.svcid_tostring)
-	set_method(tmp_dur, '__eq', libgce.dur_eq)
+  set_method(tmp_dur, '__eq', libgce.dur_eq)
   set_method(tmp_dur, '__lt', libgce.dur_lt)
   set_method(tmp_dur, '__le', libgce.dur_le)
   set_method(tmp_dur, '__add', libgce.dur_add)
   set_method(tmp_dur, '__sub', libgce.dur_sub)
   set_method(tmp_dur, '__tostring', libgce.dur_tostring)
-	set_method(tmp_dur, 'type', function (dur) return dur.ty_ end)
+  set_method(tmp_dur, 'type', function (dur) return dur.ty_ end)
 end
 
 function libgce.typeof(o)
-	local ty = type(o)
-	if ty == 'table' then
-		if o.adtype ~= nil then
-			local adty = o:adtype()
-			if adty == aid_adl.actor_id then
-				return gce.ty_actor_id
-			elseif adty == svcid_adl.service_id then
-				return gce.ty_service_id
-			elseif adty == dur_adl.duration then
-				return gce.ty_duration
+  local ty = type(o)
+  if ty == 'table' then
+    if o.adtype ~= nil then
+      local adty = o:adtype()
+      if adty == aid_adl.actor_id then
+        return gce.ty_actor_id
+      elseif adty == svcid_adl.service_id then
+        return gce.ty_service_id
+      elseif adty == dur_adl.duration then
+        return gce.ty_duration
       elseif adty == mt_adl.match then
         return gce.ty_match
-			else
-				return gce.ty_userdef
-			end
-		else
-			return gce.ty_lua
-		end
-	elseif ty == 'userdata' then
-		if o.gcety ~= nil then
-			return o:gcety()
-		else
-			return gce.ty_other
-		end
-	else
-		return gce.ty_lua
-	end
+      else
+        return gce.ty_userdef
+      end
+    else
+      return gce.ty_lua
+    end
+  elseif ty == 'userdata' then
+    if o.gcety ~= nil then
+      return o:gcety()
+    else
+      return gce.ty_other
+    end
+  else
+    return gce.ty_lua
+  end
 end
 
 function libgce.unpack(t)
@@ -771,10 +770,10 @@ function libgce.receiver.respond(...)
   assert (resp[1] ~= nil)
   
   if tmo ~= nil then
-  	resp[2] = tmo
-  	return gce.respond(resp, ...)
+    resp[2] = tmo
+    return gce.respond(resp, ...)
   else
-  	return gce.respond(resp[1], ...)
+    return gce.respond(resp[1], ...)
   end
 end
 

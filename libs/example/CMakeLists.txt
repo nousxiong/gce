@@ -28,5 +28,7 @@ endif ()
 
 # Example cluster.
 if (GCE_EXAMPLE_ALL OR GCE_EXAMPLE_CLUSTER)
-  add_subdirectory (cluster)
+  if (${GCE_PACKER} EQUAL ${GCE_ADATA})
+    add_subdirectory (cluster)
+  endif ()
 endif ()

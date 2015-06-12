@@ -10,15 +10,15 @@
 local gce = require('gce')
 
 local config = {}
-config.nodes = {}
+
 
 gce.actor(
   function ()
-  	local ec, sender, args, msg
+    local ec, sender, args, msg
 
-  	ec, sender, args = gce.match('init').recv('')
-  	local ctxid = args[1]
+    ec, sender, args = gce.match('init').recv('')
+    local ctxid = args[1]
 
-  	gce.info('master<', ctxid, '> running...')
-  	gce.info('master<', ctxid, '> end.')
+    gce.info('master<', ctxid, '> running...')
+    gce.info('master<', ctxid, '> end.')
   end)

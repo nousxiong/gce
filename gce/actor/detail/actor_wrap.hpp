@@ -303,7 +303,7 @@ struct actor_wrap<ActorRef, false>
   }
 
   template <typename Match1, typename Match2, typename Match3, typename Match4>
-  receiver_t& match(Match1 type1, Match2 type2, Match3 type3, Match3 type4, match_t& matched = default_)
+  receiver_t& match(Match1 type1, Match2 type2, Match3 type3, Match4 type4, match_t& matched = default_)
   {
     rcv_.add_match(type1);
     rcv_.add_match(type2);
@@ -317,7 +317,7 @@ struct actor_wrap<ActorRef, false>
   }
 
   template <typename Match1, typename Match2, typename Match3, typename Match4, typename Match5>
-  receiver_t& match(Match1 type1, Match2 type2, Match3 type3, Match3 type4, Match5 type5, match_t& matched = default_)
+  receiver_t& match(Match1 type1, Match2 type2, Match3 type3, Match4 type4, Match5 type5, match_t& matched = default_)
   {
     rcv_.add_match(type1);
     rcv_.add_match(type2);
