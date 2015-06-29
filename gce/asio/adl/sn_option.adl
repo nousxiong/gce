@@ -7,19 +7,12 @@
 // See https://github.com/nousxiong/gce for latest version.
 //
 
-include = gce.actor.match;
+include = gce.actor.duration;
 
-namespace = usr.adl;
+namespace = gce.asio.adl;
 
-// general response
-gen_resp
+sn_option
 {
-  gce.actor.match cmd; // resp to which msg
-}
-
-// general response error
-gen_resp_err
-{
-  gce.actor.match cmd; // resp to which msg
-  int32 errc; // error code
+  gce.adl.duration idle_period;
+  int32 bigmsg_size;
 }

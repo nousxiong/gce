@@ -33,7 +33,7 @@ public:
 
 public:
   template <typename Actor>
-  explicit signal(Actor& a)
+  explicit signal(Actor a)
     : addon_t(a)
     , snd_(base_t::get_strand())
     , impl_(snd_.get_io_service())
@@ -43,7 +43,7 @@ public:
   }
 
   template <typename Actor>
-  explicit signal(Actor& a, int signal_number_1)
+  explicit signal(Actor a, int signal_number_1)
     : addon_t(a)
     , snd_(base_t::get_strand())
     , impl_(snd_.get_io_service(), signal_number_1)
@@ -53,7 +53,7 @@ public:
   }
 
   template <typename Actor>
-  explicit signal(Actor& a, int signal_number_1, int signal_number_2)
+  explicit signal(Actor a, int signal_number_1, int signal_number_2)
     : addon_t(a)
     , snd_(base_t::get_strand())
     , impl_(snd_.get_io_service(), signal_number_1, signal_number_2)
@@ -63,7 +63,7 @@ public:
   }
 
   template <typename Actor>
-  explicit signal(Actor& a, int signal_number_1, int signal_number_2, int signal_number_3)
+  explicit signal(Actor a, int signal_number_1, int signal_number_2, int signal_number_3)
     : addon_t(a)
     , snd_(base_t::get_strand())
     , impl_(snd_.get_io_service(), signal_number_1, signal_number_2, signal_number_3)

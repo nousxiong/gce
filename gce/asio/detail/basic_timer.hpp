@@ -39,7 +39,7 @@ public:
 
 public:
   template <typename Actor>
-  explicit basic_timer(Actor& a)
+  explicit basic_timer(Actor a)
     : addon_t(a)
     , snd_(base_t::get_strand())
     , impl_(snd_.get_io_service())
@@ -56,21 +56,15 @@ public:
   void async_wait(duration_t dur, message const& msg = message(as_timeout))
   {
     GCE_ASSERT(!waiting_);
-    
-    wait_msg_ = msg;
     impl_.expires_from_now(to_chrono(dur));
-    impl_.async_wait(
-      snd_.wrap(
-        gce::detail::make_asio_alloc_handler(
-          scp_.get()->get_attachment(),
-          boost::bind(
-            &self_t::handle_wait, scp_.get(),
-            boost::asio::placeholders::error
-            )
-          )
-        )
-      );
-    waiting_ = true;
+    pri_async_wait(msg);
+  }
+
+  
+  void async_wait(message const& msg = message(as_timeout))
+  {
+    GCE_ASSERT(!waiting_);
+    pri_async_wait(msg);
   }
 
   /// for using other none-async methods directly
@@ -87,6 +81,23 @@ public:
   }
 
 private:
+  void pri_async_wait(message const& msg)
+  {
+    wait_msg_ = msg;
+    impl_.async_wait(
+      snd_.wrap(
+        gce::detail::make_asio_alloc_handler(
+          scp_.get()->get_attachment(),
+          boost::bind(
+            &self_t::handle_wait, scp_.get(),
+            boost::asio::placeholders::error
+            )
+          )
+        )
+      );
+    waiting_ = true;
+  }
+
   static void handle_wait(guard_ptr guard, errcode_t const& ec)
   {
     self_t* o = guard->get();

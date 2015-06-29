@@ -45,7 +45,7 @@ public:
 
 public:
   template <typename Actor>
-  explicit serial_port(Actor& a)
+  explicit serial_port(Actor a)
     : addon_t(a)
     , snd_(base_t::get_strand())
     , impl_(snd_.get_io_service())
@@ -56,7 +56,7 @@ public:
   }
 
   template <typename Actor>
-  explicit serial_port(Actor& a, std::string const& device)
+  explicit serial_port(Actor a, std::string const& device)
     : addon_t(a)
     , snd_(base_t::get_strand())
     , impl_(snd_.get_io_service(), device)

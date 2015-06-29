@@ -1043,6 +1043,7 @@ private:
       byte_t* data = recv_cache_.get_read_data();
       size_t const remain_size = recv_cache_.remain_read_size();
 
+      pkr_.clear();
       pkr_.set_read(data, remain_size);
       packer::error_code_t ec = packer::ok();
       pkr_.read(curr_hdr_, ec);

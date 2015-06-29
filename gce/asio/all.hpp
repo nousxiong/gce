@@ -24,5 +24,7 @@
 #ifdef GCE_OPENSSL
 # include <gce/asio/ssl/stream.hpp>
 #endif
+#include <gce/asio/session.hpp>
+#include <gce/asio/parser/simple.hpp>
 
 #endif /// GCE_ASIO_ALL_HPP

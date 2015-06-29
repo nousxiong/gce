@@ -429,6 +429,18 @@ struct actor_wrap<ActorRef, true>
     pri_recv0(sender, g, tmo);
   }
 
+  template <typename Match>
+  void recv(aid_t& sender, Match type, duration_t tmo = infin)
+  {
+    pri_recv0(sender, type, gce::guard(), tmo);
+  }
+
+  template <typename Match>
+  void recv(aid_t& sender, Match type, gce::guard g, duration_t tmo = infin)
+  {
+    pri_recv0(sender, type, g, tmo);
+  }
+
 private:
   template <typename Match>
   void pri_recv0(aid_t& sender, Match type, gce::guard g, duration_t tmo, bool has_match = true)

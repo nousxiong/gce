@@ -51,7 +51,7 @@ public:
 
 public:
   template <typename Actor>
-  explicit socket(Actor& a)
+  explicit socket(Actor a)
     : addon_t(a)
     , snd_(base_t::get_strand())
     , skt_opt_(boost::in_place(boost::ref(snd_.get_io_service())))
@@ -64,7 +64,7 @@ public:
   }
   
   template <typename Actor>
-  explicit socket(Actor& a, boost::shared_ptr<tcp_socket_t> skt)
+  explicit socket(Actor a, boost::shared_ptr<tcp_socket_t> skt)
     : addon_t(a)
     , snd_(base_t::get_strand())
     , skt_ptr_(skt)
@@ -407,7 +407,7 @@ private:
   {
     message msg(m);
     m = msg_nil_;
-    send2actor(msg);
+    base_t::send2actor(msg);
   }
 
 private:

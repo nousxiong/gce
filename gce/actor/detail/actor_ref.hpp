@@ -270,6 +270,16 @@ public:
     aw_.set_actor_ref(*this);
   }
 
+  actor_ref& operator=(actor_ref const& rhs)
+  {
+    if (this != &rhs)
+    {
+      base_t::operator=(rhs);
+      aw_.set_actor_ref(*this);
+    }
+    return *this;
+  }
+
   actor_wrap_t* operator->()
   {
     return &aw_;
@@ -358,6 +368,16 @@ public:
     : base_t(other)
   {
     aw_.set_actor_ref(*this);
+  }
+
+  actor_ref& operator=(actor_ref const& rhs)
+  {
+    if (this != &rhs)
+    {
+      base_t::operator=(rhs);
+      aw_.set_actor_ref(*this);
+    }
+    return *this;
   }
 
   actor_wrap_t* operator->()
@@ -481,6 +501,16 @@ public:
     : base_t(other)
   {
     aw_.set_actor_ref(*this);
+  }
+
+  actor_ref& operator=(actor_ref const& rhs)
+  {
+    if (this != &rhs)
+    {
+      base_t::operator=(rhs);
+      aw_.set_actor_ref(*this);
+    }
+    return *this;
   }
 
   actor_wrap_t* operator->()

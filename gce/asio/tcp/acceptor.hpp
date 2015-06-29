@@ -35,7 +35,7 @@ public:
 
 public:
   template <typename Actor>
-  explicit acceptor(Actor& a)
+  explicit acceptor(Actor a)
     : addon_t(a)
     , snd_(base_t::get_strand())
     , impl_(snd_.get_io_service())

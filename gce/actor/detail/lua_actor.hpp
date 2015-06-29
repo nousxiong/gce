@@ -63,7 +63,9 @@ public:
     , tmr_(base_t::ctx_.get_io_service())
     , tmr_sid_(0)
     , lg_(base_t::ctx_.get_logger())
+    , guard_(base_t::ctx_.get_io_service())
   {
+    guard_.expires_from_now(to_chrono(infin));
   }
 
   ~lua_actor()
@@ -436,6 +438,7 @@ public:
   {
     try
     {
+      guard_.async_wait(boost::bind(&self_t::guard));
       make_self();
       set_self();
       svc_.run_script(script_);
@@ -477,6 +480,12 @@ public:
     explicit proxy(self_t* p)
       : p_(p)
     {
+    }
+
+    void send(aid_t const& recver, message const& m)
+    {
+      BOOST_ASSERT(p_ != 0);
+      p_->send(recver, m);
     }
 
     self_t* operator->() const
@@ -620,6 +629,9 @@ private:
 
   void stop(aid_t self_aid, exit_code_t ec, std::string const& exit_msg)
   {
+    errcode_t ignored_ec;
+    guard_.cancel(ignored_ec);
+
     gce::lualib::rmv_ref(L_, "libgce", a_);
     gce::lualib::rmv_ref(L_, "libgce", co_);
     gce::lualib::rmv_ref(L_, "libgce", rf_);
@@ -953,6 +965,8 @@ private:
     lua_pop(L_, 1);
   }
 
+  static void guard() {}
+
 private:
   /// Ensure start from a new cache line.
   byte_t pad0_[GCE_CACHE_LINE_SIZE];
@@ -982,6 +996,8 @@ private:
   resp_t const nil_resp_;
   message const nil_msg_;
   log::logger_t& lg_;
+
+  timer_t guard_;
 };
 }
 }

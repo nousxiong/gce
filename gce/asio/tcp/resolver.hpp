@@ -41,7 +41,7 @@ public:
 
 public:
   template <typename Actor>
-  explicit resolver(Actor& a)
+  explicit resolver(Actor a)
     : addon_t(a)
     , snd_(base_t::get_strand())
     , impl_(boost::ref(snd_.get_io_service()))

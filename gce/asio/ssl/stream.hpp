@@ -59,7 +59,7 @@ public:
 
 public:
   template <typename Actor>
-  stream(Actor& a, context_t& ctx)
+  stream(Actor a, context_t& ctx)
     : addon_t(a)
     , snd_(base_t::get_strand())
     , skt_opt_(boost::in_place(boost::ref(snd_.get_io_service()), boost::ref(ctx)))
@@ -74,7 +74,7 @@ public:
   }
   
   template <typename Actor>
-  stream(Actor& a, boost::shared_ptr<impl_t> skt)
+  stream(Actor a, boost::shared_ptr<impl_t> skt)
     : addon_t(a)
     , snd_(base_t::get_strand())
     , skt_ptr_(skt)
@@ -503,7 +503,7 @@ private:
   {
     message msg(m);
     m = msg_nil_;
-    send2actor(msg);
+    base_t::send2actor(msg);
   }
 
 private:

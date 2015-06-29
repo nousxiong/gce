@@ -47,7 +47,9 @@ public:
     , tmr_(base_t::ctx_.get_io_service())
     , tmr_sid_(0)
     , lg_(base_t::ctx_.get_logger())
+    , guard_(base_t::ctx_.get_io_service())
   {
+    guard_.expires_from_now(to_chrono(infin));
   }
 
   ~stackless_actor()
@@ -295,6 +297,7 @@ public:
 
   void start()
   {
+    guard_.async_wait(boost::bind(&self_t::guard));
     run();
   }
 
@@ -354,6 +357,8 @@ public:
 private:
   void stop(aid_t self_aid, exit_code_t ec, std::string const& exit_msg)
   {
+    errcode_t ignored_ec;
+    guard_.cancel(ignored_ec);
     base_t::send_exit(self_aid, ec, exit_msg);
     svc_.free_actor(this);
   }
@@ -587,6 +592,8 @@ private:
     run();
   }
 
+  static void guard() {}
+
 private:
   /// Ensure start from a new cache line.
   byte_t pad0_[GCE_CACHE_LINE_SIZE];
@@ -604,6 +611,8 @@ private:
   timer_t tmr_;
   size_t tmr_sid_;
   log::logger_t& lg_;
+
+  timer_t guard_;
 };
 }
 }

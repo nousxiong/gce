@@ -33,6 +33,8 @@ static std::size_t const test_count = 1;
 #ifdef GCE_OPENSSL
 # include "test_ssl.hpp"
 #endif
+#include "test_tcp_session.hpp"
+#include "test_tcp_session_idle.hpp"
 #ifdef GCE_LUA
 # include "test_lua_asio.hpp"
 #endif
@@ -42,17 +44,20 @@ int main()
   try
   {
     /// basic test
-    gce::asio::timer_ut::run();
+    /*gce::asio::timer_ut::run();
     gce::asio::signal_ut::run();
-    gce::asio::tcp_ut::run();
+    gce::asio::tcp_ut::run();*/
 
 #ifdef GCE_OPENSSL
-    gce::asio::ssl_ut::run();
+    //gce::asio::ssl_ut::run();
 #endif
+
+    //gce::asio::tcp_session_ut::run();
+    gce::asio::tcp_session_idle_ut::run();
 
     /// script test
 #ifdef GCE_LUA
-    gce::lua_asio_ut::run();
+    //gce::lua_asio_ut::run();
 #endif
   }
   catch (std::exception& ex)
