@@ -35,7 +35,7 @@ struct length
   virtual void on_send(message&, message&) = 0;
 
   /// get msg max header size, must be reentrant
-  virtual size_t max_header_size() = 0;
+  virtual size_t max_header_size() const = 0;
 };
 
 /// using regex to parse msg
@@ -43,6 +43,9 @@ struct regex
 {
   /// invoke after finish recv a message
   virtual void on_recv(message&) = 0;
+
+  /// get current regex expression
+  virtual std::string get_expr() const = 0;
 };
 }
 }

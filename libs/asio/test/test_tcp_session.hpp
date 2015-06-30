@@ -29,6 +29,7 @@ public:
   }
 
 private:
+  template <typename Parser>
   static void echo_client(stackful_actor self)
   {
     context& ctx = self.get_context();
@@ -43,9 +44,9 @@ private:
       boost::shared_ptr<tcp_resolver_t::iterator> eitr;
       self->match("init").recv(eitr);
 
-      session<parser::length, tcp_socket_t, stackful_actor> sn(
+      session<Parser, tcp_socket_t, stackful_actor> sn(
         self, 
-        boost::make_shared<parser::simple>(), 
+        boost::make_shared<parser::simple>("||"), 
         boost::make_shared<tcp_socket_t>(boost::ref(ios)), 
         *eitr
         );
@@ -61,7 +62,7 @@ private:
           boost::throw_exception(boost::system::system_error(ec));
         }
 
-        std::string str("hello world!");
+        std::string str("hello world!||");
         message m;
         m << str;
 
@@ -84,7 +85,7 @@ private:
         }
 
         m = message();
-        m << "bye";
+        m << "bye||";
         sn.send(m);
 
         /// wait for server confirm or error
@@ -102,6 +103,7 @@ private:
     }
   }
 
+  template <typename Parser>
   static void echo_session(stackful_actor self)
   {
     context& ctx = self.get_context();
@@ -115,9 +117,9 @@ private:
       boost::shared_ptr<tcp_socket_t> tcp_skt;
       self->match("init").recv(tcp_skt);
 
-      session<parser::length, tcp_socket_t, stackful_actor> sn(
+      session<Parser, tcp_socket_t, stackful_actor> sn(
         self, 
-        boost::make_shared<parser::simple>(), 
+        boost::make_shared<parser::simple>("||"), 
         tcp_skt
         );
 
@@ -140,7 +142,7 @@ private:
 
         std::string str;
         msg >> str;
-        if (str == "bye")
+        if (str == "bye||")
         {
           sn.send(msg);
 
@@ -160,7 +162,8 @@ private:
     }
   }
 
-  static void echo_server(stackful_actor self)
+  template <typename Parser>
+  static void echo_server(stackful_actor self, std::string const& port)
   {
     context& ctx = self.get_context();
     log::logger_t& lg = ctx.get_logger();
@@ -172,7 +175,7 @@ private:
       errcode_t ec;
 
       tcp::resolver rsv(self);
-      tcp_resolver_t::query qry("0.0.0.0", "23333");
+      tcp_resolver_t::query qry("0.0.0.0", port);
       rsv.async_resolve(qry);
       boost::shared_ptr<tcp_resolver_t::iterator> eitr;
       self->match(tcp::as_resolve).recv(ec, eitr);
@@ -215,7 +218,7 @@ private:
         msg >> ec;
         if (!ec)
         {
-          aid_t cln = spawn(self, boost::bind(&tcp_session_ut::echo_session, _arg1), monitored);
+          aid_t cln = spawn(self, boost::bind(&tcp_session_ut::echo_session<Parser>, _arg1), monitored);
           self->send(cln, "init", skt);
           ++scount;
         }
@@ -230,7 +233,6 @@ private:
     {
       GCE_ERROR(lg) << "echo_server: " << ex.what();
     }
-    GCE_INFO(lg) << "echo server end.";
   }
 
   static void test_base()
@@ -250,21 +252,55 @@ private:
       threaded_actor base_svr = spawn(ctx_svr);
       threaded_actor base_cln = spawn(ctx_cln);
 
-      aid_t svr = spawn(base_svr, boost::bind(&tcp_session_ut::echo_server, _arg1), monitored);
-      base_svr->send(svr, "init");
+      aid_t len_svr = spawn(
+        base_svr, 
+        boost::bind(&tcp_session_ut::echo_server<parser::length>, _arg1, "23333"), 
+        monitored
+        );
+      base_svr->send(len_svr, "init");
+      base_svr->recv("ready");
+
+      aid_t reg_svr = spawn(
+        base_svr, 
+        boost::bind(&tcp_session_ut::echo_server<parser::regex>, _arg1, "23334"), 
+        monitored
+        );
+      base_svr->send(reg_svr, "init");
       base_svr->recv("ready");
 
       tcp::resolver rsv(base_cln);
-      boost::asio::ip::tcp::resolver::query qry("127.0.0.1", "23333");
-      rsv.async_resolve(qry);
-      boost::shared_ptr<tcp_resolver_t::iterator> eitr;
-      base_cln->match(tcp::as_resolve).recv(ec, eitr);
+      boost::asio::ip::tcp::resolver::query len_qry("127.0.0.1", "23333");
+      rsv.async_resolve(len_qry);
+      boost::shared_ptr<tcp_resolver_t::iterator> len_eitr;
+      base_cln->match(tcp::as_resolve).recv(ec, len_eitr);
+      GCE_VERIFY(!ec).except(ec);
+
+      boost::asio::ip::tcp::resolver::query reg_qry("127.0.0.1", "23334");
+      rsv.async_resolve(reg_qry);
+      boost::shared_ptr<tcp_resolver_t::iterator> reg_eitr;
+      base_cln->match(tcp::as_resolve).recv(ec, reg_eitr);
       GCE_VERIFY(!ec).except(ec);
 
       for (size_t i=0; i<cln_count; ++i)
       {
-        aid_t cln = spawn(base_cln, boost::bind(&tcp_session_ut::echo_client, _arg1), monitored);
-        base_cln->send(cln, "init", eitr);
+        if (i % 2 == 0)
+        {
+          aid_t cln = spawn(
+            base_cln, 
+            boost::bind(&tcp_session_ut::echo_client<parser::length>, _arg1), 
+            monitored
+            );
+          base_cln->send(cln, "init", len_eitr);
+        }
+        else
+        {
+          aid_t cln = spawn(
+            base_cln, 
+            boost::bind(&tcp_session_ut::echo_client<parser::regex>, _arg1), 
+            monitored
+            );
+          base_cln->send(cln, "init", reg_eitr);
+        }
       }
 
       for (size_t i=0; i<cln_count; ++i)
@@ -272,9 +308,10 @@ private:
         base_cln->recv(exit);
       }
 
-      base_svr->send(svr, "end");
+      base_svr->send(len_svr, "end");
       base_svr->recv(exit);
-      GCE_INFO(lg) << "test_base end.";
+      base_svr->send(reg_svr, "end");
+      base_svr->recv(exit);
     }
     catch (std::exception& ex)
     {

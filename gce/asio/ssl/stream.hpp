@@ -290,6 +290,32 @@ public:
       );
     recving_ = true;
   }
+
+  template <typename Allocator, typename Expr>
+  void async_read_until(
+    boost::asio::basic_streambuf<Allocator>& b, 
+    Expr const& expr, 
+    message const& msg = message(as_recv_until)
+    )
+  {
+    GCE_ASSERT(!recving_);
+    GCE_ASSERT(!conning_);
+
+    recv_msg_ = msg;
+    boost::asio::async_read_until(
+      *impl_, b, expr,
+      snd_.wrap(
+        gce::detail::make_asio_alloc_handler(
+          scp_.get()->get_attachment()[ha_recv],
+          boost::bind(
+            &self_t::handle_recv, scp_.get(),
+            boost::asio::placeholders::error, boost::asio::placeholders::bytes_transferred
+            )
+          )
+        )
+      );
+    recving_ = true;
+  }
   
   template <typename ConstBufferSequence>
   void async_write(ConstBufferSequence const& buffers, message const& msg = message(as_send))

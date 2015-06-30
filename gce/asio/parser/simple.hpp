@@ -21,7 +21,9 @@ namespace parser
 {
 struct simple
   : public length
+  , public regex
 {
+  /// length parser
   header on_recv_header(boost::asio::const_buffer b, message& msg)
   {
     pkr_.clear();
@@ -48,11 +50,34 @@ struct simple
     hdr << (uint64_t)msg.size();
   }
 
-  size_t max_header_size()
+  size_t max_header_size() const
   {
     return sizeof(uint64_t) * 2;
   }
 
+  /// regex parser
+  void on_recv(message&)
+  {
+    /// do nothing
+  }
+
+  std::string get_expr() const
+  {
+    return r_;
+  }
+
+public:
+  simple(std::string r = "\r\n")
+    : r_(r)
+  {
+  }
+
+  void set_expr(std::string const& r)
+  {
+    r_ = r;
+  }
+
+private:
   template <typename T>
   bool read(T& t)
   {
@@ -62,6 +87,7 @@ struct simple
   }
 
   packer pkr_;
+  std::string r_;
 };
 }
 }

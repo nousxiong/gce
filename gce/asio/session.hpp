@@ -18,22 +18,17 @@ namespace gce
 {
 namespace asio
 {
-template <typename Tag, typename Socket, typename Actor>
+template <typename Parser, typename Socket, typename Actor>
 class session
-{
-};
-
-template <typename Socket, typename Actor>
-class session<parser::length, Socket, Actor>
   : public addon_t
 {
   typedef addon_t base_t;
+  typedef Parser parser_t;
   typedef Socket socket_t;
   typedef Actor actor_t;
-  typedef session<parser::length, socket_t, actor_t> self_t;
+  typedef session<parser_t, socket_t, actor_t> self_t;
   typedef base_t::scope<self_t> scope_t;
   typedef typename scope_t::guard_ptr guard_ptr;
-  typedef parser::length parser_t;
   typedef boost::asio::ip::tcp::resolver resolver_t;
   typedef detail::session_impl<parser_t, socket_t> session_impl_t;
 
@@ -157,40 +152,6 @@ private:
   /// for quit
   scope_t scp_;
 };
-
-//template <typename Socket>
-//class session<parser::regex, Socket>
-//{
-//  typedef boost::function<void (boost::asio::const_buffer, message&)> parser_t;
-//public:
-//  session(std::string const& regex, boost::shared_ptr<socket_t> skt)
-//    : regex_(regex)
-//  {
-//  }
-//
-//  session(std::string const& regex, boost::shared_ptr<socket_t> skt, std::string const& ep)
-//    : regex_(regex)
-//  {
-//  }
-//
-//  template <typename F>
-//  session(std::string const& regex, F f, boost::shared_ptr<socket_t> skt)
-//    : regex_(regex)
-//    , parser_(f)
-//  {
-//  }
-//
-//  template <typename F>
-//  session(std::string const& regex, F f, boost::shared_ptr<socket_t> skt, std::string const& ep)
-//    : regex_(regex)
-//    , parser_(f)
-//  {
-//  }
-//
-//private:
-//  std::string const regex_;
-//  parser_t parser_;
-//};
 }
 }
 

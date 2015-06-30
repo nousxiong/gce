@@ -52,8 +52,8 @@ int main()
     //gce::asio::ssl_ut::run();
 #endif
 
-    //gce::asio::tcp_session_ut::run();
-    gce::asio::tcp_session_idle_ut::run();
+    gce::asio::tcp_session_ut::run();
+    //gce::asio::tcp_session_idle_ut::run();
 
     /// script test
 #ifdef GCE_LUA
