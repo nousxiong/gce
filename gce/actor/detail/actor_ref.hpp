@@ -22,29 +22,29 @@ template <typename Tag, typename Context>
 class actor_ref {};
 
 template <typename Actor>
-class actor_ref_base
+class basic_actor_ref
 {
 public:
-  actor_ref_base()
+  basic_actor_ref()
     : a_(0)
   {
   }
 
-  explicit actor_ref_base(Actor& a)
+  explicit basic_actor_ref(Actor& a)
     : a_(&a)
   {
   }
 
-  actor_ref_base(actor_ref_base const& other)
+  basic_actor_ref(basic_actor_ref const& other)
     : a_(other.a_)
   {
   }
 
-  virtual ~actor_ref_base()
+  virtual ~basic_actor_ref()
   {
   }
 
-  actor_ref_base& operator=(actor_ref_base const& rhs)
+  basic_actor_ref& operator=(basic_actor_ref const& rhs)
   {
     if (this != &rhs)
     {
@@ -136,7 +136,7 @@ protected:
 ///------------------------------------------------------------------------------
 template <typename Context>
 class actor_ref<threaded, Context>
-  : public actor_ref_base<typename Context::threaded_actor_t>
+  : public basic_actor_ref<typename Context::threaded_actor_t>
 {
 public:
   typedef Context context_t;
@@ -147,7 +147,7 @@ private:
   typedef typename context_t::threaded_actor_t threaded_actor_t;
   typedef typename context_t::threaded_service_t service_t;
   typedef typename context_t::nonblocked_actor_t nonblocked_actor_t;
-  typedef actor_ref_base<threaded_actor_t> base_t;
+  typedef basic_actor_ref<threaded_actor_t> base_t;
 
 public:
   actor_ref()
@@ -240,7 +240,7 @@ public:
 ///------------------------------------------------------------------------------
 template <typename Context>
 class actor_ref<stackful, Context>
-  : public actor_ref_base<typename Context::stackful_actor_t>
+  : public basic_actor_ref<typename Context::stackful_actor_t>
 {
 public:
   typedef Context context_t;
@@ -250,7 +250,7 @@ public:
 private:
   typedef typename context_t::stackful_actor_t stackful_actor_t;
   typedef typename context_t::stackful_service_t service_t;
-  typedef actor_ref_base<stackful_actor_t> base_t;
+  typedef basic_actor_ref<stackful_actor_t> base_t;
 
 public:
   actor_ref()
@@ -338,7 +338,7 @@ public:
 ///------------------------------------------------------------------------------
 template <typename Context>
 class actor_ref<stackless, Context>
-  : public actor_ref_base<typename Context::stackless_actor_t>
+  : public basic_actor_ref<typename Context::stackless_actor_t>
 {
 public:
   typedef Context context_t;
@@ -350,7 +350,7 @@ private:
   typedef typename context_t::stackless_service_t service_t;
   typedef typename stackless_actor_t::recv_handler_t recv_handler_t;
   typedef typename stackless_actor_t::wait_handler_t wait_handler_t;
-  typedef actor_ref_base<stackless_actor_t> base_t;
+  typedef basic_actor_ref<stackless_actor_t> base_t;
 
 public:
   actor_ref()
@@ -473,7 +473,7 @@ public:
 ///------------------------------------------------------------------------------
 template <typename Context>
 class actor_ref<nonblocked, Context>
-  : public actor_ref_base<typename Context::nonblocked_actor_t>
+  : public basic_actor_ref<typename Context::nonblocked_actor_t>
 {
 public:
   typedef Context context_t;
@@ -483,7 +483,7 @@ public:
 private:
   typedef typename context_t::nonblocked_actor_t nonblocked_actor_t;
   typedef typename context_t::nonblocked_service_t service_t;
-  typedef actor_ref_base<nonblocked_actor_t> base_t;
+  typedef basic_actor_ref<nonblocked_actor_t> base_t;
 
 public:
   actor_ref()
