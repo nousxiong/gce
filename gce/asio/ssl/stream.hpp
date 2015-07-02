@@ -25,6 +25,7 @@ static match_t const as_handshake = atom("as_handshake");
 static match_t const as_shutdown = atom("as_shutdown");
 static match_t const as_recv = atom("as_recv");
 static match_t const as_recv_some = atom("as_recv_some");
+static match_t const as_recv_until = atom("as_recv_until");
 static match_t const as_send = atom("as_send");
 static match_t const as_send_some = atom("as_send_some");
 

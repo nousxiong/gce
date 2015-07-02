@@ -199,6 +199,7 @@ protected:
     sending_ = false;
     recving_ = false;
     timing_ = false;
+    shuting_down_ = false;
     shutdown_ = false;
     gather_buffer_.clear();
     send_que_.clear();
@@ -406,8 +407,9 @@ protected:
 
   void close_socket(ssl_socket_t& s)
   {
-    if (!shutdown_)
+    if (!shuting_down_)
     {
+      shuting_down_ = true;
       s.async_shutdown();
     }
   }
@@ -459,6 +461,7 @@ protected:
   bool sending_;
   bool recving_;
   bool timing_;
+  bool shuting_down_;
   bool shutdown_;
   boost::optional<system_timer> tmr_;
   errcode_t ex_;

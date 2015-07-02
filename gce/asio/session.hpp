@@ -138,14 +138,6 @@ private:
 #endif
 
 private:
-  void pri_send2actor(message& m)
-  {
-    message msg(m);
-    m = msg_nil_;
-    base_t::send2actor(msg);
-  }
-
-private:
   actor_t& a_;
   aid_t sa_;
 
