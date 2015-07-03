@@ -48,25 +48,25 @@ int main()
   try
   {
     /// basic test
-    /*gce::asio::timer_ut::run();
+    gce::asio::timer_ut::run();
     gce::asio::signal_ut::run();
-    gce::asio::tcp_ut::run();*/
+    gce::asio::tcp_ut::run();
 
 #ifdef GCE_OPENSSL
-    //gce::asio::ssl_ut::run();
+    gce::asio::ssl_ut::run();
 #endif
 
-    /*gce::asio::tcp_session_ut::run();
-    gce::asio::tcp_session_idle_ut::run();*/
+    gce::asio::tcp_session_ut::run();
+    gce::asio::tcp_session_idle_ut::run();
 
 #ifdef GCE_OPENSSL
-    //gce::asio::ssl_session_ut::run();
+    gce::asio::ssl_session_ut::run();
     gce::asio::ssl_session_idle_ut::run();
 #endif
 
     /// script test
 #ifdef GCE_LUA
-    //gce::lua_asio_ut::run();
+    gce::lua_asio_ut::run();
 #endif
   }
   catch (std::exception& ex)
