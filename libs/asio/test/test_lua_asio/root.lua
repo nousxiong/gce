@@ -22,15 +22,16 @@ gce.actor(
 		local ec, sender, args = gce.recv('init', gce.actor_id)
 		local base_aid = args[1]
 
-		--test('timer_ut')
-		--test('signal_ut')
-		--test('tcp_ut')
-		--if gce.openssl ~= 0 then
-			--test('ssl_ut')
-		--end
-		--test('tcpsn_ut')
-		--test('tcpsn_idle_ut')
+		test('timer_ut')
+		test('signal_ut')
+		test('tcp_ut')
+		if gce.openssl ~= 0 then
+			test('ssl_ut')
+		end
+		test('tcpsn_ut')
+		test('tcpsn_idle_ut')
 		if gce.openssl ~= 0 then
 			test('sslsn_ut')
+			test('sslsn_idle_ut')
 		end
   end)
