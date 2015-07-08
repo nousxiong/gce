@@ -1966,9 +1966,9 @@ struct session
     {
       gce::lua::actor_proxy* a = gce::lua::from_lua<gce::lua::actor_proxy>(L, 1, "actor");
       asio::lua::parser::base* basic_parser = 
-          gce::lua::from_lua<asio::lua::parser::base>(L, 2, "parser::base");
+        gce::lua::from_lua<asio::lua::parser::base>(L, 2, "parser::base");
       gce::lua::basic_object* bo = 
-          gce::lua::from_lua<gce::lua::basic_object>(L, 3, "socket");
+        gce::lua::from_lua<gce::lua::basic_object>(L, 3, "socket");
 
       resolver_t::iterator eitr = resolver_t::iterator();
       int ty4 = lua_type(L, 4);

@@ -25,7 +25,9 @@ gce.actor(
     else
       parser = asio.simple_regex('||')
     end
-    local sn = asio.session(parser, skt_impl)
+    local opt = asio.sn_option()
+    opt.idle_period = gce.millisecs(100)
+    local sn = asio.session(parser, skt_impl, nil, opt)
 
     sn:open()
     ec, sender, args, msg = 
@@ -36,25 +38,11 @@ gce.actor(
       error (tostring(err))
     end
 
-    while true do
-      ec, sender, args, msg = 
-        gce.match(asio.sn_recv, asio.sn_close).recv()
-
-      if msg:getty() == asio.sn_close then
-        args = gce.unpack(msg, gce.errcode)
-        err = args[1]
-        error (tostring(err))
-      end
-
-      args = gce.unpack(msg, '')
-      local str = args[1]
-      if str == 'bye||' then
-        sn:send(msg)
-        sn:close(true)
-        gce.match(asio.sn_close).recv()
-        break
-      end
-
-      sn:send(msg)
+    -- wait for idle (timeout) twice 
+    for i=1,2 do
+      gce.match(asio.sn_idle).recv()
     end
+
+    sn:close()
+    gce.match(asio.sn_close).recv()
   end)

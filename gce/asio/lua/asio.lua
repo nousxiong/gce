@@ -14,11 +14,13 @@ local asio = {}
 
 local tcpopt_adl = nil
 local sslopt_adl = nil
+local snopt_adl = nil
 if gce.packer == gce.pkr_adata then
   tcpopt_adl = require('tcp_option_adl')
   if gce.openssl ~= 0 then
     sslopt_adl = require('ssl_option_adl')
   end
+  snopt_adl = require('sn_option_adl')
 end
 
 -- enum and constant def

@@ -15,9 +15,9 @@ gce.actor(
     local ec, sender, args, msg, err
     local ptype = asio.plength
 
-    ec, sender, args = gce.match('init').recv(ptype, asio.tcp_socket_impl)
+    ec, sender, args = gce.match('init').recv(ptype, asio.tcp_endpoint_itr)
     ptype = args[1]
-    local skt_impl = args[2]
+    local eitr = args[2]
 
     local parser
     if ptype == asio.plength then
@@ -25,7 +25,8 @@ gce.actor(
     else
       parser = asio.simple_regex('||')
     end
-    local sn = asio.session(parser, skt_impl)
+    local skt_impl = asio.tcp_socket_impl()
+    local sn = asio.session(parser, skt_impl, eitr)
 
     sn:open()
     ec, sender, args, msg = 
@@ -36,25 +37,5 @@ gce.actor(
       error (tostring(err))
     end
 
-    while true do
-      ec, sender, args, msg = 
-        gce.match(asio.sn_recv, asio.sn_close).recv()
-
-      if msg:getty() == asio.sn_close then
-        args = gce.unpack(msg, gce.errcode)
-        err = args[1]
-        error (tostring(err))
-      end
-
-      args = gce.unpack(msg, '')
-      local str = args[1]
-      if str == 'bye||' then
-        sn:send(msg)
-        sn:close(true)
-        gce.match(asio.sn_close).recv()
-        break
-      end
-
-      sn:send(msg)
-    end
+    gce.match(asio.sn_close).recv()
   end)
