@@ -126,8 +126,9 @@ if gce.openssl ~= 0 then
     return libasio.make_sslopt()
   end
 
-  function asio.ssl_stream_impl(ssl_ctx)
-    return libasio.make_ssl_stream_impl(libgce.self, ssl_ctx)
+  -- ssl_opt: optional, could be nil or none
+  function asio.ssl_stream_impl(ssl_ctx, ssl_opt)
+    return libasio.make_ssl_stream_impl(libgce.self, ssl_ctx, ssl_opt)
   end
 
   function asio.ssl_context(method, opt, pwdcb)

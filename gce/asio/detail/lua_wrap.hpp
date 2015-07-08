@@ -1150,6 +1150,7 @@ struct ssl_stream_impl
   typedef boost::asio::ssl::stream<stream_t> ssl_socket_t;
   typedef boost::shared_ptr<ssl_socket_t> object_t;
   object_t obj_;
+  std::vector<int> ref_list_;
 
   object_t* object()
   {
@@ -1163,12 +1164,22 @@ struct ssl_stream_impl
 
   virtual void pack(gce::message& msg)
   {
-    msg << obj_;
+    msg << obj_ << ref_list_.size();
+    BOOST_FOREACH(int k, ref_list_)
+    {
+      msg << k;
+    }
   }
 
   virtual void unpack(gce::message& msg)
   {
-    msg >> obj_;
+    std::vector<int>::size_type size = 0;
+    msg >> obj_ >> size;
+    ref_list_.resize(size);
+    BOOST_FOREACH(int& k, ref_list_)
+    {
+      msg >> k;
+    }
   }
 
   virtual int gcety() const
@@ -1178,27 +1189,53 @@ struct ssl_stream_impl
 
   static int make(lua_State* L)
   {
-    gce::lua::actor_proxy* a = gce::lua::from_lua<gce::lua::actor_proxy>(L, 1, "actor");
-
-    void* block = lua_newuserdata(L, sizeof(ssl_stream_impl));
-    if (!block)
+    try
     {
-      return luaL_error(L, "lua_newuserdata for ssl_stream_impl failed");
-    }
+      gce::lua::actor_proxy* a = gce::lua::from_lua<gce::lua::actor_proxy>(L, 1, "actor");
 
-    if (lua_type(L, 2) == LUA_TUSERDATA)
-    {
-      ssl_context::object_t* ssl_ctx = gce::lua::from_lua<ssl_context>(L, 2);
-      gce::io_service_t& ios = (*a)->get_context().get_io_service();
-      ssl_stream_impl* wrap = new (block) ssl_stream_impl;
-      wrap->obj_ = boost::make_shared<ssl_socket_t>(boost::ref(ios), boost::ref(**ssl_ctx));
-    }
-    else
-    {
-      new (block) ssl_stream_impl;
-    }
+      void* block = lua_newuserdata(L, sizeof(ssl_stream_impl));
+      GCE_VERIFY(block != 0).msg("lua_newuserdata for ssl_stream_impl failed");
 
-    gce::lualib::setmetatab(L, name());
+      ssl_stream_impl* wrap = 0;
+      int ty2 = lua_type(L, 2);
+      if (ty2 == LUA_TUSERDATA)
+      {
+        ssl_context::object_t* ssl_ctx = gce::lua::from_lua<ssl_context>(L, 2);
+        gce::io_service_t& ios = (*a)->get_context().get_io_service();
+        wrap = new (block) ssl_stream_impl;
+        wrap->obj_ = boost::make_shared<ssl_socket_t>(boost::ref(ios), boost::ref(**ssl_ctx));
+      }
+      else
+      {
+        wrap = new (block) ssl_stream_impl;
+      }
+
+      if (lua_type(L, 3) == LUA_TTABLE)
+      {
+        GCE_VERIFY(ty2 == LUA_TUSERDATA);
+
+        object_t* o = wrap->object();
+        sslopt_t opt = make_sslopt();
+        load(L, 3, opt);
+
+        if (opt.verify_depth != -1)
+        {
+          (*o)->set_verify_depth((int)opt.verify_depth);
+        }
+
+        int vm = make_verify(opt);
+        if (vm != -1)
+        {
+          (*o)->set_verify_mode(vm);
+        }
+      }
+
+      gce::lualib::setmetatab(L, name());
+    }
+    catch (std::exception& ex)
+    {
+      return luaL_error(L, ex.what());
+    }
     return 1;
   }
 
@@ -1207,6 +1244,10 @@ struct ssl_stream_impl
     ssl_stream_impl* wrap = static_cast<ssl_stream_impl*>(lua_touserdata(L, 1));
     if (wrap)
     {
+      BOOST_FOREACH(int k, wrap->ref_list_)
+      {
+        gce::lualib::rmv_ref(L, "libasio", k);
+      }
       wrap->~ssl_stream_impl();
     }
     return 0;
@@ -1217,6 +1258,20 @@ struct ssl_stream_impl
     ssl_stream_impl* wrap = gce::lua::from_lua<ssl_stream_impl>(L, 1, name());
     lua_pushinteger(L, wrap->gcety());
     return 1;
+  }
+
+  static int set_verify_callback(lua_State* L)
+  {
+    ssl_stream_impl* wrap = gce::lua::from_lua<ssl_stream_impl>(L, 1, name());
+    luaL_argcheck(L, lua_type(L, 2) == LUA_TFUNCTION, 2, "'function' expected");
+    object_t* o = wrap->object();
+
+    lua_pushvalue(L, 2);
+    int k = gce::lualib::make_ref(L, "libasio");
+    wrap->ref_list_.push_back(k);
+
+    (*o)->set_verify_callback(boost::bind(&verify_callback, _arg1, _arg2, L, k));
+    return 0;
   }
 };
 #endif /// GCE_OPENSSL

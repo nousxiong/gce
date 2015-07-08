@@ -84,7 +84,6 @@ public:
   }
 
 public:
-  public:
   void run(stackless_actor self, boost::shared_ptr<socket_t> skt)
   {
     try

@@ -29,5 +29,8 @@ gce.actor(
 			--test('ssl_ut')
 		--end
 		--test('tcpsn_ut')
-		test('tcpsn_idle_ut')
+		--test('tcpsn_idle_ut')
+		if gce.openssl ~= 0 then
+			test('sslsn_ut')
+		end
   end)

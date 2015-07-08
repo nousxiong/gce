@@ -68,7 +68,7 @@ private:
         *eitr
         );
 
-      for (size_t i=0; i<2; ++i)
+      for (size_t i=0; i<1; ++i)
       {
         sn.open();
         match_t type;
