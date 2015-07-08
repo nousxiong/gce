@@ -28,6 +28,9 @@ asio.ty_tcp_endpoint = libasio.ty_tcp_endpoint
 asio.ty_tcp_endpoint_itr = libasio.ty_tcp_endpoint_itr
 asio.ty_tcp_socket_impl = libasio.ty_tcp_socket_impl
 
+asio.plength = libasio.plength
+asio.pregex = libasio.pregex
+
 asio.sigint = libasio.sigint
 asio.sigterm = libasio.sigterm
 
@@ -75,6 +78,7 @@ function asio.timer()
   return libasio.make_system_timer(libgce.self)
 end
 
+-- all sig could be nil/none
 function asio.signal(sig1, sig2, sig3)
   return libasio.make_signal(libgce.self, sig1, sig2, sig3)
 end
@@ -135,6 +139,27 @@ if gce.openssl ~= 0 then
   end
 end
 
+function asio.sn_option()
+  return libasio.make_snopt()
+end
+
+function asio.simple_length()
+  return libasio.make_simple_length()
+end
+
+-- expr: regex's string expr
+function asio.simple_regex(expr)
+  return libasio.make_simple_regex(expr)
+end
+
+-- parser: msg parser, e.g. parser_simple
+-- skt_impl: tcp_socket_impl or ssl_socket_impl
+-- eitr: tcp_endpoint_itr (optional, could be nil/none)
+-- opt: sn_option (optional, could be nil/none)
+function asio.session(parser, skt_impl, eitr, opt)
+  return libasio.make_session(libgce.self, parser, skt_impl, eitr, opt)
+end
+
 
 asio.as_timeout = gce.atom('as_timeout')
 asio.as_signal = gce.atom('as_signal')
@@ -145,8 +170,14 @@ asio.as_handshake = gce.atom('as_handshake')
 asio.as_shutdown = gce.atom('as_shutdown')
 asio.as_recv = gce.atom('as_recv')
 asio.as_recv_some = gce.atom('as_recv_some')
+asio.as_recv_until = gce.atom('as_recv_until')
 asio.as_send = gce.atom('as_send')
 asio.as_send_some = gce.atom('as_send_some')
+
+asio.sn_open = gce.atom('sn_open')
+asio.sn_recv = gce.atom('sn_recv')
+asio.sn_idle = gce.atom('sn_idle')
+asio.sn_close = gce.atom('sn_close')
 
 function asio.async_read(s, length, ty)
   ty = ty or asio.as_recv

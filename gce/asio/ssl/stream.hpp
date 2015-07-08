@@ -11,6 +11,7 @@
 #define GCE_ASIO_SSL_STREAM_HPP
 
 #include <gce/asio/config.hpp>
+#include <gce/asio/socket_fwd.hpp>
 #include <boost/optional.hpp>
 #include <boost/asio/ssl.hpp>
 
@@ -20,15 +21,6 @@ namespace asio
 {
 namespace ssl
 {
-static match_t const as_conn = atom("as_conn");
-static match_t const as_handshake = atom("as_handshake");
-static match_t const as_shutdown = atom("as_shutdown");
-static match_t const as_recv = atom("as_recv");
-static match_t const as_recv_some = atom("as_recv_some");
-static match_t const as_recv_until = atom("as_recv_until");
-static match_t const as_send = atom("as_send");
-static match_t const as_send_some = atom("as_send_some");
-
 /// a wrapper for boost::asio::ssl::stream
 template <typename Socket = boost::asio::ip::tcp::socket>
 class stream
@@ -95,7 +87,7 @@ public:
   
 public:
   /// connect directly (no resolve)
-  void async_connect(typename socket_t::endpoint_type const& ep, message const& msg = message(as_conn))
+  void async_connect(typename socket_t::endpoint_type const& ep, message const& msg = message(tcp::as_conn))
   {
     GCE_ASSERT(!conning_);
     GCE_ASSERT(!handshaking_);
@@ -121,7 +113,7 @@ public:
   
   /// resovlve before connect
   template <typename Iterator>
-  void async_connect(Iterator itr, message const& msg = message(as_conn))
+  void async_connect(Iterator itr, message const& msg = message(tcp::as_conn))
   {
     GCE_ASSERT(!conning_);
     GCE_ASSERT(!handshaking_);
@@ -189,7 +181,7 @@ public:
   }
 
   template <typename MutableBufferSequence>
-  void async_read(MutableBufferSequence const& buffers, message const& msg = message(as_recv))
+  void async_read(MutableBufferSequence const& buffers, message const& msg = message(tcp::as_recv))
   {
     GCE_ASSERT(!recving_);
     GCE_ASSERT(!conning_);
@@ -211,7 +203,7 @@ public:
     recving_ = true;
   }
   
-  void async_read(size_t length, message const& msg = message(as_recv))
+  void async_read(size_t length, message const& msg = message(tcp::as_recv))
   {
     GCE_ASSERT(!recving_);
     GCE_ASSERT(!conning_);
@@ -241,7 +233,7 @@ public:
   }
 
   template <typename MutableBufferSequence>
-  void async_read_some(MutableBufferSequence const& buffers, message const& msg = message(as_recv_some))
+  void async_read_some(MutableBufferSequence const& buffers, message const& msg = message(tcp::as_recv_some))
   {
     GCE_ASSERT(!recving_);
     GCE_ASSERT(!conning_);
@@ -263,7 +255,7 @@ public:
     recving_ = true;
   }
   
-  void async_read_some(size_t length, message const& msg = message(as_recv_some))
+  void async_read_some(size_t length, message const& msg = message(tcp::as_recv_some))
   {
     GCE_ASSERT(!recving_);
     GCE_ASSERT(!conning_);
@@ -296,7 +288,7 @@ public:
   void async_read_until(
     boost::asio::basic_streambuf<Allocator>& b, 
     Expr const& expr, 
-    message const& msg = message(as_recv_until)
+    message const& msg = message(tcp::as_recv_until)
     )
   {
     GCE_ASSERT(!recving_);
@@ -319,7 +311,7 @@ public:
   }
   
   template <typename ConstBufferSequence>
-  void async_write(ConstBufferSequence const& buffers, message const& msg = message(as_send))
+  void async_write(ConstBufferSequence const& buffers, message const& msg = message(tcp::as_send))
   {
     GCE_ASSERT(!sending_);
     GCE_ASSERT(!conning_);
@@ -368,7 +360,7 @@ public:
   }
   
   template <typename ConstBufferSequence>
-  void async_write_some(ConstBufferSequence const& buffers, message const& msg = message(as_send_some))
+  void async_write_some(ConstBufferSequence const& buffers, message const& msg = message(tcp::as_send_some))
   {
     GCE_ASSERT(!sending_);
     GCE_ASSERT(!conning_);

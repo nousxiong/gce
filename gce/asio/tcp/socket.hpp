@@ -11,6 +11,7 @@
 #define GCE_ASIO_TCP_SOCKET_HPP
 
 #include <gce/asio/config.hpp>
+#include <gce/asio/socket_fwd.hpp>
 #include <boost/optional.hpp>
 #include <boost/array.hpp>
 
@@ -20,13 +21,6 @@ namespace asio
 {
 namespace tcp
 {
-static match_t const as_conn = atom("as_conn");
-static match_t const as_recv = atom("as_recv");
-static match_t const as_recv_some = atom("as_recv_some");
-static match_t const as_recv_until = atom("as_recv_until");
-static match_t const as_send = atom("as_send");
-static match_t const as_send_some = atom("as_send_some");
-
 /// a wrapper for boost::asio::ip::tcp::socket
 class socket
   : public addon_t

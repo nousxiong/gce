@@ -44,13 +44,8 @@ enum
   ty_num
 };
 
-class basic_object
+struct basic_object
 {
-public:
-  basic_object() {}
-  virtual ~basic_object() {}
-
-public:
   virtual void pack(gce::message&) = 0;
   virtual void unpack(gce::message&) = 0;
   virtual int gcety() const = 0;

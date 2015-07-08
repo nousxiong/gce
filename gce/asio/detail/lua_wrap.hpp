@@ -28,6 +28,10 @@
 # include <gce/asio/ssl/option.hpp>
 # include <gce/asio/ssl/ssl_option.adl.c2l.h>
 #endif
+#include <gce/asio/session.hpp>
+#include <gce/asio/sn_option.hpp>
+#include <gce/asio/sn_option.adl.c2l.h>
+#include <gce/asio/parser/simple.hpp>
 #include <gce/asio/lua_object.hpp>
 #include <gce/lualib/all.hpp>
 #include <boost/shared_ptr.hpp>
@@ -1685,7 +1689,7 @@ struct ssl_stream
   {
     ssl_stream::object_t* o = gce::lua::from_lua<ssl_stream>(L, 1);
     gce::lua::basic_object* bo = gce::lua::from_lua<gce::lua::basic_object>(L, 2, "endpoint");
-    gce::message m(ssl::as_conn);
+    gce::message m(tcp::as_conn);
     gce::message* msg = &m;
 
     if (lua_type(L, 3) == LUA_TUSERDATA)
@@ -1814,6 +1818,285 @@ struct ssl_stream
   }
 };
 #endif /// GCE_OPENSSL
+///------------------------------------------------------------------------------
+/// sn_option
+///------------------------------------------------------------------------------
+struct sn_option
+{
+  static int make(lua_State* L)
+  {
+    create(L);
+    return 1;
+  }
+
+  static void create(lua_State* L, snopt_t const& opt = make_snopt())
+  {
+#if GCE_PACKER == GCE_AMSG
+    adata::lua::push(L, opt, false);
+#elif GCE_PACKER == GCE_ADATA
+    adata::lua::push(L, opt);
+#endif
+  }
+};
+
+static void load(lua_State* L, int arg, snopt_t& opt)
+{
+  if (arg != -1)
+  {
+    lua_pushvalue(L, arg);
+  }
+  adata::lua::load(L, opt);
+  if (arg != -1)
+  {
+    lua_pop(L, 1);
+  }
+}
+
+static void push(lua_State* L, snopt_t const& opt)
+{
+  sn_option::create(L, opt);
+}
+///------------------------------------------------------------------------------
+/// parser::simple
+///------------------------------------------------------------------------------
+namespace parser
+{
+struct simple_length
+  : public asio::lua::parser::length
+{
+  boost::shared_ptr<asio::parser::simple> p_;
+
+  simple_length()
+    : p_(boost::make_shared<asio::parser::simple>())
+  {
+  }
+
+  static int make(lua_State* L)
+  {
+    void* block = lua_newuserdata(L, sizeof(simple_length));
+    if (!block)
+    {
+      luaL_error(L, "lua_newuserdata for simple_length failed");
+      return 0;
+    }
+
+    new (block) simple_length;
+
+    gce::lualib::setmetatab(L, "simple_length");
+    return 1;
+  }
+
+  static int gc(lua_State* L)
+  {
+    simple_length* o = static_cast<simple_length*>(lua_touserdata(L, 1));
+    if (o)
+    {
+      o->~simple_length();
+    }
+    return 0;
+  }
+
+  virtual boost::shared_ptr<asio::parser::length> get_impl()
+  {
+    return p_;
+  }
+};
+
+struct simple_regex
+  : public asio::lua::parser::regex
+{
+  boost::shared_ptr<asio::parser::simple> p_;
+
+  simple_regex(std::string const& r)
+    : p_(boost::make_shared<asio::parser::simple>(r))
+  {
+  }
+
+  static int make(lua_State* L)
+  {
+    void* block = lua_newuserdata(L, sizeof(simple_regex));
+    if (!block)
+    {
+      luaL_error(L, "lua_newuserdata for simple_regex failed");
+      return 0;
+    }
+
+    char const* r = luaL_checkstring(L, 1);
+    new (block) simple_regex(r);
+
+    gce::lualib::setmetatab(L, "simple_regex");
+    return 1;
+  }
+
+  static int gc(lua_State* L)
+  {
+    simple_regex* o = static_cast<simple_regex*>(lua_touserdata(L, 1));
+    if (o)
+    {
+      o->~simple_regex();
+    }
+    return 0;
+  }
+
+  virtual boost::shared_ptr<asio::parser::regex> get_impl()
+  {
+    return p_;
+  }
+};
+} /// namespace parser
+///------------------------------------------------------------------------------
+/// session
+///------------------------------------------------------------------------------
+struct session
+{
+  typedef boost::asio::ip::tcp::socket tcp_socket_t;
+#ifdef GCE_OPENSSL
+  typedef boost::asio::ssl::stream<tcp_socket_t> ssl_socket_t;
+#endif
+  typedef boost::asio::ip::tcp::resolver resolver_t;
+
+  static char const* name()
+  {
+    return "session";
+  }
+
+  static int make(lua_State* L)
+  {
+    try
+    {
+      gce::lua::actor_proxy* a = gce::lua::from_lua<gce::lua::actor_proxy>(L, 1, "actor");
+      asio::lua::parser::base* basic_parser = 
+          gce::lua::from_lua<asio::lua::parser::base>(L, 2, "parser::base");
+      gce::lua::basic_object* bo = 
+          gce::lua::from_lua<gce::lua::basic_object>(L, 3, "socket");
+
+      resolver_t::iterator eitr = resolver_t::iterator();
+      int ty4 = lua_type(L, 4);
+      if (ty4 != LUA_TNIL && ty4 != LUA_TNONE)
+      {
+        tcp_endpoint_itr* itr = 
+          gce::lua::from_lua<tcp_endpoint_itr>(L, 4, "tcp_endpoint_itr");
+        eitr = *itr->object()->get();
+      }
+
+      snopt_t opt = make_snopt();
+      int ty5 = lua_type(L, 5);
+      if (ty5 != LUA_TNIL && ty5 != LUA_TNONE)
+      {
+        load(L, 5, opt);
+      }
+
+      detail::basic_session* o = 0;
+      asio::lua::parser_type pt = basic_parser->get_type();
+      if (pt == asio::lua::plength)
+      {
+        asio::lua::parser::length* wrap = 
+          static_cast<asio::lua::parser::length*>(basic_parser);
+        boost::shared_ptr<asio::parser::length> p = wrap->get_impl();
+
+        if (bo->gcety() == asio::lua::ty_tcp_socket_impl)
+        {
+          typedef asio::session<asio::parser::length, tcp_socket_t, gce::lua::actor_proxy> sn_t;
+          o = create<tcp_socket_impl, sn_t>(L, a, p, bo, eitr, opt);
+        }
+        else
+        {
+#ifdef GCE_OPENSSL
+          typedef asio::session<asio::parser::length, ssl_socket_t, gce::lua::actor_proxy> sn_t;
+          o = create<ssl_stream_impl, sn_t>(L, a, p, bo, eitr, opt);
+#else
+          GCE_VERIFY(false).msg("no ssl support").except();
+#endif
+        }
+      }
+      else
+      {
+        asio::lua::parser::regex* wrap = 
+          static_cast<asio::lua::parser::regex*>(basic_parser);
+        boost::shared_ptr<asio::parser::regex> p = wrap->get_impl();
+
+        if (bo->gcety() == asio::lua::ty_tcp_socket_impl)
+        {
+          typedef asio::session<asio::parser::regex, tcp_socket_t, gce::lua::actor_proxy> sn_t;
+          o = create<tcp_socket_impl, sn_t>(L, a, p, bo, eitr, opt);
+        }
+        else
+        {
+#ifdef GCE_OPENSSL
+          typedef asio::session<asio::parser::regex, ssl_socket_t, gce::lua::actor_proxy> sn_t;
+          o = create<ssl_stream_impl, sn_t>(L, a, p, bo, eitr, opt);
+#else
+          GCE_VERIFY(false).msg("no ssl support").except();
+#endif
+        }
+      }
+
+      lua_pushvalue(L, -1);
+      int k = gce::lualib::make_ref(L, "libasio");
+      (*a)->add_addon("libasio", k, o);
+      gce::lualib::setmetatab(L, name());
+    }
+    catch (std::exception& ex)
+    {
+      return luaL_error(L, ex.what());
+    }
+    return 1;
+  }
+
+  static int gc(lua_State* L)
+  {
+    detail::basic_session* o = static_cast<detail::basic_session*>(lua_touserdata(L, 1));
+    if (o)
+    {
+      o->~basic_session();
+    }
+    return 0;
+  }
+
+  static int open(lua_State* L)
+  {
+    detail::basic_session* o = gce::lua::from_lua<detail::basic_session>(L, 1, name());
+    o->open();
+    return 0;
+  }
+
+  static int send(lua_State* L)
+  {
+    detail::basic_session* o = gce::lua::from_lua<detail::basic_session>(L, 1, name());
+    gce::message* msg = gce::lua::from_lua<gce::lua::message>(L, 2);
+    o->send(*msg);
+    return 0;
+  }
+
+  static int close(lua_State* L)
+  {
+    detail::basic_session* o = gce::lua::from_lua<detail::basic_session>(L, 1, name());
+    bool grateful = true;
+    int ty2 = lua_type(L, 2);
+    if (ty2 != LUA_TNIL || ty2 != LUA_TNONE)
+    {
+      grateful = lua_toboolean(L, 2) != 0;
+    }
+    o->close(grateful);
+    return 0;
+  }
+
+  template <typename Socket, typename Session, typename Parser>
+  static detail::basic_session* create(
+    lua_State* L,
+    gce::lua::actor_proxy* a,
+    boost::shared_ptr<Parser> p, 
+    gce::lua::basic_object* skt_bo, 
+    resolver_t::iterator eitr,
+    snopt_t opt
+    )
+  {
+    Socket* skt = boost::polymorphic_downcast<Socket*>(skt_bo);
+    void* block = lua_newuserdata(L, sizeof(Session));
+    GCE_VERIFY(block != 0).msg("lua_newuserdata for session failed").except();
+    return new (block) Session(*a, p, *skt->object(), eitr, opt);
+  }
+};
 ///------------------------------------------------------------------------------
 } /// namespace lua
 } /// namespace detail

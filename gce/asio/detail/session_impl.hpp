@@ -16,9 +16,11 @@
 #include <gce/asio/parser/basic.hpp>
 #include <gce/asio/detail/session_fwd.hpp>
 #include <gce/detail/buffer_ref.hpp>
-#include <boost/asio/ssl.hpp>
-#include <boost/mpl/if.hpp>
-#include <boost/type_traits.hpp>
+#ifdef GCE_OPENSSL
+# include <boost/asio/ssl.hpp>
+# include <boost/mpl/if.hpp>
+# include <boost/type_traits.hpp>
+#endif
 
 #ifndef GCE_SESSION_RECV_BUFFER_MIN_SIZE
 # define GCE_SESSION_RECV_BUFFER_MIN_SIZE 60000
@@ -41,11 +43,17 @@ class basic_session_impl
   typedef boost::asio::ip::tcp::resolver resolver_t;
   typedef Socket socket_t;
   typedef tcp::socket tcp_socket_t;
+#ifdef GCE_OPENSSL
   typedef ssl::stream<> ssl_socket_t;
+#endif
 
+#ifdef GCE_OPENSSL
   typedef typename boost::mpl::if_<
     typename boost::is_same<socket_t, boost::asio::ip::tcp::socket>::type, tcp_socket_t, ssl_socket_t
     >::type socket;
+#else
+  typedef tcp_socket_t socket;
+#endif
 
 protected:
   enum status
@@ -102,7 +110,6 @@ public:
           {
             errcode_t ec;
             msg_ >> ec;
-            //handle_open(ec);
             async_open(*skt_, ec);
           }
           else if (type == asio::ssl::as_handshake)
@@ -210,13 +217,11 @@ protected:
 
     if (is_conn_)
     {
-      //GCE_ASSERT(!(*skt_)->is_open());
       skt_->async_connect(eitr_);
       return;
     }
     else
     {
-      //handle_open();
       async_open(*skt_, errcode_t());
     }
   }
@@ -226,6 +231,7 @@ protected:
     handle_open(ec);
   }
 
+#ifdef GCE_OPENSSL
   void async_open(ssl_socket_t& s, errcode_t ec)
   {
     if (ec)
@@ -236,15 +242,18 @@ protected:
 
     s.async_handshake(is_conn_ ? ssl_socket_t::impl_t::client : ssl_socket_t::impl_t::server);
   }
+#endif
 
   void handle_handshake(tcp_socket_t&, errcode_t)
   {
   }
 
+#ifdef GCE_OPENSSL
   void handle_handshake(ssl_socket_t&, errcode_t ec)
   {
     handle_open(ec);
   }
+#endif
 
   void handle_open(errcode_t ec = errcode_t())
   {
@@ -261,8 +270,7 @@ protected:
 
     /// invoke child cb
     end_open();
-    /// begin recv
-    //netmsg_.set_type(asio::sn_recv);
+
     begin_recv();
   }
 
@@ -307,7 +315,6 @@ protected:
     }
 
     message& msg = send_que_.back();
-    //parser_->on_send(msg, m);
     /// invoke child cb
     on_send(msg, m);
 
@@ -418,6 +425,7 @@ protected:
   {
   }
 
+#ifdef GCE_OPENSSL
   void handle_shutdown(ssl_socket_t& s, errcode_t ec)
   {
     errcode_t ignored_ec;
@@ -425,6 +433,7 @@ protected:
     shutdown_ = true;
     try_close(ec);
   }
+#endif
 
   void on_error(errcode_t const& ec)
   {
@@ -555,7 +564,6 @@ struct recv_buffer
 ///----------------------------------------------------------------------------
 template <typename Socket>
 class session_impl<asio::parser::length, Socket>
-  //: public boost::enable_shared_from_this<session_impl<asio::parser::length, boost::asio::ip::tcp::socket> >
   : public basic_session_impl<Socket>
 {
   typedef basic_session_impl<Socket> base_t;
@@ -600,7 +608,6 @@ protected:
     parser_->on_send(msg, m);
   }
 
-private:
   void begin_recv()
   {
     while (true)
@@ -792,7 +799,6 @@ private:
 ///----------------------------------------------------------------------------
 template <typename Socket>
 class session_impl<asio::parser::regex, Socket>
-  //: public boost::enable_shared_from_this<session_impl<asio::parser::regex, boost::asio::ip::tcp::socket> >
   : public basic_session_impl<Socket>
 {
   typedef basic_session_impl<Socket> base_t;
@@ -828,7 +834,6 @@ protected:
   {
   }
 
-private:
   void begin_recv()
   {
     if (base_t::stat_ == base_t::on)

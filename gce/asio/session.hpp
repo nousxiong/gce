@@ -18,11 +18,39 @@ namespace gce
 {
 namespace asio
 {
-template <typename Parser, typename Socket, typename Actor>
-class session
+namespace detail
+{
+///------------------------------------------------------------------------------
+/// basic_session
+///------------------------------------------------------------------------------
+class basic_session
   : public addon_t
 {
-  typedef addon_t base_t;
+public:
+  template <typename Actor>
+  explicit basic_session(Actor a)
+    : addon_t(a)
+  {
+  }
+
+  virtual ~basic_session()
+  {
+  }
+
+public:
+  virtual void open() = 0;
+  virtual void send(message const&) = 0;
+  virtual void close(bool) = 0;
+};
+}
+///------------------------------------------------------------------------------
+/// session
+///------------------------------------------------------------------------------
+template <typename Parser, typename Socket, typename Actor>
+class session
+  : public detail::basic_session
+{
+  typedef detail::basic_session base_t;
   typedef Parser parser_t;
   typedef Socket socket_t;
   typedef Actor actor_t;
@@ -37,27 +65,14 @@ public:
     actor_t& a, 
     boost::shared_ptr<parser_t> parser, 
     boost::shared_ptr<socket_t> skt, 
-    snopt_t opt = make_snopt()
-    )
-    : base_t(a)
-    , a_(a)
-    , sa_(spawn_session_actor(a, parser, skt, resolver_t::iterator(), opt))
-    , scp_(this)
-  {
-    a_.send(sa_, message("init"));
-  }
-
-  session(
-    actor_t& a, 
-    boost::shared_ptr<parser_t> parser, 
-    boost::shared_ptr<socket_t> skt, 
-    resolver_t::iterator eitr, 
+    resolver_t::iterator eitr = resolver_t::iterator(), 
     snopt_t opt = make_snopt()
     )
     : base_t(a)
     , a_(a)
     , sa_(spawn_session_actor(a, parser, skt, eitr, opt))
     , scp_(this)
+    , disposed_(false)
   {
     a_.send(sa_, message("init"));
   }
@@ -69,8 +84,12 @@ public:
 
   void dispose()
   {
-    scp_.notify();
-    a_.send(sa_, message(exit));
+    if (!disposed_)
+    {
+      disposed_ = true;
+      scp_.notify();
+      a_.send(sa_, message(exit));
+    }
   }
 
 public:
@@ -143,6 +162,7 @@ private:
 
   /// for quit
   scope_t scp_;
+  bool disposed_;
 };
 }
 }

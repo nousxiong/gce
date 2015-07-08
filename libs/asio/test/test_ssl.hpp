@@ -61,7 +61,7 @@ private:
       skt->set_verify_callback(boost::bind(&ssl_ut::verify_certificate, _arg1, _arg2, lg));
 
       skt.async_connect(*eitr);
-      self->match(ssl::as_conn).recv(ec);
+      self->match(tcp::as_conn).recv(ec);
       GCE_VERIFY(!ec).except(ec);
 
       skt.async_handshake(boost::asio::ssl::stream_base::client);
@@ -83,12 +83,12 @@ private:
       for (size_t i=0; i<ecount; ++i)
       {
         skt.async_write(boost::asio::buffer(buff, hdr_len + hdr.size_));
-        self->match(ssl::as_send).recv(ec);
+        self->match(tcp::as_send).recv(ec);
         GCE_VERIFY(!ec).except(ec);
 
         skt.async_read(hdr_len + hdr.size_);
         message::chunk ch(hdr_len + hdr.size_);
-        self->match(ssl::as_recv).recv(ec, ch);
+        self->match(tcp::as_recv).recv(ec, ch);
 
         zbuf.set_read(ch.data(), hdr_len + hdr.size_);
         std::string echo_str;
@@ -105,7 +105,7 @@ private:
       amsg::write(zbuf, hdr);
       amsg::write(zbuf, str);
       skt.async_write(boost::asio::buffer(buff, hdr_len + hdr.size_));
-      self->match(ssl::as_send).recv(ec);
+      self->match(tcp::as_send).recv(ec);
       GCE_VERIFY(!ec).except(ec);
 
       skt.async_shutdown();
@@ -146,7 +146,7 @@ private:
       {
         match_t type;
         errcode_t ec;
-        self->match(recv_header, recv_body, ssl::as_send, type).recv(ec);
+        self->match(recv_header, recv_body, tcp::as_send, type).recv(ec);
         GCE_VERIFY(!ec).except(ec);
 
         if (type == recv_header)

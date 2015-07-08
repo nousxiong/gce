@@ -88,6 +88,7 @@ private:
         self, 
         boost::make_shared<parser::simple>("||"), 
         tcp_skt,
+        tcp_resolver_t::iterator(),
         opt
         );
 

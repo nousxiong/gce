@@ -11,6 +11,7 @@
 #define GCE_ASIO_LUA_OBJECT_HPP
 
 #include <gce/asio/config.hpp>
+#include <gce/asio/parser/basic.hpp>
 #include <gce/lualib/all.hpp>
 #include <cstring>
 
@@ -32,8 +33,36 @@ enum
 
   ty_num
 };
-}
-}
-}
+
+enum parser_type
+{
+  plength = 0,
+  pregex
+};
+
+namespace parser
+{
+struct base
+{
+  virtual parser_type get_type() const = 0;
+};
+
+struct length
+  : public base
+{
+  virtual boost::shared_ptr<asio::parser::length> get_impl() = 0;
+  parser_type get_type() const { return plength; }
+};
+
+struct regex
+  : public base
+{
+  virtual boost::shared_ptr<asio::parser::regex> get_impl() = 0;
+  parser_type get_type() const { return pregex; }
+};
+} /// namespace parser
+} /// namespace lua
+} /// namespace asio
+} /// namespace gce
 
 #endif /// GCE_ASIO_LUA_OBJECT_HPP

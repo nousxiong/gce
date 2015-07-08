@@ -123,6 +123,22 @@ inline void make_libasio(lua_State* L)
         .add_function("__gc", detail::lua::ssl_stream::gc)
       .end_userdata()
 #endif
+      .add_function("make_snopt", detail::lua::sn_option::make)
+      .add_function("make_simple_length", detail::lua::parser::simple_length::make)
+      .begin_userdata("simple_length")
+        .add_function("__gc", detail::lua::parser::simple_length::gc)
+      .end_userdata()
+      .add_function("make_simple_regex", detail::lua::parser::simple_regex::make)
+      .begin_userdata("simple_regex")
+        .add_function("__gc", detail::lua::parser::simple_regex::gc)
+      .end_userdata()
+      .add_function("make_session", detail::lua::session::make)
+      .begin_userdata("session")
+        .add_function("open", detail::lua::session::open)
+        .add_function("send", detail::lua::session::send)
+        .add_function("close", detail::lua::session::close)
+        .add_function("__gc", detail::lua::session::gc)
+      .end_userdata()
     .end()
     ;
 
@@ -136,6 +152,9 @@ inline void make_libasio(lua_State* L)
   oss << "libasio.ty_tcp_endpoint = " << gce::asio::lua::ty_tcp_endpoint << std::endl;
   oss << "libasio.ty_tcp_endpoint_itr = " << gce::asio::lua::ty_tcp_endpoint_itr << std::endl;
   oss << "libasio.ty_tcp_socket_impl = " << gce::asio::lua::ty_tcp_socket_impl << std::endl;
+  
+  oss << "libasio.plength = " << gce::asio::lua::plength << std::endl;
+  oss << "libasio.pregex = " << gce::asio::lua::pregex << std::endl;
 
   /// signals
   oss << "libasio.sigint = " << SIGINT << std::endl;

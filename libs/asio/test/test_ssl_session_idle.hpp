@@ -110,6 +110,7 @@ private:
         self, 
         boost::make_shared<parser::simple>("||"), 
         ssl_skt,
+        tcp_resolver_t::iterator(),
         opt
         );
 
