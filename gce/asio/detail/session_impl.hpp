@@ -411,6 +411,7 @@ protected:
     shutdown_ = true;
   }
 
+#ifdef GCE_OPENSSL
   void close_socket(ssl_socket_t& s)
   {
     if (!shuting_down_)
@@ -419,6 +420,7 @@ protected:
       s.async_shutdown();
     }
   }
+#endif
 
   void handle_shutdown(tcp_socket_t&, errcode_t)
   {

@@ -68,50 +68,47 @@ private:
         *eitr
         );
 
-      for (size_t i=0; i<1; ++i)
+      sn.open();
+      match_t type;
+      self->match(sn_open, sn_close, type).raw(msg).recv();
+      if (type == sn_close)
       {
-        sn.open();
-        match_t type;
-        self->match(sn_open, sn_close, type).raw(msg).recv();
+        msg >> ec;
+        boost::throw_exception(boost::system::system_error(ec));
+      }
+
+      std::string str("hello world!||");
+      message m;
+      m << str;
+
+      for (size_t i=0; i<ecount; ++i)
+      {
+        /// send msg
+        sn.send(m);
+
+        /// wait for echo
+        self->match(sn_recv, sn_close, type).raw(msg).recv();
         if (type == sn_close)
         {
           msg >> ec;
           boost::throw_exception(boost::system::system_error(ec));
         }
 
-        std::string str("hello world!||");
-        message m;
-        m << str;
+        std::string echo_str;
+        msg >> echo_str;
+        GCE_VERIFY(echo_str == str);
+      }
 
-        for (size_t i=0; i<ecount; ++i)
-        {
-          /// send msg
-          sn.send(m);
+      m = message();
+      m << "bye||";
+      sn.send(m);
 
-          /// wait for echo
-          self->match(sn_recv, sn_close, type).raw(msg).recv();
-          if (type == sn_close)
-          {
-            msg >> ec;
-            boost::throw_exception(boost::system::system_error(ec));
-          }
-
-          std::string echo_str;
-          msg >> echo_str;
-          GCE_VERIFY(echo_str == str);
-        }
-
-        m = message();
-        m << "bye||";
-        sn.send(m);
-
-        /// wait for server confirm or error
-        self->match(sn_recv, sn_close, type).raw(msg).recv();
-        if (type != sn_close)
-        {
-          sn.close();
-          self->match(sn_close).recv();
-        }
+      /// wait for server confirm or error
+      self->match(sn_recv, sn_close, type).raw(msg).recv();
+      if (type != sn_close)
+      {
+        sn.close();
+        self->match(sn_close).recv();
       }
     }
     catch (std::exception& ex)

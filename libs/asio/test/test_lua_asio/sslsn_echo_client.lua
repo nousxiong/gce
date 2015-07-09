@@ -20,7 +20,8 @@ gce.actor(
     local ecount = 10
     local ptype = asio.plength
 
-    ec, sender, args = gce.match('init').recv(ptype, asio.tcp_endpoint_itr, asio.ssl_context)
+    ec, sender, args = 
+      gce.match('init').recv(ptype, asio.tcp_endpoint_itr, asio.ssl_context)
     ptype = args[1]
     local eitr = args[2]
     local ssl_ctx = args[3]
@@ -38,46 +39,44 @@ gce.actor(
 
     local sn = asio.session(parser, skt_impl, eitr)
 
-    for i=1,1 do
-      sn:open()
+    sn:open()
+    ec, sender, args, msg = 
+      gce.match(asio.sn_open, asio.sn_close).recv()
+    if msg:getty() == asio.sn_close then
+      args = gce.unpack(msg, gce.errcode)
+      err = args[1]
+      error (tostring(err))
+    end
+
+    local str = 'hello world!||'
+    local m = gce.message('nil', str)
+
+    for e=1, ecount do
+      sn:send(m)
+
       ec, sender, args, msg = 
-        gce.match(asio.sn_open, asio.sn_close).recv()
+        gce.match(asio.sn_recv, asio.sn_close).recv()
       if msg:getty() == asio.sn_close then
         args = gce.unpack(msg, gce.errcode)
         err = args[1]
         error (tostring(err))
       end
 
-      local str = 'hello world!||'
-      local m = gce.message('nil', str)
+      args = gce.unpack(msg, '')
+      local echo_str = args[1]
 
-      for e=1, ecount do
-        sn:send(m)
+      assert (echo_str == str, echo_str)
+    end
 
-        ec, sender, args, msg = 
-          gce.match(asio.sn_recv, asio.sn_close).recv()
-        if msg:getty() == asio.sn_close then
-          args = gce.unpack(msg, gce.errcode)
-          err = args[1]
-          error (tostring(err))
-        end
+    m = gce.message('nil', 'bye||')
+    sn:send(m)
 
-        args = gce.unpack(msg, '')
-        local echo_str = args[1]
+    -- wait for server confirm or error
+    ec, sender, args, msg = 
+      gce.match(asio.sn_recv, asio.sn_close).recv()
 
-        assert (echo_str == str, echo_str)
-      end
-
-      m = gce.message('nil', 'bye||')
-      sn:send(m)
-
-      -- wait fro server confirm or error
-      ec, sender, args, msg = 
-        gce.match(asio.sn_recv, asio.sn_close).recv()
-
-      if msg:getty() ~= asio.sn_close then
-        sn:close()
-        gce.match(asio.sn_close).recv()
-      end
+    if msg:getty() ~= asio.sn_close then
+      sn:close()
+      gce.match(asio.sn_close).recv()
     end
   end)
