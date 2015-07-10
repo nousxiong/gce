@@ -99,7 +99,7 @@ public:
   }
 
 protected:
-  void pri_send(actor_index ai, pack& pk)
+  void pri_send(actor_index ai, pack&)
   {
     base_t& svc = base_t::ctx_.get_service(ai);
     pack_list_t* back_list = bs_.get_pack_list(ai.type_, ai.svc_id_);
