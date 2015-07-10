@@ -169,7 +169,7 @@ namespace detail
 struct actor_index
 {
   actor_index()
-    : id_(u32_nil)
+    : id_(u64_nil)
     , svc_id_(u16_nil)
     , type_(actor_nil)
   {
@@ -180,7 +180,7 @@ struct actor_index
     return type_ != actor_nil;
   }
 
-  uint32_t id_;
+  uint64_t id_;
   uint16_t svc_id_;
   detail::actor_type type_;
 };

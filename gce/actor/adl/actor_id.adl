@@ -17,7 +17,7 @@ actor_id
   gce.adl.match ctxid_;
   uint64 timestamp_;
   uint64 uintptr_;
-  uint64 svc_id_;
+  uint16 svc_id_;
   uint8 type_;
   uint8 in_pool_;
   uint32 sid_;

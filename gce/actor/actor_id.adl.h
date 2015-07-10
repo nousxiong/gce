@@ -10,19 +10,19 @@ namespace gce {namespace adl {
   {
     uint8_t type_;
     uint8_t in_pool_;
+    uint16_t svc_id_;
     uint32_t sid_;
     uint64_t timestamp_;
     uint64_t uintptr_;
-    uint64_t svc_id_;
     ::gce::adl::match ctxid_;
     ::gce::adl::service_id svc_;
     actor_id()
     :    type_(0),
     in_pool_(0),
+    svc_id_(0),
     sid_(0),
     timestamp_(0ULL),
-    uintptr_(0ULL),
-    svc_id_(0ULL)
+    uintptr_(0ULL)
     {}
   };
 
