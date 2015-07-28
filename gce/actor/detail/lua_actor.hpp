@@ -164,7 +164,7 @@ public:
 
     if (!base_t::mb_.pop(res, msg))
     {
-      if (tmo > zero)
+      if (tmo >= zero) /// change > to >= for yielding when timeout == 0
       {
         if (tmo < infin)
         {
@@ -575,7 +575,7 @@ private:
     if (!base_t::mb_.pop(rcv, msg, patt.match_list_, patt.recver_))
     {
       duration_t tmo = patt.timeout_;
-      if (tmo > zero)
+      if (tmo >= zero) /// change > to >= for yielding when timeout == 0
       {
         if (tmo < infin)
         {
