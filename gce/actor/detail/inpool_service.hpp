@@ -42,31 +42,22 @@ public:
 public:
   void on_recv_forth(base_t& sender_svc, send_pair& sp)
   {
-    base_t::snd_.post(
-      boost::bind(
-        &self_t::handle_recv_forth, this,
-        boost::ref(sender_svc), sp
-        )
-      );
+    base_t::snd_.post(handle_recv_way_binder<forth>(*this, sender_svc, sp));
   }
 
   void on_recv_back(base_t& sender_svc, send_pair& sp)
   {
-    base_t::snd_.dispatch(
-      boost::bind(
-        &self_t::handle_recv_back, this,
-        boost::ref(sender_svc), sp
-        )
-      );
+    base_t::snd_.dispatch(handle_recv_way_binder<back>(*this, sender_svc, sp));
   }
 
   void on_recv(pack& pk)
   {
-    base_t::snd_.dispatch(
-      boost::bind(
-        &self_t::handle_recv, this, pk
-        )
-      );
+    base_t::snd_.dispatch(handle_recv_binder(*this, pk));
+  }
+
+  void handle_tick(pack& pk)
+  {
+    handle_recv(pk);
   }
 
   pack& alloc_pack(aid_t const& target)
@@ -76,20 +67,39 @@ public:
       actor_index ai = get_actor_index(target, base_t::ctxid_, base_t::timestamp_);
       if (ai)
       {
-        pack_list_t* back_list = bs_.get_pack_list(ai.type_, ai.svc_id_);
-        if (back_list)
+        if (is_inpool() && ai.svc_id_ == base_t::index_)
         {
-          back_list->push_back(nil_pk_);
-          return back_list->back();
+          pack& pk = base_t::ctx_.alloc_tick_pack(base_t::index_);
+          pk.ai_ = ai;
+          return pk;
         }
         else
         {
-          messager& msgr = bs_.get_messager(ai.type_, ai.svc_id_);
-          return msgr.alloc_pack();
+          pack_list_t* back_list = bs_.get_pack_list(ai.type_, ai.svc_id_);
+          if (back_list != 0)
+          {
+            back_list->push_back(pk_nil_);
+            pack& pk = back_list->back();
+            pk.ai_ = ai;
+            return pk;
+          }
+          else
+          {
+            messager& msgr = bs_.get_messager(ai.type_, ai.svc_id_);
+            pack& pk = msgr.alloc_pack();
+            pk.ai_ = ai;
+            return pk;
+          }
         }
       }
+      else
+      {
+        pk_ = pk_nil_;
+        pk_.expiry_ = true;
+        return pk_;
+      }
     }
-    pk_ = nil_pk_;
+    pk_ = pk_nil_;
     return pk_;
   }
 
@@ -99,7 +109,7 @@ public:
   }
 
 protected:
-  void pri_send(actor_index ai, pack&)
+  void pri_send(actor_index const& ai, pack&)
   {
     base_t& svc = base_t::ctx_.get_service(ai);
     pack_list_t* back_list = bs_.get_pack_list(ai.type_, ai.svc_id_);
@@ -114,14 +124,86 @@ protected:
     }
   }
 
-  virtual actor_t* find_actor(actor_index ai, sid_t sid) = 0;
+  bool is_inpool() const
+  {
+    return true;
+  }
+
+  virtual actor_t* find_actor(actor_index const& ai, sid_t sid) = 0;
 
 private:
-  void end_handle_recv_forth(base_t& sender_svc, send_pair& sp)
+  struct forth {};
+  struct back {};
+
+  template <typename Tag>
+  struct handle_recv_way_binder
   {
-    bs_.set_pack_list(sender_svc.get_type(), sender_svc.get_index(), 0);
-    sender_svc.on_recv_back(*this, sp);
-  }
+    handle_recv_way_binder(self_t& self, base_t& sender_svc, send_pair const& sp)
+      : self_(self)
+      , sender_svc_(sender_svc)
+      , sp_(sp)
+    {
+    }
+
+    void operator()()
+    {
+      invoke(Tag());
+    }
+
+  private:
+    void invoke(forth)
+    {
+      self_.handle_recv_forth(sender_svc_, sp_);
+    }
+
+    void invoke(back)
+    {
+      self_.handle_recv_back(sender_svc_, sp_);
+    }
+
+    self_t& self_;
+    base_t& sender_svc_;
+    send_pair sp_;
+  };
+
+  struct handle_recv_binder
+  {
+    handle_recv_binder(self_t& self, pack const& pk)
+      : self_(self)
+      , pk_(pk)
+    {
+    }
+
+    void operator()()
+    {
+      self_.handle_recv(pk_);
+    }
+
+    self_t& self_;
+    pack pk_;
+  };
+
+  struct end_handle_recv_forth
+  {
+    end_handle_recv_forth(self_t& self, batch_sender& bs, base_t& sender_svc, send_pair& sp)
+      : self_(self)
+      , bs_(bs)
+      , sender_svc_(sender_svc)
+      , sp_(sp)
+    {
+    }
+
+    void operator()() const
+    {
+      bs_.set_pack_list(sender_svc_.get_type(), sender_svc_.get_index(), 0);
+      sender_svc_.on_recv_back(self_, sp_);
+    }
+
+    self_t& self_;
+    batch_sender& bs_;
+    base_t& sender_svc_;
+    send_pair& sp_;
+  };
 
   void handle_recv_forth(base_t& sender_svc, send_pair& sp)
   {
@@ -130,12 +212,7 @@ private:
     GCE_ASSERT(sp)(svc_index);
     GCE_ASSERT(bs_.get_pack_list(svc_type, svc_index) == 0)((int)svc_type)(svc_index);
 
-    scope scp(
-      boost::bind(
-        &self_t::end_handle_recv_forth, this,
-        boost::ref(sender_svc), sp
-        )
-      );
+    scope_handler<end_handle_recv_forth> scp(end_handle_recv_forth(*this, bs_, sender_svc, sp));
     pack_list_t* forth_list = sp.forth();
     bs_.set_pack_list(svc_type, svc_index, sp.back());
     BOOST_FOREACH(pack& pk, *forth_list)
@@ -151,28 +228,39 @@ private:
     }
   }
 
-  void end_handle_recv_back(base_t& sender_svc, send_pair& ret)
+  struct end_handle_recv_back
   {
-    messager& msgr = bs_.get_messager(sender_svc.get_type(), sender_svc.get_index());
-    send_pair sp = msgr.on_handle_back(ret);
-    if (sp)
+    end_handle_recv_back(self_t& self, batch_sender& bs, base_t& sender_svc, send_pair& ret)
+      : self_(self)
+      , bs_(bs)
+      , sender_svc_(sender_svc)
+      , ret_(ret)
     {
-      sender_svc.on_recv_forth(*this, sp);
     }
-  }
+
+    void operator()() const
+    {
+      messager& msgr = bs_.get_messager(sender_svc_.get_type(), sender_svc_.get_index());
+      send_pair sp = msgr.on_handle_back(ret_);
+      if (sp)
+      {
+        sender_svc_.on_recv_forth(self_, sp);
+      }
+    }
+
+    self_t& self_;
+    batch_sender& bs_;
+    base_t& sender_svc_;
+    send_pair& ret_;
+  };
 
   void handle_recv_back(base_t& sender_svc, send_pair& ret)
   {
     actor_type svc_type = sender_svc.get_type();
     size_t svc_index = sender_svc.get_index();
     GCE_ASSERT(ret)(svc_index);
-    scope scp(
-      boost::bind(
-        &self_t::end_handle_recv_back, this,
-        boost::ref(sender_svc), ret
-        )
-      );
 
+    scope_handler<end_handle_recv_back> scp(end_handle_recv_back(*this, bs_, sender_svc, ret));
     messager& msgr = bs_.get_messager(svc_type, svc_index);
     send_pair sp = msgr.on_back(ret);
     if (sp)
@@ -214,7 +302,7 @@ private:
       if (a)
       {
         GCE_ASSERT(&a->get_basic_service() == this)
-          (pk.ai_.id_)(pk.ai_.svc_id_)(pk.ai_.type_)(pk.sid_);
+          (pk.ai_.svc_id_)(pk.ai_.type_)(pk.sid_);
         a->on_recv(pk);
       }
       else
@@ -229,7 +317,7 @@ private:
 
   /// coro local vars
   pack pk_;
-  pack const nil_pk_;
+  pack const pk_nil_;
   log::logger_t& lg_;
 };
 }

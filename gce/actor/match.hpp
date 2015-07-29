@@ -12,6 +12,7 @@
 
 #include <gce/actor/config.hpp>
 #include <gce/actor/match.adl.h>
+#include <boost/container/vector.hpp>
 #include <boost/array.hpp>
 #include <boost/lexical_cast.hpp>
 #include <string>
@@ -76,7 +77,7 @@ inline match_t make_match(uint64_t val)
 
 /// match nil value
 static match_t const match_nil = make_match(u64_nil);
-typedef std::vector<match_t> match_list_t;
+typedef boost::container::vector<match_t> match_list_t;
 }
 
 inline std::ostream& operator<<(std::ostream& strm, gce::match_t const& mat)

@@ -42,7 +42,8 @@ public:
     : base_t(ctx, snd, index)
     , actor_pool_(
         base_t::ctxid_, base_t::timestamp_, (uint16_t)base_t::index_,
-        actor_t::get_pool_reserve_size(base_t::ctx_.get_attributes())
+        actor_t::get_pool_reserve_size(base_t::ctx_.get_attributes()),
+        actor_t::get_pool_max_size(base_t::ctx_.get_attributes())
         )
   {
   }
@@ -63,7 +64,7 @@ public:
   }
 
 protected:
-  actor_t* find_actor(actor_index ai, sid_t sid)
+  actor_t* find_actor(actor_index const& ai, sid_t sid)
   {
     return actor_pool_.find(ai, sid);
   }
@@ -97,14 +98,23 @@ public:
   }
 
 public:
-  pack& alloc_pack(aid_t const&)
+  pack& alloc_pack(aid_t const& target)
   {
-    pk_ = nil_pk_;
+    pk_ = pk_nil_;
+    actor_index ai = get_actor_index(target, base_t::ctxid_, base_t::timestamp_);
+    if (ai)
+    {
+      pk_.ai_ = ai;
+    }
+    else
+    {
+      pk_.expiry_ = true;
+    }
     return pk_;
   }
 
 protected:
-  void pri_send(actor_index ai, pack& pk)
+  void pri_send(actor_index const& ai, pack& pk)
   {
     base_t& svc = base_t::ctx_.get_service(ai);
     svc.on_recv(pk);
@@ -112,7 +122,7 @@ protected:
 
 private:
   pack pk_;
-  pack const nil_pk_;
+  pack const pk_nil_;
 };
 }
 }

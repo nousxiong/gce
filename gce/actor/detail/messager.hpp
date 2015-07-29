@@ -65,16 +65,13 @@ public:
     , primary_(0)
     , standby_(1)
   {
-    /*pack_list_arr_[0].reserve(1000);
-    pack_list_arr_[1].reserve(1000);
-    primary_ret_.reserve(1000);*/
   }
 
 public:
   pack& alloc_pack()
   {
     pack_list_t& pack_list = pack_list_arr_[standby_];
-    pack_list.push_back(nil_pk_);
+    pack_list.push_back(pk_nil_);
     return pack_list.back();
   }
 
@@ -141,7 +138,7 @@ private:
   size_t primary_;
   size_t standby_;
   pack_list_t primary_ret_;
-  pack nil_pk_;
+  pack pk_nil_;
 };
 }
 }

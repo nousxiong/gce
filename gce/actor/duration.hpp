@@ -92,37 +92,37 @@ inline adl::duration hours(int64_t v)
   return detail::make_dur(v, dur_hour);
 }
 
-inline adl::duration from_chrono(boost::chrono::system_clock::duration dur)
+inline adl::duration from_chrono(boost::chrono::system_clock::duration const& dur)
 {
   return duration(dur.count());
 }
 
-inline adl::duration from_chrono(boost::chrono::milliseconds dur)
+inline adl::duration from_chrono(boost::chrono::milliseconds const& dur)
 {
   return millisecs(dur.count());
 }
 
-inline adl::duration from_chrono(boost::chrono::microseconds dur)
+inline adl::duration from_chrono(boost::chrono::microseconds const& dur)
 {
   return microsecs(dur.count());
 }
 
-inline adl::duration from_chrono(boost::chrono::seconds dur)
+inline adl::duration from_chrono(boost::chrono::seconds const& dur)
 {
   return seconds(dur.count());
 }
 
-inline adl::duration from_chrono(boost::chrono::minutes dur)
+inline adl::duration from_chrono(boost::chrono::minutes const& dur)
 {
   return minutes(dur.count());
 }
 
-inline adl::duration from_chrono(boost::chrono::hours dur)
+inline adl::duration from_chrono(boost::chrono::hours const& dur)
 {
   return hours(dur.count());
 }
 
-inline boost::chrono::system_clock::duration to_chrono(adl::duration dur)
+inline boost::chrono::system_clock::duration to_chrono(adl::duration const& dur)
 {
   switch(dur.ty_)
   {
@@ -135,11 +135,95 @@ inline boost::chrono::system_clock::duration to_chrono(adl::duration dur)
   }
 }
 
+namespace detail
+{
+inline int64_t to_raw_val(adl::duration const& dur)
+{
+  static int64_t microsec_den = 
+    boost::chrono::system_clock::duration::period::den / BOOST_RATIO_INTMAX_C(1000000);
+  static int64_t millisec_den = 
+    boost::chrono::system_clock::duration::period::den / BOOST_RATIO_INTMAX_C(1000);
+  static int64_t second_den = 
+    boost::chrono::system_clock::duration::period::den;
+  static int64_t minute_den = 
+    boost::chrono::system_clock::duration::period::den * BOOST_RATIO_INTMAX_C(60);
+  static int64_t hour_den = 
+    boost::chrono::system_clock::duration::period::den * BOOST_RATIO_INTMAX_C(3600);
+  switch(dur.ty_)
+  {
+  case dur_microsec: return dur.val_ * microsec_den;
+  case dur_millisec: return dur.val_ * millisec_den;
+  case dur_second: return dur.val_ * second_den;
+  case dur_minute: return dur.val_ * minute_den;
+  case dur_hour: return dur.val_ * hour_den;
+  default: return dur.val_;
+  }
+}
+}
+
+inline adl::duration to_raw(adl::duration dur)
+{
+  return duration(detail::to_raw_val(dur));
+}
+
+namespace detail
+{
+inline int64_t from_raw_val(int64_t dur, dur_type ty)
+{
+  static int64_t microsec_den = 
+    boost::chrono::system_clock::duration::period::den / BOOST_RATIO_INTMAX_C(1000000);
+  static int64_t millisec_den = 
+    boost::chrono::system_clock::duration::period::den / BOOST_RATIO_INTMAX_C(1000);
+  static int64_t second_den = 
+    boost::chrono::system_clock::duration::period::den;
+  static int64_t minute_den = 
+    boost::chrono::system_clock::duration::period::den * BOOST_RATIO_INTMAX_C(60);
+  static int64_t hour_den = 
+    boost::chrono::system_clock::duration::period::den * BOOST_RATIO_INTMAX_C(3600);
+
+  switch(ty)
+  {
+  case dur_microsec: return dur / microsec_den;
+  case dur_millisec: return dur / millisec_den;
+  case dur_second: return dur / second_den;
+  case dur_minute: return dur / minute_den;
+  case dur_hour: return dur / hour_den;
+  default: return dur;
+  }
+}
+
+inline int64_t from_raw(adl::duration const& dur, dur_type ty)
+{
+  GCE_ASSERT(dur.ty_ == dur_raw)(dur);
+  return from_raw_val(dur.val_, ty);
+}
+}
+
+inline adl::duration from_raw(adl::duration const& dur, dur_type ty)
+{
+  adl::duration rt;
+  rt.ty_ = ty;
+  rt.val_ = detail::from_raw(dur, ty);
+  return rt;
+}
+
+inline adl::duration from_raw(int64_t dur, dur_type ty)
+{
+  adl::duration rt;
+  rt.ty_ = ty;
+  rt.val_ = detail::from_raw_val(dur, ty);
+  return rt;
+}
+
 namespace adl
 {
 inline bool operator==(duration const& lhs, duration const& rhs)
 {
-  return to_chrono(lhs) == to_chrono(rhs);
+  if (lhs.ty_ == rhs.ty_)
+  {
+    return lhs.val_ == rhs.val_;
+  }
+  return gce::detail::to_raw_val(lhs) == gce::detail::to_raw_val(rhs);
 }
 
 inline bool operator!=(duration const& lhs, duration const& rhs)
@@ -149,32 +233,46 @@ inline bool operator!=(duration const& lhs, duration const& rhs)
 
 inline bool operator<(duration const& lhs, duration const& rhs)
 {
-  return to_chrono(lhs) < to_chrono(rhs);
-}
-
-inline bool operator<=(duration const& lhs, duration const& rhs)
-{
-  return to_chrono(lhs) <= to_chrono(rhs);
+  return gce::detail::to_raw_val(lhs) < gce::detail::to_raw_val(rhs);
 }
 
 inline bool operator>(duration const& lhs, duration const& rhs)
 {
-  return to_chrono(lhs) > to_chrono(rhs);
+  return gce::detail::to_raw_val(lhs) > gce::detail::to_raw_val(rhs);
 }
 
 inline bool operator>=(duration const& lhs, duration const& rhs)
 {
-  return to_chrono(lhs) >= to_chrono(rhs);
+  return !(lhs < rhs);
+}
+
+inline bool operator<=(duration const& lhs, duration const& rhs)
+{
+  return !(lhs > rhs);
 }
 
 inline duration operator+(duration const& lhs, duration const& rhs)
 {
-  return from_chrono(to_chrono(lhs) + to_chrono(rhs));
+  dur_type ty = (dur_type)((std::min)(lhs.ty_, rhs.ty_));
+  return from_raw(gce::detail::to_raw_val(lhs) + gce::detail::to_raw_val(rhs), ty);
 }
 
 inline duration operator-(duration const& lhs, duration const& rhs)
 {
-  return from_chrono(to_chrono(lhs) - to_chrono(rhs));
+  dur_type ty = (dur_type)((std::min)(lhs.ty_, rhs.ty_));
+  return from_raw(gce::detail::to_raw_val(lhs) - gce::detail::to_raw_val(rhs), ty);
+}
+
+inline duration operator*(duration const& lhs, duration const& rhs)
+{
+  dur_type ty = (dur_type)((std::min)(lhs.ty_, rhs.ty_));
+  return from_raw(gce::detail::to_raw_val(lhs) * gce::detail::to_raw_val(rhs), ty);
+}
+
+inline duration operator/(duration const& lhs, duration const& rhs)
+{
+  dur_type ty = (dur_type)((std::min)(lhs.ty_, rhs.ty_));
+  return from_raw(gce::detail::to_raw_val(lhs) / gce::detail::to_raw_val(rhs), ty);
 }
 }
 

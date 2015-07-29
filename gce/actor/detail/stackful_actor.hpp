@@ -261,6 +261,11 @@ public:
     return attr.actor_pool_reserve_size_;
   }
 
+  static size_t get_pool_max_size(attributes const& attr)
+  {
+    return attr.actor_pool_max_size_;
+  }
+
   service_t& get_service()
   {
     return svc_;
@@ -282,6 +287,11 @@ public:
         ),
       boost::coroutines::attributes(stack_size)
       );
+
+    if (stat_ != off)
+    {
+      base_t::ctx_.on_tick(svc_.get_index());
+    }
   }
 
   void init(func_t const& f)
@@ -350,6 +360,7 @@ private:
     if (stat_ != off)
     {
       scp.reset();
+      base_t::ctx_.on_tick(svc_.get_index());
     }
   }
 
@@ -366,9 +377,13 @@ private:
   {
     errcode_t ignored_ec;
     guard_.cancel(ignored_ec);
+
     aid_t self_aid = base_t::get_aid();
+    context_t& ctx = base_t::ctx_;
+    size_t svc_id = svc_.get_index();
     base_t::send_exit(self_aid, ec_, exit_msg_);
     svc_.free_actor(this);
+    ctx.on_tick(svc_id);
   }
 
   void stop(exit_code_t ec, std::string exit_msg)
@@ -440,27 +455,24 @@ private:
     }
 
     match_t ty = pk.msg_.get_type();
+    bool recving = recving_ && !is_response;
+    bool resping = responsing_ && (is_response || ty == exit);
 
-    if (
-      (recving_ && !is_response) ||
-      (responsing_ && (is_response || ty == exit))
-      )
+    if (recving || resping)
     {
-      if (recving_ && !is_response)
+      if (recving)
       {
-        bool ret = base_t::mb_.pop(recving_rcv_, recving_msg_, curr_pattern_.match_list_, curr_pattern_.recver_);
-        if (!ret)
+        if (!base_t::mb_.pop(recving_rcv_, recving_msg_, curr_pattern_.match_list_, curr_pattern_.recver_))
         {
           return;
         }
         curr_pattern_.clear();
       }
 
-      if (responsing_ && (is_response || ty == exit))
+      if (resping)
       {
         GCE_ASSERT(recving_res_.valid());
-        bool ret = base_t::mb_.pop(recving_res_, recving_msg_);
-        if (!ret)
+        if (!base_t::mb_.pop(recving_res_, recving_msg_))
         {
           return;
         }

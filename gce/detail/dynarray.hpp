@@ -12,6 +12,7 @@
 
 #include <gce/config.hpp>
 #include <gce/integer.hpp>
+#include <boost/core/noncopyable.hpp>
 #include <vector>
 
 namespace gce
@@ -23,6 +24,7 @@ template <
   typename Alloc = std::allocator<T>
   >
 class dynarray
+  : boost::noncopyable
 {
   typedef Alloc allocator_t;
   typedef T* pointer;

@@ -39,7 +39,8 @@ public:
     : base_t(ctx, snd, index)
     , actor_pool_(
         base_t::ctxid_, base_t::timestamp_, (uint16_t)base_t::index_,
-        actor_t::get_pool_reserve_size(base_t::ctx_.get_attributes())
+        actor_t::get_pool_reserve_size(base_t::ctx_.get_attributes()),
+        actor_t::get_pool_max_size(base_t::ctx_.get_attributes())
         )
   {
   }
@@ -80,7 +81,7 @@ public:
   }
 
 protected:
-  actor_t* find_actor(actor_index ai, sid_t sid)
+  actor_t* find_actor(actor_index const& ai, sid_t sid)
   {
     return actor_pool_.find(ai, sid);
   }

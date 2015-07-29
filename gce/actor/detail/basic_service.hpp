@@ -45,39 +45,51 @@ public:
   virtual void on_recv_forth(self_t& sender_svc, send_pair& sp) {};
   virtual void on_recv_back(self_t& sender_svc, send_pair& sp) {};
   virtual void on_recv(pack&) {};
+  virtual void handle_tick(pack&) {};
 
   virtual pack& alloc_pack(aid_t const& target) = 0;
 
   void send(aid_t const& recver, pack& pk)
   {
     GCE_ASSERT(recver.type_ != (byte_t)actor_addon);
-    pk.concurrency_index_ = index_;
-    pk.type_ = type_;
     bool already_exit = true;
-    if (in_pool(recver))
+    if (pk.expiry_)
     {
-      actor_index ai = get_actor_index(recver, ctxid_, timestamp_);
-      if (ai)
-      {
-        already_exit = false;
-        pk.ai_ = ai;
-        pk.sid_ = recver.sid_;
-
-        pri_send(ai, pk);
-      }
+      already_exit = true;
     }
     else
     {
-      listener* a = get_actor_ptr(recver, ctxid_, timestamp_);
-      if (a)
+      pk.concurrency_index_ = index_;
+      pk.type_ = type_;
+      if (in_pool(recver))
       {
+        actor_index const& ai = pk.ai_;
         already_exit = false;
-        a->on_recv(pk);
+        pk.sid_ = recver.sid_;
+
+        if (is_inpool() && ai.svc_id_ == index_)
+        {
+          ctx_.push_tick(index_, pk);
+        }
+        else
+        {
+          pri_send(ai, pk);
+        }
+      }
+      else
+      {
+        listener* a = get_actor_ptr(recver, ctxid_, timestamp_);
+        if (a)
+        {
+          already_exit = false;
+          a->on_recv(pk);
+        }
       }
     }
 
     if (already_exit)
     {
+      /// no need worry about pk dealloc, bcz at this case, pk is pk_ member, not alloced
       pk.expiry_ = true;
       send_already_exit(pk);
     }
@@ -94,7 +106,12 @@ public:
   }
 
 protected:
-  virtual void pri_send(actor_index, pack&) = 0;
+  virtual void pri_send(actor_index const&, pack&) = 0;
+
+  virtual bool is_inpool() const
+  {
+    return false;
+  }
 
   void send2skt(aid_t const& from, aid_t const& to, message const& m)
   {

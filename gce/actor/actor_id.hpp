@@ -169,7 +169,7 @@ namespace detail
 struct actor_index
 {
   actor_index()
-    : id_(u64_nil)
+    : ptr_(0)
     , svc_id_(u16_nil)
     , type_(actor_nil)
   {
@@ -177,10 +177,10 @@ struct actor_index
 
   operator bool() const
   {
-    return type_ != actor_nil;
+    return ptr_ != 0;
   }
 
-  uint64_t id_;
+  uint64_t ptr_;
   uint16_t svc_id_;
   detail::actor_type type_;
 };
@@ -192,7 +192,7 @@ inline detail::actor_index get_actor_index(adl::actor_id const& aid, ctxid_t ctx
   GCE_ASSERT(in_pool(aid))(aid);
   if (ctxid == aid.ctxid_ && timestamp == aid.timestamp_)
   {
-    ret.id_ = aid.uintptr_;
+    ret.ptr_ = aid.uintptr_;
     ret.svc_id_ = aid.svc_id_;
     ret.type_ = (detail::actor_type)aid.type_;
   }
@@ -240,13 +240,13 @@ inline gce::aid_t make_aid(ctxid_t ctxid, timestamp_t timestamp, detail::listene
   return aid;
 }
 
-inline gce::aid_t make_aid(ctxid_t ctxid, timestamp_t timestamp, uint32_t id, uint16_t cac_id, detail::actor_type type, sid_t sid)
+inline gce::aid_t make_aid(ctxid_t ctxid, timestamp_t timestamp, uint64_t ptr, uint16_t svc_id, detail::actor_type type, sid_t sid)
 {
   gce::aid_t aid;
   aid.ctxid_ = ctxid;
   aid.timestamp_ = timestamp;
-  aid.uintptr_ = id;
-  aid.svc_id_ = cac_id;
+  aid.uintptr_ = ptr;
+  aid.svc_id_ = svc_id;
   aid.type_ = (byte_t)type;
   aid.in_pool_ = 1;
   aid.sid_ = sid;

@@ -449,10 +449,11 @@ private:
     std::pair<recv_meta, bool> pr = pri_recv(patt, type, gce::guard(), has_match);
     actor_ref_t& a = base_t::get_actor_ref();
     a.recv(
-      boost::bind(
+      handle_recv0(sender, pr),
+      /*boost::bind(
         &handle_recv0<actor_ref_t>, _arg1, _arg2, _arg3,
         boost::ref(sender), pr
-        ),
+        ),*/
       patt
       );
   }

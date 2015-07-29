@@ -23,8 +23,11 @@
 #include <gce/actor/detail/socket_actor.hpp>
 #include <gce/actor/detail/acceptor_actor.hpp>
 #include <gce/actor/detail/actor_function.hpp>
+#include <gce/actor/detail/mailbox_fwd.hpp>
 #include <gce/detail/dynarray.hpp>
 #include <gce/detail/unique_ptr.hpp>
+#include <gce/detail/linked_pool.hpp>
+#include <gce/detail/linked_queue.hpp>
 #include <boost/atomic.hpp>
 #include <boost/optional.hpp>
 #include <boost/lockfree/queue.hpp>
@@ -58,6 +61,25 @@ public:
   typedef detail::network_service<acceptor_actor_t> acceptor_service_t;
 
   typedef std::map<match_t, detail::remote_func<context> > native_func_list_t;
+  typedef detail::linked_queue<detail::pack> tick_queue_t;
+  typedef detail::linked_pool<detail::pack> tick_pool_t;
+
+  struct tick_t
+  {
+    tick_t(size_t pool_reserve_size, size_t pool_max_size)
+      : pool_(pool_reserve_size, pool_max_size)
+      , on_(false)
+    {
+    }
+
+    ~tick_t()
+    {
+    }
+
+    tick_pool_t pool_;
+    tick_queue_t que_;
+    bool on_;
+  };
 
   struct init_t
   {
@@ -92,6 +114,8 @@ public:
         )
     , concurrency_size_(service_size_ + attrs_.nonblocked_num_)
     , strand_list_(concurrency_size_)
+    , tick_list_(service_size_)
+    , mailbox_pool_set_list_(concurrency_size_)
     , threaded_service_list_(service_size_)
     , curr_threaded_svc_(0)
     , stackful_service_list_(service_size_)
@@ -126,6 +150,8 @@ public:
         )
     , concurrency_size_(service_size_ + attrs_.nonblocked_num_)
     , strand_list_(concurrency_size_)
+    , tick_list_(service_size_)
+    , mailbox_pool_set_list_(concurrency_size_)
     , threaded_service_list_(service_size_)
     , curr_threaded_svc_(0)
     , stackful_service_list_(service_size_)
@@ -193,7 +219,7 @@ public:
     return concurrency_size_; 
   }
 
-  service_t& get_service(detail::actor_index ai) const
+  service_t& get_service(detail::actor_index const& ai) const
   {
     switch (ai.type_)
     {
@@ -210,8 +236,8 @@ public:
     case detail::actor_acceptor:
       return (service_t&)acceptor_service_list_[ai.svc_id_];
     default:
-      GCE_ASSERT(false)(ai.type_)(ai.svc_id_)
-        .log(lg_, "out of actor type").except();
+      GCE_ASSERT(false)(ai.type_)(ai.svc_id_)(ai.ptr_)
+        .log(lg_, "out of actor type").abort();
       // just suppress vc's warning
       throw 1;
     }
@@ -387,7 +413,64 @@ public:
   }
 #endif
 
+  detail::mailbox_pool_set& get_mailbox_pool_set_list(size_t index)
+  {
+    return mailbox_pool_set_list_[index];
+  }
+
+  detail::pack& alloc_tick_pack(size_t index)
+  {
+    return *tick_list_[index].pool_.get();
+  }
+
+  void push_tick(size_t index, detail::pack& pk)
+  {
+    tick_list_[index].que_.push(&pk);
+  }
+
+  void on_tick(size_t index)
+  {
+    tick_t& tick = tick_list_[index];
+    if (tick.on_)
+    {
+      return;
+    }
+
+    tick_queue_t& que = tick.que_;
+    detail::scoped_bool<bool> scp(tick.on_);
+    for (size_t i=0; !que.empty(); ++i)
+    {
+      if (i >= attrs_.max_tick_handle_size_)
+      {
+        strand_list_[index].post(on_tick_binder(*this, index));
+        break;
+      }
+
+      detail::pack* pk = que.pop();
+      service_t& svc = get_service(pk->ai_);
+      svc.handle_tick(*pk);
+      tick.pool_.free(pk);
+    }
+  }
+
 private:
+  struct on_tick_binder
+  {
+    on_tick_binder(context& ctx, size_t index)
+      : ctx_(ctx)
+      , index_(index)
+    {
+    }
+
+    void operator()() const
+    {
+      ctx_.on_tick(index_);
+    }
+
+    context& ctx_;
+    size_t index_;
+  };
+
   void init(native_func_list_t const& native_func_list = native_func_list_t())
   {
     if (attrs_.ios_)
@@ -407,6 +490,11 @@ private:
       {
         strand_list_.emplace_back(boost::ref(*ios_));
         strand_t& snd = strand_list_.back();
+        tick_list_.emplace_back(attrs_.tick_pool_reserve_size_, attrs_.tick_pool_max_size_);
+        mailbox_pool_set_list_.emplace_back(
+          attrs_.mailbox_recv_pool_reserve_size_, attrs_.mailbox_recv_pool_grow_size_, 
+          attrs_.mailbox_mq_pool_reserve_size_, attrs_.mailbox_mq_pool_grow_size_
+          );
         threaded_service_list_.emplace_back(boost::ref(*this), boost::ref(snd), index);
         stackful_service_list_.emplace_back(boost::ref(*this), boost::ref(snd), index);
         stackless_service_list_.emplace_back(boost::ref(*this), boost::ref(snd), index);
@@ -421,6 +509,10 @@ private:
       {
         strand_list_.emplace_back(boost::ref(*ios_));
         strand_t& snd = strand_list_.back();
+        mailbox_pool_set_list_.emplace_back(
+          attrs_.mailbox_recv_pool_reserve_size_, attrs_.mailbox_recv_pool_grow_size_, 
+          attrs_.mailbox_mq_pool_reserve_size_, attrs_.mailbox_mq_pool_grow_size_
+          );
         nonblocked_service_list_.emplace_back(boost::ref(*this), boost::ref(snd), index);
         nonblocked_actor_list_.emplace_back(boost::ref(*this), boost::ref(nonblocked_service_list_[i]), index);
       }
@@ -715,6 +807,12 @@ private:
 
   /// strand list
   GCE_CACHE_ALIGNED_VAR(detail::dynarray<strand_t>, strand_list_)
+
+  /// tick queue list
+  GCE_CACHE_ALIGNED_VAR(detail::dynarray<tick_t>, tick_list_)
+
+  /// mailbox's recv_pair pool list
+  GCE_CACHE_ALIGNED_VAR(detail::dynarray<detail::mailbox_pool_set>, mailbox_pool_set_list_)
 
   /// threaded actor services
   GCE_CACHE_ALIGNED_VAR(detail::dynarray<threaded_service_t>, threaded_service_list_)

@@ -1997,10 +1997,11 @@ inline int pack_object(lua_State* L)
     try
     {
       /// adata raw write
-      msg->pre_write(len);
+      packer pkr;
+      msg->pre_write(pkr, len);
       lua_getfield(L, -1, "write");
       lua_pushvalue(L, 2);
-      lua_pushlightuserdata(L, &msg->get_packer().get_stream());
+      lua_pushlightuserdata(L, &pkr.get_stream());
       if (lua_pcall(L, 2, 1, 0) != 0)
       {
         return luaL_error(L, lua_tostring(L, -1));
@@ -2010,10 +2011,10 @@ inline int pack_object(lua_State* L)
       lua_pop(L, 1);
       if (ec != adata::success)
       {
-        adata::zero_copy_buffer& stream = msg->get_packer().get_stream();
+        adata::zero_copy_buffer& stream = pkr.get_stream();
         return luaL_error(L, stream.message());
       }
-      msg->end_write();
+      msg->end_write(pkr);
 
       /// pop obj's metatable
       lua_pop(L, 1);
@@ -2124,10 +2125,11 @@ inline int unpack_object(lua_State* L)
     {
       /// adata obj
       /// adata raw read
-      msg->pre_read();
+      packer pkr;
+      msg->pre_read(pkr);
       lua_getfield(L, -1, "read");
       lua_pushvalue(L, 2);
-      lua_pushlightuserdata(L, &msg->get_packer().get_stream());
+      lua_pushlightuserdata(L, &pkr.get_stream());
       if (lua_pcall(L, 2, 1, 0) != 0)
       {
         return luaL_error(L, lua_tostring(L, -1));
@@ -2137,10 +2139,10 @@ inline int unpack_object(lua_State* L)
       lua_pop(L, 1);
       if (ec != adata::success)
       {
-        adata::zero_copy_buffer& stream = msg->get_packer().get_stream();
+        adata::zero_copy_buffer& stream = pkr.get_stream();
         return luaL_error(L, stream.message());
       }
-      msg->end_read();
+      msg->end_read(pkr);
 
       /// pop obj's metatable
       lua_pop(L, 1);

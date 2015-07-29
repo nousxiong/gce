@@ -82,27 +82,27 @@ inline void connect(
     );
 }
 
-template <typename Context>
-inline void handle_connect(
-  actor_ref<stackless, Context> self, aid_t skt, 
-  message msg, typename Context::stackless_service_t& sire, errcode_t& ec
-  )
-{
-  if (skt)
-  {
-    ctxid_pair_t ctxid_pr;
-    msg >> ctxid_pr >> ec;
-    sire.register_socket(ctxid_pr, skt);
-  }
+//template <typename Context>
+//inline void handle_connect(
+//  actor_ref<stackless, Context>& self, aid_t skt, 
+//  message msg, typename Context::stackless_service_t& sire, errcode_t& ec
+//  )
+//{
+//  if (skt)
+//  {
+//    ctxid_pair_t ctxid_pr;
+//    msg >> ctxid_pr >> ec;
+//    sire.register_socket(ctxid_pr, skt);
+//  }
+//
+//  self.resume();
+//}
 
-  self.resume();
-}
-
-template <typename Context>
-inline void handle_bind(actor_ref<stackless, Context> self, aid_t acpr, message)
-{
-  self.resume();
-}
+//template <typename Context>
+//inline void handle_bind(actor_ref<stackless, Context>& self, aid_t acpr, message)
+//{
+//  self.resume();
+//}
 
 // bind
 template <typename Context>

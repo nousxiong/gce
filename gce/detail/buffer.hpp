@@ -24,16 +24,31 @@ namespace detail
 class buffer
   : public ref_count
 {
+  struct free_binder
+  {
+    explicit free_binder(buffer* p)
+      : p_(p)
+    {
+    }
+
+    void operator()() const
+    {
+      delete p_;
+    }
+
+    buffer* p_;
+  };
+
 public:
   buffer()
-    : ref_count(boost::bind(&buffer::free, this))
+    : ref_count(free_binder(this))
     , data_(0)
     , size_(0)
   {
   }
 
   explicit buffer(size_t size)
-    : ref_count(boost::bind(&buffer::free, this))
+    : ref_count(free_binder(this))
     , data_((byte_t*)std::malloc(size))
     , size_(size)
   {
@@ -67,11 +82,6 @@ public:
       data_ = (byte_t*)p;
     }
     size_ = size;
-  }
-
-  void free()
-  {
-    delete this;
   }
 
 private:

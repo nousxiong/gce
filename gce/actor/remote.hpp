@@ -34,7 +34,7 @@ inline remote_func_t make_remote_func(Match type, F f)
       );
 }
 ///------------------------------------------------------------------------------
-/// Connect using given NONE coroutine_stackless_actor
+/// Connect using given NONE stackless_actor
 ///------------------------------------------------------------------------------
 template <typename Ctxid>
 inline errcode_t connect(
@@ -88,7 +88,7 @@ inline errcode_t connect(
 }
 
 ///------------------------------------------------------------------------------
-/// Connect using given coroutine_stackless_actor
+/// Connect using given stackless_actor
 ///------------------------------------------------------------------------------
 template <typename Ctxid>
 inline void connect(
@@ -101,8 +101,10 @@ inline void connect(
   )
 {
   typedef context::socket_service_t service_t;
+  typedef context::stackless_actor_t stackless_actor_t;
   context& ctx = sire.get_context();
   service_t& svc = ctx.select_service<service_t>();
+  stackless_actor_t& a = sire.get_actor();
   detail::connect<context>(
     sire.get_aid(), svc, to_match(target), ep, opt, remote_func_list
     );
@@ -110,16 +112,17 @@ inline void connect(
   pattern patt;
   patt.match_list_.push_back(detail::msg_new_conn);
   sire.recv(
-    boost::bind(
+    stackless_actor_t::recv_binder(a, sire.get_service(), ec), 
+    /*boost::bind(
       &detail::handle_connect<context>, _arg1, _arg2, _arg3, 
       boost::ref(sire.get_service()), boost::ref(ec)
-      ), 
+      ), */
     patt
     );
 }
 
 ///------------------------------------------------------------------------------
-/// Bind using given NONE coroutine_stackless_actor
+/// Bind using given NONE stackless_actor
 ///------------------------------------------------------------------------------
 template <typename ActorRef>
 inline void bind(
@@ -137,7 +140,7 @@ inline void bind(
 }
 
 ///------------------------------------------------------------------------------
-/// Bind using given coroutine_stackless_actor
+/// Bind using given stackless_actor
 ///------------------------------------------------------------------------------
 inline void bind(
   stackless_actor sire,
@@ -147,16 +150,19 @@ inline void bind(
   )
 {
   typedef context::acceptor_service_t service_t;
+  typedef context::stackless_actor_t stackless_actor_t;
   context& ctx = sire.get_context();
   service_t& svc = ctx.select_service<service_t>();
+  stackless_actor_t& a = sire.get_actor();
   detail::bind<context>(sire.get_aid(), svc, ep, opt, remote_func_list);
 
   pattern patt;
   patt.match_list_.push_back(detail::msg_new_bind);
   sire.recv(
-    boost::bind(
+    stackless_actor_t::recv_binder(a), 
+    /*boost::bind(
       &detail::handle_bind<context>, _arg1, _arg2, _arg3
-      ), 
+      ), */
     patt
     );
 }

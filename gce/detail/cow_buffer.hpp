@@ -25,7 +25,7 @@ class cow_buffer
 {
 public:
   cow_buffer()
-    : buf_(small_.data(), small_.size())
+    : bref_(small_.data(), small_.size())
   {
   }
 
@@ -33,58 +33,64 @@ public:
   {
     if (size <= small_.size())
     {
-      buf_.reset(small_.data(), small_.size());
+      bref_.reset(small_.data(), small_.size());
     }
     else
     {
       make_large(size);
-      buf_.reset(large_->data(), size);
+      bref_.reset(large_->data(), size);
     }
-    std::memcpy(buf_.get_write_data(), data, size);
-    buf_.write(size);
+    std::memcpy(bref_.get_write_data(), data, size);
+    bref_.write(size);
   }
 
   cow_buffer(cow_buffer const& other)
   {
-    buffer_ref const& buf = other.buf_;
-    large_ = other.large_;
+    buffer_ref const& bref = other.bref_;
     if (other.is_small())
     {
-      buf_.reset(small_.data(), small_.size());
-      std::memcpy(small_.data(), other.small_.data(), buf.write_size());
+      bref_.reset(small_.data(), small_.size());
+      if (bref.write_size() > 0)
+      {
+        std::memcpy(small_.data(), other.small_.data(), bref.write_size());
+      }
     }
     else
     {
+      large_ = other.large_;
       BOOST_ASSERT(large_);
-      buf_.reset(large_->data(), large_->size());
+      bref_.reset(large_->data(), large_->size());
     }
-    buf_.write(buf.write_size());
+    bref_.write(bref.write_size());
   }
 
   cow_buffer& operator=(cow_buffer const& rhs)
   {
     if (this != &rhs)
     {
-      buffer_ref const& buf = rhs.buf_;
-      buf_.clear();
+      buffer_ref const& bref = rhs.bref_;
+      bref_.clear();
 
       if (rhs.is_small())
       {
         if (!is_small())
         {
           large_.reset();
+          bref_.reset(small_.data(), small_.size());
         }
 
-        buf_.reset(small_.data(), small_.size());
-        std::memcpy(small_.data(), rhs.small_.data(), buf.write_size());
+        if (bref.write_size() > 0)
+        {
+          std::memcpy(small_.data(), rhs.small_.data(), bref.write_size());
+        }
       }
       else
       {
         BOOST_ASSERT(rhs.large_);
         large_ = rhs.large_;
-        buf_.reset(large_->data(), large_->size());
+        bref_.reset(large_->data(), large_->size());
       }
-      buf_.write(buf.write_size());
+      bref_.write(bref.write_size());
     }
     return *this;
   }
@@ -96,27 +102,27 @@ public:
 public:
   byte_t const* data() const
   { 
-    return buf_.data();
+    return bref_.data();
   }
 
   size_t size() const
   {
-    return buf_.write_size();
+    return bref_.write_size();
   }
 
   buffer_ref& get_buffer_ref()
   { 
-    return buf_;
+    return bref_;
   }
 
   buffer_ref const& get_buffer_ref() const
   { 
-    return buf_;
+    return bref_;
   }
 
   bool is_small() const
   {
-    return buf_.data() == small_.data();
+    return bref_.data() == small_.data();
   }
 
   void append(std::string const& str)
@@ -137,15 +143,15 @@ public:
       size = std::char_traits<char>::length(data);
     }
     reserve(size);
-    byte_t* write_data = buf_.get_write_data();
-    buf_.write(size);
+    byte_t* write_data = bref_.get_write_data();
+    bref_.write(size);
     std::memcpy(write_data, data, size);
   }
 
   void reserve(size_t size)
   {
-    size_t old_buf_capacity = buf_.size();
-    size_t old_buf_size = buf_.write_size();
+    size_t old_buf_capacity = bref_.size();
+    size_t old_buf_size = bref_.write_size();
     size_t new_buf_size = old_buf_size + size;
     size_t new_buf_capacity = old_buf_capacity;
     if (new_buf_size > old_buf_capacity)
@@ -163,8 +169,8 @@ public:
       if (new_buf_capacity > old_buf_capacity)
       {
         make_large(new_buf_capacity);
-        std::memcpy(large_->data(), buf_.data(), buf_.write_size());
-        buf_.reset(large_->data(), new_buf_capacity);
+        std::memcpy(large_->data(), bref_.data(), bref_.write_size());
+        bref_.reset(large_->data(), new_buf_capacity);
       }
     }
     else
@@ -175,14 +181,24 @@ public:
       {
         detail::buffer_ptr tmp = large_;
         make_large(new_buf_capacity);
-        std::memcpy(large_->data(), tmp->data(), buf_.write_size());
+        std::memcpy(large_->data(), tmp->data(), bref_.write_size());
       }
       else
       {
         large_->resize(new_buf_capacity);
       }
-      buf_.reset(large_->data(), new_buf_capacity);
+      bref_.reset(large_->data(), new_buf_capacity);
     }
+  }
+
+  void clear()
+  {
+    if (!is_small())
+    {
+      large_.reset();
+      bref_.reset(small_.data(), small_.size());
+    }
+    bref_.clear();
   }
 
 private:
@@ -194,7 +210,7 @@ private:
 private:
   boost::array<byte_t, SmallSize> small_;
   buffer_ptr large_;
-  buffer_ref buf_;
+  buffer_ref bref_;
 };
 }
 }

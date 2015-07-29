@@ -105,6 +105,11 @@ public:
     return attr.acceptor_pool_reserve_size_;
   }
 
+  static size_t get_pool_max_size(attributes const& attr)
+  {
+    return attr.acceptor_pool_max_size_;
+  }
+
   void stop()
   {
     close();

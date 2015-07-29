@@ -32,8 +32,12 @@ inline void make_pattern(pattern& rt, Match type)
 
 inline void make_pattern(pattern& rt, match_list_t const& match_list)
 {
-  rt.match_list_.resize(rt.match_list_.size() + match_list.size());
-  std::copy_backward(match_list.begin(), match_list.end(), rt.match_list_.end());
+  rt.match_list_.reserve(rt.match_list_.size() + match_list.size());
+  for (size_t i=0, size=match_list.size(); i<size; ++i)
+  {
+    rt.match_list_.push_back(match_list[i]);
+  }
+  //std::copy_backward(match_list.begin(), match_list.end(), rt.match_list_.end());
 }
 
 inline bool find_exit(match_t type)
@@ -41,7 +45,8 @@ inline bool find_exit(match_t type)
   return type == exit;
 }
 
-inline bool check_exit(std::vector<match_t> const& match_list)
+template <typename MatchList>
+inline bool check_exit(MatchList const& match_list)
 {
   if (match_list.empty())
   {
@@ -49,7 +54,7 @@ inline bool check_exit(std::vector<match_t> const& match_list)
   }
   else
   {
-    std::vector<match_t>::const_iterator itr =
+    typename MatchList::const_iterator itr =
       std::find_if(
         match_list.begin(),
         match_list.end(),
@@ -397,23 +402,50 @@ inline std::pair<bool, bool> end_respond(
   return std::make_pair(true, true);
 }
 
-template <typename Stackless>
-inline void handle_recv0(
-  Stackless recver, aid_t sender, message msg,
-  aid_t& osender, std::pair<recv_meta, bool> pr
-  )
+//template <typename Stackless>
+//inline void handle_recv0(
+//  Stackless recver, aid_t sender, message msg,
+//  aid_t& osender, std::pair<recv_meta, bool> pr
+//  )
+//{
+//  std::pair<bool, bool> ret = end_recv(recver, sender, msg, osender, pr);
+//  message* meta_msg = pr.first.msg_;
+//  if (meta_msg != 0)
+//  {
+//    *meta_msg = msg;
+//  }
+//  if (ret.second)
+//  {
+//    recver.resume();
+//  }
+//}
+
+struct handle_recv0
 {
-  std::pair<bool, bool> ret = end_recv(recver, sender, msg, osender, pr);
-  message* meta_msg = pr.first.msg_;
-  if (meta_msg != 0)
+  handle_recv0(aid_t& osender, std::pair<recv_meta, bool> const& pr)
+    : osender_(osender)
+    , pr_(pr)
   {
-    *meta_msg = msg;
   }
-  if (ret.second)
+
+  template <typename Stackless>
+  void operator()(Stackless& recver, aid_t const& sender, message& msg) const
   {
-    recver.resume();
+    std::pair<bool, bool> ret = end_recv(recver, sender, msg, osender_, pr_);
+    message* meta_msg = pr_.first.msg_;
+    if (meta_msg != 0)
+    {
+      *meta_msg = msg;
+    }
+    if (ret.second)
+    {
+      recver.resume();
+    }
   }
-}
+
+  aid_t& osender_;
+  std::pair<recv_meta, bool> pr_;
+};
 
 template <typename Stackless, typename A1>
 inline void handle_recv1(

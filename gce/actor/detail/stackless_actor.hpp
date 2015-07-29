@@ -37,12 +37,127 @@ private:
 public:
   typedef actor_ref<stackless, context_t> self_ref_t;
   typedef boost::function<void (self_ref_t)> func_t;
-  typedef boost::function<void (self_ref_t, aid_t, message)> recv_handler_t;
-  typedef boost::function<void (self_ref_t)> wait_handler_t;
+  typedef boost::function<void (self_ref_t&, aid_t const&, message&)> recv_handler_t;
+
+public:
+  struct recv_binder
+  {
+    enum type
+    {
+      nil = 0,
+      recv,
+      spawn,
+      bind,
+      conn
+    };
+
+    recv_binder()
+      : ty_(nil)
+      , omsg_(0)
+    {
+    }
+
+    recv_binder(self_t& self, aid_t& osender, message& omsg)
+      : ty_(recv)
+      , self_(&self)
+      , osender_(&osender)
+      , omsg_(&omsg)
+    {
+    }
+
+    recv_binder(self_t& self, link_type lty, aid_t& osender)
+      : ty_(spawn)
+      , self_(&self)
+      , lty_(lty)
+      , osender_(&osender)
+      , omsg_(0)
+    {
+    }
+
+    explicit recv_binder(self_t& self)
+      : ty_(bind)
+      , self_(&self)
+      , omsg_(0)
+    {
+    }
+
+    recv_binder(self_t& self, service_t& sire, errcode_t& ec)
+      : ty_(conn)
+      , self_(&self)
+      , omsg_(0)
+      , sire_(&sire)
+      , ec_(&ec)
+    {
+    }
+
+    operator bool() const
+    {
+      return ty_ != nil;
+    }
+
+    void operator()(self_ref_t&, aid_t const& aid, message& m) const
+    {
+      GCE_ASSERT(ty_ != nil);
+      switch (ty_)
+      {
+      case recv: self_->recv_handler(aid, m, *osender_, *omsg_); break;
+      case spawn: self_->spawn_handler(aid, lty_, *osender_); break;
+      case bind: self_->bind_handler(); break;
+      case conn: self_->conn_handler(aid, const_cast<message&>(m), *sire_, *ec_); break;
+      default: GCE_ASSERT(false)(ty_); break;
+      }
+    }
+    
+    void clear()
+    {
+      ty_ = nil;
+      omsg_ = 0;
+    }
+
+    type ty_;
+    self_t* self_;
+    link_type lty_;
+    aid_t* osender_;
+    message* omsg_;
+    service_t* sire_;
+    errcode_t* ec_;
+  };
+
+  struct wait_binder
+  {
+    wait_binder()
+      : self_(0)
+    {
+    }
+
+    explicit wait_binder(self_t& self)
+      : self_(&self)
+    {
+    }
+
+    operator bool() const
+    {
+      return self_ != 0;
+    }
+
+    void operator()() const
+    {
+      GCE_ASSERT(self_ != 0);
+      self_->wait_handler();
+    }
+
+    void clear()
+    {
+      self_ = 0;
+    }
+
+    self_t* self_;
+  };
 
 public:
   stackless_actor(aid_t aid, service_t& svc)
     : base_t(svc.get_context(), svc, actor_stackless, aid)
+    , aref_(*this)
     , svc_(svc)
     , tmr_(base_t::ctx_.get_io_service())
     , tmr_sid_(0)
@@ -128,13 +243,7 @@ public:
 
   void recv(aid_t& sender, message& msg, pattern const& patt = pattern())
   {
-    recv(
-      boost::bind(
-        &self_t::recv_handler, this, _arg1, _arg2, _arg3,
-        boost::ref(sender), boost::ref(msg)
-        ),
-      patt
-      );
+    recv(recv_binder(*this, sender, msg), patt);
   }
 
   aid_t recv(message& msg, match_list_t const& match_list = match_list_t(), recver_t const& recver = recver_t())
@@ -155,14 +264,7 @@ public:
     duration_t tmo = seconds(GCE_DEFAULT_REQUEST_TIMEOUT_SEC)
     )
   {
-    respond(
-      boost::bind(
-        &self_t::recv_handler, this, _arg1, _arg2, _arg3,
-        boost::ref(sender), boost::ref(msg)
-        ),
-      res,
-      tmo
-      );
+    respond(recv_binder(*this, sender, msg), res, tmo);
   }
 
   aid_t respond(resp_t res, message& msg)
@@ -179,12 +281,7 @@ public:
 
   void sleep_for(duration_t dur)
   {
-    sleep_for(
-      boost::bind(
-        &self_t::wait_handler, this, _arg1
-        ),
-      dur
-      );
+    sleep_for(wait_binder(*this), dur);
   }
 
 public:
@@ -201,40 +298,32 @@ public:
     return attr.actor_pool_reserve_size_;
   }
 
+  static size_t get_pool_max_size(attributes const& attr)
+  {
+    return attr.actor_pool_max_size_;
+  }
+
   service_t& get_service()
   {
     return svc_;
   }
 
+  void recv(recv_binder const& f, pattern const& patt = pattern())
+  {
+    recv(f, recv_b_, patt);
+  }
+
   void recv(recv_handler_t const& f, pattern const& patt = pattern())
   {
-    aid_t sender;
-    recv_t rcv;
-    message msg;
+    recv(f, recv_h_, patt);
+  }
 
-    if (!base_t::mb_.pop(rcv, msg, patt.match_list_, patt.recver_))
-    {
-      duration_t tmo = patt.timeout_;
-      if (tmo > zero)
-      {
-        if (tmo < infin)
-        {
-          start_timer(tmo, f);
-        }
-        recv_h_ = f;
-        curr_pattern_ = patt;
-        return;
-      }
-    }
-    else
-    {
-      sender = end_recv(rcv, msg);
-    }
-
-    self_ref_t aref(*this);
-    base_t::snd_.post(
-      boost::bind<void>(f, aref, sender, msg)
-      );
+  void respond(
+    recv_binder const& f, resp_t res,
+    duration_t tmo = seconds(GCE_DEFAULT_REQUEST_TIMEOUT_SEC)
+    )
+  {
+    respond(f, recv_b_, res, tmo);
   }
 
   void respond(
@@ -242,19 +331,100 @@ public:
     duration_t tmo = seconds(GCE_DEFAULT_REQUEST_TIMEOUT_SEC)
     )
   {
-    aid_t sender;
-    message msg;
+    respond(f, recv_h_, res, tmo);
+  }
 
-    if (!base_t::mb_.pop(res, msg))
+  void sleep_for(wait_binder const& f, duration_t dur)
+  {
+    wait_b_ = f;
+    start_wait_timer(dur, f, wait_b_);
+  }
+
+  struct stop_binder
+  {
+    stop_binder(self_t& self, aid_t const& self_aid, exit_code_t exc, std::string const& errmsg)
+      : self_(self)
+      , self_aid_(self_aid)
+      , exc_(exc)
+      , errmsg_(errmsg)
+    {
+    }
+
+    void operator()() const
+    {
+      self_.stop(self_aid_, exc_, errmsg_);
+    }
+
+    self_t& self_;
+    aid_t self_aid_;
+    exit_code_t exc_;
+    std::string errmsg_;
+  };
+
+  void quit(
+    exit_code_t exc = exit_normal,
+    std::string const& errmsg = std::string()
+    )
+  {
+    aid_t self_aid = base_t::get_aid();
+    base_t::snd_.post(stop_binder(*this, self_aid, exc, errmsg));
+  }
+
+private:
+  template <typename RecvHandler>
+  void recv(RecvHandler const& f, RecvHandler& sf, pattern const& patt = pattern())
+  {
+    //aid_t sender;
+    sender_ = aid_nil;
+    recv_t rcv;
+    //message msg;
+    msg_.clear();
+
+    if (!base_t::mb_.pop(rcv, msg_, patt.match_list_, patt.recver_))
+    {
+      duration_t tmo = patt.timeout_;
+      if (tmo > zero)
+      {
+        sf = f;
+        curr_pattern_ = patt;
+        is_resp_ = false;
+        if (tmo < infin)
+        {
+          start_timer(tmo, f, sf);
+        }
+        return;
+      }
+    }
+    else
+    {
+      sender_ = end_recv(rcv, msg_);
+    }
+
+    base_t::snd_.post(
+      boost::bind<void>(f, boost::ref(aref_), sender_, msg_)
+      );
+  }
+
+  template <typename RecvHandler>
+  void respond(
+    RecvHandler const& f, RecvHandler& sf, resp_t res,
+    duration_t tmo = seconds(GCE_DEFAULT_REQUEST_TIMEOUT_SEC)
+    )
+  {
+    aid_t sender;
+    //message msg;
+
+    if (!base_t::mb_.pop(res, msg_))
     {
       if (tmo > zero)
       {
+        sf = f;
+        recving_res_ = res;
+        is_resp_ = true;
         if (tmo < infin)
         {
-          start_res_timer(tmo, f);
+          start_timer(tmo, f, sf);
         }
-        res_h_ = f;
-        recving_res_ = res;
         return;
       }
     }
@@ -263,29 +433,8 @@ public:
       sender = end_recv(res);
     }
 
-    self_ref_t aref(*this);
     base_t::snd_.post(
-      boost::bind<void>(f, aref, sender, msg)
-      );
-  }
-
-  void sleep_for(wait_handler_t const& f, duration_t dur)
-  {
-    start_wait_timer(dur, f);
-    wait_h_ = f;
-  }
-
-  void quit(
-    exit_code_t exc = exit_normal,
-    std::string const& errmsg = std::string()
-    )
-  {
-    aid_t self_aid = base_t::get_aid();
-    base_t::snd_.post(
-      boost::bind(
-        &self_t::stop, this,
-        self_aid, exc, errmsg
-        )
+      boost::bind<void>(f, boost::ref(aref_), sender, msg_)
       );
   }
 
@@ -295,9 +444,14 @@ public:
     f_ = f;
   }
 
+  struct guard
+  {
+    void operator()(errcode_t const&) const {}
+  };
+
   void start()
   {
-    guard_.async_wait(boost::bind(&self_t::guard));
+    guard_.async_wait(guard());
     run();
   }
 
@@ -306,13 +460,26 @@ public:
     handle_recv(pk);
   }
 
+  struct handle_recv_binder
+  {
+    handle_recv_binder(self_t& self, pack& pk)
+      : self_(self)
+      , pk_(pk)
+    {
+    }
+
+    void operator()() const
+    {
+      self_.handle_recv(pk_);
+    }
+
+    self_t& self_;
+    pack& pk_;
+  };
+
   void on_addon_recv(pack& pk)
   {
-    base_t::snd_.dispatch(
-      boost::bind(
-        &self_t::handle_recv, this, pk
-        )
-      );
+    base_t::snd_.dispatch(handle_recv_binder(*this, pk));
   }
 
   sid_t spawn(
@@ -330,27 +497,64 @@ public:
     return coro_;
   }
 
-  void spawn_handler(self_ref_t, aid_t sender, aid_t& osender)
+  void spawn_handler(aid_t sender, link_type lty, aid_t& osender)
   {
+    if (sender != aid_nil)
+    {
+      if (lty == linked)
+      {
+        link(sender);
+      }
+      else if (lty == monitored)
+      {
+        monitor(sender);
+      }
+    }
     osender = sender;
+    run();
+  }
+
+  void bind_handler()
+  {
+    run();
+  }
+
+  void conn_handler(aid_t const& skt, message& msg, service_t& sire, errcode_t& ec)
+  {
+    if (skt != aid_nil)
+    {
+      ctxid_pair_t ctxid_pr;
+      msg >> ctxid_pr >> ec;
+      sire.register_socket(ctxid_pr, skt);
+    }
+
     run();
   }
 
   void run()
   {
+    bool goon = false;
     try
     {
-      self_ref_t aref(*this);
-      f_(aref);
+      f_(aref_);
       if (coro_.is_complete())
       {
         quit();
+      }
+      else
+      {
+        goon = true;
       }
     }
     catch (std::exception& ex)
     {
       GCE_ERROR(lg_)(__FILE__)(__LINE__) << ex.what();
       quit(exit_except, ex.what());
+    }
+
+    if (goon)
+    {
+      base_t::ctx_.on_tick(svc_.get_index());
     }
   }
 
@@ -359,111 +563,109 @@ private:
   {
     errcode_t ignored_ec;
     guard_.cancel(ignored_ec);
+
+    context_t& ctx = base_t::ctx_;
+    size_t svc_id = svc_.get_index();
     base_t::send_exit(self_aid, ec, exit_msg);
     svc_.free_actor(this);
+    ctx.on_tick(svc_id);
   }
 
-  void start_timer(duration_t dur, recv_handler_t const& hdr)
+  struct recv_timer_binder
   {
-    tmr_.expires_from_now(to_chrono(dur));
-    tmr_.async_wait(
-      base_t::snd_.wrap(
-        boost::bind(
-          &self_t::handle_recv_timeout, this,
-          boost::asio::placeholders::error, ++tmr_sid_, hdr
-          )
-        )
-      );
-  }
-
-  void start_res_timer(duration_t dur, recv_handler_t const& hdr)
-  {
-    tmr_.expires_from_now(to_chrono(dur));
-    tmr_.async_wait(
-      base_t::snd_.wrap(
-        boost::bind(
-          &self_t::handle_res_timeout, this,
-          boost::asio::placeholders::error, ++tmr_sid_, hdr
-          )
-        )
-      );
-  }
-
-  void start_wait_timer(duration_t dur, wait_handler_t const& hdr)
-  {
-    tmr_.expires_from_now(to_chrono(dur));
-    tmr_.async_wait(
-      base_t::snd_.wrap(
-        boost::bind(
-          &self_t::handle_wait_timeout, this,
-          boost::asio::placeholders::error, ++tmr_sid_, hdr
-          )
-        )
-      );
-  }
-
-  void handle_recv_timeout(
-    errcode_t const& ec, size_t tmr_sid, recv_handler_t const& hdr
-    )
-  {
-    if (!ec && tmr_sid == tmr_sid_)
+    recv_timer_binder(self_t& self, size_t tmr_sid, recv_binder const& rb, recv_binder& crb)
+      : self_(self)
+      , tmr_sid_(tmr_sid)
+      , rb_(rb)
+      , crb_(&crb)
     {
-      GCE_ASSERT(recv_h_);
-      recv_h_.clear();
-      curr_pattern_.clear();
-      try
+    }
+
+    recv_timer_binder(self_t& self, size_t tmr_sid, recv_handler_t const& rh, recv_handler_t& crh)
+      : self_(self)
+      , tmr_sid_(tmr_sid)
+      , rh_(rh)
+      , crh_(&crh)
+    {
+    }
+
+    void operator()(errcode_t const& ec) const
+    {
+      if (rb_)
       {
-        self_ref_t aref(*this);
-        hdr(aref, aid_t(), message());
+        self_.handle_recv_timeout(ec, tmr_sid_, rb_, *crb_);
       }
-      catch (std::exception& ex)
+      else
       {
-        GCE_ERROR(lg_)(__FILE__)(__LINE__) << ex.what();
-        quit(exit_except, ex.what());
+        self_.handle_recv_timeout(ec, tmr_sid_, rh_, *crh_);
       }
     }
+
+    self_t& self_;
+    size_t tmr_sid_;
+    recv_binder rb_;
+    recv_binder* crb_;
+    recv_handler_t rh_;
+    recv_handler_t* crh_;
+  };
+
+  template <typename RecvHandler>
+  void start_timer(duration_t dur, RecvHandler const& hdr, RecvHandler& chdr)
+  {
+    tmr_.expires_from_now(to_chrono(dur));
+    tmr_.async_wait(base_t::snd_.wrap(recv_timer_binder(*this, ++tmr_sid_, hdr, chdr)));
   }
 
-  void handle_res_timeout(
-    errcode_t const& ec, size_t tmr_sid, recv_handler_t const& hdr
+  struct wait_timer_binder
+  {
+    wait_timer_binder(self_t& self, size_t tmr_sid, wait_binder const& wb, wait_binder& cwb)
+      : self_(self)
+      , tmr_sid_(tmr_sid)
+      , wb_(wb)
+      , cwb_(&cwb)
+    {
+    }
+
+    void operator()(errcode_t const& ec) const
+    {
+      self_.handle_wait_timeout(ec, tmr_sid_, wb_, *cwb_);
+    }
+
+    self_t& self_;
+    size_t tmr_sid_;
+    wait_binder wb_;
+    wait_binder* cwb_;
+  };
+
+  void start_wait_timer(duration_t dur, wait_binder const& hdr, wait_binder& chdr)
+  {
+    tmr_.expires_from_now(to_chrono(dur));
+    tmr_.async_wait(base_t::snd_.wrap(wait_timer_binder(*this, ++tmr_sid_, hdr, chdr)));
+  }
+
+  template <typename RecvHandler>
+  void handle_recv_timeout(
+    errcode_t const& ec, size_t tmr_sid, RecvHandler const& hdr, RecvHandler& chdr
     )
   {
     if (!ec && tmr_sid == tmr_sid_)
     {
-      GCE_ASSERT(res_h_);
-      res_h_.clear();
+      GCE_ASSERT(chdr);
+      chdr.clear();
       curr_pattern_.clear();
-      try
-      {
-        self_ref_t aref(*this);
-        hdr(aref, aid_t(), message());
-      }
-      catch (std::exception& ex)
-      {
-        GCE_ERROR(lg_)(__FILE__)(__LINE__) << ex.what();
-        quit(exit_except, ex.what());
-      }
+      hdr(aref_, aid_t(), message());
     }
   }
 
   void handle_wait_timeout(
-    errcode_t const& ec, size_t tmr_sid, wait_handler_t const& hdr
+    errcode_t const& ec, size_t tmr_sid, wait_binder const& hdr, wait_binder& chdr
     )
   {
     if (!ec && tmr_sid == tmr_sid_)
     {
-      GCE_ASSERT(wait_h_);
-      wait_h_.clear();
-      try
-      {
-        self_ref_t aref(*this);
-        hdr(aref);
-      }
-      catch (std::exception& ex)
-      {
-        GCE_ERROR(lg_)(__FILE__)(__LINE__) << ex.what();
-        quit(exit_except, ex.what());
-      }
+      GCE_ASSERT(chdr);
+      chdr.clear();
+      hdr();
     }
   }
 
@@ -495,59 +697,61 @@ private:
       base_t::mb_.push(*res, pk.msg_);
     }
 
-    match_t ty = pk.msg_.get_type();
-    recv_t rcv;
-    message msg;
-    aid_t sender;
-    recv_handler_t hdr;
-
-    if (
-      (recv_h_ && !is_response) ||
-      (res_h_ && (is_response || ty == exit))
-      )
+    bool is_binder = recv_b_ ? true : false;
+    if (is_binder || recv_h_)
     {
-      if (recv_h_ && !is_response)
+      message* msg = 0;
+      match_t ty = pk.msg_.get_type();
+
+      if (!is_resp_ && !is_response)
       {
-        bool ret = base_t::mb_.pop(rcv, msg, curr_pattern_.match_list_, curr_pattern_.recver_);
-        if (!ret)
+        recv_t rcv;
+        msg = is_binder && recv_b_.omsg_ != 0 ? recv_b_.omsg_ : &msg_;
+        if (!base_t::mb_.pop(rcv, *msg, curr_pattern_.match_list_, curr_pattern_.recver_))
         {
           return;
         }
-        sender = end_recv(rcv, msg);
-        curr_pattern_.clear();
-        hdr = recv_h_;
-        recv_h_.clear();
+        sender_ = end_recv(rcv, *msg);
       }
 
-      if (res_h_ && (is_response || ty == exit))
+      if (is_resp_ && (is_response || ty == exit))
       {
         GCE_ASSERT(recving_res_.valid());
-        bool ret = base_t::mb_.pop(recving_res_, msg);
-        if (!ret)
+        msg = is_binder && recv_b_.omsg_ != 0 ? recv_b_.omsg_ : &msg_;
+        if (!base_t::mb_.pop(recving_res_, *msg))
         {
           return;
         }
-        sender = end_recv(recving_res_);
-        hdr = res_h_;
-        res_h_.clear();
+        sender_ = end_recv(recving_res_);
         recving_res_ = resp_t();
       }
 
-      ++tmr_sid_;
-      errcode_t ec;
-      tmr_.cancel(ec);
-
-      if (hdr)
+      if (msg != 0)
       {
-        try
+        if (is_binder)
         {
-          self_ref_t aref(*this);
-          hdr(aref, sender, msg);
+          tmp_b_ = recv_b_;
+          recv_b_.clear();
         }
-        catch (std::exception& ex)
+        else
         {
-          GCE_ERROR(lg_)(__FILE__)(__LINE__) << ex.what();
-          quit(exit_except, ex.what());
+          tmp_h_ = recv_h_;
+          recv_h_.clear();
+        }
+
+        curr_pattern_.clear();
+
+        ++tmr_sid_;
+        errcode_t ignored_ec;
+        tmr_.cancel(ignored_ec);
+
+        if (is_binder)
+        {
+          tmp_b_(aref_, sender_, *msg);
+        }
+        else
+        {
+          tmp_h_(aref_, sender_, *msg);
         }
       }
     }
@@ -578,21 +782,20 @@ private:
     return res.get_aid();
   }
 
-  void recv_handler(
-    self_ref_t, aid_t sender, message msg, aid_t& osender, message& omsg
-    )
+  void recv_handler(aid_t const& sender, message& msg, aid_t& osender, message& omsg)
   {
     osender = sender;
-    omsg = msg;
+    if (&msg != &omsg)
+    {
+      omsg = msg;
+    }
     run();
   }
 
-  void wait_handler(self_ref_t)
+  void wait_handler()
   {
     run();
   }
-
-  static void guard() {}
 
 private:
   /// Ensure start from a new cache line.
@@ -602,12 +805,20 @@ private:
   GCE_CACHE_ALIGNED_VAR(coro_t, coro_)
 
   /// coro local vars
+  self_ref_t aref_;
   service_t& svc_;
+  /*recv_handler_t recv_b_;
+  recv_handler_t res_h_;*/
+  bool is_resp_;
+  recv_binder recv_b_;
+  recv_binder tmp_b_;
   recv_handler_t recv_h_;
-  recv_handler_t res_h_;
-  wait_handler_t wait_h_;
+  recv_handler_t tmp_h_;
+  wait_binder wait_b_;
   resp_t recving_res_;
   pattern curr_pattern_;
+  aid_t sender_;
+  message msg_;
   timer_t tmr_;
   size_t tmr_sid_;
   log::logger_t& lg_;

@@ -13,12 +13,14 @@
 #include <gce/actor/config.hpp>
 #include <gce/actor/service_id.hpp>
 #include <gce/actor/message.hpp>
+#include <gce/detail/linked_elem.hpp>
 
 namespace gce
 {
 namespace detail
 {
 struct pack
+  : public linked_elem<pack>
 {
   pack()
     : is_err_ret_(false)
@@ -32,6 +34,14 @@ struct pack
 
   ~pack()
   {
+  }
+
+  void on_free()
+  {
+    svc_ = svcid_nil;
+    is_err_ret_ = false;
+    msg_.clear();
+    expiry_ = false;
   }
 
   tag_t tag_;

@@ -34,13 +34,13 @@ public:
   }
 
   template <typename F>
-  explicit scope(F f)
+  explicit scope(F const& f)
     : cb_(f)
   {
   }
 
   template <typename F, typename A>
-  explicit scope(F f, A a)
+  explicit scope(F const& f, A const& a)
     : cb_(f, a)
   {
   }
@@ -76,6 +76,45 @@ public:
 
 private:
   cb_t cb_;
+};
+///----------------------------------------------------------------------------
+/// scope_handler
+///----------------------------------------------------------------------------
+template <typename Handler>
+class scope_handler
+{
+public:
+  scope_handler()
+    : h_(0)
+  {
+  }
+
+  scope_handler(Handler const& h)
+    : h_(&h)
+  {
+  }
+
+  ~scope_handler()
+  {
+    if (h_ != 0)
+    {
+      (*h_)();
+    }
+  }
+
+public:
+  void reset()
+  {
+    h_ = 0;
+  }
+
+  void reset(Handler const& h)
+  {
+    h_ = &h;
+  }
+
+private:
+  Handler const* h_;
 };
 }
 }

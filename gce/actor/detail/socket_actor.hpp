@@ -147,6 +147,11 @@ public:
     return attr.socket_pool_reserve_size_;
   }
 
+  static size_t get_pool_max_size(attributes const& attr)
+  {
+    return attr.socket_pool_max_size_;
+  }
+
   void start(
     remote_func_list_t const& remote_func_list,
     socket_ptr skt, bool is_router
@@ -1082,7 +1087,8 @@ private:
 
           /// prepare for writing last data
           pre_write_size_ = curr_hdr_.size_ - remain_size;
-          msg.pre_write(pre_write_size_);
+          body_pkr_.clear();
+          msg.pre_write(body_pkr_, pre_write_size_);
 
           /// switch to recving_msg_ mode
           recving_msg_ = true;
@@ -1107,9 +1113,9 @@ private:
     }
     else
     {
-      packer& pkr = msg.get_packer();
-      pkr.skip_write(pre_write_size_);
-      msg.end_write();
+      //packer& pkr = msg.get_packer();
+      body_pkr_.skip_write(pre_write_size_);
+      msg.end_write(body_pkr_);
 
       recv_cache_.read(curr_hdr_.size_);
       byte_t* data = recv_cache_.get_read_data();
@@ -1330,6 +1336,7 @@ private:
   log::logger_t& lg_;
 
   packer pkr_;
+  packer body_pkr_;
   adl::detail::add_svc tmp_add_svc_;
   adl::detail::rmv_svc tmp_rmv_svc_;
 };

@@ -36,7 +36,17 @@ struct attributes
     , actor_pool_reserve_size_(8)
     , socket_pool_reserve_size_(8)
     , acceptor_pool_reserve_size_(8)
+    , actor_pool_max_size_(size_nil)
+    , socket_pool_max_size_(size_nil)
+    , acceptor_pool_max_size_(size_nil)
     , max_cache_match_size_(32)
+    , max_tick_handle_size_(128)
+    , tick_pool_reserve_size_(8)
+    , tick_pool_max_size_(size_nil)
+    , mailbox_recv_pool_reserve_size_(8)
+    , mailbox_recv_pool_grow_size_(size_nil)
+    , mailbox_mq_pool_reserve_size_(8)
+    , mailbox_mq_pool_grow_size_(size_nil)
   {
   }
 
@@ -48,7 +58,17 @@ struct attributes
   size_t actor_pool_reserve_size_;
   size_t socket_pool_reserve_size_;
   size_t acceptor_pool_reserve_size_;
+  size_t actor_pool_max_size_;
+  size_t socket_pool_max_size_;
+  size_t acceptor_pool_max_size_;
   size_t max_cache_match_size_;
+  size_t max_tick_handle_size_;
+  size_t tick_pool_reserve_size_;
+  size_t tick_pool_max_size_;
+  size_t mailbox_recv_pool_reserve_size_;
+  size_t mailbox_recv_pool_grow_size_;
+  size_t mailbox_mq_pool_reserve_size_;
+  size_t mailbox_mq_pool_grow_size_;
   std::vector<thread_callback_t> thread_begin_cb_list_;
   std::vector<thread_callback_t> thread_end_cb_list_;
 #ifdef GCE_LUA

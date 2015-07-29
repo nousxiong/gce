@@ -26,6 +26,7 @@
 #include <gce/detail/cow_buffer.hpp>
 #include <boost/asio/buffer.hpp>
 #include <boost/shared_ptr.hpp>
+#include <boost/container/vector.hpp>
 #include <boost/variant/variant.hpp>
 #include <boost/variant/get.hpp>
 #include <boost/array.hpp>
@@ -35,7 +36,7 @@
 #include <iostream>
 
 #ifndef GCE_SMALL_MSG_SIZE
-# define GCE_SMALL_MSG_SIZE 128
+# define GCE_SMALL_MSG_SIZE 64
 #endif
 
 #ifndef GCE_MSG_MIN_GROW_SIZE
@@ -153,10 +154,14 @@ public:
     : type_(other.type_)
     , tag_offset_(other.tag_offset_)
     , cow_(other.cow_)
-    , pkr_(other.pkr_)
+    //, pkr_(other.pkr_)
     , relay_(other.relay_)
-    , shared_list_(other.shared_list_)
+    //, shared_list_(other.shared_list_)
   {
+    if (!other.shared_list_.empty())
+    {
+      shared_list_ = other.shared_list_;
+    }
   }
 
   message& operator=(message const& rhs)
@@ -166,9 +171,20 @@ public:
       type_ = rhs.type_;
       tag_offset_ = rhs.tag_offset_;
       cow_ = rhs.cow_;
-      pkr_ = rhs.pkr_;
+      //pkr_ = rhs.pkr_;
       relay_ = rhs.relay_;
-      shared_list_ = rhs.shared_list_;
+      //shared_list_ = rhs.shared_list_;
+      if (rhs.shared_list_.empty())
+      {
+        if (!shared_list_.empty())
+        {
+          shared_list_.clear();
+        }
+      }
+      else
+      {
+        shared_list_ = rhs.shared_list_;
+      }
     }
     return *this;
   }
@@ -199,6 +215,12 @@ public:
     return cow_.get_buffer_ref().clear_write(len);
   }
 
+  void clear()
+  {
+    cow_.clear();
+    shared_list_.clear();
+  }
+
   void to_large(size_t size = GCE_SMALL_MSG_SIZE + 8)
   {
     if (cow_.is_small())
@@ -211,35 +233,39 @@ public:
   message& operator<<(T const& t)
   {
     size_t size = packer::size_of(t);
-    pre_write(size);
-    pkr_.write(t);
-    end_write();
+    packer pkr;
+    pre_write(pkr, size);
+    pkr.write(t);
+    end_write(pkr);
     return *this;
   }
 
   template <typename T>
   message& operator>>(T& t)
   {
-    pre_read();
-    pkr_.read(t);
-    end_read();
+    packer pkr;
+    pre_read(pkr);
+    pkr.read(t);
+    end_read(pkr);
     return *this;
   }
 
   message& operator<<(skip s)
   {
     size_t size = s.len_;
-    pre_write(size);
-    pkr_.skip_write(size);
-    end_write();
+    packer pkr;
+    pre_write(pkr, size);
+    pkr.skip_write(size);
+    end_write(pkr);
     return *this;
   }
 
   message& operator>>(skip s)
   {
-    pre_read();
-    pkr_.skip_read(s.len_);
-    end_read();
+    packer pkr;
+    pre_read(pkr);
+    pkr.skip_read(s.len_);
+    end_read(pkr);
     return *this;
   }
 
@@ -248,10 +274,12 @@ public:
   {
     uint32_t index = (uint32_t)shared_list_.size();
     size_t size = packer::size_of(index);
-    pre_write(size);
-    pkr_.write(index);
+
+    packer pkr;
+    pre_write(pkr, size);
+    pkr.write(index);
     shared_list_.push_back(p);
-    end_write();
+    end_write(pkr);
     return *this;
   }
 
@@ -260,9 +288,10 @@ public:
   {
     uint32_t index;
 
-    pre_read();
-    pkr_.read(index);
-    end_read();
+    packer pkr;
+    pre_read(pkr);
+    pkr.read(index);
+    end_read(pkr);
 
     GCE_VERIFY(index < shared_list_.size())(index);
     GCE_ASSERT(shared_list_[index])(index);
@@ -287,15 +316,20 @@ public:
     size += packer::size_of(shared_offset);
     size += packer::size_of(shared_size);
 
-    pre_write(size);
-    pkr_.write(hdr);
-    pkr_.write(m.data(), hdr.size_);
-    pkr_.write(shared_offset);
-    pkr_.write(shared_size);
-    end_write();
+    packer pkr;
+    pre_write(pkr, size);
+    pkr.write(hdr);
+    pkr.write(m.data(), hdr.size_);
+    pkr.write(shared_offset);
+    pkr.write(shared_size);
+    end_write(pkr);
 
-    shared_list_.resize(shared_offset + shared_size);
-    std::copy_backward(m.shared_list_.begin(), m.shared_list_.end(), shared_list_.end());
+    shared_list_.reserve(shared_offset + shared_size);
+    for (size_t i=0; i<shared_size; ++i)
+    {
+      shared_list_.push_back(m.shared_list_[i]);
+    }
+    //std::copy_backward(m.shared_list_.begin(), m.shared_list_.end(), shared_list_.end());
     return *this;
   }
 
@@ -305,20 +339,25 @@ public:
     uint32_t shared_offset;
     uint32_t shared_size;
 
-    pre_read();
-    pkr_.read(hdr);
-    byte_t const* body = pkr_.skip_read(hdr.size_);
-    pkr_.read(shared_offset);
-    pkr_.read(shared_size);
-    end_read();
+    packer pkr;
+    pre_read(pkr);
+    pkr.read(hdr);
+    byte_t const* body = pkr.skip_read(hdr.size_);
+    pkr.read(shared_offset);
+    pkr.read(shared_size);
+    end_read(pkr);
 
     message m(hdr.type_, body, hdr.size_, hdr.tag_offset_);
-    m.shared_list_.resize(shared_size);
-    std::copy(
+    m.shared_list_.reserve(shared_size);
+    for (size_t i=shared_offset, size=shared_offset+shared_size; i<size; ++i)
+    {
+      m.shared_list_.push_back(shared_list_[i]);
+    }
+    /*std::copy(
       shared_list_.begin()+shared_offset, 
       shared_list_.begin()+(shared_offset+shared_size), 
       m.shared_list_.begin()
-      );
+      );*/
 
     msg = m;
     return *this;
@@ -330,10 +369,11 @@ public:
     size_t size = packer::size_of(len);
     size += len;
 
-    pre_write(size);
-    pkr_.write(len);
-    pkr_.write((byte_t const*)str.data(), (size_t)len);
-    end_write();
+    packer pkr;
+    pre_write(pkr, size);
+    pkr.write(len);
+    pkr.write((byte_t const*)str.data(), (size_t)len);
+    end_write(pkr);
     return *this;
   }
 
@@ -343,10 +383,11 @@ public:
     size_t size = packer::size_of(len);
     size += len;
 
-    pre_write(size);
-    pkr_.write(len);
-    pkr_.write((byte_t const*)str.data(), (size_t)len);
-    end_write();
+    packer pkr;
+    pre_write(pkr, size);
+    pkr.write(len);
+    pkr.write((byte_t const*)str.data(), (size_t)len);
+    end_write(pkr);
     return *this;
   }
 
@@ -356,32 +397,35 @@ public:
     size_t size = packer::size_of(len);
     size += len;
 
-    pre_write(size);
-    pkr_.write(len);
-    pkr_.write((byte_t const*)str, (size_t)len);
-    end_write();
+    packer pkr;
+    pre_write(pkr, size);
+    pkr.write(len);
+    pkr.write((byte_t const*)str, (size_t)len);
+    end_write(pkr);
     return *this;
   }
 
   message& operator>>(std::string& str)
   {
     uint32_t len = 0;
-    pre_read();
-    pkr_.read(len);
-    byte_t const* ptr = pkr_.skip_read(len);
+    packer pkr;
+    pre_read(pkr);
+    pkr.read(len);
+    byte_t const* ptr = pkr.skip_read(len);
     str.assign((char const*)ptr, len);
-    end_read();
+    end_read(pkr);
     return *this;
   }
 
   message& operator>>(boost::string_ref& str)
   {
     uint32_t len = 0;
-    pre_read();
-    pkr_.read(len);
-    byte_t const* ptr = pkr_.skip_read(len);
+    packer pkr;
+    pre_read(pkr);
+    pkr.read(len);
+    byte_t const* ptr = pkr.skip_read(len);
     str = boost::string_ref((char const*)ptr, len);
-    end_read();
+    end_read(pkr);
     return *this;
   }
 
@@ -625,9 +669,10 @@ public:
   message& operator<<(chunk const& ch)
   {
     GCE_ASSERT(ch.data() != 0);
-    pre_write(ch.size());
-    pkr_.write(ch.data(), ch.size());
-    end_write();
+    packer pkr;
+    pre_write(pkr, ch.size());
+    pkr.write(ch.data(), ch.size());
+    end_write(pkr);
     return *this;
   }
 
@@ -638,9 +683,10 @@ public:
     {
       ch.len_ = buf.remain_read_size();
     }
-    pre_read();
-    ch.data_ = pkr_.skip_read(ch.len_);
-    end_read();
+    packer pkr;
+    pre_read(pkr);
+    ch.data_ = pkr.skip_read(ch.len_);
+    end_read(pkr);
     return *this;
   }
 
@@ -798,37 +844,37 @@ public:
 
   void clear_relay()
   {
-    relay_ = detail::relay_t();
+    relay_ = int(0);
   }
 
-  inline packer& get_packer()
+  /*inline packer& get_packer()
   {
     return pkr_;
-  }
+  }*/
 
-  inline void pre_read()
+  inline void pre_read(packer& pkr)
   {
     detail::buffer_ref& buf = cow_.get_buffer_ref();
-    pkr_.set_read(buf.get_read_data(), buf.remain_read_size());
+    pkr.set_read(buf.get_read_data(), buf.remain_read_size());
   }
 
-  inline void end_read()
+  inline void end_read(packer& pkr)
   {
     detail::buffer_ref& buf = cow_.get_buffer_ref();
-    buf.read(pkr_.read_length());
+    buf.read(pkr.read_length());
   }
 
-  inline void pre_write(size_t len)
+  inline void pre_write(packer& pkr, size_t len)
   {
     cow_.reserve(len);
     detail::buffer_ref& buf = cow_.get_buffer_ref();
-    pkr_.set_write(buf.get_write_data(), buf.remain_write_size());
+    pkr.set_write(buf.get_write_data(), buf.remain_write_size());
   }
 
-  inline void end_write()
+  inline void end_write(packer& pkr)
   {
     detail::buffer_ref& buf = cow_.get_buffer_ref();
-    buf.write(pkr_.write_length());
+    buf.write(pkr.write_length());
   }
 
 private:
@@ -837,13 +883,13 @@ private:
   detail::cow_buffer<GCE_SMALL_MSG_SIZE, GCE_MSG_MIN_GROW_SIZE> cow_;
 
   /// packer
-  packer pkr_;
+  //packer pkr_;
 
   /// relay helper data
   detail::relay_t relay_;
 
   /// local data to carry
-  std::vector<boost::shared_ptr<void> > shared_list_;
+  boost::container::vector<boost::shared_ptr<void> > shared_list_;
 };
 
 inline std::string to_string(message const& msg)

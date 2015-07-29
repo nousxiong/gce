@@ -413,6 +413,11 @@ public:
     return attr.actor_pool_reserve_size_;
   }
 
+  static size_t get_pool_max_size(attributes const& attr)
+  {
+    return attr.actor_pool_max_size_;
+  }
+
   service_t& get_service()
   {
     return svc_;

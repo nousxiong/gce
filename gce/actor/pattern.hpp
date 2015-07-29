@@ -82,10 +82,44 @@ struct pattern
     match_list_.push_back(to_match(type5));
   }
 
+  pattern(pattern const& other)
+    : timeout_(other.timeout_)
+    , recver_(other.recver_)
+  {
+    if (!other.match_list_.empty())
+    {
+      match_list_ = other.match_list_;
+    }
+  }
+
+  pattern& operator=(pattern const& rhs)
+  {
+    if (this != &rhs)
+    {
+      timeout_ = rhs.timeout_;
+      if (rhs.match_list_.empty())
+      {
+        if (!match_list_.empty())
+        {
+          match_list_.clear();
+        }
+      }
+      else
+      {
+        match_list_ = rhs.match_list_;
+      }
+      recver_ = rhs.recver_;
+    }
+    return *this;
+  }
+
   void clear()
   {
     timeout_ = infin;
-    match_list_.clear();
+    if (!match_list_.empty())
+    {
+      match_list_.clear();
+    }
   }
 
   template <typename Match>

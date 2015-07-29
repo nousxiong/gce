@@ -45,14 +45,18 @@ private:
 
   static void test_common()
   {
+    log::asio_logger lgr;
+    log::logger_t lg = boost::bind(&gce::log::asio_logger::output, &lgr, _arg1, "");
     try
     {
-      context ctx;
+      attributes attrs;
+      attrs.lg_ = lg;
+      context ctx(attrs);
       threaded_actor base = spawn(ctx);
 
       aid_t base_id = base.get_aid();
       aid_t aid1 = spawn(base, boost::bind(&match_recver_ut::my_actor, _arg1, base_id), monitored);
-      spawn(base, boost::bind(&match_recver_ut::my_actor, _arg1, aid_t()), monitored);
+      spawn(base, boost::bind(&match_recver_ut::my_actor, _arg1, aid_nil), monitored);
 
       message msg;
       pattern patt;

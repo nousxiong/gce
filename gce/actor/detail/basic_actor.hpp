@@ -41,7 +41,7 @@ public:
     : ctx_(ctx)
     , basic_svc_(svc)
     , snd_(basic_svc_.get_strand())
-    , mb_(ctx_.get_attributes().max_cache_match_size_)
+    , mb_(ctx_.get_mailbox_pool_set_list(svc.get_index()), ctx_.get_attributes().max_cache_match_size_)
     , ctxid_(ctx_.get_ctxid())
     , timestamp_(ctx_.get_timestamp())
     , type_(type)

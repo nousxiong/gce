@@ -116,11 +116,11 @@ inline void spawn(
   stackless_actor_t& a = sire.get_actor();
   service_t& svc = select_service<service_t>(sire, sync_sire);
   spawn(
-    stackless(), sire, f, 
-    boost::bind(
+    stackless(), sire, f, aid,
+    /*boost::bind(
       &stackless_actor_t::spawn_handler, &a, 
       _arg1, _arg2, boost::ref(aid)
-      ), 
+      ), */
     boost::ref(svc), type
     );
 }
@@ -138,11 +138,11 @@ inline void spawn(
   stackless_actor_t& a = sire.get_actor();
   service_t& svc = select_service<service_t>(sire, sync_sire);
   spawn(
-    luaed(), sire, 
-    boost::bind(
+    luaed(), sire, aid,
+    /*boost::bind(
       &stackless_actor_t::spawn_handler, &a, 
       _arg1, _arg2, boost::ref(aid)
-      ), 
+      ), */
     script, boost::ref(svc), type
     );
 }

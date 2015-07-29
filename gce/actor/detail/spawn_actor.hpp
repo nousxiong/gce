@@ -92,26 +92,27 @@ inline aid_t end_spawn(ActorRef sire, link_type type)
   return aid;
 }
 
-template <typename Context>
-inline void handle_spawn(
-  actor_ref<stackless, Context> self, aid_t aid, message msg, 
-  link_type type, boost::function<void (actor_ref<stackless, Context>, aid_t)> const& hdr
-  )
-{
-  if (aid != aid_nil)
-  {
-    if (type == linked)
-    {
-      self.link(aid);
-    }
-    else if (type == monitored)
-    {
-      self.monitor(aid);
-    }
-  }
-
-  hdr(self, aid);
-}
+//template <typename Context>
+//inline void handle_spawn(
+//  actor_ref<stackless, Context> self, aid_t aid, message msg, 
+//  link_type type, aid_t& osender/*boost::function<void (actor_ref<stackless, Context>, aid_t)> const& hdr*/
+//  )
+//{
+//  if (aid != aid_nil)
+//  {
+//    if (type == linked)
+//    {
+//      self.link(aid);
+//    }
+//    else if (type == monitored)
+//    {
+//      self.monitor(aid);
+//    }
+//  }
+//
+//  //hdr(self, aid);
+//  self.get_actor().spawn_handler(self, aid, osender);
+//}
 
 /// spawn stackful_actor using NONE stackless_actor
 template <typename ActorRef, typename F>
@@ -181,16 +182,18 @@ inline aid_t spawn(
 #endif
 
 /// spawn stackless_actor using stackless_actor
-template <typename Context, typename F, typename SpawnHandler>
+template <typename Context, typename F/*, typename SpawnHandler*/>
 inline void spawn(
   stackless,
-  actor_ref<stackless, Context> sire, F f, SpawnHandler h,
+  actor_ref<stackless, Context> sire, F f, aid_t& aid,/*SpawnHandler h,*/
   typename Context::stackless_service_t& svc,
   link_type type
   )
 {
   typedef Context context_t;
-  typedef boost::function<void (actor_ref<stackless, context_t>, aid_t)> spawn_handler_t;
+  typedef typename context_t::stackless_actor_t stackless_actor_t;
+  stackless_actor_t& a = sire.get_actor();
+  //typedef boost::function<void (actor_ref<stackless, context_t>, aid_t)> spawn_handler_t;
 
   svc.get_strand().post(
     boost::bind(
@@ -203,27 +206,30 @@ inline void spawn(
   pattern patt;
   patt.add_match(detail::msg_new_actor);
   sire.recv(
-    boost::bind(
-      &handle_spawn<context_t>, _arg1, _arg2, _arg3,
-      type, spawn_handler_t(h)
-      ),
+    stackless_actor_t::recv_binder(a, type, aid), 
+    //boost::bind(
+    //  &handle_spawn<context_t>, _arg1, _arg2, _arg3,
+    //  type, boost::ref(aid)/*spawn_handler_t(h)*/
+    //  ),
     patt
     );
 }
 
 #ifdef GCE_LUA
 /// spawn lua_actor using stackless_actor
-template <typename Context, typename SpawnHandler>
+template <typename Context/*, typename SpawnHandler*/>
 inline void spawn(
   luaed,
-  actor_ref<stackless, Context> sire, SpawnHandler h, 
+  actor_ref<stackless, Context> sire, aid_t& aid,/*SpawnHandler h,*/ 
   std::string const& script, typename Context::lua_service_t& svc, 
   link_type type
   )
 {
   typedef Context context_t;
   typedef typename context_t::lua_service_t service_t;
-  typedef boost::function<void (actor_ref<stackless, context_t>, aid_t)> spawn_handler_t;
+  typedef typename context_t::stackless_actor_t stackless_actor_t;
+  stackless_actor_t& a = sire.get_actor();
+  //typedef boost::function<void (actor_ref<stackless, context_t>, aid_t)> spawn_handler_t;
 
   svc.get_strand().post(
     boost::bind(
@@ -235,10 +241,11 @@ inline void spawn(
   pattern patt;
   patt.add_match(detail::msg_new_actor);
   sire.recv(
-    boost::bind(
-      &handle_spawn<context_t>, _arg1, _arg2, _arg3,
-      type, spawn_handler_t(h)
-      ),
+    stackless_actor_t::recv_binder(a, type, aid), 
+    //boost::bind(
+    //  &handle_spawn<context_t>, _arg1, _arg2, _arg3,
+    //  type, boost::ref(aid)/*spawn_handler_t(h)*/
+    //  ),
     patt
     );
 }

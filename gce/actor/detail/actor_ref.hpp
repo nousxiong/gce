@@ -349,7 +349,8 @@ private:
   typedef typename context_t::stackless_actor_t stackless_actor_t;
   typedef typename context_t::stackless_service_t service_t;
   typedef typename stackless_actor_t::recv_handler_t recv_handler_t;
-  typedef typename stackless_actor_t::wait_handler_t wait_handler_t;
+  typedef typename stackless_actor_t::recv_binder recv_binder;
+  typedef typename stackless_actor_t::wait_binder wait_binder;
   typedef basic_actor_ref<stackless_actor_t> base_t;
 
 public:
@@ -424,6 +425,11 @@ public:
     base_t::a_->recv(h, patt);
   }
 
+  void recv(recv_binder const& h, pattern const& patt = pattern())
+  {
+    base_t::a_->recv(h, patt);
+  }
+
   void respond(
     recv_handler_t const& h, resp_t const& res, 
     duration_t tmo = seconds(GCE_DEFAULT_REQUEST_TIMEOUT_SEC)
@@ -432,7 +438,15 @@ public:
     base_t::a_->respond(h, res, tmo);
   }
 
-  void sleep_for(wait_handler_t const& h, duration_t dur)
+  void respond(
+    recv_binder const& h, resp_t const& res, 
+    duration_t tmo = seconds(GCE_DEFAULT_REQUEST_TIMEOUT_SEC)
+    )
+  {
+    base_t::a_->respond(h, res, tmo);
+  }
+
+  void sleep_for(wait_binder const& h, duration_t dur)
   {
     base_t::a_->sleep_for(h, dur);
   }
