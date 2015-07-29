@@ -14,6 +14,7 @@
 #include <gce/integer.hpp>
 #include <gce/detail/linked_pool.hpp>
 #include <boost/container/deque.hpp>
+#include <boost/assert.hpp>
 
 namespace gce
 {
@@ -27,6 +28,7 @@ public:
     : reserve_size_(reserve_size)
     , grow_size_(grow_size)
   {
+    BOOST_ASSERT(grow_size != size_nil);
     grow(reserve_size);
   }
 

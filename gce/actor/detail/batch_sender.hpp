@@ -24,7 +24,7 @@ class batch_sender
   typedef dynarray<messager> msgr_arr_t;
   typedef std::vector<pack_list_t*> pack_list_arr_t;
 public:
-  explicit batch_sender(size_t service_size)
+  batch_sender(size_t service_size, size_t pack_list_reserve_size, size_t pack_list_max_size)
     : msgr_list_((size_t)actor_num)
     , back_list_((size_t)actor_num)
   {
@@ -34,7 +34,7 @@ public:
       msgr_arr_t& msgr_arr = msgr_list_.back();
       for (size_t j=0; j<service_size; ++j)
       {
-        msgr_arr.emplace_back();
+        msgr_arr.emplace_back(pack_list_reserve_size, pack_list_max_size);
       }
     }
 
@@ -48,21 +48,21 @@ public:
 public:
   messager& get_messager(actor_type type, size_t index)
   {
-    GCE_VERIFY(index < msgr_list_[type].size())((int)type)(index)(msgr_list_[type].size())
+    GCE_ASSERT(index < msgr_list_[type].size())((int)type)(index)(msgr_list_[type].size())
       .msg("get_messager index out of msgr_list");
     return msgr_list_[type][index];
   }
 
   pack_list_t* get_pack_list(actor_type type, size_t index)
   {
-    GCE_VERIFY(index < back_list_[type].size())((int)type)(index)(back_list_[type].size())
+    GCE_ASSERT(index < back_list_[type].size())((int)type)(index)(back_list_[type].size())
       .msg("get_pack_list index out of back_list_");
     return back_list_[type][index];
   }
 
   void set_pack_list(actor_type type, size_t index, pack_list_t* back_list)
   {
-    GCE_VERIFY(index < back_list_[type].size())((int)type)(index)(back_list_[type].size())
+    GCE_ASSERT(index < back_list_[type].size())((int)type)(index)(back_list_[type].size())
       .msg("get_pack_list index out of back_list_");
     back_list_[type][index] = back_list;
   }

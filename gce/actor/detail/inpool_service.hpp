@@ -34,7 +34,11 @@ class inpool_service
 public:
   inpool_service(context_t& ctx, strand_t& snd, size_t index)
     : base_t(ctx, snd, index, actor_t::get_type())
-    , bs_(base_t::ctx_.get_service_size())
+    , bs_(
+        ctx.get_service_size(), 
+        ctx.get_attributes().pack_list_reserve_size_, 
+        ctx.get_attributes().pack_list_max_size_
+        )
     , lg_(ctx.get_logger())
   {
   }
@@ -78,8 +82,8 @@ public:
           pack_list_t* back_list = bs_.get_pack_list(ai.type_, ai.svc_id_);
           if (back_list != 0)
           {
-            back_list->push_back(pk_nil_);
-            pack& pk = back_list->back();
+            //back_list->push_back(pk_nil_);
+            pack& pk = back_list->alloc_pack();
             pk.ai_ = ai;
             return pk;
           }
@@ -215,10 +219,12 @@ private:
     scope_handler<end_handle_recv_forth> scp(end_handle_recv_forth(*this, bs_, sender_svc, sp));
     pack_list_t* forth_list = sp.forth();
     bs_.set_pack_list(svc_type, svc_index, sp.back());
-    BOOST_FOREACH(pack& pk, *forth_list)
+    //BOOST_FOREACH(pack& pk, *forth_list)
+    for (size_t i=0, size=forth_list->size(); i<size; ++i)
     {
       try
       {
+        pack& pk = (*forth_list)[i];
         recv_pack(pk);
       }
       catch (std::exception& ex)
@@ -269,10 +275,12 @@ private:
     }
 
     pack_list_t* back_list = ret.back();
-    BOOST_FOREACH(pack& pk, *back_list)
+    //BOOST_FOREACH(pack& pk, *back_list)
+    for (size_t i=0, size=back_list->size(); i<size; ++i)
     {
       try
       {
+        pack& pk = (*back_list)[i];
         recv_pack(pk);
       }
       catch (std::exception& ex)

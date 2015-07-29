@@ -12,15 +12,89 @@
 
 #include <gce/actor/config.hpp>
 #include <gce/actor/detail/pack.hpp>
+#include <gce/detail/dynarray.hpp>
+#include <boost/container/deque.hpp>
 #include <boost/array.hpp>
-#include <deque>
 #include <vector>
 
 namespace gce
 {
 namespace detail
 {
-typedef std::deque<pack> pack_list_t;
+///----------------------------------------------------------------------------
+/// pack_list_t
+///----------------------------------------------------------------------------
+class pack_list_t
+{
+public:
+  pack_list_t(size_t reserve_size, size_t max_size)
+    : que_(reserve_size)
+    , size_(0)
+    , max_size_(max_size)
+  {
+  }
+
+  ~pack_list_t()
+  {
+  }
+
+public:
+  bool empty() const
+  {
+    return size_ == 0;
+  }
+
+  size_t size() const
+  {
+    return size_;
+  }
+
+  pack& alloc_pack()
+  {
+    if (size_ < que_.size())
+    {
+      return que_[size_++];
+    }
+    else
+    {
+      que_.emplace_back();
+      ++size_;
+      return que_.back();
+    }
+  }
+
+  void clear()
+  {
+    if (size_ > max_size_)
+    {
+      que_.resize(max_size_);
+      size_ = max_size_;
+    }
+    for (size_t i=size_; i>0; --i)
+    {
+      que_[i - 1].on_free();
+    }
+    size_ = 0;
+  }
+
+  pack& operator[](size_t i)
+  {
+    return que_[i];
+  }
+
+  pack const& operator[](size_t i) const
+  {
+    return que_[i];
+  }
+
+private:
+  boost::container::deque<pack> que_;
+  size_t size_;
+  size_t const max_size_;
+};
+///----------------------------------------------------------------------------
+/// send_pair
+///----------------------------------------------------------------------------
 class send_pair
 {
 public:
@@ -55,24 +129,30 @@ private:
   pack_list_t* forth_;
   pack_list_t* back_;
 };
-
+///----------------------------------------------------------------------------
+/// messager
+///----------------------------------------------------------------------------
 class messager
 {
 public:
-  messager()
+  messager(size_t pack_list_reserve_size, size_t pack_list_max_size)
     : on_back_(false)
     , primary_sending_(false)
+    , pack_list_arr_(2)
     , primary_(0)
     , standby_(1)
+    , primary_ret_(pack_list_reserve_size, pack_list_max_size)
   {
+    for (size_t i=0; i<2; ++i)
+    {
+      pack_list_arr_.emplace_back(pack_list_reserve_size, pack_list_max_size);
+    }
   }
 
 public:
   pack& alloc_pack()
   {
-    pack_list_t& pack_list = pack_list_arr_[standby_];
-    pack_list.push_back(pk_nil_);
-    return pack_list.back();
+    return pack_list_arr_[standby_].alloc_pack();
   }
 
   send_pair try_forth()
@@ -134,7 +214,7 @@ private:
 
   bool on_back_;
   bool primary_sending_;
-  boost::array<pack_list_t, 2> pack_list_arr_;
+  dynarray<pack_list_t> pack_list_arr_;
   size_t primary_;
   size_t standby_;
   pack_list_t primary_ret_;
