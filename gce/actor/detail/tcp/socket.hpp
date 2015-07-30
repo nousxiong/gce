@@ -104,12 +104,16 @@ public:
     }
   }
 
-  size_t recv(byte_t* buf, size_t size, yield_t yield)
+  size_t recv(byte_t* buf, size_t size, yielder ylder)
   {
-    return sock_.async_read_some(boost::asio::buffer(buf, size), yield);
+    size_t len = 0;
+    ylder[len];
+    sock_.async_read_some(boost::asio::buffer(buf, size), ylder);
+    ylder.yield();
+    return len;
   }
 
-  void connect(yield_t yield)
+  void connect(yielder ylder)
   {
     if (is_sending())
     {
@@ -117,12 +121,16 @@ public:
     }
     close_socket();
     boost::asio::ip::tcp::resolver::query query(host_, port_);
-    boost::asio::ip::tcp::resolver::iterator itr = reso_.async_resolve(query, yield);
-    if (yield.ec_ && *yield.ec_)
+    boost::asio::ip::tcp::resolver::iterator itr;
+    ylder[itr];
+    reso_.async_resolve(query, ylder);
+    ylder.yield();
+    if (ylder.ec_ && *ylder.ec_)
     {
       return;
     }
-    boost::asio::async_connect(sock_, itr, yield);
+    boost::asio::async_connect(sock_, itr, ylder);
+    ylder.yield();
   }
 
   void close()
@@ -134,14 +142,16 @@ public:
     }
   }
 
-  void wait_end(yield_t yield)
+  void wait_end(yielder ylder)
   {
     waiting_end_ = true;
     if (is_sending())
     {
       errcode_t ec;
+      ylder[ec];
       sync_.expires_from_now(to_chrono(infin));
-      sync_.async_wait(yield[ec]);
+      sync_.async_wait(ylder);
+      ylder.yield();
     }
   }
 

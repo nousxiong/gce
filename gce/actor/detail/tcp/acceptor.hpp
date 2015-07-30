@@ -14,6 +14,7 @@
 #include <gce/actor/detail/basic_acceptor.hpp>
 #include <gce/actor/detail/tcp/socket.hpp>
 #include <boost/asio/ip/tcp.hpp>
+#include <boost/make_shared.hpp>
 
 namespace gce
 {
@@ -58,10 +59,11 @@ public:
     acpr_.set_option(boost::asio::socket_base::enable_connection_aborted(true));
   }
 
-  gce::detail::socket_ptr accept(yield_t yield)
+  gce::detail::socket_ptr accept(yielder ylder)
   {
-    socket_ptr skt(new socket(snd_.get_io_service()));
-    acpr_.async_accept(skt->get_socket(), yield);
+    socket_ptr skt = boost::make_shared<socket>(boost::ref(snd_.get_io_service()));
+    acpr_.async_accept(skt->get_socket(), ylder);
+    ylder.yield();
     return skt;
   }
 

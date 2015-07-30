@@ -237,7 +237,7 @@ public:
       return (service_t&)acceptor_service_list_[ai.svc_id_];
     default:
       GCE_ASSERT(false)(ai.type_)(ai.svc_id_)(ai.ptr_)
-        .log(lg_, "out of actor type").abort();
+        .log(lg_, "out of actor type");
       // just suppress vc's warning
       throw 1;
     }

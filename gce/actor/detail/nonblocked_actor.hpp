@@ -89,9 +89,9 @@ private:
 public:
   nonblocked_actor(context_t& ctx, service_t& svc, size_t index)
     : base_t(
-      ctx, svc, actor_nonblocked,
-      make_aid(ctx.get_ctxid(), ctx.get_timestamp(), this, sid_t(0))
-      )
+        ctx, svc, actor_nonblocked,
+        make_aid(ctx.get_ctxid(), ctx.get_timestamp(), this, sid_t(0))
+        )
     , pack_queue_(1024)
     , svc_(svc)
   {

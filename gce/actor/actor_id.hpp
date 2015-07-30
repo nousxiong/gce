@@ -27,10 +27,20 @@ inline bool in_pool(adl::actor_id const& o)
   return o.in_pool_ != 0;
 }
 
+inline void clear(adl::actor_id& o)
+{
+  o.uintptr_ = 0ULL;
+}
+
 namespace adl
 {
 inline bool operator==(actor_id const& lhs, actor_id const& rhs)
 {
+  if (rhs.uintptr_ == 0ULL)
+  {
+    return lhs.uintptr_ == 0ULL;
+  }
+
   return
     lhs.ctxid_ == rhs.ctxid_ &&
     lhs.timestamp_ == rhs.timestamp_ &&
@@ -189,7 +199,7 @@ struct actor_index
 inline detail::actor_index get_actor_index(adl::actor_id const& aid, ctxid_t ctxid, timestamp_t timestamp)
 {
   detail::actor_index ret;
-  GCE_ASSERT(in_pool(aid))(aid);
+  //GCE_ASSERT(in_pool(aid))(aid);
   if (ctxid == aid.ctxid_ && timestamp == aid.timestamp_)
   {
     ret.ptr_ = aid.uintptr_;

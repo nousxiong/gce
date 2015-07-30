@@ -71,11 +71,10 @@ public:
       actor_index ai = get_actor_index(target, base_t::ctxid_, base_t::timestamp_);
       if (ai)
       {
+        pack* pk = 0;
         if (is_inpool() && ai.svc_id_ == base_t::index_)
         {
-          pack& pk = base_t::ctx_.alloc_tick_pack(base_t::index_);
-          pk.ai_ = ai;
-          return pk;
+          pk = &base_t::ctx_.alloc_tick_pack(base_t::index_);
         }
         else
         {
@@ -83,27 +82,27 @@ public:
           if (back_list != 0)
           {
             //back_list->push_back(pk_nil_);
-            pack& pk = back_list->alloc_pack();
-            pk.ai_ = ai;
-            return pk;
+            pk = &back_list->alloc_pack();
           }
           else
           {
             messager& msgr = bs_.get_messager(ai.type_, ai.svc_id_);
-            pack& pk = msgr.alloc_pack();
-            pk.ai_ = ai;
-            return pk;
+            pk = &msgr.alloc_pack();
           }
         }
+        pk->ai_ = ai;
+        return *pk;
       }
       else
       {
-        pk_ = pk_nil_;
+        //pk_ = pk_nil_;
+        pk_.on_free();
         pk_.expiry_ = true;
         return pk_;
       }
     }
-    pk_ = pk_nil_;
+    //pk_ = pk_nil_;
+    pk_.on_free();
     return pk_;
   }
 

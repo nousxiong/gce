@@ -38,7 +38,9 @@ struct pack
 
   void on_free()
   {
-    svc_ = svcid_nil;
+    clear(recver_);
+    clear(skt_);
+    clear(svc_);
     is_err_ret_ = false;
     msg_.clear();
     expiry_ = false;

@@ -42,13 +42,13 @@ struct attributes
     , max_cache_match_size_(32)
     , max_tick_handle_size_(128)
     , tick_pool_reserve_size_(8)
-    , tick_pool_max_size_(size_nil)
+    , tick_pool_max_size_(256)
     , mailbox_recv_pool_reserve_size_(8)
     , mailbox_recv_pool_grow_size_(32)
     , mailbox_mq_pool_reserve_size_(8)
     , mailbox_mq_pool_grow_size_(32)
     , pack_list_reserve_size_(8)
-    , pack_list_max_size_(size_nil)
+    , pack_list_max_size_(128)
   {
   }
 

@@ -12,6 +12,7 @@
 
 #include <gce/actor/config.hpp>
 #include <gce/actor/duration.hpp>
+#include <gce/actor/detail/yielder.hpp>
 #include <boost/asio/placeholders.hpp>
 #include <boost/bind.hpp>
 #include <boost/function.hpp>
@@ -83,13 +84,15 @@ public:
     }
   }
 
-  void wait_end(yield_t yield)
+  void wait_end(yielder ylder)
   {
     if (waiting_ > 0)
     {
       errcode_t ec;
+      ylder[ec];
       sync_.expires_from_now(gce::to_chrono(infin));
-      sync_.async_wait(yield[ec]);
+      sync_.async_wait(ylder);
+      ylder.yield();
     }
   }
 

@@ -91,6 +91,11 @@ inline bool operator<(service_id const& lhs, service_id const& rhs)
 /// service_id nil value
 static adl::service_id const svcid_nil = adl::service_id();
 
+inline void clear(adl::service_id& o)
+{
+  o = svcid_nil;
+}
+
 typedef adl::service_id svcid_t;
 
 template <typename Ctxid, typename Match>

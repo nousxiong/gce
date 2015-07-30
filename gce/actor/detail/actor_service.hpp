@@ -100,7 +100,8 @@ public:
 public:
   pack& alloc_pack(aid_t const& target)
   {
-    pk_ = pk_nil_;
+    //pk_ = pk_nil_;
+    pk_.on_free();
     actor_index ai = get_actor_index(target, base_t::ctxid_, base_t::timestamp_);
     if (ai)
     {

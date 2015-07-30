@@ -22,6 +22,7 @@
 #include <gce/actor/detail/basic_actor.hpp>
 #include <gce/actor/detail/pack.hpp>
 #include <gce/actor/detail/actor_function.hpp>
+#include <gce/actor/detail/yielder.hpp>
 #include <gce/actor/detail/internal.hpp>
 #include <gce/actor/detail/tcp/socket.hpp>
 #include <boost/asio/placeholders.hpp>
@@ -76,6 +77,7 @@ public:
   socket_actor(aid_t aid, service_t& svc)
     : base_t(svc.get_context(), svc, actor_socket, aid)
     , stat_(ready)
+    , host_(this)
     , svc_(svc)
     , hb_(base_t::snd_)
     , sync_(base_t::ctx_.get_io_service())
@@ -102,7 +104,7 @@ public:
   }
 
   void connect(
-    aid_t sire, std::vector<remote_func_t> const& remote_func_list,
+    aid_t const& sire, std::vector<remote_func_t> const& remote_func_list,
     ctxid_t target, std::string const& ep, bool target_is_router
     )
   {
@@ -121,12 +123,14 @@ public:
 
     boost::asio::spawn(
       base_t::snd_,
-      boost::bind(
-        &self_t::run_conn,
-        this, sire, ctxid_pr, ep, _arg1
-        ),
+      run_conn_binder(*this, sire, ctxid_pr, ep), 
       boost::coroutines::attributes(default_stacksize())
       );
+
+    if (stat_ != off)
+    {
+      base_t::ctx_.on_tick(svc_.get_index());
+    }
   }
 
   void send(aid_t const& recver, message const& msg)
@@ -163,11 +167,14 @@ public:
 
     boost::asio::spawn(
       base_t::snd_,
-      boost::bind(
-        &self_t::run, this, skt, _arg1
-        ),
+      run_binder(*this, skt), 
       boost::coroutines::attributes(default_stacksize())
       );
+
+    if (stat_ != off)
+    {
+      base_t::ctx_.on_tick(svc_.get_index());
+    }
   }
 
   void stop()
@@ -182,21 +189,77 @@ public:
 
   void on_addon_recv(pack& pk)
   {
-    base_t::snd_.dispatch(
-      boost::bind(
-        &self_t::handle_recv, this, pk
-        )
-      );
+    base_t::snd_.dispatch(handle_recv_binder(*this, pk));
   }
 
   void link(aid_t const&) {}
   void monitor(aid_t const&) {}
 
 private:
-  void send_pack(aid_t const& target, pack& src)
+  struct run_conn_binder
+  {
+    run_conn_binder(self_t& self, aid_t const& sire, ctxid_pair_t const& ctxid_pr, std::string const& ep)
+      : self_(self)
+      , sire_(sire)
+      , ctxid_pr_(ctxid_pr)
+      , ep_(ep)
+    {
+    }
+
+    void operator()(yield_t yld) const
+    {
+      self_.run_conn(sire_, ctxid_pr_, ep_, yld);
+    }
+
+    self_t& self_;
+    aid_t const sire_;
+    ctxid_pair_t const ctxid_pr_;
+    std::string const ep_;
+  };
+
+  struct run_binder
+  {
+    run_binder(self_t& self, socket_ptr skt)
+      : self_(self)
+      , skt_(skt)
+    {
+    }
+
+    void operator()(yield_t yld) const
+    {
+      self_.run(skt_, yld);
+    }
+
+    self_t& self_;
+    socket_ptr skt_;
+  };
+
+  struct handle_recv_binder
+  {
+    handle_recv_binder(self_t& self, pack const& pk)
+      : self_(self)
+      , pk_(pk)
+    {
+    }
+
+    void operator()()
+    {
+      self_.handle_recv(pk_);
+    }
+
+    self_t& self_;
+    pack pk_;
+  };
+
+  void send_pack(aid_t const& target, pack& src, message const& msg)
   {
     pack& pk = base_t::basic_svc_.alloc_pack(target);
-    pk = src;
+    pk.tag_ = src.tag_;
+    pk.recver_ = src.recver_;
+    pk.skt_ = src.skt_;
+    pk.svc_ = src.svc_;
+    pk.is_err_ret_ = src.is_err_ret_;
+    pk.msg_ = msg;
     svc_.send(target, pk);
   }
 
@@ -259,7 +322,8 @@ private:
 
   void handle_net_msg(message& msg)
   {
-    pack pk;
+    pk_.on_free();
+    pack& pk = pk_;
 
     bool has_tag =
       msg.pop_tag(
@@ -267,7 +331,7 @@ private:
         pk.skt_, pk.is_err_ret_
         );
     GCE_ASSERT(has_tag);
-    pk.msg_ = msg;
+    //pk.msg_ = msg;
 
     if (link_t* link = boost::get<link_t>(&pk.tag_))
     {
@@ -287,7 +351,7 @@ private:
           {
             add_router_link(pk.recver_, link->get_aid(), skt);
           }
-          send_pack(pk.skt_, pk);
+          send_pack(pk.skt_, pk, msg);
         }
       }
       else
@@ -297,7 +361,7 @@ private:
         {
           add_straight_link(pk.recver_, link->get_aid());
         }
-        send_pack(pk.recver_, pk);
+        send_pack(pk.recver_, pk, msg);
       }
     }
     else if (exit_t* ex = boost::get<exit_t>(&pk.tag_))
@@ -308,12 +372,12 @@ private:
         GCE_ASSERT(skt != aid_nil)(pk.recver_)(ex->get_aid());
         pk.tag_ = fwd_exit_t(ex->get_code(), ex->get_aid(), base_t::get_aid());
         pk.skt_ = skt;
-        send_pack(pk.skt_, pk);
+        send_pack(pk.skt_, pk, msg);
       }
       else
       {
         remove_straight_link(pk.recver_, ex->get_aid());
-        send_pack(pk.recver_, pk);
+        send_pack(pk.recver_, pk, msg);
       }
     }
     else if (spawn_t* spw = boost::get<spawn_t>(&pk.tag_))
@@ -328,7 +392,7 @@ private:
         else
         {
           pk.skt_ = skt;
-          send_pack(pk.skt_, pk);
+          send_pack(pk.skt_, pk, msg);
         }
       }
       else
@@ -394,7 +458,7 @@ private:
         if (skt != aid_nil)
         {
           pk.skt_ = skt;
-          send_pack(pk.skt_, pk);
+          send_pack(pk.skt_, pk, msg);
         }
       }
       else
@@ -409,9 +473,9 @@ private:
           aid = base_t::get_aid();
         }
         pk.tag_ = aid;
-        pk.msg_ = m;
+        //pk.msg_ = m;
 
-        send_pack(pk.recver_, pk);
+        send_pack(pk.recver_, pk, m);
       }
     }
     else
@@ -434,7 +498,7 @@ private:
         if (skt != aid_nil)
         {
           pk.skt_ = skt;
-          send_pack(pk.skt_, pk);
+          send_pack(pk.skt_, pk, msg);
         }
       }
       else
@@ -444,7 +508,7 @@ private:
           pk.recver_ = svc_.find_service(pk.svc_.name_);
         }
 
-        send_pack(pk.recver_, pk);
+        send_pack(pk.recver_, pk, msg);
       }
     }
   }
@@ -552,8 +616,9 @@ private:
     gce::detail::send(*this, sire, msg_new_conn, ctxid_pr, ec);
   }
 
-  void run_conn(aid_t const& sire, ctxid_pair_t target, std::string const& ep, yield_t yield)
+  void run_conn(aid_t const& sire, ctxid_pair_t target, std::string const& ep, yield_t yld)
   {
+    yld_ = boost::in_place(yld);
     exit_code_t exc = exit_normal;
     std::string exit_msg("exit normal");
     ctxid_pair_t curr_pr = target;
@@ -571,18 +636,18 @@ private:
           errcode_t ec;
           scope scp(boost::bind(&self_t::send_ret, this, sire, target, boost::ref(ec)));
           skt_ = make_socket(ep);
-          ec = connect(yield, true);
+          ec = connect(true);
         }
 
         if (!conn_)
         {
-          connect(yield);
+          connect();
         }
 
         while (stat_ == on)
         {
           message msg;
-          errcode_t ec = recv(msg, yield);
+          errcode_t ec = recv(msg);
           if (ec)
           {
             on_neterr(base_t::get_aid(), ec);
@@ -602,7 +667,7 @@ private:
             ctx.deregister_socket(curr_pr, skt, actor_socket, svc_.get_index());
 
             /// try reconnect
-            connect(yield);
+            connect();
           }
           else
           {
@@ -650,11 +715,12 @@ private:
           );
       gce::detail::send(*this, sire, msg_new_conn, target, ec);
     }
-    free_self(curr_pr, exc, exit_msg, yield);
+    quit(curr_pr, exc, exit_msg);
   }
 
-  void run(socket_ptr skt, yield_t yield)
+  void run(socket_ptr skt, yield_t yld)
   {
+    yld_ = boost::in_place(yld);
     exit_code_t exc = exit_normal;
     std::string exit_msg("exit normal");
     ctxid_pair_t curr_pr =
@@ -677,7 +743,7 @@ private:
         while (stat_ == on)
         {
           message msg;
-          errcode_t ec = recv(msg, yield);
+          errcode_t ec = recv(msg);
           if (ec)
           {
             on_neterr(base_t::get_aid(), ec);
@@ -741,7 +807,7 @@ private:
         close();
       }
     }
-    free_self(curr_pr, exc, exit_msg, yield);
+    quit(curr_pr, exc, exit_msg);
   }
 
   socket_ptr make_socket(std::string const& ep)
@@ -792,7 +858,7 @@ private:
     match_t ty = pk.msg_.get_type();
     if (ty != msg_add_svc && ty != msg_rmv_svc)
     {
-      GCE_ASSERT(!check_local(pk.recver_, base_t::ctxid_))(pk.recver_)(base_t::ctxid_);
+      //GCE_ASSERT(!check_local(pk.recver_, base_t::ctxid_))(pk.recver_)(base_t::ctxid_);
       if (link_t* link = boost::get<link_t>(&pk.tag_))
       {
         add_straight_link(link->get_aid(), pk.recver_);
@@ -1010,6 +1076,61 @@ private:
     size_t size_;
   };
 
+  struct resume_binder
+  {
+    explicit resume_binder(self_t& self)
+      : self_(self)
+    {
+    }
+
+    void operator()() const
+    {
+      self_.resume();
+    }
+
+    self_t& self_;
+  };
+
+  struct host
+    : public yielder::basic_host
+  {
+    explicit host(self_t* self)
+      : self_(self)
+    {
+    }
+
+    void yield()
+    {
+      self_->yield();
+    }
+
+    void resume()
+    {
+      self_->snd_.dispatch(resume_binder(*self_));
+    }
+
+    self_t* self_;
+  };
+
+  typedef boost::asio::detail::async_result_init<yield_t, void ()> async_result_init_t;
+
+  void resume()
+  {
+    GCE_ASSERT(yld_cb_);
+    yld_cb_();
+
+    base_t::ctx_.on_tick(svc_.get_index());
+  }
+
+  void yield()
+  {
+    GCE_ASSERT(yld_);
+    async_result_init_t init(BOOST_ASIO_MOVE_CAST(yield_t)(*yld_));
+
+    yld_cb_ = init.handler;
+    return init.result.get();
+  }
+
   void adjust_recv_buffer(size_t expect_size)
   {
     size_t const remain_size = recv_cache_.remain_read_size();
@@ -1132,7 +1253,7 @@ private:
     return true;
   }
 
-  errcode_t connect(yield_t yield, bool init = false)
+  errcode_t connect(bool init = false)
   {
     errcode_t ec;
     if (stat_ == on)
@@ -1157,14 +1278,18 @@ private:
         {
           errcode_t ignored_ec;
           sync_.expires_from_now(to_chrono(reconn_period));
-          sync_.async_wait(yield[ignored_ec]);
+          //sync_.async_wait(yield[ignored_ec]);
+          yielder ylder(host_, ignored_ec);
+          sync_.async_wait(ylder);
+          ylder.yield();
           if (stat_ != on)
           {
             break;
           }
         }
 
-        skt_->connect(yield[ec]);
+        //skt_->connect(yield[ec]);
+        skt_->connect(yielder(host_, ec));
         if (!ec || stat_ != on)
         {
           recv_cache_.clear();
@@ -1189,16 +1314,17 @@ private:
     return ec;
   }
 
-  errcode_t recv(message& msg, yield_t yield)
+  errcode_t recv(message& msg)
   {
     errcode_t ec;
+    yielder ylder(host_, ec);
     while (stat_ != off && !parse_message(msg))
     {
       size_t size =
         skt_->recv(
           recv_cache_.get_write_data(),
           recv_cache_.remain_write_size(),
-          yield[ec]
+          ylder
           );
       if (ec)
       {
@@ -1260,23 +1386,13 @@ private:
     hb_.start();
   }
 
-  void free_self(
-    ctxid_pair_t ctxid_pr, exit_code_t exc,
-    std::string const& exit_msg, yield_t yield
-    )
+  void quit(ctxid_pair_t ctxid_pr, exit_code_t exc, std::string const& exit_msg)
   {
-    try
+    yielder ylder(host_);
+    hb_.wait_end(ylder);
+    if (skt_)
     {
-      hb_.wait_end(yield);
-      if (skt_)
-      {
-        skt_->wait_end(yield);
-      }
-    }
-    catch (...)
-    {
-      GCE_ERROR(lg_)(__FILE__)(__LINE__) << 
-        boost::current_exception_diagnostic_information();
+      skt_->wait_end(ylder);
     }
 
     skt_.reset();
@@ -1292,7 +1408,28 @@ private:
     aid_t self_aid = base_t::get_aid();
     on_neterr(self_aid);
     base_t::send_exit(self_aid, exc, exit_msg);
+    base_t::snd_.post(free_self_binder(*this));
+  }
+
+  struct free_self_binder
+  {
+    explicit free_self_binder(self_t& self)
+      : self_(self)
+    {
+    }
+
+    void operator()() const
+    {
+      self_.free_self();
+    }
+
+    self_t& self_;
+  };
+
+  void free_self()
+  {
     svc_.free_actor(this);
+    base_t::ctx_.on_tick(svc_.get_index());
   }
 
 private:
@@ -1303,11 +1440,17 @@ private:
   GCE_CACHE_ALIGNED_VAR(netopt_t, opt_)
 
   /// coro local vars
+  host host_;
   service_t& svc_;
   socket_ptr skt_;
   heartbeat hb_;
   timer_t sync_;
   size_t tmr_sid_;
+
+  typedef boost::function<void ()> yield_cb_t;
+  //typedef typename boost::asio::handler_type<yield_t, void ()>::type yield_cb_t;
+  boost::optional<yield_t> yld_;
+  yield_cb_t yld_cb_;
 
   recv_buffer recv_buffer_;
   buffer_ref recv_cache_;
@@ -1339,6 +1482,8 @@ private:
   packer body_pkr_;
   adl::detail::add_svc tmp_add_svc_;
   adl::detail::rmv_svc tmp_rmv_svc_;
+
+  pack pk_;
 };
 }
 }

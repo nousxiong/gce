@@ -56,6 +56,7 @@ public:
   acceptor_actor(aid_t aid, service_t& svc)
     : base_t(svc.get_context(), svc, actor_acceptor, aid)
     , stat_(ready)
+    , host_(this)
     , svc_(svc)
     , lg_(base_t::ctx_.get_logger())
   {
@@ -85,11 +86,17 @@ public:
 
     boost::asio::spawn(
       base_t::snd_,
-      boost::bind(
+      run_binder(*this, sire, ep), 
+      /*boost::bind(
         &self_t::run, this, sire, ep, _arg1
-        ),
+        ),*/
       boost::coroutines::attributes(default_stacksize())
       );
+
+    if (stat_ != off)
+    {
+      base_t::ctx_.on_tick(svc_.get_index());
+    }
   }
 
 public:
@@ -122,11 +129,7 @@ public:
 
   void on_addon_recv(pack& pk)
   {
-    base_t::snd_.dispatch(
-      boost::bind(
-        &self_t::handle_recv, this, pk
-        )
-      );
+    base_t::snd_.dispatch(handle_recv_binder(*this, pk));
   }
 
   void send(aid_t const& recver, message const& m)
@@ -136,6 +139,98 @@ public:
 
   void link(aid_t const&) {}
   void monitor(aid_t const&) {}
+
+private:
+  struct run_binder
+  {
+    run_binder(self_t& self, aid_t const& sire, std::string const& ep)
+      : self_(self)
+      , sire_(sire)
+      , ep_(ep)
+    {
+    }
+
+    void operator()(yield_t yld) const
+    {
+      self_.run(sire_, ep_, yld);
+    }
+
+    self_t& self_;
+    aid_t const sire_;
+    std::string const ep_;
+  };
+
+  struct handle_recv_binder
+  {
+    handle_recv_binder(self_t& self, pack const& pk)
+      : self_(self)
+      , pk_(pk)
+    {
+    }
+
+    void operator()()
+    {
+      self_.handle_recv(pk_);
+    }
+
+    self_t& self_;
+    pack pk_;
+  };
+
+  struct resume_binder
+  {
+    explicit resume_binder(self_t& self)
+      : self_(self)
+    {
+    }
+
+    void operator()() const
+    {
+      self_.resume();
+    }
+
+    self_t& self_;
+  };
+
+  struct host
+    : public yielder::basic_host
+  {
+    explicit host(self_t* self)
+      : self_(self)
+    {
+    }
+
+    void yield()
+    {
+      self_->yield();
+    }
+
+    void resume()
+    {
+      self_->snd_.dispatch(resume_binder(*self_));
+    }
+
+    self_t* self_;
+  };
+
+  typedef boost::asio::detail::async_result_init<yield_t, void ()> async_result_init_t;
+
+  void resume()
+  {
+    GCE_ASSERT(yld_cb_);
+    yld_cb_();
+
+    base_t::ctx_.on_tick(svc_.get_index());
+  }
+
+  void yield()
+  {
+    GCE_ASSERT(yld_);
+    async_result_init_t init(BOOST_ASIO_MOVE_CAST(yield_t)(*yld_));
+
+    yld_cb_ = init.handler;
+    return init.result.get();
+  }
 
 private:
   void send_ret(aid_t const& sire)
@@ -149,8 +244,9 @@ private:
     acpr_->bind();
   }
 
-  void run(aid_t const& sire, std::string const& ep, yield_t yield)
+  void run(aid_t const& sire, std::string const& ep, yield_t yld)
   {
+    yld_ = boost::in_place(yld);
     exit_code_t exc = exit_normal;
     std::string exit_msg("exit normal");
 
@@ -173,10 +269,12 @@ private:
         time_point_t last_tp = min_tp;
         int curr_rebind_num = 0;
 
+        yielder ylder(host_);
         while (stat_ == on)
         {
           errcode_t ec;
-          socket_ptr prot = acpr_->accept(yield[ec]);
+          ylder[ec];
+          socket_ptr prot = acpr_->accept(ylder);
           if (ec)
           {
             if (stat_ == off)
@@ -197,7 +295,9 @@ private:
                   {
                     errcode_t ignored_ec;
                     tmr.expires_from_now(to_chrono(opt_.rebind_period - diff));
-                    tmr.async_wait(yield[ignored_ec]);
+                    ylder[ignored_ec];
+                    tmr.async_wait(ylder);
+                    ylder.yield();
                   }
                 }
                 bind(ep);
@@ -246,7 +346,7 @@ private:
     {
       gce::detail::send(*this, sire, msg_new_bind);
     }
-    free_self(exc, exit_msg, yield);
+    quit(exc, exit_msg);
   }
 
   void spawn_socket(
@@ -316,14 +416,35 @@ private:
     }
   }
 
-  void free_self(exit_code_t exc, std::string const& exit_msg, yield_t yield)
+  void quit(exit_code_t exc, std::string const& exit_msg)
   {
     acpr_.reset();
 
     svc_.remove_actor(this);
     aid_t self_aid = base_t::get_aid();
     base_t::send_exit(self_aid, exc, exit_msg);
+    base_t::snd_.post(free_self_binder(*this));
+  }
+
+  struct free_self_binder
+  {
+    explicit free_self_binder(self_t& self)
+      : self_(self)
+    {
+    }
+
+    void operator()() const
+    {
+      self_.free_self();
+    }
+
+    self_t& self_;
+  };
+
+  void free_self()
+  {
     svc_.free_actor(this);
+    base_t::ctx_.on_tick(svc_.get_index());
   }
 
 private:
@@ -334,10 +455,15 @@ private:
   GCE_CACHE_ALIGNED_VAR(netopt_t, opt_)
 
   /// coro local vars
+  host host_;
   service_t& svc_;
   boost::optional<tcp::acceptor> acpr_;
   remote_func_list_t remote_func_list_;
   log::logger_t& lg_;
+
+  typedef boost::function<void ()> yield_cb_t;
+  boost::optional<yield_t> yld_;
+  yield_cb_t yld_cb_;
 };
 }
 }

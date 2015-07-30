@@ -25,7 +25,7 @@ public:
 
 public:
   virtual void bind() = 0;
-  virtual socket_ptr accept(yield_t) = 0;
+  virtual socket_ptr accept(yielder) = 0;
   virtual void close() = 0;
 };
 }
