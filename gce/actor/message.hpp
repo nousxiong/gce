@@ -856,10 +856,10 @@ public:
     relay_ = int(0);
   }
 
-  /*inline packer& get_packer()
+  inline packer& get_packer()
   {
     return pkr_;
-  }*/
+  }
 
   inline void pre_read(packer& pkr)
   {

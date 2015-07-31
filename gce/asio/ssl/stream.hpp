@@ -214,7 +214,8 @@ public:
     m.to_large();
     m << errcode_t();
 
-    m.pre_write(length);
+    packer& pkr = m.get_packer();
+    m.pre_write(pkr, length);
     byte_t* buffer = m.reset_write(0);
 
     boost::asio::async_read(
@@ -266,7 +267,8 @@ public:
     m.to_large();
     m << errcode_t();
 
-    m.pre_write(length);
+    packer& pkr = m.get_packer();
+    m.pre_write(pkr, length);
     byte_t* buffer = m.reset_write(0);
     
     impl_->async_read_some(
@@ -495,7 +497,7 @@ private:
     message& m = o->recv_msg_;
     packer& pkr = m.get_packer();
     pkr.skip_write(bytes_transferred);
-    m.end_write();
+    m.end_write(pkr);
 
     m.reset_write(packer::size_of(gce::adl::detail::errcode()) + bytes_transferred);
     m << ec << message::skip(bytes_transferred);

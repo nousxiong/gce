@@ -734,7 +734,8 @@ protected:
 
           /// prepare for writing last data
           pre_write_size_ = curr_hdr_.body_size_ - remain_size;
-          msg.pre_write(pre_write_size_);
+          body_pkr_.clear();
+          msg.pre_write(body_pkr_, pre_write_size_);
 
           /// switch to recving_msg_ mode
           recving_msg_ = true;
@@ -759,9 +760,9 @@ protected:
     }
     else
     {
-      packer& pkr = msg.get_packer();
-      pkr.skip_write(pre_write_size_);
-      msg.end_write();
+      //packer& pkr = msg.get_packer();
+      body_pkr_.skip_write(pre_write_size_);
+      msg.end_write(body_pkr_);
 
       recv_cache_.read(curr_hdr_.body_size_);
       byte_t* data = recv_cache_.get_read_data();
@@ -787,6 +788,7 @@ private:
   bool recving_header_;
   bool recving_msg_;
   message netmsg_;
+  packer body_pkr_;
 
   /// temp header buffer
   size_t pre_write_size_;
