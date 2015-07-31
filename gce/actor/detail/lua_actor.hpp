@@ -254,11 +254,15 @@ public:
       }
 
       svc->get_strand().post(
-        boost::bind(
+        spawn_stackful_binder(
+          *this, base_t::get_aid(), svc, f, stack_size, (link_type)type
+          )
+        );
+        /*boost::bind(
           &self_t::spawn_stackful,
           base_t::get_aid(), svc, f, stack_size, (link_type)type
           )
-        );
+        );*/
     }
     else if (spw_type == spw_stackless)
     {
@@ -281,11 +285,15 @@ public:
       }
 
       svc->get_strand().post(
-        boost::bind(
+        spawn_stackless_binder(
+          *this, base_t::get_aid(), svc, f, (link_type)type
+          )
+        );
+        /*boost::bind(
           &self_t::spawn_stackless,
           base_t::get_aid(), svc, f, (link_type)type
           )
-        );
+        );*/
     }
     else
     {
@@ -300,9 +308,8 @@ public:
       }
 
       svc->get_strand().post(
-        boost::bind(
-          &service_t::spawn_actor, svc, 
-          func, base_t::get_aid(), (link_type)type
+        spawn_actor_binder(
+          svc, func, base_t::get_aid(), (link_type)type
           )
         );
     }
@@ -331,11 +338,11 @@ public:
     duration_t curr_tmo = tmo;
     typedef boost::chrono::system_clock clock_t;
     clock_t::time_point begin_tp = clock_t::now();
-    spw_hdr_ = 
-      boost::bind(
+    spw_hdr_ = spawn_handler_t(*this, (link_type)type, begin_tp, sid, tmo, curr_tmo);
+      /*boost::bind(
         &self_t::handle_remote_spawn, this, _arg1, _arg2,
         (link_type)type, begin_tp, sid, tmo, curr_tmo
-        );
+        );*/
 
     aid_t sender;
     message msg;
@@ -443,7 +450,7 @@ public:
   {
     try
     {
-      guard_.async_wait(boost::bind(&self_t::guard));
+      guard_.async_wait(guard());
       make_self();
       set_self();
       svc_.run_script(script_);
@@ -463,11 +470,7 @@ public:
 
   void on_addon_recv(pack& pk)
   {
-    base_t::snd_.dispatch(
-      boost::bind(
-        &self_t::handle_recv, this, pk
-        )
-      );
+    base_t::snd_.dispatch(handle_recv_binder(*this, pk));
   }
 
   void quit(exit_code_t exc = exit_normal, std::string const& errmsg = std::string())
@@ -475,7 +478,14 @@ public:
     if (!yielding_)
     {
       aid_t self_aid = base_t::get_aid();
-      base_t::snd_.post(boost::bind(&self_t::stop, this, self_aid, exc, errmsg));
+      base_t::snd_.post(stop_binder(*this, self_aid, exc, errmsg));
+    }
+    else
+    {
+      if (exc == exit_normal)
+      {
+        base_t::ctx_.on_tick(svc_.get_index());
+      }
     }
   }
 
@@ -523,6 +533,110 @@ public:
   };
 
 private:
+  struct spawn_stackful_binder
+  {
+    spawn_stackful_binder(
+      self_t& self, 
+      aid_t const& aid, 
+      stackful_service_t* svc, 
+      remote_func<context_t>* f, 
+      size_t stacksize,
+      link_type type
+      )
+      : self_(self)
+      , aid_(aid)
+      , svc_(svc)
+      , f_(f)
+      , stacksize_(stacksize)
+      , type_(type)
+    {
+    }
+
+    void operator()() const
+    {
+      self_.spawn_stackful(aid_, svc_, f_, stacksize_, type_);
+    }
+
+    self_t& self_;
+    aid_t const aid_;
+    stackful_service_t* svc_; 
+    remote_func<context_t>* f_;
+    size_t stacksize_;
+    link_type type_;
+  };
+
+  struct spawn_stackless_binder
+  {
+    spawn_stackless_binder(
+      self_t& self, 
+      aid_t const& aid, 
+      stackless_service_t* svc, 
+      remote_func<context_t>* f, 
+      link_type type
+      )
+      : self_(self)
+      , aid_(aid)
+      , svc_(svc)
+      , f_(f)
+      , type_(type)
+    {
+    }
+
+    void operator()() const
+    {
+      self_.spawn_stackless(aid_, svc_, f_, type_);
+    }
+
+    self_t& self_;
+    aid_t const aid_;
+    stackless_service_t* svc_; 
+    remote_func<context_t>* f_;
+    link_type type_;
+  };
+
+  struct spawn_actor_binder
+  {
+    spawn_actor_binder(
+      service_t* svc, 
+      std::string const& func, 
+      aid_t const& aid, 
+      link_type type
+      )
+      : svc_(svc)
+      , func_(func)
+      , aid_(aid)
+      , type_(type)
+    {
+    }
+
+    void operator()() const
+    {
+      svc_->spawn_actor(func_, aid_, type_);
+    }
+
+    service_t* svc_; 
+    std::string const func_;
+    aid_t const aid_;
+    link_type type_;
+  };
+
+  struct handle_recv_binder
+  {
+    handle_recv_binder(self_t& self, pack const& pk)
+      : self_(self)
+      , pk_(pk)
+    {
+    }
+
+    void operator()()
+    {
+      self_.handle_recv(pk_);
+    }
+
+    self_t& self_;
+    pack pk_;
+  };
+
   void make_self()
   {
     a_ = lua::actor<self_t>::create(L_, this);
@@ -632,7 +746,28 @@ private:
     quit(exc, errmsg);
   }
 
-  void stop(aid_t self_aid, exit_code_t ec, std::string const& exit_msg)
+  struct stop_binder
+  {
+    stop_binder(self_t& self, aid_t const& self_aid, exit_code_t ec, std::string const& exit_msg)
+      : self_(self)
+      , self_aid_(self_aid)
+      , ec_(ec)
+      , exit_msg_(exit_msg)
+    {
+    }
+
+    void operator()() const
+    {
+      self_.stop(self_aid_, ec_, exit_msg_);
+    }
+
+    self_t& self_;
+    aid_t const self_aid_;
+    exit_code_t ec_;
+    std::string const exit_msg_;
+  };
+
+  void stop(aid_t const& self_aid, exit_code_t ec, std::string const& exit_msg)
   {
     errcode_t ignored_ec;
     guard_.cancel(ignored_ec);
@@ -649,19 +784,30 @@ private:
 
     base_t::send_exit(self_aid, ec, exit_msg);
     svc_.free_actor(this);
+    base_t::ctx_.on_tick(svc_.get_index());
   }
+
+  struct handle_timeout_binder
+  {
+    handle_timeout_binder(self_t& self, size_t tmr_sid)
+      : self_(self)
+      , tmr_sid_(tmr_sid)
+    {
+    }
+
+    void operator()(errcode_t const& ec) const
+    {
+      self_.handle_timeout(ec, tmr_sid_);
+    }
+
+    self_t& self_;
+    size_t tmr_sid_;
+  };
 
   void start_timer(duration_t dur)
   {
     tmr_.expires_from_now(gce::to_chrono(dur));
-    tmr_.async_wait(
-      base_t::snd_.wrap(
-        boost::bind(
-          &self_t::handle_timeout, this,
-          boost::asio::placeholders::error, ++tmr_sid_
-          )
-        )
-      );
+    tmr_.async_wait(base_t::snd_.wrap(handle_timeout_binder(*this, ++tmr_sid_)));
   }
 
   void handle_timeout(errcode_t const& ec, size_t tmr_sid)
@@ -674,7 +820,8 @@ private:
 
       if (spw_hdr_)
       {
-        pri_handle_remote_spawn(aid_nil, nil_msg_);
+        message msg;
+        pri_handle_remote_spawn(aid_nil, msg);
       }
       else
       {
@@ -870,9 +1017,68 @@ private:
     }
   }
 
+  struct handle_remote_spawn_binder
+  {
+    handle_remote_spawn_binder()
+      : self_(0)
+    {
+    }
+
+    handle_remote_spawn_binder(
+      self_t& self, 
+      link_type type, 
+      boost::chrono::system_clock::time_point const& begin_tp,
+      sid_t sid, 
+      duration_t const& tmo,
+      duration_t const& curr_tmo
+      )
+      : self_(&self)
+      , type_(type)
+      , begin_tp_(begin_tp)
+      , sid_(sid)
+      , tmo_(tmo)
+      , curr_tmo_(curr_tmo)
+    {
+    }
+
+    /*void operator=(handle_remote_spawn_binder const& rhs)
+    {
+      if (this != &rhs)
+      {
+        type_ = rhs.type_;
+        begin_tp_ = rhs.begin_tp_;
+        sid_ = rhs.sid_;
+        tmo_ = rhs.tmo_;
+        curr_tmo_ = rhs.curr_tmo_;
+      }
+    }*/
+
+    bool operator()(aid_t const& aid, message& msg) const
+    {
+      return self_->handle_remote_spawn(aid, msg, type_, begin_tp_, sid_, tmo_, curr_tmo_);
+    }
+
+    void clear()
+    {
+      self_ = 0;
+    }
+
+    operator bool() const
+    {
+      return self_ != 0;
+    }
+
+    self_t* self_;
+    link_type type_;
+    boost::chrono::system_clock::time_point begin_tp_;
+    sid_t sid_;
+    duration_t tmo_;
+    duration_t curr_tmo_;
+  };
+
   bool handle_remote_spawn(
     aid_t aid,
-    message msg, link_type type,
+    message& msg, link_type type,
     boost::chrono::system_clock::time_point begin_tp,
     sid_t sid, duration_t tmo, duration_t curr_tmo
     )
@@ -903,11 +1109,11 @@ private:
         bool is_yield = pri_recv_match(patt, sender, msg);
         if (is_yield)
         {
-          spw_hdr_ = 
-            boost::bind(
+          spw_hdr_ = spawn_handler_t(*this, type, begin_tp, sid, tmo, curr_tmo);
+            /*boost::bind(
               &self_t::handle_remote_spawn, this, _arg1, _arg2,
               type, begin_tp, sid, tmo, curr_tmo
-              );
+              );*/
           return true;
         }
       }
@@ -939,7 +1145,7 @@ private:
     return false;
   }
 
-  bool pri_handle_remote_spawn(aid_t const& sender, message const& msg)
+  bool pri_handle_remote_spawn(aid_t const& sender, message& msg)
   {
     if (spw_hdr_)
     {
@@ -970,7 +1176,10 @@ private:
     lua_pop(L_, 1);
   }
 
-  static void guard() {}
+  struct guard
+  {
+    void operator()(errcode_t const&) const {}
+  };
 
 private:
   /// Ensure start from a new cache line.
@@ -992,7 +1201,8 @@ private:
   timer_t tmr_;
   size_t tmr_sid_;
 
-  typedef boost::function<bool (aid_t, message)> spawn_handler_t;
+  //typedef boost::function<bool (aid_t, message)> spawn_handler_t;
+  typedef handle_remote_spawn_binder spawn_handler_t;
   spawn_handler_t spw_hdr_;
 
   std::vector<addon> addon_list_;

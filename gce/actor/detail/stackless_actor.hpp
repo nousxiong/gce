@@ -444,11 +444,6 @@ public:
     f_ = f;
   }
 
-  struct guard
-  {
-    void operator()(errcode_t const&) const {}
-  };
-
   void start()
   {
     guard_.async_wait(guard());
@@ -796,6 +791,11 @@ private:
   {
     run();
   }
+
+  struct guard
+  {
+    void operator()(errcode_t const&) const {}
+  };
 
 private:
   /// Ensure start from a new cache line.

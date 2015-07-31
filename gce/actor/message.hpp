@@ -124,7 +124,8 @@ public:
 
 public:
   message()
-    : tag_offset_(u32_nil)
+    : type_(match_nil)
+    , tag_offset_(u32_nil)
   {
   }
 

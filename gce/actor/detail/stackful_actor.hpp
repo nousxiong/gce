@@ -273,7 +273,7 @@ public:
 
   void start(size_t stack_size)
   {
-    guard_.async_wait(boost::bind(&self_t::guard));
+    guard_.async_wait(guard());
 
     if (stack_size < minimum_stacksize())
     {
@@ -485,7 +485,10 @@ private:
     }
   }
 
-  static void guard() {}
+  struct guard
+  {
+    void operator()(errcode_t const&) const {}
+  };
 
 private:
   /// Ensure start from a new cache line.
