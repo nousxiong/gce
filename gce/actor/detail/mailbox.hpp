@@ -33,14 +33,16 @@ class mailbox
 {
   //typedef std::pair<recv_t, message> recv_pair_t;
   typedef recv_pair recv_pair_t;
-  typedef std::pair<resp_t, message> res_msg_pair_t;
-  typedef std::map<sid_t, res_msg_pair_t> res_msg_list_t;
+  //typedef std::pair<resp_t, message*> res_msg_pair_t;
+  //typedef std::map<sid_t, res_msg_pair_t> res_msg_list_t;
 
 public:
-  mailbox(mailbox_pool_set& pool_set, size_t cache_match_size)
+  mailbox(mailbox_pool_set& pool_set, msg_pool_t& msg_pool, size_t cache_match_size)
     : recv_pair_pool_(pool_set.recv_pair_)
     , recv_itr_pool_(pool_set.recv_itr_)
     , match_queue_pool_(pool_set.match_que_)
+    , res_msg_pair_pool_(pool_set.res_msg_pair_)
+    , msg_pool_(msg_pool)
     , cache_match_list_(cache_match_size)
   {
     for (size_t i=0, size=cache_match_list_.size(); i<size; ++i)
@@ -53,7 +55,8 @@ public:
 
   ~mailbox()
   {
-    recv_que_.clear_and_dispose(recv_pair_disposer(recv_pair_pool_));
+    recv_que_.clear_and_dispose(recv_pair_disposer(recv_pair_pool_, &msg_pool_));
+    res_msg_list_.clear_and_dispose(res_msg_pair_disposer(res_msg_pair_pool_, &msg_pool_));
 
     for (size_t i=0, size=cache_match_list_.size(); i<size; ++i)
     {
@@ -64,7 +67,7 @@ public:
   }
 
 public:
-  bool pop(recv_t& src, message& msg, match_list_t const& match_list, recver_t const& recver)
+  bool pop(recv_t& src, message*& msg, match_list_t const& match_list, recver_t const& recver)
   {
     if (recv_que_.empty())
     {
@@ -74,7 +77,7 @@ public:
     if (match_list.empty())
     {
       recv_pair_t& rp = recv_que_.front();
-      return fetch_match_msg(rp.msg_.get_type(), recver, src, msg);
+      return fetch_match_msg(rp.msg_->get_type(), recver, src, msg);
     }
 
     BOOST_FOREACH(match_t type, match_list)
@@ -88,14 +91,15 @@ public:
     return false;
   }
 
-  bool pop(resp_t& res, message& msg)
+  bool pop(resp_t& res, message*& msg)
   {
-    res_msg_list_t::iterator itr(res_msg_list_.find(res.get_id()));
+    dummy3_.sid_= res.get_id();
+    res_msg_pair_list_t::iterator itr(res_msg_list_.find(dummy3_));
     if (itr != res_msg_list_.end())
     {
-      res = itr->second.first;
-      msg = itr->second.second;
-      res_msg_list_.erase(itr);
+      res = itr->resp_;
+      msg = itr->msg_;
+      res_msg_list_.erase_and_dispose(itr, res_msg_pair_disposer(res_msg_pair_pool_));
       return true;
     }
     else
@@ -109,7 +113,9 @@ public:
           //recv_itr* rtr = recv_itr_pool_.get();
           recv_itr& rtr = *itr->second;
           //recv_itr rtr = *itr->second;
-          msg = rtr.itr_->msg_;
+          message* tmp = msg_pool_.get();
+          *tmp = *rtr.itr_->msg_;
+          msg = tmp;
           res = resp_t(res.get_id(), recver);
           return true;
         }
@@ -121,7 +127,9 @@ public:
         if (itr != svc_exit_list_.end())
         {
           recv_itr& rtr = *itr->second.second;
-          msg = rtr.itr_->msg_;
+          message* tmp = msg_pool_.get();
+          *tmp = *rtr.itr_->msg_;
+          msg = tmp;
           res = resp_t(res.get_id(), itr->second.first);
           return true;
         }
@@ -147,19 +155,19 @@ public:
     return false;
   }
 
-  void push(aid_t const& sender, message const& msg)
+  void push(aid_t const& sender, message* msg)
   {
     recv_t rcv(sender);
     add_match_msg(rcv, sender, msg);
   }
 
-  void push(exit_t ex, message const& msg)
+  void push(exit_t const& ex, message* msg)
   {
     recv_t rcv(ex);
     add_match_msg(rcv, ex.get_aid(), msg);
   }
 
-  void push(request_t req, message const& msg)
+  void push(request_t const& req, message* msg)
   {
     recv_t rcv(req);
     add_match_msg(rcv, aid_t(), msg);
@@ -168,21 +176,23 @@ public:
     pr.first->second.push_back(req);
   }
 
-  bool push(resp_t res, message const& msg)
+  bool push(resp_t const& res, message* msg)
   {
-    res_msg_list_.insert(std::make_pair(res.get_id(), std::make_pair(res, msg)));
+    res_msg_pair* rmp = res_msg_pair_pool_.get();
+    rmp->init(res.get_id(), res, msg);
+    res_msg_list_.insert(*rmp);
     return false;
   }
 
 private:
-  void add_match_msg(recv_t const& rcv, aid_t const& sender, message const& msg)
+  void add_match_msg(recv_t const& rcv, aid_t const& sender, message* msg)
   {
     recv_pair_t* rp = recv_pair_pool_.get();
     rp->init(rcv, msg);
     recv_itr* rtr = recv_itr_pool_.get();
     recv_queue_t::iterator itr = recv_que_.insert(recv_que_.end(), *rp);
     rtr->init(itr);
-    match_t type = msg.get_type();
+    match_t type = msg->get_type();
     match_itr mtr;
     match_queue_t* match_que = 0;
 
@@ -195,8 +205,6 @@ private:
       match_queue* mq = match_queue_pool_.get();
       mq->init(type, recv_itr_pool_);
       std::pair<match_queue_list_t::iterator, bool> pr =
-        //match_queue_list_.insert(std::make_pair(type, dummy2_));
-        /// TODO change match_queue_list_t to boost::intrusive::set
         match_queue_list_.insert(*mq);
       if (!pr.second)
       {
@@ -237,7 +245,7 @@ private:
     }
   }
 
-  bool fetch_match_msg(match_t type, recver_t const& recver, recv_t& src, message& msg)
+  bool fetch_match_msg(match_t type, recver_t const& recver, recv_t& src, message*& msg)
   {
     if (fetch_match_msg(type, src, msg))
     {
@@ -252,7 +260,9 @@ private:
         {
           recv_itr& rtr = *itr->second;
           src = rtr.itr_->rcv_;
-          msg = rtr.itr_->msg_;
+          message* tmp = msg_pool_.get();
+          *tmp = *rtr.itr_->msg_;
+          msg = tmp;
           return true;
         }
       }
@@ -263,7 +273,9 @@ private:
         {
           recv_itr& rtr = *itr->second.second;
           src = rtr.itr_->rcv_;
-          msg = rtr.itr_->msg_;
+          message* tmp = msg_pool_.get();
+          *tmp = *rtr.itr_->msg_;
+          msg = tmp;
           return true;
         }
       }
@@ -271,7 +283,7 @@ private:
     }
   }
 
-  bool fetch_match_msg(match_t type, recv_t& src, message& msg)
+  bool fetch_match_msg(match_t type, recv_t& src, message*& msg)
   {
     match_queue_t* match_que = 0;
     match_queue_list_t::iterator mq_itr(match_queue_list_.end());
@@ -335,6 +347,8 @@ private:
   recv_pair_pool_t& recv_pair_pool_;
   recv_itr_pool_t& recv_itr_pool_;
   match_queue_pool_t& match_queue_pool_;
+  res_msg_pair_pool_t& res_msg_pair_pool_;
+  msg_pool_t& msg_pool_;
 
   //typedef std::list<recv_pair_t> recv_queue_t;
   //typedef recv_queue_t::iterator recv_itr;
@@ -363,7 +377,7 @@ private:
   //typedef std::map<match_t, match_queue_t> match_queue_list_t;
   match_queue_list_t match_queue_list_;
 
-  res_msg_list_t res_msg_list_;
+  res_msg_pair_list_t res_msg_list_;
 
   typedef std::deque<request_t> req_queue_t;
   typedef std::map<aid_t, req_queue_t> wait_reply_list_t;
@@ -376,6 +390,7 @@ private:
 
   req_queue_t dummy_;
   match_queue dummy2_;
+  res_msg_pair dummy3_;
 };
 }
 }

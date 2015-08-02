@@ -43,10 +43,14 @@ struct attributes
     , max_tick_handle_size_(128)
     , tick_pool_reserve_size_(8)
     , tick_pool_max_size_(256)
+    , msg_pool_reserve_size_(8)
+    , msg_pool_max_size_(256)
     , mailbox_recv_pool_reserve_size_(8)
     , mailbox_recv_pool_grow_size_(32)
     , mailbox_mq_pool_reserve_size_(8)
     , mailbox_mq_pool_grow_size_(32)
+    , mailbox_res_pool_reserve_size_(2)
+    , mailbox_res_pool_grow_size_(32)
     , pack_list_reserve_size_(8)
     , pack_list_max_size_(128)
   {
@@ -67,10 +71,14 @@ struct attributes
   size_t max_tick_handle_size_;
   size_t tick_pool_reserve_size_;
   size_t tick_pool_max_size_;
+  size_t msg_pool_reserve_size_;
+  size_t msg_pool_max_size_;
   size_t mailbox_recv_pool_reserve_size_;
   size_t mailbox_recv_pool_grow_size_;
   size_t mailbox_mq_pool_reserve_size_;
   size_t mailbox_mq_pool_grow_size_;
+  size_t mailbox_res_pool_reserve_size_;
+  size_t mailbox_res_pool_grow_size_;
   size_t pack_list_reserve_size_;
   size_t pack_list_max_size_;
   std::vector<thread_callback_t> thread_begin_cb_list_;

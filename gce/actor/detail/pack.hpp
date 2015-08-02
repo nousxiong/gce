@@ -24,6 +24,7 @@ struct pack
 {
   pack()
     : is_err_ret_(false)
+    , pmsg_(0)
     , concurrency_index_(size_nil)
     , cache_index_(u64_nil)
     , type_(actor_nil)
@@ -42,8 +43,32 @@ struct pack
     clear(skt_);
     clear(svc_);
     is_err_ret_ = false;
-    msg_.clear();
+    if (pmsg_ != 0)
+    {
+      pmsg_ = 0;
+    }
+    else
+    {
+      msg_.clear();
+    }
     expiry_ = false;
+  }
+
+  void setmsg(message const& msg)
+  {
+    if (pmsg_ != 0)
+    {
+      *pmsg_ = msg;
+    }
+    else
+    {
+      msg_ = msg;
+    }
+  }
+
+  message& getmsg()
+  {
+    return pmsg_ != 0 ? *pmsg_ : msg_;
   }
 
   tag_t tag_;
@@ -52,6 +77,7 @@ struct pack
   svcid_t svc_;
   bool is_err_ret_;
   message msg_;
+  message* pmsg_;
 
   /// for nonblocked actor recv
   size_t concurrency_index_;

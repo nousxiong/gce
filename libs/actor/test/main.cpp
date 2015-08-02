@@ -28,6 +28,7 @@
 static std::size_t const test_count = 1;
 
 #include <boost/timer/timer.hpp>
+#include "test_linked.hpp"
 #include "test_coro.hpp"
 #include "test_actor.hpp"
 #include "test_response.hpp"
@@ -71,11 +72,12 @@ int main()
   try
   {
     /// basic test
+    /*gce::linked_ut::run();
     gce::coro_ut::run();
     gce::send_recv_ut::run();
-    gce::actor_ut::run();
+    gce::actor_ut::run();*/
     gce::response_ut::run();
-    gce::stackless_ut::run();
+    /*gce::stackless_ut::run();
     gce::mixin_ut::run();
     gce::slice_ut::run();
     gce::actor_pingpong_ut::run();
@@ -89,10 +91,10 @@ int main()
     gce::common_relay_ut::run();
     gce::message_ut::run();
     gce::pointer_ut::run();
-    gce::addon_ut::run();
+    gce::addon_ut::run();*/
 
     /// remote test
-    gce::socket_ut::run();
+    /*gce::socket_ut::run();
     gce::socket_broken_ut::run();
     gce::big_msg_ut::run();
     gce::remote_ut::run();
@@ -103,14 +105,14 @@ int main()
     gce::remote_relay_ut::run();
     gce::remote_common_relay_ut::run();
     gce::service_ut::run();
-    gce::services_ut::run();
+    gce::services_ut::run();*/
 
     /// script test
 #ifdef GCE_LUA
-    gce::lua_actor_ut::run();
+    /*gce::lua_actor_ut::run();
     gce::lua_socket_ut::run();
     gce::lua_service_ut::run();
-    gce::lua_services_ut::run();
+    gce::lua_services_ut::run();*/
 #endif
   }
   catch (std::exception& ex)

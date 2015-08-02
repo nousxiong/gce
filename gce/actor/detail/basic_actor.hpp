@@ -41,11 +41,16 @@ public:
     : ctx_(ctx)
     , basic_svc_(svc)
     , snd_(basic_svc_.get_strand())
-    , mb_(ctx_.get_mailbox_pool_set_list(svc.get_index()), ctx_.get_attributes().max_cache_match_size_)
+    , mb_(
+        ctx_.get_mailbox_pool_set_list(svc.get_index()), 
+        ctx_.get_msg_pool(svc.get_index()), 
+        ctx_.get_attributes().max_cache_match_size_
+        )
     , ctxid_(ctx_.get_ctxid())
     , timestamp_(ctx_.get_timestamp())
     , type_(type)
     , aid_(aid)
+    , msg_pool_(ctx_.get_msg_pool(svc.get_index()))
     , req_id_(0)
     , lg_(ctx_.get_logger())
   {
@@ -372,7 +377,7 @@ protected:
       pk.tag_ = link_t(l.get_type(), get_aid());
       pk.recver_ = recver;
       pk.skt_ = skt;
-      pk.msg_ = message(msg_link);
+      pk.msg_.set_type(msg_link);
 
       svc->send(target, pk);
     }
@@ -404,6 +409,30 @@ protected:
     monitor_list_.erase(aid);
   }
 
+  message* handle_pack(pack& pk)
+  {
+    if (pk.getmsg().get_type() == msg_link)
+    {
+      return 0;
+    }
+
+    if (pk.pmsg_ != 0)
+    {
+      return pk.pmsg_;
+    }
+    else
+    {
+      message* msg = msg_pool_.get();
+      *msg = pk.msg_;
+      return msg;
+    }
+  }
+
+  void free_msg(message* msg)
+  {
+    msg_pool_.free(msg);
+  }
+
 private:
   /// Ensure start from a new cache line.
   byte_t pad0_[GCE_CACHE_LINE_SIZE];
@@ -421,6 +450,7 @@ private:
   GCE_CACHE_ALIGNED_VAR(aid_t, aid_)
 
   /// local vals
+  linked_pool<message>& msg_pool_;
   sid_t req_id_;
   typedef std::map<aid_t, sktaid_t> link_list_t;
   typedef std::set<aid_t> monitor_list_t;

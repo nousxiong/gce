@@ -92,8 +92,8 @@ private:
   {
     try
     {
-      std::size_t free_actor_num = 20;
-      std::size_t user_thr_num = 0;
+      std::size_t free_actor_num = 10;
+      std::size_t user_thr_num = 5;
       std::size_t my_actor_size = free_actor_num + user_thr_num * 2;
       attributes attrs;
       context ctx(attrs);

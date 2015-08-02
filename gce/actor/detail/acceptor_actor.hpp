@@ -404,6 +404,11 @@ private:
     {
       base_t::remove_link(ex->get_aid());
     }
+
+    if (pk.pmsg_ != 0)
+    {
+      base_t::free_msg(pk.pmsg_);
+    }
   }
 
 private:

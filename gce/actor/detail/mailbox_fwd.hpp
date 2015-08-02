@@ -26,12 +26,16 @@ namespace detail
 {
 typedef boost::variant<aid_t, request_t, exit_t> recv_t;
 ///----------------------------------------------------------------------------
+/// message pool
+///----------------------------------------------------------------------------
+typedef linked_pool<message> msg_pool_t;
+///----------------------------------------------------------------------------
 /// recv_pair
 ///----------------------------------------------------------------------------
 struct recv_pair
   : public linked_elem<recv_pair>
 {
-  void init(recv_t const& rcv, message const& msg)
+  void init(recv_t const& rcv, message* msg)
   {
     rcv_ = rcv;
     msg_ = msg;
@@ -39,11 +43,11 @@ struct recv_pair
 
   void on_free()
   {
-    msg_.clear();
+    msg_ = 0;
   }
 
   recv_t rcv_;
-  message msg_;
+  message* msg_;
 
   boost::intrusive::list_member_hook<> hook_;
 };
@@ -52,17 +56,23 @@ typedef object_pool<recv_pair> recv_pair_pool_t;
 
 struct recv_pair_disposer
 {
-  explicit recv_pair_disposer(recv_pair_pool_t& pool)
+  explicit recv_pair_disposer(recv_pair_pool_t& pool, msg_pool_t* msg_pool = 0)
     : pool_(pool)
+    , msg_pool_(msg_pool)
   {
   }
 
   void operator()(recv_pair* p)
   {
+    if (msg_pool_ != 0)
+    {
+      msg_pool_->free(p->msg_);
+    }
     pool_.free(p);
   }
 
   recv_pair_pool_t& pool_;
+  msg_pool_t* msg_pool_;
 };
 
 typedef boost::intrusive::list<
@@ -172,23 +182,84 @@ typedef boost::intrusive::set<
   boost::intrusive::member_hook<match_queue, boost::intrusive::set_member_hook<>, &match_queue::hook_> 
   > match_queue_list_t;
 ///----------------------------------------------------------------------------
+/// res_msg_pair
+///----------------------------------------------------------------------------
+struct res_msg_pair
+  : public linked_elem<res_msg_pair>
+{
+  void init(sid_t sid, resp_t const& resp, message* msg)
+  {
+    sid_ = sid;
+    resp_ = resp;
+    msg_ = msg;
+  }
+
+  void on_free()
+  {
+    sid_ = sid_nil;
+    msg_ = 0;
+  }
+
+  sid_t sid_;
+  resp_t resp_;
+  message* msg_;
+
+  boost::intrusive::set_member_hook<> hook_;
+};
+
+inline bool operator<(res_msg_pair const& lhs, res_msg_pair const& rhs)
+{
+  return lhs.sid_ < rhs.sid_;
+}
+
+typedef object_pool<res_msg_pair> res_msg_pair_pool_t;
+
+struct res_msg_pair_disposer
+{
+  explicit res_msg_pair_disposer(res_msg_pair_pool_t& pool, msg_pool_t* msg_pool = 0)
+    : pool_(pool)
+    , msg_pool_(msg_pool)
+  {
+  }
+
+  void operator()(res_msg_pair* p)
+  {
+    if (msg_pool_ != 0)
+    {
+      msg_pool_->free(p->msg_);
+    }
+    pool_.free(p);
+  }
+
+  res_msg_pair_pool_t& pool_;
+  msg_pool_t* msg_pool_;
+};
+
+typedef boost::intrusive::set<
+  res_msg_pair, 
+  boost::intrusive::member_hook<res_msg_pair, boost::intrusive::set_member_hook<>, &res_msg_pair::hook_> 
+  > res_msg_pair_list_t;
+///----------------------------------------------------------------------------
 /// pools
 ///----------------------------------------------------------------------------
 struct mailbox_pool_set
 {
   mailbox_pool_set(
     size_t recv_reserve_size, size_t recv_grow_size, 
-    size_t match_que_reserve_size, size_t match_que_grow_size
+    size_t match_que_reserve_size, size_t match_que_grow_size, 
+    size_t res_reserve_size, size_t res_grow_size
     )
     : recv_pair_(recv_reserve_size, recv_grow_size)
     , recv_itr_(recv_reserve_size, recv_grow_size)
     , match_que_(match_que_reserve_size, match_que_grow_size)
+    , res_msg_pair_(res_reserve_size, res_grow_size)
   {
   }
 
   recv_pair_pool_t recv_pair_;
   recv_itr_pool_t recv_itr_;
   match_queue_pool_t match_que_;
+  res_msg_pair_pool_t res_msg_pair_;
 };
 }
 }

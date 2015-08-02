@@ -160,9 +160,9 @@ public:
   bool recv_response_timeout(resp_t res, duration_t tmo)
   {
     aid_t sender;
-    message msg;
+    message* pmsg = 0;
 
-    if (!base_t::mb_.pop(res, msg))
+    if (!base_t::mb_.pop(res, pmsg))
     {
       if (tmo > zero)
       {
@@ -181,8 +181,18 @@ public:
       sender = end_recv(res);
     }
 
-    int ec = check_result(msg);
-    set_recv_result(sender, msg, ec);
+    tmp_msg_.clear();
+    if (pmsg != 0)
+    {
+      tmp_msg_ = *pmsg;
+    }
+
+    int ec = check_result(tmp_msg_);
+    set_recv_result(sender, tmp_msg_, ec);
+    if (pmsg != 0)
+    {
+      base_t::free_msg(pmsg);
+    }
     return false;
   }
 
@@ -690,8 +700,9 @@ private:
   bool pri_recv_match(pattern const& patt, aid_t& sender, message& msg)
   {
     recv_t rcv;
+    message* pmsg = 0;
 
-    if (!base_t::mb_.pop(rcv, msg, patt.match_list_, patt.recver_))
+    if (!base_t::mb_.pop(rcv, pmsg, patt.match_list_, patt.recver_))
     {
       duration_t tmo = patt.timeout_;
       if (tmo > zero)
@@ -711,8 +722,18 @@ private:
       sender = end_recv(rcv, msg);
     }
 
-    int ec = check_result(patt, msg);
-    set_recv_result(sender, msg, ec);
+    tmp_msg_.clear();
+    if (pmsg != 0)
+    {
+      tmp_msg_ = *pmsg;
+    }
+
+    int ec = check_result(patt, tmp_msg_);
+    set_recv_result(sender, tmp_msg_, ec);
+    if (pmsg != 0)
+    {
+      base_t::free_msg(pmsg);
+    }
     return false;
   }
 
@@ -859,14 +880,15 @@ private:
   void handle_recv(pack& pk)
   {
     bool is_response = false;
+    message* msg = base_t::handle_pack(pk);
 
     if (aid_t* aid = boost::get<aid_t>(&pk.tag_))
     {
-      base_t::mb_.push(*aid, pk.msg_);
+      base_t::mb_.push(*aid, msg);
     }
     else if (request_t* req = boost::get<request_t>(&pk.tag_))
     {
-      base_t::mb_.push(*req, pk.msg_);
+      base_t::mb_.push(*req, msg);
     }
     else if (link_t* link = boost::get<link_t>(&pk.tag_))
     {
@@ -875,51 +897,49 @@ private:
     }
     else if (exit_t* ex = boost::get<exit_t>(&pk.tag_))
     {
-      base_t::mb_.push(*ex, pk.msg_);
+      base_t::mb_.push(*ex, msg);
       base_t::remove_link(ex->get_aid());
     }
     else if (resp_t* res = boost::get<resp_t>(&pk.tag_))
     {
       is_response = true;
-      base_t::mb_.push(*res, pk.msg_);
+      base_t::mb_.push(*res, msg);
     }
 
-    match_t ty = pk.msg_.get_type();
-    recv_t rcv;
-    message msg;
+    match_t ty = msg->get_type();
+    msg = 0;
+    //message msg;
     aid_t sender;
     int ec = lua::ec_ok;
     bool need_resume = false;
+    bool recving = recving_ && !is_response;
+    bool resping = responsing_ && (is_response || ty == exit);
 
-    if (
-      (recving_ && !is_response) ||
-      (responsing_ && (is_response || ty == exit))
-      )
+    if (recving || resping)
     {
-      if (recving_ && !is_response)
+      if (recving)
       {
-        bool ret = base_t::mb_.pop(rcv, msg, curr_pattern_.match_list_, curr_pattern_.recver_);
-        if (!ret)
+        recv_t rcv;
+        if (!base_t::mb_.pop(rcv, msg, curr_pattern_.match_list_, curr_pattern_.recver_))
         {
           return;
         }
-        sender = end_recv(rcv, msg);
-        ec = check_result(curr_pattern_, msg);
+        sender = end_recv(rcv, *msg);
+        ec = check_result(curr_pattern_, *msg);
         curr_pattern_.clear();
         need_resume = true;
         recving_ = false;
       }
 
-      if (responsing_ && (is_response || ty == exit))
+      if (resping)
       {
         GCE_ASSERT(recving_res_.valid());
-        bool ret = base_t::mb_.pop(recving_res_, msg);
-        if (!ret)
+        if (!base_t::mb_.pop(recving_res_, msg))
         {
           return;
         }
         sender = end_recv(recving_res_);
-        ec = check_result(msg);
+        ec = check_result(*msg);
         need_resume = true;
         responsing_ = false;
         recving_res_ = nil_resp_;
@@ -929,16 +949,16 @@ private:
       errcode_t ignored_ec;
       tmr_.cancel(ignored_ec);
 
-      match_t msg_type = msg.get_type();
+      match_t msg_type = msg->get_type();
       if (msg_type == msg_new_actor)
       {
         need_resume = false;
-        handle_spawn(sender, msg);
+        handle_spawn(sender, *msg);
       }
       else if (msg_type == msg_spawn_ret)
       {
         need_resume = false;
-        pri_handle_remote_spawn(sender, msg);
+        pri_handle_remote_spawn(sender, *msg);
       }
       else if (msg_type == msg_new_bind)
       {
@@ -948,13 +968,18 @@ private:
       else if (msg_type == msg_new_conn)
       {
         need_resume = false;
-        handle_connect(sender, msg);
+        handle_connect(sender, *msg);
       }
 
       if (need_resume)
       {
-        set_recv_result(sender, msg, ec);
+        set_recv_result(sender, *msg, ec);
+        base_t::free_msg(msg);
         resume();
+      }
+      else
+      {
+        base_t::free_msg(msg);
       }
     }
   }
@@ -1200,6 +1225,7 @@ private:
   pattern curr_pattern_;
   timer_t tmr_;
   size_t tmr_sid_;
+  message tmp_msg_;
 
   //typedef boost::function<bool (aid_t, message)> spawn_handler_t;
   typedef handle_remote_spawn_binder spawn_handler_t;

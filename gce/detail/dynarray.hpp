@@ -173,6 +173,20 @@ public:
     ++size_;
   }
 
+  template <typename A1, typename A2, typename A3, typename A4, typename A5, typename A6>
+  void emplace_back(A1 a1, A2 a2, A3 a3, A4 a4, A5 a5, A6 a6)
+  {
+    if (size_ == elem_list_.size())
+    {
+      throw std::out_of_range("out of max size");
+    }
+
+    element& e = elem_list_[size_];
+    pointer p = new ((pointer)e.segment_) T(a1, a2, a3, a4, a5, a6);
+    e.p_ = p;
+    ++size_;
+  }
+
   reference operator[](size_t i)
   {
     return *elem_list_[i].p_;

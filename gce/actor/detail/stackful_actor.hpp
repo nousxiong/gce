@@ -63,6 +63,7 @@ public:
     , svc_(svc)
     , recving_(false)
     , responsing_(false)
+    , recving_msg_(0)
     , tmr_(base_t::ctx_.get_io_service())
     , tmr_sid_(0)
     , ec_(exit_normal)
@@ -150,8 +151,9 @@ public:
   {
     aid_t sender;
     recv_t rcv;
+    message* pmsg = 0;
 
-    if (!base_t::mb_.pop(rcv, msg, patt.match_list_, patt.recver_))
+    if (!base_t::mb_.pop(rcv, pmsg, patt.match_list_, patt.recver_))
     {
       duration_t tmo = patt.timeout_;
       if (tmo > zero)
@@ -169,15 +171,18 @@ public:
         }
 
         rcv = recving_rcv_;
-        msg = recving_msg_;
+        pmsg = recving_msg_;
         recving_rcv_ = nil_rcv_;
-        recving_msg_ = nil_msg_;
+        recving_msg_ = 0;
       }
       else
       {
         return sender;
       }
     }
+
+    msg = *pmsg;
+    base_t::free_msg(pmsg);
 
     if (aid_t* aid = boost::get<aid_t>(&rcv))
     {
@@ -203,9 +208,10 @@ public:
     )
   {
     aid_t sender;
+    message* pmsg = 0;
 
     recving_res_ = res;
-    if (!base_t::mb_.pop(res, msg))
+    if (!base_t::mb_.pop(res, pmsg))
     {
       if (tmo > zero)
       {
@@ -221,9 +227,9 @@ public:
         }
 
         res = recving_res_;
-        msg = recving_msg_;
+        pmsg = recving_msg_;
         recving_res_ = nil_resp_;
-        recving_msg_ = nil_msg_;
+        recving_msg_ = 0;
       }
       else
       {
@@ -231,6 +237,8 @@ public:
       }
     }
 
+    msg = *pmsg;
+    base_t::free_msg(pmsg);
     sender = res.get_aid();
     return sender;
   }
@@ -429,14 +437,15 @@ private:
   void handle_recv(pack& pk)
   {
     bool is_response = false;
+    message* msg = base_t::handle_pack(pk);
 
     if (aid_t* aid = boost::get<aid_t>(&pk.tag_))
     {
-      base_t::mb_.push(*aid, pk.msg_);
+      base_t::mb_.push(*aid, msg);
     }
     else if (request_t* req = boost::get<request_t>(&pk.tag_))
     {
-      base_t::mb_.push(*req, pk.msg_);
+      base_t::mb_.push(*req, msg);
     }
     else if (link_t* link = boost::get<link_t>(&pk.tag_))
     {
@@ -445,16 +454,17 @@ private:
     }
     else if (exit_t* ex = boost::get<exit_t>(&pk.tag_))
     {
-      base_t::mb_.push(*ex, pk.msg_);
+      base_t::mb_.push(*ex, msg);
       base_t::remove_link(ex->get_aid());
     }
     else if (resp_t* res = boost::get<resp_t>(&pk.tag_))
     {
       is_response = true;
-      base_t::mb_.push(*res, pk.msg_);
+      base_t::mb_.push(*res, msg);
     }
 
-    match_t ty = pk.msg_.get_type();
+    match_t ty = msg->get_type();
+    msg = 0;
     bool recving = recving_ && !is_response;
     bool resping = responsing_ && (is_response || ty == exit);
 
@@ -505,7 +515,7 @@ private:
   bool responsing_;
   recv_t recving_rcv_;
   resp_t recving_res_;
-  message recving_msg_;
+  message* recving_msg_;
   pattern curr_pattern_;
   timer_t tmr_;
   size_t tmr_sid_;

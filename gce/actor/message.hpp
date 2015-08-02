@@ -24,6 +24,7 @@
 #include <gce/actor/detail/exit.hpp>
 #include <gce/actor/to_match.hpp>
 #include <gce/detail/cow_buffer.hpp>
+#include <gce/detail/linked_elem.hpp>
 #include <boost/asio/buffer.hpp>
 #include <boost/shared_ptr.hpp>
 #include <boost/container/vector.hpp>
@@ -65,6 +66,7 @@ typedef boost::variant<int, aid_t, request_t> relay_t;
 }
 
 class message
+  : public detail::linked_elem<message>
 {
 public:
   struct chunk
@@ -910,6 +912,11 @@ public:
     {
       shared_list_.push_back(m.shared_list_[i]);
     }
+  }
+
+  void on_free()
+  {
+    clear();
   }
 
 private:

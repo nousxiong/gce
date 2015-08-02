@@ -115,6 +115,7 @@ public:
     , concurrency_size_(service_size_ + attrs_.nonblocked_num_)
     , strand_list_(concurrency_size_)
     , tick_list_(service_size_)
+    , msg_pool_list_(concurrency_size_)
     , mailbox_pool_set_list_(concurrency_size_)
     , threaded_service_list_(service_size_)
     , curr_threaded_svc_(0)
@@ -151,6 +152,7 @@ public:
     , concurrency_size_(service_size_ + attrs_.nonblocked_num_)
     , strand_list_(concurrency_size_)
     , tick_list_(service_size_)
+    , msg_pool_list_(concurrency_size_)
     , mailbox_pool_set_list_(concurrency_size_)
     , threaded_service_list_(service_size_)
     , curr_threaded_svc_(0)
@@ -413,6 +415,11 @@ public:
   }
 #endif
 
+  detail::msg_pool_t& get_msg_pool(size_t index)
+  {
+    return msg_pool_list_[index];
+  }
+
   detail::mailbox_pool_set& get_mailbox_pool_set_list(size_t index)
   {
     return mailbox_pool_set_list_[index];
@@ -491,9 +498,11 @@ private:
         strand_list_.emplace_back(boost::ref(*ios_));
         strand_t& snd = strand_list_.back();
         tick_list_.emplace_back(attrs_.tick_pool_reserve_size_, attrs_.tick_pool_max_size_);
+        msg_pool_list_.emplace_back(attrs_.msg_pool_reserve_size_, attrs_.msg_pool_max_size_);
         mailbox_pool_set_list_.emplace_back(
           attrs_.mailbox_recv_pool_reserve_size_, attrs_.mailbox_recv_pool_grow_size_, 
-          attrs_.mailbox_mq_pool_reserve_size_, attrs_.mailbox_mq_pool_grow_size_
+          attrs_.mailbox_mq_pool_reserve_size_, attrs_.mailbox_mq_pool_grow_size_, 
+          attrs_.mailbox_res_pool_reserve_size_, attrs_.mailbox_res_pool_grow_size_
           );
         threaded_service_list_.emplace_back(boost::ref(*this), boost::ref(snd), index);
         stackful_service_list_.emplace_back(boost::ref(*this), boost::ref(snd), index);
@@ -509,9 +518,11 @@ private:
       {
         strand_list_.emplace_back(boost::ref(*ios_));
         strand_t& snd = strand_list_.back();
+        msg_pool_list_.emplace_back(attrs_.msg_pool_reserve_size_, attrs_.msg_pool_max_size_);
         mailbox_pool_set_list_.emplace_back(
           attrs_.mailbox_recv_pool_reserve_size_, attrs_.mailbox_recv_pool_grow_size_, 
-          attrs_.mailbox_mq_pool_reserve_size_, attrs_.mailbox_mq_pool_grow_size_
+          attrs_.mailbox_mq_pool_reserve_size_, attrs_.mailbox_mq_pool_grow_size_, 
+          attrs_.mailbox_res_pool_reserve_size_, attrs_.mailbox_res_pool_grow_size_
           );
         nonblocked_service_list_.emplace_back(boost::ref(*this), boost::ref(snd), index);
         nonblocked_actor_list_.emplace_back(boost::ref(*this), boost::ref(nonblocked_service_list_[i]), index);
@@ -810,6 +821,9 @@ private:
 
   /// tick queue list
   GCE_CACHE_ALIGNED_VAR(detail::dynarray<tick_t>, tick_list_)
+
+  /// message pool list
+  GCE_CACHE_ALIGNED_VAR(detail::dynarray<detail::msg_pool_t>, msg_pool_list_)
 
   /// mailbox's recv_pair pool list
   GCE_CACHE_ALIGNED_VAR(detail::dynarray<detail::mailbox_pool_set>, mailbox_pool_set_list_)

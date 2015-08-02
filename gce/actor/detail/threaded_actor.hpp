@@ -51,6 +51,8 @@ public:
     , svc_(svc)
     , recv_p_(0)
     , res_p_(0)
+    , recv_msg_(0)
+    , res_msg_(0)
     , tmr_(base_t::ctx_.get_io_service())
     , tmr_sid_(0)
   {
@@ -189,7 +191,7 @@ public:
     base_t::snd_.post(
       boost::bind(
         &self_t::try_recv, this,
-        boost::ref(p), boost::cref(patt)
+        boost::ref(p), boost::ref(msg), boost::cref(patt)
         )
       );
 
@@ -198,21 +200,21 @@ public:
     if (opt)
     {
       recv_optional_t::reference_type rcv = boost::get(opt);
-      if (aid_t* aid = boost::get<aid_t>(&rcv.first))
+      if (aid_t* aid = boost::get<aid_t>(&rcv))
       {
         sender = *aid;
         msg.set_relay(*aid);
       }
-      else if (request_t* req = boost::get<request_t>(&rcv.first))
+      else if (request_t* req = boost::get<request_t>(&rcv))
       {
         sender = req->get_aid();
         msg.set_relay(*req);
       }
-      else if (exit_t* ex = boost::get<exit_t>(&rcv.first))
+      else if (exit_t* ex = boost::get<exit_t>(&rcv))
       {
         sender = ex->get_aid();
-      }
-      msg = rcv.second;
+      }/*
+      msg = rcv.second;*/
     }
     return sender;
   }
@@ -228,7 +230,7 @@ public:
     base_t::snd_.post(
       boost::bind(
         &self_t::try_response, this,
-        boost::ref(p), res, tmo
+        boost::ref(p), boost::ref(msg), res, tmo
         )
       );
 
@@ -236,10 +238,9 @@ public:
     res_optional_t opt = f.get();
     if (opt)
     {
-      res_optional_t::reference_type res_pr = boost::get(opt);
-      res = res_pr.first;
+      res = boost::get(opt);
       sender = res.get_aid();
-      msg = res_pr.second;
+      //msg = res_pr.second;
     }
     return sender;
   }
@@ -304,53 +305,65 @@ public:
   }
 
 private:
-  typedef boost::optional<std::pair<recv_t, message> > recv_optional_t;
-  typedef boost::optional<std::pair<resp_t, message> > res_optional_t;
+  typedef boost::optional<recv_t> recv_optional_t;
+  typedef boost::optional<resp_t> res_optional_t;
   typedef boost::promise<recv_optional_t> recv_promise_t;
   typedef boost::promise<res_optional_t> res_promise_t;
   typedef boost::unique_future<recv_optional_t> recv_future_t;
   typedef boost::unique_future<res_optional_t> res_future_t;
 
-  void try_recv(recv_promise_t& p, pattern const& patt)
+  void try_recv(recv_promise_t& p, message& msg, pattern const& patt)
   {
-    std::pair<recv_t, message> rcv;
-    if (!base_t::mb_.pop(rcv.first, rcv.second, patt.match_list_, patt.recver_))
+    recv_t rcv;
+    message* pmsg = 0;
+    if (!base_t::mb_.pop(rcv, pmsg, patt.match_list_, patt.recver_))
     {
       duration_t tmo = patt.timeout_;
       if (tmo > zero)
       {
+        recv_msg_ = &msg;
+        recv_p_ = &p;
+        curr_pattern_ = patt;
         if (tmo < infin)
         {
           start_timer(tmo, p);
         }
-        recv_p_ = &p;
-        curr_pattern_ = patt;
         return;
       }
     }
 
+    if (pmsg != 0)
+    {
+      msg = *pmsg;
+      base_t::free_msg(pmsg);
+    }
     p.set_value(rcv);
   }
 
-  void try_response(res_promise_t& p, resp_t res, duration_t tmo)
+  void try_response(res_promise_t& p, message& msg, resp_t res, duration_t tmo)
   {
-    std::pair<resp_t, message> res_pr;
-    res_pr.first = res;
-    if (!base_t::mb_.pop(res_pr.first, res_pr.second))
+    message* pmsg = 0;
+    if (!base_t::mb_.pop(res, pmsg))
     {
       if (tmo > zero)
       {
+        res_msg_ = &msg;
+        res_p_ = &p;
+        recving_res_ = res;
         if (tmo < infin)
         {
           start_timer(tmo, p);
         }
-        res_p_ = &p;
-        recving_res_ = res;
         return;
       }
     }
 
-    p.set_value(res_pr);
+    if (pmsg != 0)
+    {
+      msg = *pmsg;
+      base_t::free_msg(pmsg);
+    }
+    p.set_value(res);
   }
 
   void start_timer(duration_t dur, recv_promise_t& p)
@@ -387,8 +400,8 @@ private:
       GCE_ASSERT(&p == recv_p_);
       recv_p_ = 0;
       curr_pattern_.clear();
-      std::pair<recv_t, message> rcv;
-      p.set_value(rcv);
+      //std::pair<recv_t, message> rcv;
+      p.set_value(recv_t());
     }
   }
 
@@ -400,22 +413,23 @@ private:
       GCE_ASSERT(&p == res_p_);
       res_p_ = 0;
       recving_res_ = resp_t();
-      std::pair<resp_t, message> res_pr;
-      p.set_value(res_pr);
+      //std::pair<resp_t, message> res_pr;
+      p.set_value(recving_res_);
     }
   }
 
   void handle_recv(pack& pk)
   {
     bool is_response = false;
+    message* msg = base_t::handle_pack(pk);
 
     if (aid_t* aid = boost::get<aid_t>(&pk.tag_))
     {
-      base_t::mb_.push(*aid, pk.msg_);
+      base_t::mb_.push(*aid, msg);
     }
     else if (request_t* req = boost::get<request_t>(&pk.tag_))
     {
-      base_t::mb_.push(*req, pk.msg_);
+      base_t::mb_.push(*req, msg);
     }
     else if (link_t* link = boost::get<link_t>(&pk.tag_))
     {
@@ -424,37 +438,40 @@ private:
     }
     else if (exit_t* ex = boost::get<exit_t>(&pk.tag_))
     {
-      base_t::mb_.push(*ex, pk.msg_);
+      base_t::mb_.push(*ex, msg);
       base_t::remove_link(ex->get_aid());
     }
     else if (resp_t* res = boost::get<resp_t>(&pk.tag_))
     {
       is_response = true;
-      base_t::mb_.push(*res, pk.msg_);
+      base_t::mb_.push(*res, msg);
     }
 
-    match_t ty = pk.msg_.get_type();
-    recv_t rcv;
-    message msg;
+    match_t ty = msg->get_type();
+    msg = 0;
+    bool recving = recv_p_ != 0 && !is_response;
+    bool resping = res_p_ != 0 && (is_response || ty == exit);
 
-    if (
-      (recv_p_ && !is_response) ||
-      (res_p_ && (is_response || ty == exit))
-      )
+    if (recving || resping)
     {
-      if (recv_p_ && !is_response)
+      if (recving)
       {
+        recv_t rcv;
         bool ret = base_t::mb_.pop(rcv, msg, curr_pattern_.match_list_, curr_pattern_.recver_);
         if (!ret)
         {
           return;
         }
-        recv_p_->set_value(std::make_pair(rcv, msg));
-        recv_p_ = 0;
+        *recv_msg_ = *msg;
+        base_t::free_msg(msg);
+        recv_msg_= 0;
         curr_pattern_.clear();
+        recv_promise_t* recv_p = recv_p_;
+        recv_p_ = 0;
+        recv_p->set_value(rcv);
       }
 
-      if (res_p_ && (is_response || ty == exit))
+      if (resping)
       {
         GCE_ASSERT(recving_res_.valid());
         bool ret = base_t::mb_.pop(recving_res_, msg);
@@ -462,9 +479,14 @@ private:
         {
           return;
         }
-        res_p_->set_value(std::make_pair(recving_res_, msg));
+        *res_msg_ = *msg;
+        base_t::free_msg(msg);
+        res_msg_ = 0;
+        res_promise_t* res_p = res_p_;
         res_p_ = 0;
+        resp_t recving_res = recving_res_;
         recving_res_ = resp_t();
+        res_p->set_value(recving_res);
       }
 
       ++tmr_sid_;
@@ -482,6 +504,8 @@ private:
   std::vector<nonblocked_actor_t*> nonblocked_actor_list_;
   recv_promise_t* recv_p_;
   res_promise_t* res_p_;
+  message* recv_msg_;
+  message* res_msg_;
   resp_t recving_res_;
   pattern curr_pattern_;
   timer_t tmr_;

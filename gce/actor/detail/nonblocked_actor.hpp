@@ -179,13 +179,16 @@ public:
   {
     aid_t sender;
     recv_t rcv;
+    message* pmsg = 0;
 
     move_pack();
-    if (!base_t::mb_.pop(rcv, msg, match_list, recver))
+    if (!base_t::mb_.pop(rcv, pmsg, match_list, recver))
     {
       return sender;
     }
 
+    msg = *pmsg;
+    base_t::free_msg(pmsg);
     if (aid_t* aid = boost::get<aid_t>(&rcv))
     {
       sender = *aid;
@@ -207,13 +210,16 @@ public:
   aid_t respond(resp_t res, message& msg)
   {
     aid_t sender;
+    message* pmsg = 0;
 
     move_pack();
-    if (!base_t::mb_.pop(res, msg))
+    if (!base_t::mb_.pop(res, pmsg))
     {
       return sender;
     }
 
+    msg = *pmsg;
+    base_t::free_msg(pmsg);
     sender = res.get_aid();
     return sender;
   }
@@ -363,7 +369,7 @@ private:
     pack pk;
     pk.concurrency_index_ = concurrency_index;
     pk.type_ = type;
-    aid_t self = base_t::get_aid();
+    aid_t const& self = base_t::get_aid();
     pk.tag_ = self;
     pk.recver_ = self;
     return pk;
@@ -372,6 +378,7 @@ private:
   void handle_recv(pack& pk)
   {
     bool is_response = false;
+
     if (aid_t* aid = boost::get<aid_t>(&pk.tag_))
     {
       match_t type = pk.msg_.get_type();
@@ -419,27 +426,32 @@ private:
       }
       else
       {
-        base_t::mb_.push(*aid, pk.msg_);
+        message* msg = base_t::handle_pack(pk);
+        base_t::mb_.push(*aid, msg);
       }
     }
-    else if (request_t* req = boost::get<request_t>(&pk.tag_))
+    else
     {
-      base_t::mb_.push(*req, pk.msg_);
-    }
-    else if (link_t* link = boost::get<link_t>(&pk.tag_))
-    {
-      base_t::add_link(link->get_aid(), pk.skt_);
-      return;
-    }
-    else if (exit_t* ex = boost::get<exit_t>(&pk.tag_))
-    {
-      base_t::mb_.push(*ex, pk.msg_);
-      base_t::remove_link(ex->get_aid());
-    }
-    else if (resp_t* res = boost::get<resp_t>(&pk.tag_))
-    {
-      is_response = true;
-      base_t::mb_.push(*res, pk.msg_);
+      message* msg = base_t::handle_pack(pk);
+      if (request_t* req = boost::get<request_t>(&pk.tag_))
+      {
+        base_t::mb_.push(*req, msg);
+      }
+      else if (link_t* link = boost::get<link_t>(&pk.tag_))
+      {
+        base_t::add_link(link->get_aid(), pk.skt_);
+        return;
+      }
+      else if (exit_t* ex = boost::get<exit_t>(&pk.tag_))
+      {
+        base_t::mb_.push(*ex, msg);
+        base_t::remove_link(ex->get_aid());
+      }
+      else if (resp_t* res = boost::get<resp_t>(&pk.tag_))
+      {
+        is_response = true;
+        base_t::mb_.push(*res, msg);
+      }
     }
   }
 

@@ -88,6 +88,7 @@ public:
     , curr_reconn_(0)
     , is_router_(false)
     , lg_(base_t::ctx_.get_logger())
+    , msg_hb_(msg_hb)
   {
   }
 
@@ -608,7 +609,7 @@ private:
 
   void send_msg_hb()
   {
-    send(message(msg_hb));
+    send(msg_hb_);
   }
 
   void send_ret(aid_t const& sire, ctxid_pair_t ctxid_pr, errcode_t& ec)
@@ -855,7 +856,8 @@ private:
 
   void handle_recv(pack& pk)
   {
-    match_t ty = pk.msg_.get_type();
+    message& msg = pk.getmsg();
+    match_t ty = msg.get_type();
     if (ty != msg_add_svc && ty != msg_rmv_svc)
     {
       //GCE_ASSERT(!check_local(pk.recver_, base_t::ctxid_))(pk.recver_)(base_t::ctxid_);
@@ -877,12 +879,17 @@ private:
         remove_router_link(ex->get_aid(), pk.recver_);
         pk.tag_ = exit_t(ex->get_code(), ex->get_aid());
       }
-      pk.msg_.push_tag(
+      msg.push_tag(
         pk.tag_, pk.recver_, pk.svc_,
         pk.skt_, pk.is_err_ret_
         );
     }
-    send(pk.msg_);
+
+    send(msg);
+    if (pk.pmsg_ != 0)
+    {
+      base_t::free_msg(pk.pmsg_);
+    }
   }
 
   void add_straight_link(aid_t const& src, aid_t const& des)
@@ -1484,6 +1491,7 @@ private:
   adl::detail::rmv_svc tmp_rmv_svc_;
 
   pack pk_;
+  message const msg_hb_;
 };
 }
 }

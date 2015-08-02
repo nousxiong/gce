@@ -103,7 +103,7 @@ public:
       case recv: self_->recv_handler(aid, m, *osender_, *omsg_); break;
       case spawn: self_->spawn_handler(aid, lty_, *osender_); break;
       case bind: self_->bind_handler(); break;
-      case conn: self_->conn_handler(aid, const_cast<message&>(m), *sire_, *ec_); break;
+      case conn: self_->conn_handler(aid, m, *sire_, *ec_); break;
       default: GCE_ASSERT(false)(ty_); break;
       }
     }
@@ -379,8 +379,9 @@ private:
     recv_t rcv;
     //message msg;
     msg_.clear();
+    message* pmsg = 0;
 
-    if (!base_t::mb_.pop(rcv, msg_, patt.match_list_, patt.recver_))
+    if (!base_t::mb_.pop(rcv, pmsg, patt.match_list_, patt.recver_))
     {
       duration_t tmo = patt.timeout_;
       if (tmo > zero)
@@ -397,7 +398,13 @@ private:
     }
     else
     {
-      sender_ = end_recv(rcv, msg_);
+      sender_ = end_recv(rcv, *pmsg);
+    }
+
+    if (pmsg != 0)
+    {
+      msg_ = *pmsg;
+      base_t::free_msg(pmsg);
     }
 
     base_t::snd_.post(
@@ -412,9 +419,11 @@ private:
     )
   {
     aid_t sender;
+    msg_.clear();
+    message* pmsg = 0;
     //message msg;
 
-    if (!base_t::mb_.pop(res, msg_))
+    if (!base_t::mb_.pop(res, pmsg))
     {
       if (tmo > zero)
       {
@@ -431,6 +440,12 @@ private:
     else
     {
       sender = end_recv(res);
+    }
+
+    if (pmsg != 0)
+    {
+      msg_ = *pmsg;
+      base_t::free_msg(pmsg);
     }
 
     base_t::snd_.post(
@@ -667,14 +682,15 @@ private:
   void handle_recv(pack& pk)
   {
     bool is_response = false;
+    message* msg = base_t::handle_pack(pk);
 
     if (aid_t* aid = boost::get<aid_t>(&pk.tag_))
     {
-      base_t::mb_.push(*aid, pk.msg_);
+      base_t::mb_.push(*aid, msg);
     }
     else if (request_t* req = boost::get<request_t>(&pk.tag_))
     {
-      base_t::mb_.push(*req, pk.msg_);
+      base_t::mb_.push(*req, msg);
     }
     else if (link_t* link = boost::get<link_t>(&pk.tag_))
     {
@@ -683,26 +699,27 @@ private:
     }
     else if (exit_t* ex = boost::get<exit_t>(&pk.tag_))
     {
-      base_t::mb_.push(*ex, pk.msg_);
+      base_t::mb_.push(*ex, msg);
       base_t::remove_link(ex->get_aid());
     }
     else if (resp_t* res = boost::get<resp_t>(&pk.tag_))
     {
       is_response = true;
-      base_t::mb_.push(*res, pk.msg_);
+      base_t::mb_.push(*res, msg);
     }
 
     bool is_binder = recv_b_ ? true : false;
     if (is_binder || recv_h_)
     {
-      message* msg = 0;
-      match_t ty = pk.msg_.get_type();
+      //message* msg = 0;
+      match_t ty = msg->get_type();
+      msg = 0;
 
       if (!is_resp_ && !is_response)
       {
         recv_t rcv;
-        msg = is_binder && recv_b_.omsg_ != 0 ? recv_b_.omsg_ : &msg_;
-        if (!base_t::mb_.pop(rcv, *msg, curr_pattern_.match_list_, curr_pattern_.recver_))
+        //msg = is_binder && recv_b_.omsg_ != 0 ? recv_b_.omsg_ : &msg_;
+        if (!base_t::mb_.pop(rcv, msg, curr_pattern_.match_list_, curr_pattern_.recver_))
         {
           return;
         }
@@ -712,8 +729,8 @@ private:
       if (is_resp_ && (is_response || ty == exit))
       {
         GCE_ASSERT(recving_res_.valid());
-        msg = is_binder && recv_b_.omsg_ != 0 ? recv_b_.omsg_ : &msg_;
-        if (!base_t::mb_.pop(recving_res_, *msg))
+        //msg = is_binder && recv_b_.omsg_ != 0 ? recv_b_.omsg_ : &msg_;
+        if (!base_t::mb_.pop(recving_res_, msg))
         {
           return;
         }
@@ -748,6 +765,7 @@ private:
         {
           tmp_h_(aref_, sender_, *msg);
         }
+        base_t::free_msg(msg);
       }
     }
   }
