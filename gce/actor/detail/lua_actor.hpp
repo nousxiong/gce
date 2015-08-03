@@ -268,11 +268,6 @@ public:
           *this, base_t::get_aid(), svc, f, stack_size, (link_type)type
           )
         );
-        /*boost::bind(
-          &self_t::spawn_stackful,
-          base_t::get_aid(), svc, f, stack_size, (link_type)type
-          )
-        );*/
     }
     else if (spw_type == spw_stackless)
     {
@@ -299,11 +294,6 @@ public:
           *this, base_t::get_aid(), svc, f, (link_type)type
           )
         );
-        /*boost::bind(
-          &self_t::spawn_stackless,
-          base_t::get_aid(), svc, f, (link_type)type
-          )
-        );*/
     }
     else
     {
@@ -349,10 +339,6 @@ public:
     typedef boost::chrono::system_clock clock_t;
     clock_t::time_point begin_tp = clock_t::now();
     spw_hdr_ = spawn_handler_t(*this, (link_type)type, begin_tp, sid, tmo, curr_tmo);
-      /*boost::bind(
-        &self_t::handle_remote_spawn, this, _arg1, _arg2,
-        (link_type)type, begin_tp, sid, tmo, curr_tmo
-        );*/
 
     aid_t sender;
     message msg;
