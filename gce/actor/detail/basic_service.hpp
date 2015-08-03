@@ -539,20 +539,19 @@ public:
     }
   }
 
-  void send_already_exited(aid_t recver, aid_t const& sender)
+  void send_already_exited(aid_t const& recver, aid_t const& sender)
   {
     aid_t target = filter_aid(recver);
     if (target != aid_nil)
     {
-      message m(exit);
-      std::string exit_msg("already exited");
-      m << exit_already << exit_msg;
-
       pack& pk = alloc_pack(target);
-      pk.tag_ = sender;
+      pk.tag_ = exit_t(exit_already, sender);
       pk.recver_ = recver;
       pk.skt_ = target;
-      pk.msg_ = m;
+      message& m = pk.msg_;
+      m.clear();
+      m.set_type(exit);
+      m << exit_already << "already exited";
       pk.is_err_ret_ = true;
 
       send(target, pk);
@@ -564,15 +563,14 @@ public:
     aid_t target = filter_aid(recver);
     if (target != aid_nil)
     {
-      message m(exit);
-      std::string exit_msg("already exited");
-      m << exit_already << exit_msg;
-
       pack& pk = alloc_pack(target);
       pk.tag_ = res;
       pk.recver_ = recver;
       pk.skt_ = target;
-      pk.msg_ = m;
+      message& m = pk.msg_;
+      m.clear();
+      m.set_type(exit);
+      m << exit_already << "already exited";
       pk.is_err_ret_ = true;
 
       send(target, pk);

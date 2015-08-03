@@ -81,6 +81,10 @@ private:
 
       base->match("not_catch").guard(aid1, ec).recv(i);
       GCE_VERIFY(ec);
+
+      base->recv(exit);
+      base->recv(exit);
+      base->recv(exit);
     }
     catch (std::exception& ex)
     {

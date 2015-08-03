@@ -663,7 +663,7 @@ private:
             }
 
             /// remove self from socket list
-            aid_t skt = base_t::get_aid();
+            aid_t const& skt = base_t::get_aid();
             svc_.deregister_socket(curr_pr, skt);
             ctx.deregister_socket(curr_pr, skt, actor_socket, svc_.get_index());
 

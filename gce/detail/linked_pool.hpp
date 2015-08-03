@@ -51,6 +51,9 @@ public:
     : curr_(0)
     , size_(0)
     , max_size_(max_size)
+#ifdef GCE_POOL_CHECK
+    , check_(0)
+#endif
   {
     for (size_t i=0; i<reserve_size; ++i)
     {
@@ -67,6 +70,10 @@ public:
       curr_ = curr_->next_;
       delete t;
     }
+
+#ifdef GCE_POOL_CHECK
+    GCE_ASSERT(check_ == 0);
+#endif
   }
 
 public:
@@ -82,6 +89,9 @@ public:
       curr_ = curr_->next_;
       t->next_ = 0;
       --size_;
+#ifdef GCE_POOL_CHECK
+      --check_;
+#endif
       return t;
     }
   }
@@ -92,12 +102,18 @@ public:
     if (t == 0)
     {
       t = new T;
+#ifdef GCE_POOL_CHECK
+      --check_;
+#endif
     }
     return t;
   }
 
   void free(T* t)
   {
+#ifdef GCE_POOL_CHECK
+    ++check_;
+#endif
     if (size_ >= max_size_)
     {
       delete t;
@@ -123,6 +139,9 @@ public:
     {
       back->next_ = 0;
     }
+#ifdef GCE_POOL_CHECK
+    check_ -= size;
+#endif
     return line(front, back, size);
   }
 
@@ -136,11 +155,17 @@ public:
     l.back_->next_ = curr_;
     curr_ = l.front_;
     size_ += l.size_;
+#ifdef GCE_POOL_CHECK
+    check_ += l.size_;
+#endif
   }
 
   void drop()
   {
     curr_ = 0;
+#ifdef GCE_POOL_CHECK
+    check_ -= size_;
+#endif
     size_ = 0;
   }
 
@@ -166,6 +191,10 @@ private:
   T* curr_;
   size_t size_;
   size_t const max_size_;
+
+#ifdef GCE_POOL_CHECK
+  int check_;
+#endif
 };
 }
 }

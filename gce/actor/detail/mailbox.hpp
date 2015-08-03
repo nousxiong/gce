@@ -215,32 +215,34 @@ private:
     }
     mtr = match_que->insert(match_que->end(), *rtr);
 
-    if (sender != aid_nil && type == exit)
+    if (sender != aid_nil && boost::get<exit_t>(&rcv) != 0)
     {
       if (sender.svc_ != svcid_nil)
       {
         std::pair<aid_t, match_itr> p = std::make_pair(sender, mtr);
         std::pair<svc_exit_list_t::iterator, bool> pr = 
           svc_exit_list_.insert(std::make_pair(sender.svc_, p));
-        if (!pr.second)
+        GCE_ASSERT(pr.second);
+        /*if (!pr.second)
         {
           recv_itr& rtr = *pr.first->second.second;
           recv_que_.erase_and_dispose(rtr.itr_, recv_pair_disposer(recv_pair_pool_));
           match_que->erase_and_dispose(pr.first->second.second, recv_itr_disposer(recv_itr_pool_));
           pr.first->second = p;
-        }
+        }*/
       }
       else
       {
         std::pair<exit_list_t::iterator, bool> pr = 
           exit_list_.insert(std::make_pair(sender, mtr));
-        if (!pr.second)
+        GCE_ASSERT(pr.second);
+        /*if (!pr.second)
         {
           recv_itr& rtr = *pr.first->second;
           recv_que_.erase_and_dispose(rtr.itr_, recv_pair_disposer(recv_pair_pool_));
           match_que->erase_and_dispose(pr.first->second, recv_itr_disposer(recv_itr_pool_));
           pr.first->second = mtr;
-        }
+        }*/
       }
     }
   }
