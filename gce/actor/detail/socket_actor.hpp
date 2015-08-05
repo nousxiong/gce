@@ -597,7 +597,12 @@ private:
             ctx.deregister_socket(curr_pr, skt, actor_socket, svc_.get_index());
 
             /// try reconnect
-            connect(yield);
+            ec = connect(yield);
+            if (!ec)
+            {
+              svc_.register_socket(curr_pr, skt);
+              ctx.register_socket(curr_pr, skt, actor_socket, svc_.get_index());
+            }
           }
           else
           {
