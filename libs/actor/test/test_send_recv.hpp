@@ -29,8 +29,8 @@ public:
   {
     try
     {
-      aid_t host, partner;
-      host = self->recv("prepare", partner);
+      aid_t partner;
+      self->recv("prepare", partner);
 
       int count_down;
       while (true)
@@ -44,7 +44,6 @@ public:
         --count_down;
         self->send(partner, "ping_pong", count_down);
       }
-      self->send(host);
     }
     catch (std::exception& ex)
     {
@@ -59,18 +58,16 @@ public:
       context ctx;
       threaded_actor base = spawn(ctx);
 
-      int const count_down = 10000;
-      aid_t ping = spawn(base, boost::bind(&send_recv_ut::ping_pong, _arg1));
-      aid_t pong = spawn(base, boost::bind(&send_recv_ut::ping_pong, _arg1));
+      int const count_down = 1;
+      aid_t ping = spawn(base, boost::bind(&send_recv_ut::ping_pong, _arg1), monitored);
+      aid_t pong = spawn(base, boost::bind(&send_recv_ut::ping_pong, _arg1), monitored);
 
       base->send(ping, "prepare", pong);
       base->send(pong, "prepare", ping);
 
       base->send(ping, "ping_pong", count_down);
-      for (std::size_t i=0; i<2; ++i)
-      {
-        base->recv();
-      }
+      base->recv(exit);
+      base->recv(exit);
     }
     catch (std::exception& ex)
     {

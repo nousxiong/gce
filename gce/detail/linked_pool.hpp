@@ -38,7 +38,16 @@ public:
       , back_(back)
       , size_(size)
     {
+    }
 
+    operator bool() const
+    {
+      return size_ != 0;
+    }
+
+    bool operator!() const
+    {
+      return size_ == 0;
     }
 
     T* front_;
@@ -66,34 +75,26 @@ public:
   {
     while (!empty())
     {
-      T* t = curr_;
-      curr_ = curr_->next_;
+      T* t = pop();
       delete t;
     }
 
 #ifdef GCE_POOL_CHECK
-    GCE_ASSERT(check_ == 0);
+    GCE_ASSERT(check_ == 0)(check_);
 #endif
   }
 
 public:
   T* try_get()
   {
-    if (empty())
-    {
-      return 0;
-    }
-    else
-    {
-      T* t = curr_;
-      curr_ = curr_->next_;
-      t->next_ = 0;
-      --size_;
+    T* t = pop();
 #ifdef GCE_POOL_CHECK
+    if (t != 0)
+    {
       --check_;
-#endif
-      return t;
     }
+#endif
+    return t;
   }
 
   T* get()
@@ -126,6 +127,20 @@ public:
 
   line detach(size_t count = size_nil)
   {
+    if (count == 0)
+    {
+      return line();
+    }
+
+    if (count != size_nil && count > size_)
+    {
+      size_t const diff = count - size_;
+      for (size_t i=0; i<diff; ++i)
+      {
+        add(new T);
+      }
+    }
+
     T* front = curr_;
     T* back = curr_;
     size_t size = 0;
@@ -147,7 +162,7 @@ public:
 
   void attach(line l)
   {
-    if (l.front_ == 0 || l.back_ == 0)
+    if (!l)
     {
       return;
     }
@@ -158,6 +173,12 @@ public:
 #ifdef GCE_POOL_CHECK
     check_ += l.size_;
 #endif
+
+    while (size_ > max_size_)
+    {
+      T* t = pop();
+      delete t;
+    }
   }
 
   void drop()
@@ -180,6 +201,22 @@ public:
   }
 
 private:
+  T* pop()
+  {
+    if (empty())
+    {
+      return 0;
+    }
+    else
+    {
+      T* t = curr_;
+      curr_ = curr_->next_;
+      t->next_ = 0;
+      --size_;
+      return t;
+    }
+  }
+
   void add(T* t)
   {
     t->next_ = curr_;

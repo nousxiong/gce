@@ -13,6 +13,7 @@
 #include <gce/config.hpp>
 #include <gce/integer.hpp>
 #include <gce/detail/linked_pool.hpp>
+#include <gce/detail/dynarray.hpp>
 #include <boost/container/deque.hpp>
 #include <boost/assert.hpp>
 

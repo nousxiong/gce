@@ -101,7 +101,8 @@ public:
       pk.tag_ = get_aid();
       pk.recver_ = recver;
       pk.skt_ = target;
-      pk.msg_ = m;
+      //pk.msg_ = m;
+      pk.setmsg(m);
 
       basic_svc_.send(target, pk);
     }
@@ -121,7 +122,8 @@ public:
       }
       pk.svc_ = recver;
       pk.skt_ = target;
-      pk.msg_ = m;
+      //pk.msg_ = m;
+      pk.setmsg(m);
 
       basic_svc_.send(target, pk);
     }
@@ -162,7 +164,8 @@ public:
       }
       pk.recver_ = recver;
       pk.skt_ = target;
-      pk.msg_ = m;
+      //pk.msg_ = m;
+      pk.setmsg(m);
 
       basic_svc_.send(target, pk);
     }
@@ -205,7 +208,8 @@ public:
       }
       pk.svc_ = recver;
       pk.skt_ = target;
-      pk.msg_ = m;
+      //pk.msg_ = m;
+      pk.setmsg(m);
 
       basic_svc_.send(target, pk);
     }
@@ -231,7 +235,8 @@ public:
       pk.tag_ = req;
       pk.recver_ = recver;
       pk.skt_ = target;
-      pk.msg_ = m;
+      //pk.msg_ = m;
+      pk.setmsg(m);
 
       basic_svc_.send(target, pk);
     }
@@ -259,7 +264,8 @@ public:
       }
       pk.svc_ = recver;
       pk.skt_ = target;
-      pk.msg_ = m;
+      //pk.msg_ = m;
+      pk.setmsg(m);
 
       basic_svc_.send(target, pk);
     }
@@ -293,7 +299,8 @@ public:
       }
       pk.recver_ = recver;
       pk.skt_ = target;
-      pk.msg_ = m;
+      //pk.msg_ = m;
+      pk.setmsg(m);
 
       basic_svc_.send(target, pk);
     }
@@ -326,7 +333,11 @@ public:
     pack& pk = basic_svc_.alloc_pack(skt);
     pk.tag_ = spawn_t(type, func, ctxid, stack_size, sid, get_aid());
     pk.skt_ = skt;
-    pk.msg_ = message(msg_spawn);
+    //pk.msg_ = message(msg_spawn);
+    message& msg = pk.getmsg();
+    //pk.setmsg(message(msg_spawn));
+    msg.clear();
+    msg.set_type(msg_spawn);
     pk.recver_.ctxid_ = ctxid_nil;
 
     basic_svc_.send(skt, pk);
@@ -377,7 +388,9 @@ protected:
       pk.tag_ = link_t(l.get_type(), get_aid());
       pk.recver_ = recver;
       pk.skt_ = skt;
-      pk.msg_.set_type(msg_link);
+      message& msg = pk.getmsg();
+      msg.clear();
+      msg.set_type(msg_link);
 
       svc->send(target, pk);
     }
@@ -397,7 +410,8 @@ protected:
       pk.tag_ = exit_t(ec, self_aid);
       pk.recver_ = pr.first;
       pk.skt_ = target;
-      pk.msg_ = m;
+      //pk.msg_ = m;
+      pk.setmsg(m);
 
       basic_svc_.send(target, pk);
     }
@@ -413,6 +427,10 @@ protected:
   {
     if (pk.getmsg().get_type() == msg_link)
     {
+      if (pk.pmsg_ != 0)
+      {
+        free_msg(pk.pmsg_);
+      }
       return 0;
     }
 

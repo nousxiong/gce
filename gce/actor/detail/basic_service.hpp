@@ -12,6 +12,7 @@
 
 #include <gce/actor/config.hpp>
 #include <gce/actor/actor_id.hpp>
+#include <gce/actor/detail/mailbox_fwd.hpp>
 #include <gce/actor/detail/pack.hpp>
 #include <gce/actor/detail/listener.hpp>
 #include <set>
@@ -42,9 +43,10 @@ public:
   }
 
 public:
-  virtual void on_recv_forth(self_t& sender_svc, send_pair& sp) {};
-  virtual void on_recv_back(self_t& sender_svc, send_pair& sp) {};
+  virtual void on_recv_forth(self_t& sender_svc, send_pair& sp, msg_pool_t::line&) {};
+  virtual void on_recv_back(self_t& sender_svc, send_pair& sp, msg_pool_t::line&) {};
   virtual void on_recv(pack&) {};
+  virtual void on_attach(msg_pool_t::line&) {};
   virtual void handle_tick(pack&) {};
 
   virtual pack& alloc_pack(aid_t const& target) = 0;
@@ -120,7 +122,8 @@ protected:
     pk.tag_ = from;
     pk.recver_ = to;
     pk.skt_ = to;
-    pk.msg_ = m;
+    //pk.msg_ = m;
+    pk.setmsg(m);
 
     send(to, pk);
   }
@@ -548,10 +551,10 @@ public:
       pk.tag_ = exit_t(exit_already, sender);
       pk.recver_ = recver;
       pk.skt_ = target;
-      message& m = pk.msg_;
-      m.clear();
-      m.set_type(exit);
-      m << exit_already << "already exited";
+      message& msg = pk.getmsg();
+      msg.clear();
+      msg.set_type(exit);
+      msg << exit_already << "already exited";
       pk.is_err_ret_ = true;
 
       send(target, pk);
@@ -567,10 +570,10 @@ public:
       pk.tag_ = res;
       pk.recver_ = recver;
       pk.skt_ = target;
-      message& m = pk.msg_;
-      m.clear();
-      m.set_type(exit);
-      m << exit_already << "already exited";
+      message& msg = pk.getmsg();
+      msg.clear();
+      msg.set_type(exit);
+      msg << exit_already << "already exited";
       pk.is_err_ret_ = true;
 
       send(target, pk);

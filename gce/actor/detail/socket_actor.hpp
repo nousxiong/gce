@@ -260,7 +260,8 @@ private:
     pk.skt_ = src.skt_;
     pk.svc_ = src.svc_;
     pk.is_err_ret_ = src.is_err_ret_;
-    pk.msg_ = msg;
+    //pk.msg_ = msg;
+    pk.setmsg(msg);
     svc_.send(target, pk);
   }
 
@@ -668,7 +669,12 @@ private:
             ctx.deregister_socket(curr_pr, skt, actor_socket, svc_.get_index());
 
             /// try reconnect
-            connect();
+            ec = connect();
+            if (!ec)
+            {
+              svc_.register_socket(curr_pr, skt);
+              ctx.register_socket(curr_pr, skt, actor_socket, svc_.get_index());
+            }
           }
           else
           {
@@ -970,7 +976,8 @@ private:
         pk.tag_ = exit_t(exit_neterr, des);
         pk.recver_ = target;
         pk.skt_ = pr.first;
-        pk.msg_ = m;
+        //pk.msg_ = m;
+        pk.setmsg(m);
 
         svc_.send(target, pk);
       }
@@ -986,7 +993,8 @@ private:
         pk.tag_ = fwd_exit_t(exit_neterr, des.first, self_aid);
         pk.recver_ = pr.first;
         pk.skt_ = target;
-        pk.msg_ = m;
+        //pk.msg_ = m;
+        pk.setmsg(m);
 
         svc_.send(target, pk);
       }

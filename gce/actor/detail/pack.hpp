@@ -43,27 +43,13 @@ struct pack
     clear(skt_);
     clear(svc_);
     is_err_ret_ = false;
-    if (pmsg_ != 0)
-    {
-      pmsg_ = 0;
-    }
-    else
-    {
-      msg_.clear();
-    }
+    pmsg_ != 0 ? pmsg_ = 0 : msg_.clear();
     expiry_ = false;
   }
 
   void setmsg(message const& msg)
   {
-    if (pmsg_ != 0)
-    {
-      *pmsg_ = msg;
-    }
-    else
-    {
-      msg_ = msg;
-    }
+    pmsg_ != 0 ? *pmsg_ = msg : msg_ = msg;
   }
 
   message& getmsg()

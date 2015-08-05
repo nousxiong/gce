@@ -66,6 +66,7 @@ private:
           aid = self.respond(res_list[i], msg, seconds(1));
         }
         while (aid == aid_nil);
+        GCE_VERIFY(msg.get_type() == exit)(msg.get_type());
       }
 
       tmr.expires_from_now(boost::chrono::milliseconds(1));

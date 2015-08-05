@@ -39,24 +39,30 @@ public:
         ctx.get_attributes().pack_list_reserve_size_, 
         ctx.get_attributes().pack_list_max_size_
         )
+    , msg_pool_(ctx.get_msg_pool(index))
     , lg_(ctx.get_logger())
   {
   }
 
 public:
-  void on_recv_forth(base_t& sender_svc, send_pair& sp)
+  void on_recv_forth(base_t& sender_svc, send_pair& sp, msg_pool_t::line& ml)
   {
-    base_t::snd_.post(handle_recv_way_binder<forth>(*this, sender_svc, sp));
+    base_t::snd_.post(handle_recv_way_binder<forth>(*this, sender_svc, sp, ml));
   }
 
-  void on_recv_back(base_t& sender_svc, send_pair& sp)
+  void on_recv_back(base_t& sender_svc, send_pair& sp, msg_pool_t::line& ml)
   {
-    base_t::snd_.dispatch(handle_recv_way_binder<back>(*this, sender_svc, sp));
+    base_t::snd_.dispatch(handle_recv_way_binder<back>(*this, sender_svc, sp, ml));
   }
 
   void on_recv(pack& pk)
   {
     base_t::snd_.dispatch(handle_recv_binder(*this, pk));
+  }
+
+  void on_attach(msg_pool_t::line& ml)
+  {
+    base_t::snd_.dispatch(handle_attach_binder(*this, ml));
   }
 
   void handle_tick(pack& pk)
@@ -91,6 +97,7 @@ public:
           }
         }
         pk->ai_ = ai;
+        pk->pmsg_ = msg_pool_.get();
         return *pk;
       }
       else
@@ -122,7 +129,8 @@ protected:
       send_pair sp = msgr.try_forth();
       if (sp)
       {
-        svc.on_recv_forth(*this, sp);
+        msg_pool_t::line ml;
+        svc.on_recv_forth(*this, sp, ml);
       }
     }
   }
@@ -141,10 +149,11 @@ private:
   template <typename Tag>
   struct handle_recv_way_binder
   {
-    handle_recv_way_binder(self_t& self, base_t& sender_svc, send_pair const& sp)
+    handle_recv_way_binder(self_t& self, base_t& sender_svc, send_pair const& sp, msg_pool_t::line& ml)
       : self_(self)
       , sender_svc_(sender_svc)
       , sp_(sp)
+      , ml_(ml)
     {
     }
 
@@ -156,17 +165,18 @@ private:
   private:
     void invoke(forth)
     {
-      self_.handle_recv_forth(sender_svc_, sp_);
+      self_.handle_recv_forth(sender_svc_, sp_, ml_);
     }
 
     void invoke(back)
     {
-      self_.handle_recv_back(sender_svc_, sp_);
+      self_.handle_recv_back(sender_svc_, sp_, ml_);
     }
 
     self_t& self_;
     base_t& sender_svc_;
     send_pair sp_;
+    msg_pool_t::line ml_;
   };
 
   struct handle_recv_binder
@@ -186,37 +196,69 @@ private:
     pack pk_;
   };
 
+  struct handle_attach_binder
+  {
+    handle_attach_binder(self_t& self, msg_pool_t::line& ml)
+      : self_(self)
+      , ml_(ml)
+    {
+    }
+    
+    void operator()()
+    {
+      self_.handle_attach(ml_);
+    }
+
+    self_t& self_;
+    msg_pool_t::line ml_;
+  };
+
   struct end_handle_recv_forth
   {
-    end_handle_recv_forth(self_t& self, batch_sender& bs, base_t& sender_svc, send_pair& sp)
+    end_handle_recv_forth(
+      self_t& self, 
+      batch_sender& bs, 
+      base_t& sender_svc, 
+      send_pair& sp, 
+      msg_pool_t::line& ml
+      )
       : self_(self)
       , bs_(bs)
       , sender_svc_(sender_svc)
       , sp_(sp)
+      , ml_(ml)
     {
     }
 
     void operator()() const
     {
       bs_.set_pack_list(sender_svc_.get_type(), sender_svc_.get_index(), 0);
-      sender_svc_.on_recv_back(self_, sp_);
+      sender_svc_.on_recv_back(self_, sp_, ml_);
     }
 
     self_t& self_;
     batch_sender& bs_;
     base_t& sender_svc_;
     send_pair& sp_;
+    msg_pool_t::line& ml_;
   };
 
-  void handle_recv_forth(base_t& sender_svc, send_pair& sp)
+  void handle_recv_forth(base_t& sender_svc, send_pair& sp, msg_pool_t::line& ml)
   {
+    /// attach ml first
+    msg_pool_.attach(ml);
+
+    /// check svc type and index
     actor_type svc_type = sender_svc.get_type();
     size_t svc_index = sender_svc.get_index();
     GCE_ASSERT(sp)(svc_index);
     GCE_ASSERT(bs_.get_pack_list(svc_type, svc_index) == 0)((int)svc_type)(svc_index);
 
-    scope_handler<end_handle_recv_forth> scp(end_handle_recv_forth(*this, bs_, sender_svc, sp));
+    /// give back equals num msgs
     pack_list_t* forth_list = sp.forth();
+    ml = msg_pool_.detach(forth_list->size());
+
+    scope_handler<end_handle_recv_forth> scp(end_handle_recv_forth(*this, bs_, sender_svc, sp, ml));
     bs_.set_pack_list(svc_type, svc_index, sp.back());
     //BOOST_FOREACH(pack& pk, *forth_list)
     for (size_t i=0, size=forth_list->size(); i<size; ++i)
@@ -235,11 +277,18 @@ private:
 
   struct end_handle_recv_back
   {
-    end_handle_recv_back(self_t& self, batch_sender& bs, base_t& sender_svc, send_pair& ret)
+    end_handle_recv_back(
+      self_t& self, 
+      batch_sender& bs, 
+      base_t& sender_svc, 
+      send_pair& ret, 
+      msg_pool_t::line& ml
+      )
       : self_(self)
       , bs_(bs)
       , sender_svc_(sender_svc)
       , ret_(ret)
+      , ml_(ml)
     {
     }
 
@@ -249,7 +298,11 @@ private:
       send_pair sp = msgr.on_handle_back(ret_);
       if (sp)
       {
-        sender_svc_.on_recv_forth(self_, sp);
+        sender_svc_.on_recv_forth(self_, sp, ml_);
+      }
+      else if (ml_)
+      {
+        sender_svc_.on_attach(ml_);
       }
     }
 
@@ -257,23 +310,34 @@ private:
     batch_sender& bs_;
     base_t& sender_svc_;
     send_pair& ret_;
+    msg_pool_t::line& ml_;
   };
 
-  void handle_recv_back(base_t& sender_svc, send_pair& ret)
+  void handle_recv_back(base_t& sender_svc, send_pair& ret, msg_pool_t::line& ml)
   {
+    /// attach ml first
+    msg_pool_.attach(ml);
+
+    /// check svc type and index
     actor_type svc_type = sender_svc.get_type();
     size_t svc_index = sender_svc.get_index();
     GCE_ASSERT(ret)(svc_index);
 
-    scope_handler<end_handle_recv_back> scp(end_handle_recv_back(*this, bs_, sender_svc, ret));
+    pack_list_t* back_list = ret.back();
+    ml = msg_pool_.detach(back_list->size());
+
     messager& msgr = bs_.get_messager(svc_type, svc_index);
     send_pair sp = msgr.on_back(ret);
-    if (sp)
+    bool sp_valid = sp ? true : false;
+    msg_pool_t::line ml_nil;
+    scope_handler<end_handle_recv_back> scp(
+      end_handle_recv_back(*this, bs_, sender_svc, ret, sp_valid ? ml_nil : ml)
+      );
+    if (sp_valid)
     {
-      sender_svc.on_recv_forth(*this, sp);
+      sender_svc.on_recv_forth(*this, sp, ml);
     }
 
-    pack_list_t* back_list = ret.back();
     //BOOST_FOREACH(pack& pk, *back_list)
     for (size_t i=0, size=back_list->size(); i<size; ++i)
     {
@@ -301,6 +365,11 @@ private:
     }
   }
 
+  void handle_attach(msg_pool_t::line& ml)
+  {
+    msg_pool_.attach(ml);
+  }
+
   void recv_pack(pack& pk)
   {
     if (!pk.expiry_)
@@ -315,6 +384,10 @@ private:
       else
       {
         base_t::send_already_exit(pk);
+        if (pk.pmsg_ != 0)
+        {
+          msg_pool_.free(pk.pmsg_);
+        }
       }
     }
   }
@@ -323,6 +396,7 @@ private:
   GCE_CACHE_ALIGNED_VAR(batch_sender, bs_)
 
   /// coro local vars
+  msg_pool_t& msg_pool_;
   pack pk_;
   pack const pk_nil_;
   log::logger_t& lg_;

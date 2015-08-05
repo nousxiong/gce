@@ -23,6 +23,7 @@ public:
     {
       test_queue();
       test_pool();
+      test_pool_attach();
       test_object_pool();
       if (test_count > 1) std::cout << "\r" << i;
     }
@@ -84,6 +85,35 @@ private:
       }
 
       GCE_VERIFY(pool.size() == 100)(pool.size());
+    }
+    catch (std::exception& ex)
+    {
+      std::cerr << ex.what() << std::endl; 
+    }
+  }
+
+  static void test_pool_attach()
+  {
+    try
+    {
+      typedef detail::linked_pool<elem>::line line_t;
+      detail::linked_pool<elem> pool1(50);
+      detail::linked_pool<elem> pool2(50, 50);
+
+      line_t l1 = pool2.detach(20);
+      GCE_VERIFY(pool2.size() == 50 - 20)(pool2.size());
+      pool1.attach(l1);
+      GCE_VERIFY(pool1.size() == 50 + 20)(pool1.size());
+
+      line_t l2 = pool2.detach(40);
+      GCE_VERIFY(pool2.size() == 0)(pool2.size());
+      pool1.attach(l2);
+      GCE_VERIFY(pool1.size() == 50 + 20 + 40)(pool1.size());
+
+      line_t l3 = pool1.detach(60);
+      GCE_VERIFY(pool1.size() == 50 + 20 + 40 - 60)(pool1.size());
+      pool2.attach(l3);
+      GCE_VERIFY(pool2.size() == 50)(pool2.size());
     }
     catch (std::exception& ex)
     {
