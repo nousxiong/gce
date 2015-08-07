@@ -89,19 +89,22 @@ struct yielder
     host_->resume();
   }
 
-  void operator[](errcode_t& ec)
+  yielder& operator[](errcode_t& ec)
   {
     ec_ = &ec;
+    return *this;
   }
 
-  void operator[](size_t& bytes_transferred)
+  yielder& operator[](size_t& bytes_transferred)
   {
     bytes_transferred_ = &bytes_transferred;
+    return *this;
   }
 
-  void operator[](resolver_iterator& itr)
+  yielder& operator[](resolver_iterator& itr)
   {
     itr_ = &itr;
+    return *this;
   }
 
   basic_host* host_;

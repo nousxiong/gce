@@ -446,6 +446,16 @@ protected:
     }
   }
 
+  msg_pool_t& get_msg_pool()
+  {
+    return msg_pool_;
+  }
+
+  message* alloc_msg()
+  {
+    return msg_pool_.get();
+  }
+
   void free_msg(message* msg)
   {
     msg_pool_.free(msg);

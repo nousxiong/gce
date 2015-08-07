@@ -23,7 +23,7 @@
 #include <gce/actor/detail/socket_actor.hpp>
 #include <gce/actor/detail/acceptor_actor.hpp>
 #include <gce/actor/detail/actor_function.hpp>
-#include <gce/actor/detail/mailbox_fwd.hpp>
+#include <gce/actor/detail/msg_pool.hpp>
 #include <gce/detail/dynarray.hpp>
 #include <gce/detail/unique_ptr.hpp>
 #include <gce/detail/linked_pool.hpp>

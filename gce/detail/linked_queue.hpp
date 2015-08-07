@@ -25,6 +25,7 @@ public:
   linked_queue()
     : front_(0)
     , back_(0)
+    , size_(0)
   {
   }
 
@@ -48,6 +49,7 @@ public:
         back_ = front_;
       }
       t->next_ = 0;
+      --size_;
       return t;
     }
   }
@@ -65,16 +67,33 @@ public:
       back_ = t;
     }
     t->next_ = 0;
+    ++size_;
   }
 
   bool empty() const
   {
-    return front_ == 0;
+    return size_ == 0;
+  }
+
+  size_t size() const
+  {
+    return size_;
+  }
+
+  T* front()
+  {
+    return front_;
+  }
+
+  T* back()
+  {
+    return back_;
   }
 
 private:
   T* front_;
   T* back_;
+  size_t size_;
 };
 }
 }

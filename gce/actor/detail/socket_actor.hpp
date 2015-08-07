@@ -25,6 +25,7 @@
 #include <gce/actor/detail/yielder.hpp>
 #include <gce/actor/detail/internal.hpp>
 #include <gce/actor/detail/tcp/socket.hpp>
+#include <gce/detail/linked_queue.hpp>
 #include <boost/asio/placeholders.hpp>
 #include <boost/variant/get.hpp>
 #include <boost/bind.hpp>
@@ -88,16 +89,16 @@ public:
     , curr_reconn_(0)
     , is_router_(false)
     , lg_(base_t::ctx_.get_logger())
-    , msg_hb_(msg_hb)
   {
   }
 
   ~socket_actor()
   {
+    clear_conn_cache();
   }
 
 public:
-  void init(netopt_t opt)
+  void init(netopt_t const& opt)
   {
     GCE_ASSERT(stat_ == ready)(stat_).log(lg_, "socket_actor status error");
     opt_ = opt;
@@ -557,13 +558,14 @@ private:
 
   void end_spawn_remote_actor(spawn_t spw, aid_t const& aid)
   {
-    pack pk;
+    //pack pk;
+    spw_pk_.on_free();
     spawn_error err = spawn_ok;
     if (aid == aid_nil)
     {
       err = spawn_func_not_found;
     }
-    send_spawn_ret(&spw, pk, err, aid, false);
+    send_spawn_ret(&spw, spw_pk_, err, aid, false);
   }
 
   void send_spawn_ret(
@@ -574,43 +576,46 @@ private:
     pk.skt_ = spw->get_aid();
     pk.tag_ = spawn_ret_t(err, spw->get_id(), aid);
     pk.is_err_ret_ = is_err_ret;
-    pk.msg_.set_type(msg_spawn_ret);
-    pk.msg_.push_tag(
+
+    message* msg = base_t::alloc_msg();
+    msg->set_type(msg_spawn_ret);
+    msg->push_tag(
       pk.tag_, pk.recver_, pk.svc_,
       pk.skt_, pk.is_err_ret_
       );
-    send(pk.msg_);
+    //send(pk.msg_);
+    send(msg);
   }
 
-  void send(message const& m)
+  void send(message* msg)
   {
-    GCE_ASSERT(m.shared_size() == 0)(m);
+    GCE_ASSERT(msg->shared_size() == 0)(*msg);
     if (conn_)
     {
-      GCE_ASSERT(skt_)(m);
-      while (!conn_cache_.empty())
+      GCE_ASSERT(skt_)(*msg);
+      while (message* m = conn_cache_.pop())
       {
-        message const& m = conn_cache_.front();
         send_msg(m);
-        conn_cache_.pop_front();
       }
-      send_msg(m);
+      send_msg(msg);
     }
     else
     {
-      conn_cache_.push_back(m);
+      conn_cache_.push(msg);
     }
   }
 
-  void send_msg(message const& m)
+  void send_msg(message* msg)
   {
-    GCE_ASSERT(skt_)(m);
-    skt_->send(m);
+    GCE_ASSERT(skt_)(*msg);
+    skt_->send(msg);
   }
 
   void send_msg_hb()
   {
-    send(msg_hb_);
+    message* msg = base_t::alloc_msg();
+    msg->set_type(msg_hb);
+    send(msg);
   }
 
   void send_ret(aid_t const& sire, ctxid_pair_t ctxid_pr, errcode_t& ec)
@@ -646,9 +651,10 @@ private:
           connect();
         }
 
+        message msg;
         while (stat_ == on)
         {
-          message msg;
+          msg.clear();
           errcode_t ec = recv(msg);
           if (ec)
           {
@@ -744,12 +750,13 @@ private:
       {
         stat_ = on;
         skt_ = skt;
-        skt_->init(svc_.get_strand());
+        skt_->init(svc_.get_strand(), base_t::get_msg_pool());
         start_heartbeat(boost::bind(&self_t::close, this));
 
+        message msg;
         while (stat_ == on)
         {
-          message msg;
+          msg.clear();
           errcode_t ec = recv(msg);
           if (ec)
           {
@@ -776,14 +783,16 @@ private:
 
               base_t::basic_svc_.merge_global_service_list(base_t::get_aid(), peer_glb_svc_list);
 
-              message m(msg_login_ret);
-              m << std::make_pair(
+              //message m(msg_login_ret);
+              message* m = base_t::alloc_msg();
+              m->set_type(msg_login_ret);
+              *m << std::make_pair(
                 base_t::ctxid_,
                 is_router_ ? socket_router : socket_comm
                 );
               adl::detail::global_service_list glb_svc_list;
               base_t::basic_svc_.get_global_service_list(glb_svc_list);
-              m << glb_svc_list;
+              *m << glb_svc_list;
 
               send(m);
             }
@@ -847,7 +856,7 @@ private:
           address, port
           )
         );
-      skt->init(snd);
+      skt->init(snd, base_t::get_msg_pool());
       return skt;
     }
     else
@@ -862,8 +871,9 @@ private:
 
   void handle_recv(pack& pk)
   {
-    message& msg = pk.getmsg();
-    match_t ty = msg.get_type();
+    /*message& msg = pk.getmsg();*/
+    message* msg = handle_pack(pk);
+    match_t ty = msg->get_type();
     if (ty != msg_add_svc && ty != msg_rmv_svc)
     {
       //GCE_ASSERT(!check_local(pk.recver_, base_t::ctxid_))(pk.recver_)(base_t::ctxid_);
@@ -885,16 +895,30 @@ private:
         remove_router_link(ex->get_aid(), pk.recver_);
         pk.tag_ = exit_t(ex->get_code(), ex->get_aid());
       }
-      msg.push_tag(
+      msg->push_tag(
         pk.tag_, pk.recver_, pk.svc_,
         pk.skt_, pk.is_err_ret_
         );
     }
 
     send(msg);
-    if (pk.pmsg_ != 0)
+    /*if (pk.pmsg_ != 0)
     {
       base_t::free_msg(pk.pmsg_);
+    }*/
+  }
+
+  message* handle_pack(pack& pk)
+  {
+    if (pk.pmsg_ != 0)
+    {
+      return pk.pmsg_;
+    }
+    else
+    {
+      message* msg = base_t::alloc_msg();
+      *msg = pk.msg_;
+      return msg;
     }
   }
 
@@ -957,7 +981,8 @@ private:
   void on_neterr(aid_t const& self_aid, errcode_t ec = errcode_t())
   {
     conn_ = false;
-    conn_cache_.clear();
+    //conn_cache_.clear();
+    clear_conn_cache();
     std::string errmsg("net error");
     if (ec)
     {
@@ -1014,6 +1039,14 @@ private:
       ctx.register_socket(new_pr, skt, actor_socket, svc_.get_index());
     }
     return new_pr;
+  }
+
+  void clear_conn_cache()
+  {
+    while (message* msg = conn_cache_.pop())
+    {
+      base_t::free_msg(msg);
+    }
   }
 
 private:
@@ -1362,14 +1395,16 @@ private:
 
   void send_login()
   {
-    message m(msg_login);
-    m << base_t::ctxid_;
+    //message m(msg_login);
+    message* m = base_t::alloc_msg();
+    m->set_type(msg_login);
+    *m << base_t::ctxid_;
 
     /// send self global service list to remote
     adl::detail::global_service_list glb_svc_list;
     base_t::basic_svc_.get_global_service_list(glb_svc_list);
 
-    m << glb_svc_list;
+    *m << glb_svc_list;
 
     send(m);
   }
@@ -1475,7 +1510,8 @@ private:
   header_t curr_hdr_;
 
   bool conn_;
-  std::deque<message> conn_cache_;
+  //std::deque<message> conn_cache_;
+  linked_queue<message> conn_cache_;
   size_t curr_reconn_;
 
   /// remote links
@@ -1499,7 +1535,7 @@ private:
   adl::detail::rmv_svc tmp_rmv_svc_;
 
   pack pk_;
-  message const msg_hb_;
+  pack spw_pk_;
 };
 }
 }

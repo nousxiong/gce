@@ -12,7 +12,7 @@
 
 #include <gce/actor/config.hpp>
 #include <gce/actor/actor_id.hpp>
-#include <gce/actor/detail/mailbox_fwd.hpp>
+#include <gce/actor/detail/msg_pool.hpp>
 #include <gce/actor/detail/pack.hpp>
 #include <gce/actor/detail/listener.hpp>
 #include <set>

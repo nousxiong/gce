@@ -13,6 +13,7 @@
 #include <gce/actor/config.hpp>
 #include <gce/actor/message.hpp>
 #include <gce/actor/actor_id.hpp>
+#include <gce/actor/detail/msg_pool.hpp>
 #include <gce/actor/detail/request.hpp>
 #include <gce/actor/detail/exit.hpp>
 #include <gce/detail/object_pool.hpp>
@@ -25,10 +26,6 @@ namespace gce
 namespace detail
 {
 typedef boost::variant<aid_t, request_t, exit_t> recv_t;
-///----------------------------------------------------------------------------
-/// message pool
-///----------------------------------------------------------------------------
-typedef linked_pool<message> msg_pool_t;
 ///----------------------------------------------------------------------------
 /// recv_pair
 ///----------------------------------------------------------------------------

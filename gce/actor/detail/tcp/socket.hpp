@@ -14,6 +14,7 @@
 #include <gce/actor/asio.hpp>
 #include <gce/actor/message.hpp>
 #include <gce/actor/detail/basic_socket.hpp>
+#include <gce/detail/linked_queue.hpp>
 #include <gce/detail/asio_alloc_handler.hpp>
 #include <gce/detail/bytes.hpp>
 #include <gce/integer.hpp>
@@ -41,6 +42,7 @@ class socket
 public:
   explicit socket(io_service_t& ios)
     : snd_(0)
+    , msg_pool_(0)
     , reso_(ios)
     , sock_(ios)
     , closed_(false)
@@ -53,6 +55,7 @@ public:
 
   socket(io_service_t& ios, std::string const& host, std::string const& port)
     : snd_(0)
+    , msg_pool_(0)
     , reso_(ios)
     , sock_(ios)
     , host_(host)
@@ -66,35 +69,49 @@ public:
 
   ~socket()
   {
+    if (msg_pool_ != 0)
+    {
+      while (message* m = send_que_.pop())
+      {
+        msg_pool_->free(m);
+      }
+    }
+    else
+    {
+      GCE_ASSERT(send_que_.empty());
+    }
   }
 
 public:
-  void init(strand_t& snd)
+  void init(strand_t& snd, msg_pool_t& msg_pool)
   {
     snd_ = &snd;
+    msg_pool_ = &msg_pool;
     gather_buffer_.reserve(GCE_IOV_MAX);
   }
 
-  void send(message const& m)
+  void send(message* m)
   {
     if (!waiting_end_)
     {
       GCE_ASSERT(gather_buffer_.size() <= send_que_.size());
       if (gather_buffer_.size() == send_que_.size())
       {
-        send_que_.push_back(msg_nil_);
+        //send_que_.push_back(msg_nil_);
+        send_que_.push(msg_pool_->get());
       }
 
-      header_t hdr = make_header((uint32_t)m.size(), m.get_type(), m.get_tag_offset());
-      message& msg = send_que_.back();
-      msg << hdr;
-      if (m.size() < GCE_SOCKET_BIG_MSG_SIZE)
+      header_t hdr = make_header((uint32_t)m->size(), m->get_type(), m->get_tag_offset());
+      message* msg = send_que_.back();
+      *msg << hdr;
+      if (m->size() < GCE_SOCKET_BIG_MSG_SIZE)
       {
-        msg << message::chunk(m.data(), m.size());
+        *msg << message::chunk(m->data(), m->size());
+        msg_pool_->free(m);
       }
       else
       {
-        send_que_.push_back(m);
+        send_que_.push(m);
       }
 
       if (!is_sending())
@@ -107,8 +124,7 @@ public:
   size_t recv(byte_t* buf, size_t size, yielder ylder)
   {
     size_t len = 0;
-    ylder[len];
-    sock_.async_read_some(boost::asio::buffer(buf, size), ylder);
+    sock_.async_read_some(boost::asio::buffer(buf, size), ylder[len]);
     ylder.yield();
     return len;
   }
@@ -122,8 +138,7 @@ public:
     close_socket();
     boost::asio::ip::tcp::resolver::query query(host_, port_);
     boost::asio::ip::tcp::resolver::iterator itr;
-    ylder[itr];
-    reso_.async_resolve(query, ylder);
+    reso_.async_resolve(query, ylder[itr]);
     ylder.yield();
     if (ylder.ec_ && *ylder.ec_)
     {
@@ -148,9 +163,8 @@ public:
     if (is_sending())
     {
       errcode_t ec;
-      ylder[ec];
       sync_.expires_from_now(to_chrono(infin));
-      sync_.async_wait(ylder);
+      sync_.async_wait(ylder[ec]);
       ylder.yield();
     }
   }
@@ -179,10 +193,12 @@ private:
 
   void begin_send()
   {
-    for (size_t i=0, size=(std::min)((size_t)GCE_IOV_MAX, send_que_.size()); i<size; ++i)
+    message* itr = send_que_.front();
+    for (size_t i=0, size=(std::min)((size_t)GCE_IOV_MAX, send_que_.size()); i<size; ++i, itr=itr->next_)
     {
-      message const& msg = send_que_[i];
-      gather_buffer_.push_back(boost::asio::buffer(msg.data(), msg.size()));
+      //message const& msg = send_que_[i];
+      GCE_ASSERT(itr != 0)(i);
+      gather_buffer_.push_back(boost::asio::buffer(itr->data(), itr->size()));
     }
     strand_t& snd = *snd_;
 
@@ -205,7 +221,10 @@ private:
   {
     for (size_t i=0, size=gather_buffer_.size(); i<size; ++i)
     {
-      send_que_.pop_front();
+      //send_que_.pop_front();
+      message* msg = send_que_.pop();
+      GCE_ASSERT(msg != 0)(i);
+      msg_pool_->free(msg);
     }
     gather_buffer_.clear();
 
@@ -229,6 +248,7 @@ private:
 
 private:
   strand_t* snd_;
+  msg_pool_t* msg_pool_;
   boost::asio::ip::tcp::resolver reso_;
   boost::asio::ip::tcp::socket sock_;
   std::string const host_;
@@ -237,9 +257,10 @@ private:
   bool closed_;
   bool reconn_;
 
-  std::deque<message> send_que_;
+  //std::deque<message> send_que_;
+  linked_queue<message> send_que_;
   std::vector<boost::asio::const_buffer> gather_buffer_;
-  message const msg_nil_;
+  //message const msg_nil_;
 
   timer_t sync_;
   bool waiting_end_;
