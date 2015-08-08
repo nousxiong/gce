@@ -40,6 +40,33 @@ inline aid_t make_stackful_actor(
 }
 
 template <typename Context>
+struct make_stackful_actor_binder
+{
+  make_stackful_actor_binder(
+    aid_t const& sire, typename Context::stackful_service_t& svc,
+    actor_func<stackful, Context> const& f, size_t stack_size, link_type type
+    )
+    : sire_(sire)
+    , svc_(svc)
+    , f_(f)
+    , stack_size_(stack_size)
+    , type_(type)
+  {
+  }
+
+  void operator()() const
+  {
+    make_stackful_actor<Context>(sire_, svc_, f_, stack_size_, type_);
+  }
+
+  aid_t const sire_;
+  typename Context::stackful_service_t& svc_;
+  actor_func<stackful, Context> const f_;
+  size_t stack_size_;
+  link_type type_;
+};
+
+template <typename Context>
 inline aid_t make_stackless_actor(
   aid_t const& sire, typename Context::stackless_service_t& svc,
   actor_func<stackless, Context> const& f, link_type type
@@ -56,6 +83,31 @@ inline aid_t make_stackless_actor(
   a->start();
   return aid;
 }
+
+template <typename Context>
+struct make_stackless_actor_binder
+{
+  make_stackless_actor_binder(
+    aid_t const& sire, typename Context::stackless_service_t& svc,
+    actor_func<stackless, Context> const& f, link_type type
+    )
+    : sire_(sire)
+    , svc_(svc)
+    , f_(f)
+    , type_(type)
+  {
+  }
+
+  void operator()() const
+  {
+    make_stackless_actor<Context>(sire_, svc_, f_, type_);
+  }
+
+  aid_t const sire_;
+  typename Context::stackless_service_t& svc_;
+  actor_func<stackless, Context> const f_;
+  link_type type_;
+};
 
 template <typename Service, typename ActorRef>
 inline Service& select_service(ActorRef sire, bool sync_sire)
@@ -127,10 +179,10 @@ inline aid_t spawn(
 
   service_t& svc = select_service<service_t>(sire, sync_sire);
   svc.get_strand().post(
-    boost::bind(
-      &make_stackful_actor<context_t>,
-      sire.get_aid(), boost::ref(svc),
-      make_actor_func<stackful, context_t>(f), stack_size, type
+    make_stackful_actor_binder<context_t>(
+      sire.get_aid(), svc,
+      make_actor_func<stackful, context_t>(f), 
+      stack_size, type
       )
     );
   return end_spawn(sire, type);
@@ -149,9 +201,8 @@ inline aid_t spawn(
 
   service_t& svc = select_service<service_t>(sire, sync_sire);
   svc.get_strand().post(
-    boost::bind(
-      &make_stackless_actor<context_t>,
-      sire.get_aid(), boost::ref(svc),
+    make_stackless_actor_binder<context_t>(
+      sire.get_aid(), svc,
       make_actor_func<stackless, context_t>(f), type
       )
     );
@@ -159,6 +210,30 @@ inline aid_t spawn(
 }
 
 #ifdef GCE_LUA
+template <typename Service>
+struct spawn_actor_binder
+{
+  spawn_actor_binder(
+    Service* svc, std::string const& script, 
+    aid_t const& sire, link_type type
+    )
+    : svc_(svc)
+    , script_(script)
+    , sire_(sire)
+    , type_(type)
+  {
+  }
+
+  void operator()() const
+  {
+    svc_->spawn_actor(script_, sire_, type_);
+  }
+
+  Service* svc_;
+  std::string const script_;
+  aid_t const sire_;
+  link_type type_;
+};
 /// spawn lua_actor using NONE stackless_actor
 template <typename ActorRef>
 inline aid_t spawn(
@@ -172,10 +247,7 @@ inline aid_t spawn(
 
   service_t& svc = select_service<service_t>(sire, sync_sire);
   svc.get_strand().post(
-    boost::bind(
-    &service_t::spawn_actor, &svc,
-      script, sire.get_aid(), type
-      )
+    spawn_actor_binder<service_t>(&svc, script, sire.get_aid(), type)
     );
   return end_spawn(sire, type);
 }
@@ -196,11 +268,15 @@ inline void spawn(
   //typedef boost::function<void (actor_ref<stackless, context_t>, aid_t)> spawn_handler_t;
 
   svc.get_strand().post(
-    boost::bind(
+    make_stackless_actor_binder<context_t>(
+      sire.get_aid(), svc,
+      make_actor_func<stackless, context_t>(f), type
+      )
+    /*boost::bind(
       &make_stackless_actor<context_t>,
       sire.get_aid(), boost::ref(svc),
       make_actor_func<stackless, context_t>(f), type
-      )
+      )*/
     );
 
   pattern patt;
@@ -232,10 +308,7 @@ inline void spawn(
   //typedef boost::function<void (actor_ref<stackless, context_t>, aid_t)> spawn_handler_t;
 
   svc.get_strand().post(
-    boost::bind(
-    &service_t::spawn_actor, &svc,
-      script, sire.get_aid(), type
-      )
+    spawn_actor_binder<service_t>(&svc, script, sire.get_aid(), type)
     );
 
   pattern patt;

@@ -290,9 +290,7 @@ public:
 
     boost::asio::spawn(
       base_t::snd_,
-      boost::bind(
-        &self_t::run, this, _arg1
-        ),
+      run_binder(*this),
       boost::coroutines::attributes(stack_size)
       );
 
@@ -315,11 +313,7 @@ public:
 
   void on_addon_recv(pack& pk)
   {
-    base_t::snd_.dispatch(
-      boost::bind(
-        &self_t::handle_recv, this, pk
-        )
-      );
+    base_t::snd_.dispatch(handle_recv_binder(*this, pk));
   }
 
   sid_t spawn(spawn_type type, std::string const& func, match_t ctxid, size_t stack_size)
@@ -330,7 +324,39 @@ public:
   }
 
 private:
-  void run(yield_t yld)
+  struct handle_recv_binder
+  {
+    handle_recv_binder(self_t& self, pack const& pk)
+      : self_(self)
+      , pk_(pk)
+    {
+    }
+
+    void operator()()
+    {
+      self_.handle_recv(pk_);
+    }
+
+    self_t& self_;
+    pack pk_;
+  };
+
+  struct run_binder
+  {
+    explicit run_binder(self_t& self)
+      : self_(self)
+    {
+    }
+
+    void operator()(yield_t yld) const
+    {
+      self_.run(yld);
+    }
+
+    self_t& self_;
+  };
+
+  void run(yield_t& yld)
   {
     yld_ = boost::in_place(yld);
 
@@ -361,7 +387,7 @@ private:
 
   void resume(actor_code ac = actor_normal)
   {
-    scope scp(boost::bind(&self_t::free_self, this));
+    scope_handler<free_self_binder> scp(free_self_binder(*this));
     GCE_ASSERT(yld_cb_);
     yld_cb_(ac);
 
@@ -372,12 +398,27 @@ private:
     }
   }
 
+  struct free_self_binder
+  {
+    explicit free_self_binder(self_t& self)
+      : self_(self)
+    {
+    }
+
+    void operator()() const
+    {
+      self_.free_self();
+    }
+
+    self_t& self_;
+  };
+
   actor_code yield()
   {
     GCE_ASSERT(yld_);
     async_result_init_t init(BOOST_ASIO_MOVE_CAST(yield_t)(*yld_));
 
-    yld_cb_ = boost::bind<void>(init.handler, _arg1);
+    yld_cb_ = init.handler;
     return init.result.get();
   }
 
@@ -394,12 +435,29 @@ private:
     ctx.on_tick(svc_id);
   }
 
+  struct resume_binder
+  {
+    resume_binder(self_t& self, actor_code ac)
+      : self_(self)
+      , ac_(ac)
+    {
+    }
+
+    void operator()() const
+    {
+      self_.resume(ac_);
+    }
+
+    self_t& self_;
+    actor_code ac_;
+  };
+
   void stop(exit_code_t ec, std::string exit_msg)
   {
     if (ec == exit_normal)
     {
       /// Trigger a context switching, ensure we stop coro using self_t::resume.
-      base_t::snd_.post(boost::bind(&self_t::resume, this, actor_normal));
+      base_t::snd_.post(resume_binder(*this, actor_normal));
       yield();
     }
 
@@ -413,15 +471,29 @@ private:
     }
   }
 
+  struct handle_recv_timeout_binder
+  {
+    handle_recv_timeout_binder(self_t& self, size_t tmr_sid)
+      : self_(self)
+      , tmr_sid_(tmr_sid)
+    {
+    }
+
+    void operator()(errcode_t const& ec) const
+    {
+      self_.handle_recv_timeout(ec, tmr_sid_);
+    }
+
+    self_t& self_;
+    size_t tmr_sid_;
+  };
+
   void start_timer(duration_t dur)
   {
     tmr_.expires_from_now(to_chrono(dur));
     tmr_.async_wait(
       base_t::snd_.wrap(
-        boost::bind(
-          &self_t::handle_recv_timeout, this,
-          boost::asio::placeholders::error, ++tmr_sid_
-          )
+        handle_recv_timeout_binder(*this, ++tmr_sid_)
         )
       );
   }

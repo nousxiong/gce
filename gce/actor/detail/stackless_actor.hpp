@@ -408,7 +408,8 @@ private:
     }
 
     base_t::snd_.post(
-      boost::bind<void>(f, boost::ref(aref_), sender_, msg_)
+      recv_handler_binder<RecvHandler>(f, aref_, sender_, msg_)
+      //boost::bind<void>(f, boost::ref(aref_), sender_, msg_)
       );
   }
 
@@ -449,9 +450,37 @@ private:
     }
 
     base_t::snd_.post(
-      boost::bind<void>(f, boost::ref(aref_), sender, msg_)
+      recv_handler_binder<RecvHandler>(f, aref_, sender, msg_)
+      //boost::bind<void>(f, boost::ref(aref_), sender, msg_)
       );
   }
+
+  template <typename RecvHandler>
+  struct recv_handler_binder
+  {
+    recv_handler_binder(
+      RecvHandler const& h, 
+      self_ref_t& aref, 
+      aid_t const& sender, 
+      message const& msg
+      )
+      : h_(h)
+      , aref_(aref)
+      , sender_(sender)
+      , msg_(msg)
+    {
+    }
+
+    void operator()()
+    {
+      h_(aref_, sender_, msg_);
+    }
+
+    RecvHandler h_;
+    self_ref_t& aref_;
+    aid_t sender_;
+    message msg_;
+  };
 
 public:
   void init(func_t const& f)
@@ -507,7 +536,7 @@ public:
     return coro_;
   }
 
-  void spawn_handler(aid_t sender, link_type lty, aid_t& osender)
+  void spawn_handler(aid_t const& sender, link_type lty, aid_t& osender)
   {
     if (sender != aid_nil)
     {

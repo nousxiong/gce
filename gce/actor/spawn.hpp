@@ -219,6 +219,23 @@ inline aid_t spawn_remote(
 ///------------------------------------------------------------------------------
 /// Spawn a actor on remote context using stackless_actor
 ///------------------------------------------------------------------------------
+struct spawn_handler_binder
+{
+  spawn_handler_binder(context::stackless_actor_t* a, aid_t& aid)
+    : a_(a)
+    , aid_(aid)
+  {
+  }
+
+  void operator()(aid_t const& sender, link_type lty) const
+  {
+    a_->spawn_handler(sender, lty, aid_);
+  }
+
+  context::stackless_actor_t* a_;
+  aid_t& aid_;
+};
+
 template <typename Match>
 inline void spawn_remote(
   stackless_actor sire, std::string const& func, aid_t& aid,
@@ -233,10 +250,7 @@ inline void spawn_remote(
   stackless_actor_t& a = sire.get_actor();
   detail::spawn_remote(
     stackful(), sire, func, 
-    boost::bind(
-      &stackless_actor_t::spawn_handler, &a, 
-      _arg1, _arg2, boost::ref(aid)
-      ), 
+    spawn_handler_binder(&a, aid), 
     to_match(ctxid), type, stack_size, tmo
     );
 }
