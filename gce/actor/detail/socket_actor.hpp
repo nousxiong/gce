@@ -417,9 +417,8 @@ private:
             {
               stackful_service_t& svc = ctx.select_service<stackful_service_t>();
               svc.get_strand().post(
-                boost::bind(
-                  &self_t::spawn_remote_stackful_actor, this,
-                  boost::ref(svc), *spw, itr->second
+                spawn_remote_stackful_actor_binder(
+                  *this, svc, *spw, itr->second
                   )
                 );
             }
@@ -427,9 +426,8 @@ private:
             {
               stackless_service_t& svc = ctx.select_service<stackless_service_t>();
               svc.get_strand().post(
-                boost::bind(
-                  &self_t::spawn_remote_stackless_actor, this,
-                  boost::ref(svc), *spw, itr->second
+                spawn_remote_stackless_actor_binder(
+                  *this, svc, *spw, itr->second
                   )
                 );
             }
@@ -443,9 +441,8 @@ private:
             context_t& ctx = svc_.get_context();
             lua_service_t& svc = ctx.select_service<lua_service_t>();
             svc.get_strand().post(
-              boost::bind(
-                &self_t::spawn_remote_lua_actor, this,
-                boost::ref(svc), *spw, spw->get_func()
+              spawn_remote_lua_actor_binder(
+                *this, svc, *spw, spw->get_func()
                 )
               );
           }
@@ -516,6 +513,77 @@ private:
     }
   }
 
+  struct spawn_remote_stackless_actor_binder
+  {
+    spawn_remote_stackless_actor_binder(
+      self_t& self, 
+      typename context_t::stackless_service_t& svc, 
+      spawn_t spw, 
+      remote_func<context_t> const& f
+      )
+      : self_(self)
+      , svc_(svc)
+      , spw_(spw)
+      , f_(f)
+    {
+    }
+
+    void operator()() const
+    {
+      self_.spawn_remote_stackless_actor(svc_, spw_, f_);
+    }
+
+    self_t& self_;
+    typename context_t::stackless_service_t& svc_;
+    spawn_t const spw_;
+    remote_func<context_t> const f_;
+  };
+
+  struct spawn_remote_stackful_actor_binder
+  {
+    spawn_remote_stackful_actor_binder(
+      self_t& self,
+      typename context_t::stackful_service_t& svc, 
+      spawn_t spw, 
+      remote_func<context_t> const& f
+      )
+      : self_(self)
+      , svc_(svc)
+      , spw_(spw)
+      , f_(f)
+    {
+    }
+
+    void operator()() const
+    {
+      self_.spawn_remote_stackful_actor(svc_, spw_, f_);
+    }
+
+    self_t& self_;
+    typename context_t::stackful_service_t& svc_;
+    spawn_t const spw_;
+    remote_func<context_t> const f_;
+  };
+
+  struct end_spawn_remote_actor_binder
+  {
+    end_spawn_remote_actor_binder(self_t& self, spawn_t spw, aid_t const& aid)
+      : self_(self)
+      , spw_(spw)
+      , aid_(aid)
+    {
+    }
+
+    void operator()() const
+    {
+      self_.end_spawn_remote_actor(spw_, aid_);
+    }
+
+    self_t& self_;
+    spawn_t const spw_;
+    aid_t const aid_;
+  };
+
   void spawn_remote_stackful_actor(
     typename context_t::stackful_service_t& svc, spawn_t spw, remote_func<context_t> f
     )
@@ -523,11 +591,7 @@ private:
     spawn_type type = spw.get_type();
     GCE_ASSERT(type == spw_stackful)(type);
     aid_t aid = make_stackful_actor<context_t>(aid_nil, svc, f.af_, spw.get_stack_size(), no_link);
-    base_t::snd_.post(
-      boost::bind(
-        &self_t::end_spawn_remote_actor, this, spw, aid
-        )
-      );
+    base_t::snd_.post(end_spawn_remote_actor_binder(*this, spw, aid));
   }
 
   void spawn_remote_stackless_actor(
@@ -537,22 +601,40 @@ private:
     spawn_type type = spw.get_type();
     GCE_ASSERT(type == spw_stackless)(type);
     aid_t aid = make_stackless_actor<context_t>(aid_nil, svc, f.ef_, no_link);
-    base_t::snd_.post(
-      boost::bind(
-        &self_t::end_spawn_remote_actor, this, spw, aid
-        )
-      );
+    base_t::snd_.post(end_spawn_remote_actor_binder(*this, spw, aid));
   }
 
 #ifdef GCE_LUA
+  struct spawn_remote_lua_actor_binder
+  {
+    spawn_remote_lua_actor_binder(
+      self_t& self, 
+      lua_service_t& svc, 
+      spawn_t spw, 
+      std::string const& script
+      )
+      : self_(self)
+      , svc_(svc)
+      , spw_(spw)
+      , script_(script)
+    {
+    }
+
+    void operator()() const
+    {
+      self_.spawn_remote_lua_actor(svc_, spw_, script_);
+    }
+
+    self_t& self_;
+    lua_service_t& svc_;
+    spawn_t const spw_;
+    std::string const script_;
+  };
+
   void spawn_remote_lua_actor(lua_service_t& svc, spawn_t spw, std::string const& script)
   {
     aid_t aid = svc.spawn_actor(script, aid_nil, no_link);
-    base_t::snd_.post(
-      boost::bind(
-        &self_t::end_spawn_remote_actor, this, spw, aid
-        )
-      );
+    base_t::snd_.post(end_spawn_remote_actor_binder(*this, spw, aid));
   }
 #endif
 
@@ -611,12 +693,53 @@ private:
     skt_->send(msg);
   }
 
+  struct send_msg_hb_binder
+  {
+    explicit send_msg_hb_binder(self_t& self)
+      : self_(self)
+    {
+    }
+
+    void operator()() const
+    {
+      self_.send_msg_hb();
+    }
+
+    self_t& self_;
+  };
+
   void send_msg_hb()
   {
     message* msg = base_t::alloc_msg();
     msg->set_type(msg_hb);
     send(msg);
   }
+
+  struct send_ret_binder
+  {
+    send_ret_binder(
+      self_t& self, 
+      aid_t const& sire, 
+      ctxid_pair_t const& ctxid_pr, 
+      errcode_t& ec
+      )
+      : self_(self)
+      , sire_(sire)
+      , ctxid_pr_(ctxid_pr)
+      , ec_(ec)
+    {
+    }
+
+    void operator()() const
+    {
+      self_.send_ret(sire_, ctxid_pr_, ec_);
+    }
+
+    self_t& self_;
+    aid_t const& sire_;
+    ctxid_pair_t const& ctxid_pr_;
+    errcode_t& ec_;
+  };
 
   void send_ret(aid_t const& sire, ctxid_pair_t ctxid_pr, errcode_t& ec)
   {
@@ -641,7 +764,7 @@ private:
         stat_ = on;
         {
           errcode_t ec;
-          scope scp(boost::bind(&self_t::send_ret, this, sire, target, boost::ref(ec)));
+          scope_handler<send_ret_binder> scp(send_ret_binder(*this, sire, target, ec));
           skt_ = make_socket(ep);
           ec = connect(true);
         }
@@ -731,6 +854,21 @@ private:
     quit(curr_pr, exc, exit_msg);
   }
 
+  struct close_binder
+  {
+    explicit close_binder(self_t& self)
+      : self_(self)
+    {
+    }
+
+    void operator()() const
+    {
+      self_.close();
+    }
+
+    self_t& self_;
+  };
+
   void run(socket_ptr skt, yield_t yld)
   {
     yld_ = boost::in_place(yld);
@@ -751,7 +889,7 @@ private:
         stat_ = on;
         skt_ = skt;
         skt_->init(svc_.get_strand(), base_t::get_msg_pool());
-        start_heartbeat(boost::bind(&self_t::close, this));
+        start_heartbeat(close_binder(*this));
 
         message msg;
         while (stat_ == on)
@@ -1301,6 +1439,21 @@ private:
     return true;
   }
 
+  struct reconn_binder
+  {
+    explicit reconn_binder(self_t& self)
+      : self_(self)
+    {
+    }
+
+    void operator()() const
+    {
+      self_.reconn();
+    }
+
+    self_t& self_;
+  };
+
   errcode_t connect(bool init = false)
   {
     errcode_t ec;
@@ -1355,7 +1508,7 @@ private:
       GCE_VERIFY(!ec)(ec.value()).msg(ec.message().c_str());
 
       conn_ = true;
-      start_heartbeat(boost::bind(&self_t::reconn, this));
+      start_heartbeat(reconn_binder(*this));
 
       send_login();
     }
@@ -1427,11 +1580,11 @@ private:
   }
 
   template <typename F>
-  void start_heartbeat(F f)
+  void start_heartbeat(F const& f)
   {
     hb_.init(
       opt_.heartbeat_period, (size_t)opt_.heartbeat_count,
-      f, boost::bind(&self_t::send_msg_hb, this)
+      f, send_msg_hb_binder(*this)
       );
     hb_.start();
   }

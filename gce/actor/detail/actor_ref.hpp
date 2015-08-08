@@ -468,7 +468,7 @@ public:
   void resume() { base_t::a_->run(); }
   void sync_resume() 
   {
-    base_t::a_->get_strand().dispatch(boost::bind(&stackless_actor_t::run, base_t::a_));
+    base_t::a_->get_strand().dispatch(run_binder(base_t::a_));
   }
 
   context_t& get_context()
@@ -480,6 +480,22 @@ public:
   {
     return base_t::a_->get_service();
   }
+
+private:
+  struct run_binder
+  {
+    explicit run_binder(stackless_actor_t* a)
+      : a_(a)
+    {
+    }
+
+    void operator()() const
+    {
+      a_->run();
+    }
+
+    stackless_actor_t* a_;
+  };
 };
 
 ///------------------------------------------------------------------------------

@@ -178,14 +178,14 @@ struct actor_wrap<ActorRef, false>
     return pr.first;
   }
 
-  aid_t respond(resp_t res, duration_t tmo = infin)
+  aid_t respond(resp_t const& res, duration_t tmo = infin)
   {
     message msg;
     return respond_impl(typename actor_ref_t::type(), base_t::get_actor_ref(), res, msg, tmo).first;
   }
 
   template <typename A1>
-  aid_t respond(resp_t res, A1& a1, duration_t tmo = infin)
+  aid_t respond(resp_t const& res, A1& a1, duration_t tmo = infin)
   {
     message msg;
     std::pair<aid_t, bool> pr = respond_impl(typename actor_ref_t::type(), base_t::get_actor_ref(), res, msg, tmo);
@@ -197,7 +197,7 @@ struct actor_wrap<ActorRef, false>
   }
 
   template <typename A1, typename A2>
-  aid_t respond(resp_t res, A1& a1, A2& a2, duration_t tmo = infin)
+  aid_t respond(resp_t const& res, A1& a1, A2& a2, duration_t tmo = infin)
   {
     message msg;
     std::pair<aid_t, bool> pr = respond_impl(typename actor_ref_t::type(), base_t::get_actor_ref(), res, msg, tmo);
@@ -209,7 +209,7 @@ struct actor_wrap<ActorRef, false>
   }
 
   template <typename A1, typename A2, typename A3>
-  aid_t respond(resp_t res, A1& a1, A2& a2, A3& a3, duration_t tmo = infin)
+  aid_t respond(resp_t const& res, A1& a1, A2& a2, A3& a3, duration_t tmo = infin)
   {
     message msg;
     std::pair<aid_t, bool> pr = respond_impl(typename actor_ref_t::type(), base_t::get_actor_ref(), res, msg, tmo);
@@ -221,7 +221,7 @@ struct actor_wrap<ActorRef, false>
   }
 
   template <typename A1, typename A2, typename A3, typename A4>
-  aid_t respond(resp_t res, A1& a1, A2& a2, A3& a3, A4& a4, duration_t tmo = infin)
+  aid_t respond(resp_t const& res, A1& a1, A2& a2, A3& a3, A4& a4, duration_t tmo = infin)
   {
     message msg;
     std::pair<aid_t, bool> pr = respond_impl(typename actor_ref_t::type(), base_t::get_actor_ref(), res, msg, tmo);
@@ -233,7 +233,7 @@ struct actor_wrap<ActorRef, false>
   }
 
   template <typename A1, typename A2, typename A3, typename A4, typename A5>
-  aid_t respond(resp_t res, A1& a1, A2& a2, A3& a3, A4& a4, A5& a5, duration_t tmo = infin)
+  aid_t respond(resp_t const& res, A1& a1, A2& a2, A3& a3, A4& a4, A5& a5, duration_t tmo = infin)
   {
     message msg;
     std::pair<aid_t, bool> pr = respond_impl(typename actor_ref_t::type(), base_t::get_actor_ref(), res, msg, tmo);
@@ -331,7 +331,7 @@ struct actor_wrap<ActorRef, false>
     return rcv_;
   }
 
-  receiver_t& match(resp_t res)
+  receiver_t& match(resp_t const& res)
   {
     rcv_.set_response(res);
     return rcv_;
@@ -486,10 +486,11 @@ private:
   {
     actor_ref_t& a = base_t::get_actor_ref();
     a.recv(
-      boost::bind(
+      handle_recv1<A1>(sender, pr, a1),
+      /*boost::bind(
         &handle_recv1<actor_ref_t, A1>, _arg1, _arg2, _arg3,
         boost::ref(sender), pr, boost::ref(a1)
-        ),
+        ),*/
       patt
       );
   }
@@ -517,10 +518,11 @@ private:
   {
     actor_ref_t& a = base_t::get_actor_ref();
     a.recv(
-      boost::bind(
+      handle_recv2<A1, A2>(sender, pr, a1, a2),
+      /*boost::bind(
         &handle_recv2<actor_ref_t, A1, A2>, _arg1, _arg2, _arg3,
         boost::ref(sender), pr, boost::ref(a1), boost::ref(a2)
-        ),
+        ),*/
       patt
       );
   }
@@ -548,11 +550,12 @@ private:
   {
     actor_ref_t& a = base_t::get_actor_ref();
     a.recv(
-      boost::bind(
+      handle_recv3<A1, A2, A3>(sender, pr, a1, a2, a3),
+      /*boost::bind(
         &handle_recv3<actor_ref_t, A1, A2, A3>, _arg1, _arg2, _arg3,
         boost::ref(sender), pr, boost::ref(a1), boost::ref(a2), 
         boost::ref(a3)
-        ),
+        ),*/
       patt
       );
   }
@@ -580,11 +583,12 @@ private:
   {
     actor_ref_t& a = base_t::get_actor_ref();
     a.recv(
-      boost::bind(
+      handle_recv4<A1, A2, A3, A4>(sender, pr, a1, a2, a3, a4),
+      /*boost::bind(
         &handle_recv4<actor_ref_t, A1, A2, A3, A4>, _arg1, _arg2, _arg3,
         boost::ref(sender), pr, boost::ref(a1), boost::ref(a2), 
         boost::ref(a3), boost::ref(a4)
-        ),
+        ),*/
       patt
       );
   }
@@ -612,93 +616,100 @@ private:
   {
     actor_ref_t& a = base_t::get_actor_ref();
     a.recv(
-      boost::bind(
+      handle_recv5<A1, A2, A3, A4, A5>(sender, pr, a1, a2, a3, a4, a5),
+      /*boost::bind(
         &handle_recv5<actor_ref_t, A1, A2, A3, A4, A5>, _arg1, _arg2, _arg3,
         boost::ref(sender), pr, boost::ref(a1), boost::ref(a2), 
         boost::ref(a3), boost::ref(a4), boost::ref(a5)
-        ),
+        ),*/
       patt
       );
   }
 
 public:
-  void respond(resp_t res, aid_t& sender, duration_t tmo = infin)
+  void respond(resp_t const& res, aid_t& sender, duration_t tmo = infin)
   {
     pattern patt(tmo);
     actor_ref_t& a = base_t::get_actor_ref();
     a->respond(
-      boost::bind(
+      handle_respond0(sender, recv_meta()), 
+      /*boost::bind(
         &handle_respond0<actor_ref_t>, _arg1, _arg2, _arg3,
         boost::ref(sender), recv_meta()
-        ),
+        ),*/
       res, tmo
       );
   }
 
   template <typename A1>
-  void respond(resp_t res, aid_t& sender, A1& a1, duration_t tmo = infin)
+  void respond(resp_t const& res, aid_t& sender, A1& a1, duration_t tmo = infin)
   {
     actor_ref_t& a = base_t::get_actor_ref();
     a->respond(
-      boost::bind(
+      handle_respond1<A1>(sender, recv_meta(), a1), 
+      /*boost::bind(
         &handle_respond1<actor_ref_t, A1>, _arg1, _arg2, _arg3,
         boost::ref(sender), recv_meta(), boost::ref(a1)
-        ),
+        ),*/
       res, tmo
       );
   }
 
   template <typename A1, typename A2>
-  void respond(resp_t res, aid_t& sender, A1& a1, A2& a2, duration_t tmo = infin)
+  void respond(resp_t const& res, aid_t& sender, A1& a1, A2& a2, duration_t tmo = infin)
   {
     actor_ref_t& a = base_t::get_actor_ref();
     a->respond(
-      boost::bind(
+      handle_respond2<A1, A2>(sender, recv_meta(), a1, a2), 
+      /*boost::bind(
         &handle_respond2<actor_ref_t, A1, A2>, _arg1, _arg2, _arg3,
         boost::ref(sender), recv_meta(), boost::ref(a1), boost::ref(a2)
-        ),
+        ),*/
       res, tmo
       );
   }
 
   template <typename A1, typename A2, typename A3>
-  void respond(resp_t res, aid_t& sender, A1& a1, A2& a2, A3& a3, duration_t tmo = infin)
+  void respond(resp_t const& res, aid_t& sender, A1& a1, A2& a2, A3& a3, duration_t tmo = infin)
   {
     actor_ref_t& a = base_t::get_actor_ref();
     a->respond(
-      boost::bind(
+      handle_respond3<A1, A2, A3>(sender, recv_meta(), a1, a2, a3), 
+      /*boost::bind(
         &handle_respond3<actor_ref_t, A1, A2, A3>, _arg1, _arg2, _arg3,
         boost::ref(sender), recv_meta(), boost::ref(a1), boost::ref(a2),
         boost::ref(a3)
-        ),
+        ),*/
       res, tmo
       );
   }
 
   template <typename A1, typename A2, typename A3, typename A4>
-  void respond(resp_t res, aid_t& sender, A1& a1, A2& a2, A3& a3, A4& a4, duration_t tmo = infin)
+  void respond(resp_t const& res, aid_t& sender, A1& a1, A2& a2, A3& a3, A4& a4, duration_t tmo = infin)
   {
     actor_ref_t& a = base_t::get_actor_ref();
     a->respond(
-      boost::bind(
+      handle_respond4<A1, A2, A3, A4>(sender, recv_meta(), a1, a2, a3, a4), 
+      /*boost::bind(
         &handle_respond4<actor_ref_t, A1, A2, A3, A4>, _arg1, _arg2, _arg3,
         boost::ref(sender), recv_meta(), boost::ref(a1), boost::ref(a2),
         boost::ref(a3), boost::ref(a4)
-        ),
+        ),*/
       res, tmo
       );
   }
 
   template <typename A1, typename A2, typename A3, typename A4, typename A5>
-  void respond(resp_t res, aid_t& sender, A1& a1, A2& a2, A3& a3, A4& a4, A5& a5, duration_t tmo = infin)
+  void respond(resp_t const& res, aid_t& sender, A1& a1, A2& a2, A3& a3, A4& a4, A5& a5, duration_t tmo = infin)
   {
     actor_ref_t& a = base_t::get_actor_ref();
     a->respond(
-      boost::bind(
+      handle_respond5<A1, A2, A3, A4, A5>(sender, recv_meta(), a1, a2, a3, a4, a5), 
+      /*boost::bind(
         &handle_respond5<actor_ref_t, A1, A2, A3, A4, A5>, _arg1, _arg2, _arg3,
         boost::ref(sender), recv_meta(), boost::ref(a1), boost::ref(a2),
         boost::ref(a3), boost::ref(a4), boost::ref(a5)
-        ),
+        ),*/
       res, tmo
       );
   }

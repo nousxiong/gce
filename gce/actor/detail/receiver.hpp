@@ -447,10 +447,11 @@ struct receiver<ActorRef, true>
     std::pair<recv_meta, bool> pr = pri_recv(patt);
     actor_ref_t& a = base_t::get_actor_ref();
     a.recv(
-      boost::bind(
+      handle_recv0(sender, pr), 
+      /*boost::bind(
         &handle_recv0<actor_ref_t>, _arg1, _arg2, _arg3,
         boost::ref(sender), pr
-        ),
+        ),*/
       patt
       );
   }
@@ -462,10 +463,11 @@ struct receiver<ActorRef, true>
     std::pair<recv_meta, bool> pr = pri_recv(patt);
     actor_ref_t& a = base_t::get_actor_ref();
     a.recv(
-      boost::bind(
+      handle_recv1<A1>(sender, pr, a1), 
+      /*boost::bind(
         &handle_recv1<actor_ref_t, A1>, _arg1, _arg2, _arg3,
         boost::ref(sender), pr, boost::ref(a1)
-        ),
+        ),*/
       patt
       );
   }
@@ -477,10 +479,11 @@ struct receiver<ActorRef, true>
     std::pair<recv_meta, bool> pr = pri_recv(patt);
     actor_ref_t& a = base_t::get_actor_ref();
     a.recv(
-      boost::bind(
+      handle_recv2<A1, A2>(sender, pr, a1, a2), 
+      /*boost::bind(
         &handle_recv2<actor_ref_t, A1, A2>, _arg1, _arg2, _arg3,
         boost::ref(sender), pr, boost::ref(a1), boost::ref(a2)
-        ),
+        ),*/
       patt
       );
   }
@@ -492,11 +495,12 @@ struct receiver<ActorRef, true>
     std::pair<recv_meta, bool> pr = pri_recv(patt);
     actor_ref_t& a = base_t::get_actor_ref();
     a.recv(
-      boost::bind(
+      handle_recv3<A1, A2, A3>(sender, pr, a1, a2, a3), 
+      /*boost::bind(
         &handle_recv3<actor_ref_t, A1, A2, A3>, _arg1, _arg2, _arg3,
         boost::ref(sender), pr, boost::ref(a1), boost::ref(a2),
         boost::ref(a3)
-        ),
+        ),*/
       patt
       );
   }
@@ -508,11 +512,12 @@ struct receiver<ActorRef, true>
     std::pair<recv_meta, bool> pr = pri_recv(patt);
     actor_ref_t& a = base_t::get_actor_ref();
     a.recv(
-      boost::bind(
+      handle_recv4<A1, A2, A3, A4>(sender, pr, a1, a2, a3, a4), 
+      /*boost::bind(
         &handle_recv4<actor_ref_t, A1, A2, A3, A4>, _arg1, _arg2, _arg3,
         boost::ref(sender), pr, boost::ref(a1), boost::ref(a2),
         boost::ref(a3), boost::ref(a4)
-        ),
+        ),*/
       patt
       );
   }
@@ -524,11 +529,12 @@ struct receiver<ActorRef, true>
     std::pair<recv_meta, bool> pr = pri_recv(patt);
     actor_ref_t& a = base_t::get_actor_ref();
     a.recv(
-      boost::bind(
+      handle_recv5<A1, A2, A3, A4, A5>(sender, pr, a1, a2, a3, a4, a5), 
+      /*boost::bind(
         &handle_recv5<actor_ref_t, A1, A2, A3, A4, A5>, _arg1, _arg2, _arg3,
         boost::ref(sender), pr, boost::ref(a1), boost::ref(a2),
         boost::ref(a3), boost::ref(a4), boost::ref(a5)
-        ),
+        ),*/
       patt
       );
   }
@@ -540,10 +546,11 @@ struct receiver<ActorRef, true>
     recv_meta meta = pri_respond();
     actor_ref_t& a = base_t::get_actor_ref();
     a.respond(
-      boost::bind(
+      handle_respond0(sender, meta), 
+      /*boost::bind(
         &handle_respond0<actor_ref_t>, _arg1, _arg2, _arg3,
         boost::ref(sender), meta
-        ),
+        ),*/
       res, tmo
       );
   }
@@ -556,10 +563,11 @@ struct receiver<ActorRef, true>
     recv_meta meta = pri_respond();
     actor_ref_t& a = base_t::get_actor_ref();
     a.respond(
-      boost::bind(
+      handle_respond1<A1>(sender, meta, a1), 
+      /*boost::bind(
         &handle_respond1<actor_ref_t, A1>, _arg1, _arg2, _arg3,
         boost::ref(sender), meta, boost::ref(a1)
-        ),
+        ),*/
       res, tmo
       );
   }
@@ -572,10 +580,11 @@ struct receiver<ActorRef, true>
     recv_meta meta = pri_respond();
     actor_ref_t& a = base_t::get_actor_ref();
     a.respond(
-      boost::bind(
+      handle_respond2<A1, A2>(sender, meta, a1, a2), 
+      /*boost::bind(
         &handle_respond2<actor_ref_t, A1, A2>, _arg1, _arg2, _arg3,
         boost::ref(sender), meta, boost::ref(a1), boost::ref(a2)
-        ),
+        ),*/
       res, tmo
       );
   }
@@ -588,11 +597,12 @@ struct receiver<ActorRef, true>
     recv_meta meta = pri_respond();
     actor_ref_t& a = base_t::get_actor_ref();
     a.respond(
-      boost::bind(
+      handle_respond3<A1, A2, A3>(sender, meta, a1, a2, a3), 
+      /*boost::bind(
         &handle_respond3<actor_ref_t, A1, A2, A3>, _arg1, _arg2, _arg3,
         boost::ref(sender), meta, boost::ref(a1), boost::ref(a2), 
         boost::ref(a3)
-        ),
+        ),*/
       res, tmo
       );
   }
@@ -605,11 +615,12 @@ struct receiver<ActorRef, true>
     recv_meta meta = pri_respond();
     actor_ref_t& a = base_t::get_actor_ref();
     a.respond(
-      boost::bind(
+      handle_respond4<A1, A2, A3, A4>(sender, meta, a1, a2, a3, a4), 
+      /*boost::bind(
         &handle_respond4<actor_ref_t, A1, A2, A3, A4>, _arg1, _arg2, _arg3,
         boost::ref(sender), meta, boost::ref(a1), boost::ref(a2), 
         boost::ref(a3), boost::ref(a4)
-        ),
+        ),*/
       res, tmo
       );
   }
@@ -622,11 +633,12 @@ struct receiver<ActorRef, true>
     recv_meta meta = pri_respond();
     actor_ref_t& a = base_t::get_actor_ref();
     a.respond(
-      boost::bind(
+      handle_respond5<A1, A2, A3, A4, A5>(sender, meta, a1, a2, a3, a4, a5), 
+      /*boost::bind(
         &handle_respond5<actor_ref_t, A1, A2, A3, A4, A5>, _arg1, _arg2, _arg3,
         boost::ref(sender), meta, boost::ref(a1), boost::ref(a2), 
         boost::ref(a3), boost::ref(a4), boost::ref(a5)
-        ),
+        ),*/
       res, tmo
       );
   }

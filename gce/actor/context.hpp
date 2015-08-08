@@ -647,75 +647,151 @@ private:
     svc.get_strand().post(boost::bind(&Service::stop, &svc));
   }
 
+  struct tag_reg {};
+  struct tag_dereg {};
+  struct tag_add {};
+  struct tag_rmv {};
+
+  template <typename Tag, typename Service>
+  struct service_binder
+  {
+    service_binder(Service& s, match_t const& name, aid_t const& svc)
+      : s_(s)
+      , name_(name)
+      , svc_(svc)
+    {
+    }
+
+    service_binder(Service& s, match_t const& name, ctxid_t const& ctxid)
+      : s_(s)
+      , name_(name)
+      , ctxid_(ctxid)
+    {
+    }
+
+    void operator()() const
+    {
+      invoke(Tag());
+    }
+
+  private:
+    void invoke(tag_reg) const
+    {
+      s_.register_service(name_, svc_);
+    }
+
+    void invoke(tag_dereg) const
+    {
+      s_.deregister_service(name_, svc_);
+    }
+
+    void invoke(tag_add) const
+    {
+      s_.add_service(name_, ctxid_);
+    }
+
+    void invoke(tag_rmv) const
+    {
+      s_.rmv_service(name_, ctxid_);
+    }
+    
+    Service& s_;
+    match_t name_;
+    aid_t svc_;
+    ctxid_t ctxid_;
+  };
+
   template <typename Service>
   void register_service(match_t name, aid_t const& svc, Service& s)
   {
-    s.get_strand().dispatch(
-      boost::bind(
-        &Service::register_service, &s, name, svc
-        )
-      );
+    s.get_strand().dispatch(service_binder<tag_reg, Service>(s, name, svc));
   }
 
   template <typename Service>
   void deregister_service(match_t name, aid_t const& svc, Service& s)
   {
-    s.get_strand().dispatch(
-      boost::bind(
-        &Service::deregister_service, &s, name, svc
-        )
-      );
+    s.get_strand().dispatch(service_binder<tag_dereg, Service>(s, name, svc));
   }
 
   template <typename Service>
   void add_service(match_t name, ctxid_t ctxid, Service& s)
   {
-    s.get_strand().dispatch(
-      boost::bind(
-        &Service::add_service, &s, name, ctxid
-        )
-      );
+    s.get_strand().dispatch(service_binder<tag_add, Service>(s, name, ctxid));
   }
 
   template <typename Service>
   void rmv_service(match_t name, ctxid_t ctxid, Service& s)
   {
-    s.get_strand().dispatch(
-      boost::bind(
-        &Service::rmv_service, &s, name, ctxid
-        )
-      );
+    s.get_strand().dispatch(service_binder<tag_rmv, Service>(s, name, ctxid));
   }
+
+  template <typename Tag, typename Service>
+  struct socket_binder
+  {
+    socket_binder(Service& s, detail::ctxid_pair_t const& ctxid_pr, aid_t const& skt)
+      : s_(s)
+      , ctxid_pr_(ctxid_pr)
+      , skt_(skt)
+    {
+    }
+
+    void operator()() const
+    {
+      invoke(Tag());
+    }
+
+  private:
+    void invoke(tag_reg) const
+    {
+      s_.register_socket(ctxid_pr_, skt_);
+    }
+
+    void invoke(tag_dereg) const
+    {
+      s_.deregister_socket(ctxid_pr_, skt_);
+    }
+    
+    Service& s_;
+    detail::ctxid_pair_t ctxid_pr_;
+    aid_t skt_;
+  };
 
   template <typename Service>
   void register_socket(detail::ctxid_pair_t ctxid_pr, aid_t const& skt, Service& s)
   {
-    s.get_strand().dispatch(
-      boost::bind(
-        &Service::register_socket, &s, ctxid_pr, skt
-        )
-      );
+    s.get_strand().dispatch(socket_binder<tag_reg, Service>(s, ctxid_pr, skt));
   }
 
   template <typename Service>
   void deregister_socket(detail::ctxid_pair_t ctxid_pr, aid_t const& skt, Service& s)
   {
-    s.get_strand().dispatch(
-      boost::bind(
-        &Service::deregister_socket, &s, ctxid_pr, skt
-        )
-      );
+    s.get_strand().dispatch(socket_binder<tag_dereg, Service>(s, ctxid_pr, skt));
   }
 
 #ifdef GCE_LUA
+  struct lua_script_binder
+  {
+    lua_script_binder(lua_service_t& s, std::string const& name, std::string const& script)
+      : s_(s)
+      , name_(name)
+      , script_(script)
+    {
+    }
+
+    void operator()() const
+    {
+      s_.set_script(name_, script_);
+    }
+
+    lua_service_t& s_;
+    std::string name_;
+    std::string script_;
+  };
+
   void register_script(luaed, std::string const& name, std::string const& script, size_t i)
   {
     lua_service_t& s = lua_service_list_[i];
-    s.get_strand().dispatch(
-      boost::bind(
-        &lua_service_t::set_script, &s, name, script
-        )
-      );
+    s.get_strand().dispatch(lua_script_binder(s, name, script));
   }
 #endif
 

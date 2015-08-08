@@ -238,11 +238,54 @@ private:
     gce::detail::send(*this, sire, msg_new_bind);
   }
 
+  struct send_ret_binder
+  {
+    send_ret_binder(self_t& self, aid_t const& sire)
+      : self_(self)
+      , sire_(sire)
+    {
+    }
+
+    void operator()() const
+    {
+      self_.send_ret(sire_);
+    }
+
+    self_t& self_;
+    aid_t const& sire_;
+  };
+
   void bind(std::string const& ep)
   {
     make_acceptor(ep);
     acpr_->bind();
   }
+
+  struct spawn_socket_binder
+  {
+    spawn_socket_binder(
+      self_t& self, 
+      socket_service_t& svc, 
+      remote_func_list_t const& remote_func_list, 
+      socket_ptr prot
+      )
+      : self_(self)
+      , svc_(svc)
+      , remote_func_list_(remote_func_list)
+      , prot_(prot)
+    {
+    }
+
+    void operator()() const
+    {
+      self_.spawn_socket(svc_, remote_func_list_, prot_);
+    }
+
+    self_t& self_;
+    socket_service_t& svc_;
+    remote_func_list_t const remote_func_list_;
+    socket_ptr prot_;
+  };
 
   void run(aid_t const& sire, std::string const& ep, yield_t yld)
   {
@@ -258,7 +301,7 @@ private:
       {
         stat_ = on;
         {
-          scope scp(boost::bind(&self_t::send_ret, this, sire));
+          scope scp(send_ret_binder(*this, sire));
           bind(ep);
         }
 
@@ -319,12 +362,7 @@ private:
 
           socket_service_t& svc = 
             base_t::ctx_.select_service<socket_service_t>();
-          svc.get_strand().post(
-            boost::bind(
-              &self_t::spawn_socket, this, 
-              boost::ref(svc), remote_func_list_, prot
-              )
-            );
+          svc.get_strand().post(spawn_socket_binder(*this, svc, remote_func_list_, prot));
         }
       }
       catch (std::exception& ex)

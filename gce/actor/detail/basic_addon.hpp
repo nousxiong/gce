@@ -38,9 +38,24 @@ public:
     typedef guard<T, Attachment> self_t;
     typedef Attachment attachment_t;
 
+    struct free_binder
+    {
+      explicit free_binder(self_t& self)
+        : self_(self)
+      {
+      }
+
+      void operator()() const
+      {
+        self_.free();
+      }
+
+      self_t& self_;
+    };
+
   public:
     explicit guard(T* p)
-      : ref_count(boost::bind(&self_t::free, this))
+      : ref_count(free_binder(*this))
       , p_(p)
     {
       GCE_ASSERT(p_ != 0);

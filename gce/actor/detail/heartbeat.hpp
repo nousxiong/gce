@@ -42,10 +42,10 @@ public:
   }
 
 public:
-  template <typename F>
+  template <typename F, typename T>
   void init(
     gce::duration_t period, size_t max_count, 
-    F f, F t = timeout_func_t()
+    F f, T t = timeout_func_t()
     )
   {
     clear();
@@ -103,18 +103,26 @@ public:
   }
 
 private:
+  struct handle_timeout_binder
+  {
+    explicit handle_timeout_binder(heartbeat& hb)
+      : hb_(hb)
+    {
+    }
+
+    void operator()(errcode_t const& ec) const
+    {
+      hb_.handle_timeout(ec);
+    }
+
+    heartbeat& hb_;
+  };
+
   void start_timer()
   {
     ++waiting_;
     tmr_.expires_from_now(gce::to_chrono(period_));
-    tmr_.async_wait(
-      snd_.wrap(
-        boost::bind(
-          &heartbeat::handle_timeout, this,
-          boost::asio::placeholders::error
-          )
-        )
-      );
+    tmr_.async_wait(snd_.wrap(handle_timeout_binder(*this)));
   }
 
   void handle_timeout(errcode_t const& errc)

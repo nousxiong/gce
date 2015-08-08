@@ -208,14 +208,30 @@ private:
       snd.wrap(
         make_asio_alloc_handler(
           ha_,
-          boost::bind(
+          end_send_binder(*this)
+          /*boost::bind(
             &socket::end_send, this,
             boost::asio::placeholders::error
-            )
+            )*/
           )
         )
       );
   }
+
+  struct end_send_binder
+  {
+    explicit end_send_binder(socket& skt)
+      : skt_(skt)
+    {
+    }
+
+    void operator()(errcode_t const& ec, size_t) const
+    {
+      skt_.end_send(ec);
+    }
+
+    socket& skt_;
+  };
 
   void end_send(errcode_t const& errc)
   {

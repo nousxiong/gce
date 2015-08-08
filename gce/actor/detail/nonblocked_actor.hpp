@@ -347,6 +347,21 @@ private:
     }
   }
 
+  struct release_pack_binder
+  {
+    explicit release_pack_binder(self_t& self)
+      : self_(self)
+    {
+    }
+
+    void operator()() const
+    {
+      self_.release_pack();
+    }
+
+    self_t& self_;
+  };
+
   void move_pack()
   {
     BOOST_FOREACH(pack_list_t& pack_list, gc_)
@@ -355,7 +370,7 @@ private:
       pack_list.resize(base_t::ctx_.get_concurrency_size(), 0);
     }
 
-    scope scp(boost::bind(&nonblocked_actor::release_pack, this));
+    scope scp(release_pack_binder(*this));
     pack* pk = 0;
     while (pack_queue_.pop(pk))
     {

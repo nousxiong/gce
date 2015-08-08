@@ -47,7 +47,7 @@ private:
   {
     try
     {
-      std::size_t root_num = 1;
+      std::size_t root_num = 10;
       attributes attrs;
       attrs.id_ = atom("router");
       attrs.thread_num_ = 1;
