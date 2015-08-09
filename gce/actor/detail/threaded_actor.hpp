@@ -65,81 +65,47 @@ public:
 public:
   void send(aid_t const& recver, message const& m)
   {
-    base_t::snd_.post(
-      boost::bind(
-        &base_t::pri_send, this, recver, m
-        )
-      );
+    base_t::snd_.post(send_binder<aid_t>(*this, recver, m));
   }
 
   void send(svcid_t const& recver, message const& m)
   {
-    base_t::snd_.post(
-      boost::bind(
-        &base_t::pri_send_svc, this, recver, m
-        )
-      );
+    base_t::snd_.post(send_binder<svcid_t>(*this, recver, m));
   }
 
   template <typename Recver>
   void send(Recver recver, message const& m)
   {
-    base_t::snd_.post(
-      boost::bind(
-        &base_t::pri_send_svcs, this, to_match(recver), m
-        )
-      );
+    base_t::snd_.post(send_binder<match_t>(*this, to_match(recver), m));
   }
 
   void relay(aid_t const& des, message& m)
   {
-    base_t::snd_.post(
-      boost::bind(
-        &base_t::pri_relay, this, des, m
-        )
-      );
+    base_t::snd_.post(relay_binder<aid_t>(*this, des, m));
   }
 
   void relay(svcid_t const& des, message& m)
   {
-    base_t::snd_.post(
-      boost::bind(
-        &base_t::pri_relay_svc, this, des, m
-        )
-      );
+    base_t::snd_.post(relay_binder<svcid_t>(*this, des, m));
   }
 
   template <typename Recver>
   void relay(Recver des, message const& m)
   {
-    base_t::snd_.post(
-      boost::bind(
-        &base_t::pri_relay_svcs, this, to_match(des), m
-        )
-      );
+    base_t::snd_.post(relay_binder<match_t>(*this, to_match(des), m));
   }
 
   resp_t request(aid_t const& recver, message const& m)
   {
     resp_t res(base_t::new_request(), base_t::get_aid(), recver);
-    base_t::snd_.post(
-      boost::bind(
-        &base_t::pri_request, this,
-        res, recver, m
-        )
-      );
+    base_t::snd_.post(request_binder<aid_t>(*this, res, recver, m));
     return res;
   }
 
   resp_t request(svcid_t const& recver, message const& m)
   {
     resp_t res(base_t::new_request(), base_t::get_aid(), recver);
-    base_t::snd_.post(
-      boost::bind(
-        &base_t::pri_request_svc, this,
-        res, recver, m
-        )
-      );
+    base_t::snd_.post(request_binder<svcid_t>(*this, res, recver, m));
     return res;
   }
 
@@ -147,40 +113,23 @@ public:
   resp_t request(Recver recver, message const& m)
   {
     resp_t res(base_t::new_request(), base_t::get_aid());
-    base_t::snd_.post(
-      boost::bind(
-        &base_t::pri_request_svcs, this,
-        res, to_match(recver), m
-        )
-      );
+    base_t::snd_.post(request_binder<match_t>(*this, res, to_match(recver), m));
     return res;
   }
 
   void reply(aid_t const& recver, message const& m)
   {
-    base_t::snd_.post(
-      boost::bind(
-        &base_t::pri_reply, this, recver, m
-        )
-      );
+    base_t::snd_.post(reply_binder(*this, recver, m));
   }
 
   void link(aid_t const& target)
   {
-    base_t::snd_.post(
-      boost::bind(
-        &base_t::pri_link, this, target
-        )
-      );
+    base_t::snd_.post(link_binder(*this, target));
   }
 
   void monitor(aid_t const& target)
   {
-    base_t::snd_.post(
-      boost::bind(
-        &base_t::pri_monitor, this, target
-        )
-      );
+    base_t::snd_.post(monitor_binder(*this, target));
   }
 
   aid_t recv(message& msg, pattern const& patt = pattern())
@@ -188,12 +137,7 @@ public:
     recv_promise_t p;
     recv_future_t f = p.get_future();
 
-    base_t::snd_.post(
-      boost::bind(
-        &self_t::try_recv, this,
-        boost::ref(p), boost::ref(msg), boost::cref(patt)
-        )
-      );
+    base_t::snd_.post(try_recv_binder(*this, p, msg, patt));
 
     aid_t sender;
     recv_optional_t opt = f.get();
@@ -227,12 +171,7 @@ public:
     res_promise_t p;
     res_future_t f = p.get_future();
 
-    base_t::snd_.post(
-      boost::bind(
-        &self_t::try_response, this,
-        boost::ref(p), boost::ref(msg), res, tmo
-        )
-      );
+    base_t::snd_.post(try_response_binder(*this, p, msg, res, tmo));
 
     aid_t sender;
     res_optional_t opt = f.get();
@@ -276,31 +215,18 @@ public:
 
   void on_recv(pack& pk)
   {
-    base_t::snd_.dispatch(
-      boost::bind(
-        &self_t::handle_recv, this, pk
-        )
-      );
+    base_t::snd_.dispatch(handle_recv_binder(*this, pk));
   }
 
   void on_addon_recv(pack& pk)
   {
-    base_t::snd_.dispatch(
-      boost::bind(
-        &self_t::handle_recv, this, pk
-        )
-      );
+    base_t::snd_.dispatch(handle_recv_binder(*this, pk));
   }
 
   sid_t spawn(spawn_type type, std::string const& func, match_t ctxid, size_t stack_size)
   {
     sid_t sid = base_t::new_request();
-    base_t::snd_.post(
-      boost::bind(
-        &base_t::pri_spawn, this,
-        sid, type, func, ctxid, stack_size
-        )
-      );
+    base_t::snd_.post(spawn_binder(*this, sid, type, func, ctxid, stack_size));
     return sid;
   }
 
@@ -311,6 +237,262 @@ private:
   typedef boost::promise<res_optional_t> res_promise_t;
   typedef boost::unique_future<recv_optional_t> recv_future_t;
   typedef boost::unique_future<res_optional_t> res_future_t;
+
+  template <typename Recver>
+  struct send_binder
+  {
+    send_binder(base_t& self, Recver const& recver, message const& m)
+      : self_(self)
+      , recver_(recver)
+      , m_(m)
+    {
+    }
+
+    void operator()() const
+    {
+      invoke(recver_);
+    }
+
+  private:
+    void invoke(aid_t const& recver) const
+    {
+      self_.pri_send(recver, m_);
+    }
+
+    void invoke(svcid_t const& recver) const
+    {
+      self_.pri_send_svc(recver, m_);
+    }
+
+    void invoke(match_t const& recver) const
+    {
+      self_.pri_send_svcs(recver, m_);
+    }
+
+    base_t& self_;
+    Recver const recver_;
+    message const m_;
+  };
+
+  template <typename Recver>
+  struct relay_binder
+  {
+    relay_binder(base_t& self, Recver const& des, message const& m)
+      : self_(self)
+      , des_(des)
+      , m_(m)
+    {
+    }
+
+    void operator()() const
+    {
+      invoke(des_);
+    }
+
+  private:
+    void invoke(aid_t const& des) const
+    {
+      self_.pri_relay(des, m_);
+    }
+
+    void invoke(svcid_t const& des) const
+    {
+      self_.pri_relay_svc(des, m_);
+    }
+
+    void invoke(match_t const& des) const
+    {
+      self_.pri_relay_svcs(des, m_);
+    }
+
+    base_t& self_;
+    Recver const des_;
+    message const m_;
+  };
+
+  template <typename Recver>
+  struct request_binder
+  {
+    request_binder(base_t& self, resp_t const& res, Recver const& recver, message const& m)
+      : self_(self)
+      , res_(res)
+      , recver_(recver)
+      , m_(m)
+    {
+    }
+
+    void operator()() const
+    {
+      invoke(recver_);
+    }
+
+  private:
+    void invoke(aid_t const& recver) const
+    {
+      self_.pri_request(res_, recver, m_);
+    }
+
+    void invoke(svcid_t const& recver) const
+    {
+      self_.pri_request_svc(res_, recver, m_);
+    }
+
+    void invoke(match_t const& recver) const
+    {
+      self_.pri_request_svcs(res_, recver, m_);
+    }
+
+    base_t& self_;
+    resp_t const res_;
+    Recver const recver_;
+    message const m_;
+  };
+
+  struct reply_binder
+  {
+    reply_binder(base_t& self, aid_t const& recver, message const& m)
+      : self_(self)
+      , recver_(recver)
+      , m_(m)
+    {
+    }
+
+    void operator()() const
+    {
+      self_.pri_reply(recver_, m_);
+    }
+
+    base_t& self_;
+    aid_t const recver_;
+    message const m_;
+  };
+
+  struct link_binder
+  {
+    link_binder(base_t& self, aid_t const& target)
+      : self_(self)
+      , target_(target)
+    {
+    }
+
+    void operator()() const
+    {
+      self_.pri_link(target_);
+    }
+
+    base_t& self_;
+    aid_t const target_;
+  };
+
+  struct monitor_binder
+  {
+    monitor_binder(base_t& self, aid_t const& target)
+      : self_(self)
+      , target_(target)
+    {
+    }
+
+    void operator()() const
+    {
+      self_.pri_monitor(target_);
+    }
+
+    base_t& self_;
+    aid_t const target_;
+  };
+
+  struct try_recv_binder
+  {
+    try_recv_binder(self_t& self, recv_promise_t& p, message& msg, pattern const& patt)
+      : self_(self)
+      , p_(p)
+      , msg_(msg)
+      , patt_(patt)
+    {
+    }
+
+    void operator()() const
+    {
+      self_.try_recv(p_, msg_, patt_);
+    }
+
+    self_t& self_;
+    recv_promise_t& p_;
+    message& msg_;
+    pattern const& patt_;
+  };
+
+  struct try_response_binder
+  {
+    try_response_binder(self_t& self, res_promise_t& p, message& msg, resp_t const& res, duration_t tmo)
+      : self_(self)
+      , p_(p)
+      , msg_(msg)
+      , res_(res)
+      , tmo_(tmo)
+    {
+    }
+
+    void operator()() const
+    {
+      self_.try_response(p_, msg_, res_, tmo_);
+    }
+
+    self_t& self_;
+    res_promise_t& p_;
+    message& msg_;
+    resp_t const res_;
+    duration_t tmo_;
+  };
+
+  struct handle_recv_binder
+  {
+    handle_recv_binder(self_t& self, pack const& pk)
+      : self_(self)
+      , pk_(pk)
+    {
+    }
+
+    void operator()()
+    {
+      self_.handle_recv(pk_);
+    }
+
+    self_t& self_;
+    pack pk_;
+  };
+
+  struct spawn_binder
+  {
+    spawn_binder(
+      base_t& self, 
+      sid_t const sid, 
+      spawn_type const type, 
+      std::string const& func, 
+      match_t const& ctxid, 
+      size_t const stack_size
+      )
+      : self_(self)
+      , sid_(sid)
+      , type_(type)
+      , func_(func)
+      , ctxid_(ctxid)
+      , stack_size_(stack_size)
+    {
+    }
+
+    void operator()() const
+    {
+      self_.pri_spawn(sid_, type_, func_, ctxid_, stack_size_);
+    }
+
+    base_t& self_;
+    sid_t const sid_;
+    spawn_type const type_;
+    std::string const func_;
+    match_t const ctxid_;
+    size_t const stack_size_;
+  };
 
   void try_recv(recv_promise_t& p, message& msg, pattern const& patt)
   {
@@ -366,15 +548,43 @@ private:
     p.set_value(res);
   }
 
+  template <typename Promise>
+  struct handle_timeout_binder
+  {
+    handle_timeout_binder(self_t& self, Promise& p, size_t const tmr_sid)
+      : self_(self)
+      , p_(p)
+      , tmr_sid_(tmr_sid)
+    {
+    }
+
+    void operator()(errcode_t const& ec) const
+    {
+      invoke(ec, p_);
+    }
+
+  private:
+    void invoke(errcode_t const& ec, recv_promise_t& p) const
+    {
+      self_.handle_recv_timeout(ec, p, tmr_sid_);
+    }
+
+    void invoke(errcode_t const& ec, res_promise_t& p) const
+    {
+      self_.handle_res_timeout(ec, p, tmr_sid_);
+    }
+
+    self_t& self_;
+    Promise& p_;
+    size_t const tmr_sid_;
+  };
+
   void start_timer(duration_t dur, recv_promise_t& p)
   {
     tmr_.expires_from_now(to_chrono(dur));
     tmr_.async_wait(
       base_t::snd_.wrap(
-        boost::bind(
-          &self_t::handle_recv_timeout, this,
-          boost::asio::placeholders::error, boost::ref(p), ++tmr_sid_
-          )
+        handle_timeout_binder<recv_promise_t>(*this, p, ++tmr_sid_)
         )
       );
   }
@@ -384,10 +594,7 @@ private:
     tmr_.expires_from_now(to_chrono(dur));
     tmr_.async_wait(
       base_t::snd_.wrap(
-        boost::bind(
-          &self_t::handle_res_timeout, this,
-          boost::asio::placeholders::error, boost::ref(p), ++tmr_sid_
-          )
+        handle_timeout_binder<res_promise_t>(*this, p, ++tmr_sid_)
         )
       );
   }
