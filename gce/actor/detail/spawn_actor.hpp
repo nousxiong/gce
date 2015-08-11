@@ -282,7 +282,7 @@ inline void spawn(
   pattern patt;
   patt.add_match(detail::msg_new_actor);
   sire.recv(
-    stackless_actor_t::recv_binder(a, type, aid), 
+    typename stackless_actor_t::recv_binder(a, type, aid), 
     //boost::bind(
     //  &handle_spawn<context_t>, _arg1, _arg2, _arg3,
     //  type, boost::ref(aid)/*spawn_handler_t(h)*/
@@ -314,7 +314,7 @@ inline void spawn(
   pattern patt;
   patt.add_match(detail::msg_new_actor);
   sire.recv(
-    stackless_actor_t::recv_binder(a, type, aid), 
+    typename stackless_actor_t::recv_binder(a, type, aid), 
     //boost::bind(
     //  &handle_spawn<context_t>, _arg1, _arg2, _arg3,
     //  type, boost::ref(aid)/*spawn_handler_t(h)*/

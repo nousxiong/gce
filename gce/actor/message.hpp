@@ -746,9 +746,9 @@ public:
       GCE_ASSERT(false);
     }
 
-    recver == aid_nil ? *this << (byte_t)1 : *this << (byte_t)0 << recver;
-    svc == svcid_nil ? *this << (byte_t)1 : *this << (byte_t)0 << svc;
-    skt == aid_nil ? *this << (byte_t)1 : *this << (byte_t)0 << skt;
+    if (recver == aid_nil) *this << (byte_t)1; else *this << (byte_t)0 << recver;
+    if (svc == svcid_nil) *this << (byte_t)1; else *this << (byte_t)0 << svc;
+    if (skt == aid_nil) *this << (byte_t)1; else *this << (byte_t)0 << skt;
     *this << is_err_ret;
   }
 
@@ -828,11 +828,11 @@ public:
 
       byte_t is_nil = 0;
       *this >> is_nil;
-      is_nil == 0 ? *this >> recver : gce::clear(recver);
+      if (is_nil == 0) *this >> recver; else gce::clear(recver);
       *this >> is_nil;
-      is_nil == 0 ? *this >> svc : gce::clear(svc);
+      if (is_nil == 0) *this >> svc; else gce::clear(svc);
       *this >> is_nil;
-      is_nil == 0 ? *this >> skt : gce::clear(skt);
+      if (is_nil == 0) *this >> skt; else gce::clear(skt);
       *this >> is_err_ret;
 
       buf.clear();

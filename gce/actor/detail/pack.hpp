@@ -43,7 +43,7 @@ struct pack
     clear(skt_);
     clear(svc_);
     is_err_ret_ = false;
-    pmsg_ != 0 ? pmsg_ = 0 : msg_.clear();
+    if (pmsg_ != 0) pmsg_ = 0; else msg_.clear();
     expiry_ = false;
   }
 

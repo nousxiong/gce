@@ -692,7 +692,8 @@ private:
       GCE_ASSERT(chdr);
       chdr.clear();
       curr_pattern_.clear();
-      hdr(aref_, aid_t(), message());
+      message msg_nil;
+      hdr(aref_, aid_nil, msg_nil);
     }
   }
 

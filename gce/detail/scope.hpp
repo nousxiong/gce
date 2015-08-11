@@ -84,37 +84,35 @@ template <typename Handler>
 class scope_handler
 {
 public:
-  scope_handler()
-    : h_(0)
-  {
-  }
-
-  scope_handler(Handler const& h)
-    : h_(&h)
+  explicit scope_handler(Handler const& h)
+    : h_(h)
+    , off_(false)
   {
   }
 
   ~scope_handler()
   {
-    if (h_ != 0)
+    if (!off_)
     {
-      (*h_)();
+      h_();
     }
   }
 
 public:
   void reset()
   {
-    h_ = 0;
+    off_ = true;
   }
 
   void reset(Handler const& h)
   {
-    h_ = &h;
+    h_ = h;
+    off_ = false;
   }
 
 private:
-  Handler const* h_;
+  Handler h_;
+  bool off_;
 };
 }
 }

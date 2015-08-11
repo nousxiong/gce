@@ -488,8 +488,8 @@ struct handle_recv1
   template <typename Stackless>
   void operator()(Stackless& recver, aid_t const& sender, message& msg) const
   {
-    std::pair<bool, bool> ret = end_recv(recver, sender, msg, osender, pr);
-    message* meta_msg = pr.first.msg_;
+    std::pair<bool, bool> ret = end_recv(recver, sender, msg, osender_, pr_);
+    message* meta_msg = pr_.first.msg_;
     if (ret.first)
     {
       if (meta_msg != 0)
@@ -556,8 +556,8 @@ struct handle_recv2
   template <typename Stackless>
   void operator()(Stackless& recver, aid_t const& sender, message& msg) const
   {
-    std::pair<bool, bool> ret = end_recv(recver, sender, msg, osender, pr);
-    message* meta_msg = pr.first.msg_;
+    std::pair<bool, bool> ret = end_recv(recver, sender, msg, osender_, pr_);
+    message* meta_msg = pr_.first.msg_;
     if (ret.first)
     {
       if (meta_msg != 0)
@@ -626,8 +626,8 @@ struct handle_recv3
   template <typename Stackless>
   void operator()(Stackless& recver, aid_t const& sender, message& msg) const
   {
-    std::pair<bool, bool> ret = end_recv(recver, sender, msg, osender, pr);
-    message* meta_msg = pr.first.msg_;
+    std::pair<bool, bool> ret = end_recv(recver, sender, msg, osender_, pr_);
+    message* meta_msg = pr_.first.msg_;
     if (ret.first)
     {
       if (meta_msg != 0)
@@ -698,8 +698,8 @@ struct handle_recv4
   template <typename Stackless>
   void operator()(Stackless& recver, aid_t const& sender, message& msg) const
   {
-    std::pair<bool, bool> ret = end_recv(recver, sender, msg, osender, pr);
-    message* meta_msg = pr.first.msg_;
+    std::pair<bool, bool> ret = end_recv(recver, sender, msg, osender_, pr_);
+    message* meta_msg = pr_.first.msg_;
     if (ret.first)
     {
       if (meta_msg != 0)
@@ -772,8 +772,8 @@ struct handle_recv5
   template <typename Stackless>
   void operator()(Stackless& recver, aid_t const& sender, message& msg) const
   {
-    std::pair<bool, bool> ret = end_recv(recver, sender, msg, osender, pr);
-    message* meta_msg = pr.first.msg_;
+    std::pair<bool, bool> ret = end_recv(recver, sender, msg, osender_, pr_);
+    message* meta_msg = pr_.first.msg_;
     if (ret.first)
     {
       if (meta_msg != 0)
