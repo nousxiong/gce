@@ -330,6 +330,24 @@ public:
     on_recv(pk);
   }
 
+  void conn_socket(ctxid_pair_t ctxid_pr, aid_t const& skt, actor_type type, size_t concurrency_index)
+  {
+    pack pk = make_pack(type, concurrency_index);
+    message m(msg_con_skt);
+    m << ctxid_pr << skt;
+    pk.msg_ = m;
+    on_recv(pk);
+  }
+
+  void disconn_socket(ctxid_pair_t ctxid_pr, aid_t const& skt, actor_type type, size_t concurrency_index)
+  {
+    pack pk = make_pack(type, concurrency_index);
+    message m(msg_decon_skt);
+    m << ctxid_pr << skt;
+    pk.msg_ = m;
+    on_recv(pk);
+  }
+
 private:
   void release_pack()
   {
@@ -410,6 +428,20 @@ private:
         aid_t skt;
         pk.msg_ >> ctxid_pr >> skt;
         base_t::basic_svc_.deregister_socket(ctxid_pr, skt);
+      }
+      else if (type == msg_con_skt)
+      {
+        ctxid_pair_t ctxid_pr;
+        aid_t skt;
+        pk.msg_ >> ctxid_pr >> skt;
+        base_t::basic_svc_.conn_socket(ctxid_pr, skt);
+      }
+      else if (type == msg_decon_skt)
+      {
+        ctxid_pair_t ctxid_pr;
+        aid_t skt;
+        pk.msg_ >> ctxid_pr >> skt;
+        base_t::basic_svc_.disconn_socket(ctxid_pr, skt);
       }
       else if (type == msg_reg_svc)
       {

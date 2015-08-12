@@ -121,7 +121,7 @@ public:
         );
     svc_.register_socket(ctxid_pr, base_t::get_aid());
 
-    send_login();
+    send_login(false);
 
     boost::asio::spawn(
       base_t::snd_,
@@ -794,15 +794,15 @@ private:
 
             /// remove self from socket list
             aid_t const& skt = base_t::get_aid();
-            svc_.deregister_socket(curr_pr, skt);
-            ctx.deregister_socket(curr_pr, skt, actor_socket, svc_.get_index());
+            svc_.disconn_socket(curr_pr, skt);
+            ctx.disconn_socket(curr_pr, skt, actor_socket, svc_.get_index());
 
             /// try reconnect
             ec = connect();
             if (!ec)
             {
-              svc_.register_socket(curr_pr, skt);
-              ctx.register_socket(curr_pr, skt, actor_socket, svc_.get_index());
+              svc_.conn_socket(curr_pr, skt);
+              ctx.conn_socket(curr_pr, skt, actor_socket, svc_.get_index());
             }
           }
           else
@@ -815,6 +815,9 @@ private:
               msg >> ctxid_pr >> glb_svc_list;
               curr_pr = sync_ctxid(ctxid_pr, curr_pr);
               base_t::basic_svc_.merge_global_service_list(base_t::get_aid(), glb_svc_list);
+
+              /// send cached msgs
+              send_cache_msg();
             }
             else if (type == msg_add_svc || type == msg_rmv_svc)
             {
@@ -1546,7 +1549,7 @@ private:
     return ec;
   }
 
-  void send_login()
+  void send_login(bool immediate = true)
   {
     //message m(msg_login);
     message* m = base_t::alloc_msg();
@@ -1559,7 +1562,27 @@ private:
 
     *m << glb_svc_list;
 
-    send(m);
+    if (immediate)
+    {
+      send_msg(m);
+    }
+    else
+    {
+      send(m);
+    }
+  }
+
+  void send_cache_msg()
+  {
+    if (!conn_)
+    {
+      return;
+    }
+
+    while (message* m = conn_cache_.pop())
+    {
+      send_msg(m);
+    }
   }
 
   void close()

@@ -381,123 +381,25 @@ public:
 
   aid_t select_straight_socket(ctxid_t ctxid = ctxid_nil, ctxid_t* target = 0)
   {
-    aid_t skt;
-    skt_list_t* skt_list = 0;
-    skt_list_t::iterator* curr_skt = 0;
-
-    if (ctxid != ctxid_nil)
-    {
-      typename conn_list_t::iterator itr(conn_list_.find(ctxid));
-      if (itr != conn_list_.end())
-      {
-        skt_list = &itr->second.skt_list_;
-        curr_skt = &itr->second.curr_skt_;
-      }
-    }
-    else
-    {
-      if (!conn_list_.empty())
-      {
-        if (curr_socket_list_ != conn_list_.end())
-        {
-          skt_list = &curr_socket_list_->second.skt_list_;
-          curr_skt = &curr_socket_list_->second.curr_skt_;
-          if (target)
-          {
-            *target = curr_socket_list_->first;
-          }
-        }
-
-        ++curr_socket_list_;
-        if (curr_socket_list_ == conn_list_.end())
-        {
-          curr_socket_list_ = conn_list_.begin();
-        }
-      }
-    }
-
-    if (skt_list && !skt_list->empty())
-    {
-      GCE_ASSERT(curr_skt);
-      skt_list_t::iterator& itr = *curr_skt;
-      if (itr != skt_list->end())
-      {
-        skt = *itr;
-      }
-      ++itr;
-      if (itr == skt_list->end())
-      {
-        itr = skt_list->begin();
-      }
-    }
-
-    return skt;
+    return pri_select_socket(conn_list_, curr_socket_list_, ctxid, target);
   }
 
   aid_t select_joint_socket(ctxid_t ctxid = ctxid_nil, ctxid_t* target = 0)
   {
-    aid_t skt;
-    skt_list_t* skt_list = 0;
-    skt_list_t::iterator* curr_skt = 0;
-
-    if (ctxid != ctxid_nil)
-    {
-      typename conn_list_t::iterator itr(joint_list_.find(ctxid));
-      if (itr != joint_list_.end())
-      {
-        skt_list = &itr->second.skt_list_;
-        curr_skt = &itr->second.curr_skt_;
-      }
-    }
-    else
-    {
-      if (!joint_list_.empty())
-      {
-        if (curr_joint_list_ != joint_list_.end())
-        {
-          skt_list = &curr_joint_list_->second.skt_list_;
-          curr_skt = &curr_joint_list_->second.curr_skt_;
-          if (target)
-          {
-            *target = curr_joint_list_->first;
-          }
-        }
-
-        ++curr_joint_list_;
-        if (curr_joint_list_ == joint_list_.end())
-        {
-          curr_joint_list_ = joint_list_.begin();
-        }
-      }
-    }
-
-    if (skt_list && !skt_list->empty())
-    {
-      GCE_ASSERT(curr_skt);
-      skt_list_t::iterator& itr = *curr_skt;
-      if (itr != skt_list->end())
-      {
-        skt = *itr;
-      }
-      ++itr;
-      if (itr == skt_list->end())
-      {
-        itr = skt_list->begin();
-      }
-    }
-
-    return skt;
+    return pri_select_socket(joint_list_, curr_joint_list_, ctxid, target);
   }
 
   aid_t select_router(ctxid_t* target = 0)
   {
-    aid_t skt;
+    aid_t skt = aid_nil;
     if (!router_list_.empty())
     {
       if (curr_router_list_ != router_list_.end())
       {
         skt_list_t& skt_list = curr_router_list_->second.skt_list_;
+        skt_list_t& reconn_list = curr_router_list_->second.reconn_list_;
         skt_list_t::iterator& curr_skt = curr_router_list_->second.curr_skt_;
+        skt_list_t::iterator& curr_reconn = curr_router_list_->second.curr_reconn_;
         if (target)
         {
           *target = curr_router_list_->first;
@@ -513,6 +415,18 @@ public:
           if (curr_skt == skt_list.end())
           {
             curr_skt = skt_list.begin();
+          }
+        }
+        else if (!reconn_list.empty())
+        {
+          if (curr_reconn != reconn_list.end())
+          {
+            skt = *curr_reconn;
+          }
+          ++curr_reconn;
+          if (curr_reconn == reconn_list.end())
+          {
+            curr_reconn = reconn_list.begin();
           }
         }
       }
@@ -539,6 +453,38 @@ public:
     else
     {
       pri_deregister_socket(conn_list_, ctxid_pr.first, skt);
+    }
+  }
+
+  void conn_socket(ctxid_pair_t ctxid_pr, aid_t const& skt)
+  {
+    if (ctxid_pr.second == socket_router)
+    {
+      pri_conn_socket(router_list_, ctxid_pr.first, skt);
+    }
+    else if (ctxid_pr.second == socket_joint)
+    {
+      pri_conn_socket(joint_list_, ctxid_pr.first, skt);
+    }
+    else
+    {
+      pri_conn_socket(conn_list_, ctxid_pr.first, skt);
+    }
+  }
+
+  void disconn_socket(ctxid_pair_t ctxid_pr, aid_t const& skt)
+  {
+    if (ctxid_pr.second == socket_router)
+    {
+      pri_disconn_socket(router_list_, ctxid_pr.first, skt);
+    }
+    else if (ctxid_pr.second == socket_joint)
+    {
+      pri_disconn_socket(joint_list_, ctxid_pr.first, skt);
+    }
+    else
+    {
+      pri_disconn_socket(conn_list_, ctxid_pr.first, skt);
     }
   }
 
@@ -672,6 +618,8 @@ private:
   {
     skt_list_t skt_list_;
     skt_list_t::iterator curr_skt_;
+    skt_list_t reconn_list_;
+    skt_list_t::iterator curr_reconn_;
   };
   typedef std::map<ctxid_t, socket_list> conn_list_t;
 
@@ -680,11 +628,91 @@ private:
     BOOST_FOREACH(typename conn_list_t::value_type const& pr, conn_list)
     {
       skt_list_t const& skt_list = pr.second.skt_list_;
+      skt_list_t const& reconn_list = pr.second.reconn_list_;
       if (!skt_list.empty())
       {
         send2skt(from, *skt_list.begin(), m);
       }
+      else if (!reconn_list.empty())
+      {
+        send2skt(from, *reconn_list.begin(), m);
+      }
     }
+  }
+
+  static aid_t pri_select_socket(
+    conn_list_t& conn_list, 
+    typename conn_list_t::iterator& curr_socket_list, 
+    ctxid_t ctxid, ctxid_t* target
+    )
+  {
+    aid_t skt = aid_nil;
+    skt_list_t* skt_list = 0;
+    skt_list_t::iterator* curr_skt = 0;
+
+    if (ctxid != ctxid_nil)
+    {
+      typename conn_list_t::iterator itr(conn_list.find(ctxid));
+      if (itr != conn_list.end())
+      {
+        if (!itr->second.skt_list_.empty())
+        {
+          skt_list = &itr->second.skt_list_;
+          curr_skt = &itr->second.curr_skt_;
+        }
+        else
+        {
+          skt_list = &itr->second.reconn_list_;
+          curr_skt = &itr->second.curr_reconn_;
+        }
+      }
+    }
+    else
+    {
+      if (!conn_list.empty())
+      {
+        if (curr_socket_list != conn_list.end())
+        {
+          if (!curr_socket_list->second.skt_list_.empty())
+          {
+            skt_list = &curr_socket_list->second.skt_list_;
+            curr_skt = &curr_socket_list->second.curr_skt_;
+          }
+          else
+          {
+            skt_list = &curr_socket_list->second.reconn_list_;
+            curr_skt = &curr_socket_list->second.curr_reconn_;
+          }
+          if (target)
+          {
+            *target = curr_socket_list->first;
+          }
+        }
+
+        ++curr_socket_list;
+        if (curr_socket_list == conn_list.end())
+        {
+          curr_socket_list = conn_list.begin();
+        }
+      }
+    }
+
+    if (skt_list && !skt_list->empty())
+    {
+      GCE_ASSERT(curr_skt);
+      skt_list_t::iterator& itr = *curr_skt;
+      if (itr != skt_list->end())
+      {
+        skt = *itr;
+      }
+      ++itr;
+      if (itr == skt_list->end())
+      {
+        itr = skt_list->begin();
+      }
+    }
+
+    return skt;
   }
 
   void pri_register_socket(conn_list_t& conn_list, typename conn_list_t::iterator& curr, ctxid_t ctxid, aid_t const& skt)
@@ -709,21 +737,91 @@ private:
     typename conn_list_t::iterator itr(conn_list.find(ctxid));
     if (itr != conn_list.end())
     {
-      socket_list& skt_list = itr->second;
-      skt_list_t::iterator skt_itr = skt_list.skt_list_.find(skt);
-      skt_list_t::iterator next_itr(skt_itr);
-      bool is_curr = skt_itr == skt_list.curr_skt_;
-      ++next_itr;
-      skt_list.skt_list_.erase(skt_itr);
-      if (is_curr)
+      //socket_list& skt_list = itr->second;
+      skt_list_t& skt_list = itr->second.skt_list_;
+      skt_list_t& reconn_list = itr->second.reconn_list_;
+      skt_list_t::iterator& curr_skt = itr->second.curr_skt_;
+      skt_list_t::iterator& curr_reconn = itr->second.curr_reconn_;
+
+      skt_list_t::iterator skt_itr = skt_list.find(skt);
+      if (skt_itr != skt_list.end())
       {
-        skt_list.curr_skt_ = next_itr;
+        erase_socket(skt_list, skt_itr, curr_skt);
+      }
+      else
+      {
+        skt_itr = reconn_list.find(skt);
+        if (skt_itr != reconn_list.end())
+        {
+          erase_socket(reconn_list, skt_itr, curr_reconn);
+        }
       }
 
-      if (skt_list.skt_list_.empty())
+      if (skt_list.empty() && reconn_list.empty())
       {
         conn_list.erase(itr);
       }
+    }
+  }
+
+  static void erase_socket(skt_list_t& skt_list, skt_list_t::iterator& itr, skt_list_t::iterator& curr)
+  {
+    skt_list_t::iterator next_itr(itr);
+    ++next_itr;
+    bool is_curr = itr == curr;
+    skt_list.erase(itr);
+    if (is_curr)
+    {
+      curr = next_itr;
+    }
+  }
+
+  static void pri_conn_socket(conn_list_t& conn_list, ctxid_t ctxid, aid_t const& skt)
+  {
+    typename conn_list_t::iterator itr(conn_list.find(ctxid));
+    if (itr != conn_list.end())
+    {
+      skt_list_t& skt_list = itr->second.skt_list_;
+      skt_list_t& reconn_list = itr->second.reconn_list_;
+      skt_list_t::iterator& curr_skt = itr->second.curr_skt_;
+      skt_list_t::iterator& curr_reconn = itr->second.curr_reconn_;
+
+      move_socket(reconn_list, curr_reconn, skt_list, curr_skt, skt);
+    }
+  }
+
+  static void pri_disconn_socket(conn_list_t& conn_list, ctxid_t ctxid, aid_t const& skt)
+  {
+    typename conn_list_t::iterator itr(conn_list.find(ctxid));
+    if (itr != conn_list.end())
+    {
+      skt_list_t& skt_list = itr->second.skt_list_;
+      skt_list_t& reconn_list = itr->second.reconn_list_;
+      skt_list_t::iterator& curr_skt = itr->second.curr_skt_;
+      skt_list_t::iterator& curr_reconn = itr->second.curr_reconn_;
+
+      move_socket(skt_list, curr_skt, reconn_list, curr_reconn, skt);
+    }
+  }
+
+  static void move_socket(
+    skt_list_t& from, 
+    skt_list_t::iterator& curr_from,
+    skt_list_t& to, 
+    skt_list_t::iterator& curr_to,
+    aid_t const& skt
+    )
+  {
+    skt_list_t::iterator skt_itr = from.find(skt);
+    if (skt_itr != from.end())
+    {
+      erase_socket(from, skt_itr, curr_from);
+    }
+
+    to.insert(skt);
+    if (to.size() == 1)
+    {
+      curr_to = to.begin();
     }
   }
 

@@ -403,6 +403,50 @@ public:
     }
   }
 
+  void conn_socket(
+    detail::ctxid_pair_t ctxid_pr, aid_t const& skt, detail::actor_type type, size_t concurrency_index
+    )
+  {
+    for (size_t i=0; i<service_size_; ++i)
+    {
+      conn_socket(ctxid_pr, skt, threaded_service_list_[i]);
+      conn_socket(ctxid_pr, skt, stackful_service_list_[i]);
+      conn_socket(ctxid_pr, skt, stackless_service_list_[i]);
+#ifdef GCE_LUA
+      conn_socket(ctxid_pr, skt, lua_service_list_[i]);
+#endif
+      conn_socket(ctxid_pr, skt, socket_service_list_[i]);
+      conn_socket(ctxid_pr, skt, acceptor_service_list_[i]);
+    }
+
+    for (size_t i=0, size=nonblocked_actor_list_.size(); i<size; ++i)
+    {
+      nonblocked_actor_list_[i].conn_socket(ctxid_pr, skt, type, concurrency_index);
+    }
+  }
+
+  void disconn_socket(
+    detail::ctxid_pair_t ctxid_pr, aid_t const& skt, detail::actor_type type, size_t concurrency_index
+    )
+  {
+    for (size_t i=0; i<service_size_; ++i)
+    {
+      disconn_socket(ctxid_pr, skt, threaded_service_list_[i]);
+      disconn_socket(ctxid_pr, skt, stackful_service_list_[i]);
+      disconn_socket(ctxid_pr, skt, stackless_service_list_[i]);
+#ifdef GCE_LUA
+      disconn_socket(ctxid_pr, skt, lua_service_list_[i]);
+#endif
+      disconn_socket(ctxid_pr, skt, socket_service_list_[i]);
+      disconn_socket(ctxid_pr, skt, acceptor_service_list_[i]);
+    }
+
+    for (size_t i=0, size=nonblocked_actor_list_.size(); i<size; ++i)
+    {
+      nonblocked_actor_list_[i].disconn_socket(ctxid_pr, skt, type, concurrency_index);
+    }
+  }
+
 #ifdef GCE_SCRIPT
   template <typename Type>
   void register_script(std::string const& name, std::string const& script)
@@ -651,6 +695,8 @@ private:
   struct tag_dereg {};
   struct tag_add {};
   struct tag_rmv {};
+  struct tag_con {};
+  struct tag_decon {};
 
   template <typename Tag, typename Service>
   struct service_binder
@@ -750,6 +796,16 @@ private:
     {
       s_.deregister_socket(ctxid_pr_, skt_);
     }
+
+    void invoke(tag_con) const
+    {
+      s_.conn_socket(ctxid_pr_, skt_);
+    }
+
+    void invoke(tag_decon) const
+    {
+      s_.disconn_socket(ctxid_pr_, skt_);
+    }
     
     Service& s_;
     detail::ctxid_pair_t ctxid_pr_;
@@ -766,6 +822,18 @@ private:
   void deregister_socket(detail::ctxid_pair_t ctxid_pr, aid_t const& skt, Service& s)
   {
     s.get_strand().dispatch(socket_binder<tag_dereg, Service>(s, ctxid_pr, skt));
+  }
+
+  template <typename Service>
+  void conn_socket(detail::ctxid_pair_t ctxid_pr, aid_t const& skt, Service& s)
+  {
+    s.get_strand().dispatch(socket_binder<tag_con, Service>(s, ctxid_pr, skt));
+  }
+
+  template <typename Service>
+  void disconn_socket(detail::ctxid_pair_t ctxid_pr, aid_t const& skt, Service& s)
+  {
+    s.get_strand().dispatch(socket_binder<tag_decon, Service>(s, ctxid_pr, skt));
   }
 
 #ifdef GCE_LUA
