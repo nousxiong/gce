@@ -62,6 +62,8 @@ static std::size_t const test_count = 1;
 #include "test_send_recv.hpp"
 #include "test_service.hpp"
 #include "test_services.hpp"
+#include "test_service_link.hpp"
+#include "test_service_broken.hpp"
 #include "test_reconn.hpp"
 #ifdef GCE_LUA
 # include "test_lua_actor.hpp"
@@ -109,7 +111,9 @@ int main()
     gce::remote_common_relay_ut::run();
     gce::service_ut::run();
     gce::services_ut::run();
-    gce::reconn_ut::run();
+    gce::service_link_ut::run();
+    gce::service_broken_ut::run();
+    //gce::reconn_ut::run();
 
     /// script test
 #ifdef GCE_LUA

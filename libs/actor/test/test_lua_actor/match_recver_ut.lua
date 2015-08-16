@@ -32,11 +32,8 @@ gce.actor(
   	assert (args[1] == 1)
   	gce.print('catch ', args[1])
 
-  	local res = gce.request(aid, 'resp', i)
-  	ec, sender, args, msg = gce.match(res).respond(i)
-  	assert (ec == gce.ec_guard)
-  	assert (msg:getty() == gce.exit)
-
   	ec = gce.match('not_catch').guard(aid).recv(i)
   	assert (ec == gce.ec_guard)
+
+    gce.recv(gce.exit)
   end)

@@ -134,13 +134,13 @@ inline std::pair<aid_t, bool> recv_impl(
     }
   }
 
-  if (sender == aid_nil && meta.tmo_ != 0)
+  if (!valid(sender) && meta.tmo_ != 0)
   {
     *meta.tmo_ = boost::asio::error::make_error_code(boost::asio::error::timed_out);
     return std::make_pair(sender, false);
   }
 
-  GCE_VERIFY(sender != aid_nil)(msg)(patt)
+  GCE_VERIFY(valid(sender))(msg)(patt)
     .msg("gce::recv_timeout_exception").except<recv_timeout_exception>();
 
   return std::make_pair(sender, true);
@@ -200,7 +200,7 @@ inline std::pair<aid_t, bool> recv_impl(
       }
     }
   }
-  return std::make_pair(sender, sender != aid_nil);
+  return std::make_pair(sender, valid(sender));
 }
 
 template <typename Tag, typename Recver>
@@ -253,13 +253,13 @@ inline std::pair<aid_t, bool> respond_impl(
     }
   }
 
-  if (sender == aid_nil && meta.tmo_ != 0)
+  if (!valid(sender) && meta.tmo_ != 0)
   {
     *meta.tmo_ = boost::asio::error::make_error_code(boost::asio::error::timed_out);
     return std::make_pair(sender, false);
   }
 
-  GCE_VERIFY(sender != aid_nil)(res)(msg)(tmo)
+  GCE_VERIFY(valid(sender))(res)(msg)(tmo)
     .msg("gce::respond_timeout_exception").except<respond_timeout_exception>();
   return std::make_pair(sender, true);
 }
@@ -313,7 +313,7 @@ inline std::pair<aid_t, bool> respond_impl(
       }
     }
   }
-  return std::make_pair(sender, sender != aid_nil);
+  return std::make_pair(sender, valid(sender));
 }
 ///------------------------------------------------------------------------------
 /// recv stackless
@@ -346,7 +346,7 @@ inline std::pair<bool, bool> end_recv(
       return std::make_pair(false, false);
     }
   }
-  else if (sender == aid_nil)
+  else if (!valid(sender))
   {
     if (pr.first.tmo_ != 0)
     {
@@ -385,7 +385,7 @@ inline std::pair<bool, bool> end_respond(
       return std::make_pair(false, false);
     }
   }
-  else if (sender == aid_nil)
+  else if (!valid(sender))
   {
     if (meta.tmo_ != 0)
     {

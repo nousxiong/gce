@@ -16,6 +16,7 @@ net_option
   int8 is_router;
   gce.adl.duration heartbeat_period;
   int32 heartbeat_count;
+  gce.adl.duration reconn_wait_period;
   gce.adl.duration init_reconn_period;
   int32 init_reconn_try;
   gce.adl.duration reconn_period;

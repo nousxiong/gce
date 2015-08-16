@@ -175,6 +175,16 @@ public:
     base_t::pri_monitor(target);
   }
 
+  void link(svcid_t const& target)
+  {
+    base_t::pri_link_svc(target);
+  }
+
+  void monitor(svcid_t const& target)
+  {
+    base_t::pri_monitor_svc(target);
+  }
+
   aid_t recv(message& msg, match_list_t const& match_list = match_list_t(), recver_t const& recver = recver_t())
   {
     aid_t sender;

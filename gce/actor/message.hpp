@@ -746,7 +746,18 @@ public:
       GCE_ASSERT(false);
     }
 
-    if (recver == aid_nil) *this << (byte_t)1; else *this << (byte_t)0 << recver;
+    if (!detail::valid(recver)) 
+    {
+      *this << (byte_t)0;
+    }
+    else if (recver != aid_nil)
+    {
+      *this << (byte_t)1 << recver;
+    }
+    else
+    {
+      *this << (byte_t)2 << recver.svc_;
+    }
     if (svc == svcid_nil) *this << (byte_t)1; else *this << (byte_t)0 << svc;
     if (skt == aid_nil) *this << (byte_t)1; else *this << (byte_t)0 << skt;
     *this << is_err_ret;
@@ -826,9 +837,21 @@ public:
         GCE_ASSERT(false);
       }
 
+      byte_t stat = 0;
+      *this >> stat;
+      if (stat == 0) 
+      {
+        gce::clear(recver);
+      }
+      else if (stat == 1)
+      {
+        *this >> recver;
+      }
+      else
+      {
+        *this >> recver.svc_;
+      }
       byte_t is_nil = 0;
-      *this >> is_nil;
-      if (is_nil == 0) *this >> recver; else gce::clear(recver);
       *this >> is_nil;
       if (is_nil == 0) *this >> svc; else gce::clear(svc);
       *this >> is_nil;

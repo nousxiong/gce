@@ -340,7 +340,8 @@ private:
     {
       if (is_router_)
       {
-        sktaid_t skt = svc_.select_joint_socket(pk.recver_.ctxid_);
+        ctxid_t ctxid = pk.recver_ != aid_nil ? pk.recver_.ctxid_ : pk.recver_.svc_.ctxid_;
+        sktaid_t skt = svc_.select_joint_socket(ctxid);
         if (skt == aid_nil)
         {
           /// no socket found, send already exit back
@@ -364,7 +365,18 @@ private:
         {
           add_straight_link(pk.recver_, link->get_aid());
         }
-        send_pack(pk.recver_, pk, msg);
+        aid_t target = 
+          pk.recver_ != aid_nil ? 
+          pk.recver_ : 
+          base_t::basic_svc_.filter_svcid(pk.recver_.svc_);
+        if (target != aid_nil)
+        {
+          send_pack(target, pk, msg);
+        }
+        else
+        {
+          svc_.send_already_exited(link->get_aid(), pk.recver_);
+        }
       }
     }
     else if (exit_t* ex = boost::get<exit_t>(&pk.tag_))
@@ -372,15 +384,27 @@ private:
       if (is_router_)
       {
         sktaid_t skt = remove_router_link(pk.recver_, ex->get_aid());
-        GCE_ASSERT(skt != aid_nil)(pk.recver_)(ex->get_aid());
-        pk.tag_ = fwd_exit_t(ex->get_code(), ex->get_aid(), base_t::get_aid());
-        pk.skt_ = skt;
-        send_pack(pk.skt_, pk, msg);
+        //GCE_ASSERT(skt != aid_nil)(pk.recver_)(ex->get_aid());
+        if (skt != aid_nil)
+        {
+          pk.tag_ = fwd_exit_t(ex->get_code(), ex->get_aid(), base_t::get_aid());
+          pk.skt_ = skt;
+          send_pack(pk.skt_, pk, msg);
+        }
       }
       else
       {
-        remove_straight_link(pk.recver_, ex->get_aid());
-        send_pack(pk.recver_, pk, msg);
+        if (remove_straight_link(pk.recver_, ex->get_aid()))
+        {
+          aid_t target = 
+            pk.recver_ != aid_nil ? 
+            pk.recver_ : 
+            base_t::basic_svc_.filter_svcid(pk.recver_.svc_);
+          if (target != aid_nil)
+          {
+            send_pack(target, pk, msg);
+          }
+        }
       }
     }
     else if (spawn_t* spw = boost::get<spawn_t>(&pk.tag_))
@@ -1067,52 +1091,222 @@ private:
   {
     if (des != aid_nil)
     {
-      std::pair<straight_link_list_t::iterator, bool> pr =
-        straight_link_list_.insert(std::make_pair(src, straight_dummy_));
-      pr.first->second.insert(des);
+      if (src != aid_nil)
+      {
+        std::pair<straight_link_list_t::iterator, bool> pr =
+          straight_link_list_.insert(std::make_pair(src, straight_dummy_));
+        pr.first->second.aid_list_.insert(des);
+      }
+      else if (src.svc_ != svcid_nil)
+      {
+        std::pair<svc_straight_link_list_t::iterator, bool> pr =
+          svc_straight_link_list_.insert(std::make_pair(src.svc_, straight_dummy_));
+        pr.first->second.aid_list_.insert(des);
+      }
+    }
+    else if (des.svc_ != svcid_nil)
+    {
+      if (src != aid_nil)
+      {
+        std::pair<straight_link_list_t::iterator, bool> pr =
+          straight_link_list_.insert(std::make_pair(src, straight_dummy_));
+        pr.first->second.svcid_list_.insert(des.svc_);
+      }
+      else if (src.svc_ != svcid_nil)
+      {
+        std::pair<svc_straight_link_list_t::iterator, bool> pr =
+          svc_straight_link_list_.insert(std::make_pair(src.svc_, straight_dummy_));
+        pr.first->second.svcid_list_.insert(des.svc_);
+      }
     }
   }
 
-  void remove_straight_link(aid_t const& src, aid_t const& des)
+  bool remove_straight_link(aid_t const& src, aid_t const& des)
   {
+    bool rt = false;
     if (des != aid_nil)
     {
-      straight_link_list_t::iterator itr(
-        straight_link_list_.find(src)
-        );
-      if (itr != straight_link_list_.end())
+      if (src != aid_nil)
       {
-        itr->second.erase(des);
+        straight_link_list_t::iterator itr(
+          straight_link_list_.find(src)
+          );
+        if (itr != straight_link_list_.end())
+        {
+          std::set<aid_t>& aid_list = itr->second.aid_list_;
+          std::set<aid_t>::iterator it(aid_list.find(des));
+          if (it != aid_list.end())
+          {
+            aid_list.erase(it);
+            rt = true;
+          }
+        }
+      }
+
+      if (src.svc_ != svcid_nil)
+      {
+        svc_straight_link_list_t::iterator itr(
+          svc_straight_link_list_.find(src.svc_)
+          );
+        if (itr != svc_straight_link_list_.end())
+        {
+          std::set<aid_t>& aid_list = itr->second.aid_list_;
+          std::set<aid_t>::iterator it(aid_list.find(des));
+          if (it != aid_list.end())
+          {
+            aid_list.erase(it);
+            rt = true;
+          }
+        }
       }
     }
+
+    if (des.svc_ != svcid_nil)
+    {
+      if (src != aid_nil)
+      {
+        straight_link_list_t::iterator itr(
+          straight_link_list_.find(src)
+          );
+        if (itr != straight_link_list_.end())
+        {
+          std::set<svcid_t>& svcid_list = itr->second.svcid_list_;
+          std::set<svcid_t>::iterator it(svcid_list.find(des.svc_));
+          if (it != svcid_list.end())
+          {
+            svcid_list.erase(it);
+            rt = true;
+          }
+        }
+      }
+
+      if (src.svc_ != svcid_nil)
+      {
+        svc_straight_link_list_t::iterator itr(
+          svc_straight_link_list_.find(src.svc_)
+          );
+        if (itr != svc_straight_link_list_.end())
+        {
+          std::set<svcid_t>& svcid_list = itr->second.svcid_list_;
+          std::set<svcid_t>::iterator it(svcid_list.find(des.svc_));
+          if (it != svcid_list.end())
+          {
+            svcid_list.erase(it);
+            rt = true;
+          }
+        }
+      }
+    }
+    return rt;
   }
 
   void add_router_link(aid_t const& src, aid_t const& des, sktaid_t skt)
   {
     if (des != aid_nil)
     {
-      std::pair<router_link_list_t::iterator, bool> pr =
-        router_link_list_.insert(std::make_pair(src, router_dummy_));
-      pr.first->second.insert(std::make_pair(des, skt));
+      if (src != aid_nil)
+      {
+        std::pair<router_link_list_t::iterator, bool> pr =
+          router_link_list_.insert(std::make_pair(src, router_dummy_));
+        pr.first->second.aid_list_.insert(std::make_pair(des, skt));
+      }
+      else if (src.svc_ != svcid_nil)
+      {
+        std::pair<svc_router_link_list_t::iterator, bool> pr =
+          svc_router_link_list_.insert(std::make_pair(src.svc_, router_dummy_));
+        pr.first->second.aid_list_.insert(std::make_pair(des, skt));
+      }
+    }
+    else if (des.svc_ != svcid_nil)
+    {
+      if (src != aid_nil)
+      {
+        std::pair<router_link_list_t::iterator, bool> pr =
+          router_link_list_.insert(std::make_pair(src, router_dummy_));
+        pr.first->second.svcid_list_.insert(std::make_pair(des.svc_, skt));
+      }
+      else if (src.svc_ != svcid_nil)
+      {
+        std::pair<svc_router_link_list_t::iterator, bool> pr =
+          svc_router_link_list_.insert(std::make_pair(src.svc_, router_dummy_));
+        pr.first->second.svcid_list_.insert(std::make_pair(des.svc_, skt));
+      }
     }
   }
 
   sktaid_t remove_router_link(aid_t const& src, aid_t const& des)
   {
-    sktaid_t skt;
+    sktaid_t skt = aid_nil;
     if (des != aid_nil)
     {
-      router_link_list_t::iterator itr(
-        router_link_list_.find(src)
-        );
-      if (itr != router_link_list_.end())
+      if (src != aid_nil)
       {
-        std::map<aid_t, sktaid_t>& skt_list = itr->second;
-        std::map<aid_t, sktaid_t>::iterator skt_itr(skt_list.find(des));
-        if (skt_itr != skt_list.end())
+        router_link_list_t::iterator itr(
+          router_link_list_.find(src)
+          );
+        if (itr != router_link_list_.end())
         {
-          skt = skt_itr->second;
-          skt_list.erase(skt_itr);
+          std::map<aid_t, sktaid_t>& skt_list = itr->second.aid_list_;
+          std::map<aid_t, sktaid_t>::iterator skt_itr(skt_list.find(des));
+          if (skt_itr != skt_list.end())
+          {
+            skt = skt_itr->second;
+            skt_list.erase(skt_itr);
+          }
+        }
+      }
+
+      if (src.svc_ != svcid_nil)
+      {
+        svc_router_link_list_t::iterator itr(
+          svc_router_link_list_.find(src.svc_)
+          );
+        if (itr != svc_router_link_list_.end())
+        {
+          std::map<aid_t, sktaid_t>& skt_list = itr->second.aid_list_;
+          std::map<aid_t, sktaid_t>::iterator skt_itr(skt_list.find(des));
+          if (skt_itr != skt_list.end())
+          {
+            skt = skt_itr->second;
+            skt_list.erase(skt_itr);
+          }
+        }
+      }
+    }
+
+    if (des.svc_ != svcid_nil)
+    {
+      if (src != aid_nil)
+      {
+        router_link_list_t::iterator itr(
+          router_link_list_.find(src)
+          );
+        if (itr != router_link_list_.end())
+        {
+          std::map<svcid_t, sktaid_t>& skt_list = itr->second.svcid_list_;
+          std::map<svcid_t, sktaid_t>::iterator skt_itr(skt_list.find(des.svc_));
+          if (skt_itr != skt_list.end())
+          {
+            skt = skt_itr->second;
+            skt_list.erase(skt_itr);
+          }
+        }
+      }
+
+      if (src.svc_ != svcid_nil)
+      {
+        svc_router_link_list_t::iterator itr(
+          svc_router_link_list_.find(src.svc_)
+          );
+        if (itr != svc_router_link_list_.end())
+        {
+          std::map<svcid_t, sktaid_t>& skt_list = itr->second.svcid_list_;
+          std::map<svcid_t, sktaid_t>::iterator skt_itr(skt_list.find(des.svc_));
+          if (skt_itr != skt_list.end())
+          {
+            skt = skt_itr->second;
+            skt_list.erase(skt_itr);
+          }
         }
       }
     }
@@ -1123,7 +1317,7 @@ private:
   {
     conn_ = false;
     //conn_cache_.clear();
-    clear_conn_cache();
+    //clear_conn_cache();
     std::string errmsg("net error");
     if (ec)
     {
@@ -1135,7 +1329,7 @@ private:
 
     BOOST_FOREACH(straight_link_list_t::value_type& pr, straight_link_list_)
     {
-      BOOST_FOREACH(aid_t const& des, pr.second)
+      BOOST_FOREACH(aid_t const& des, pr.second.aid_list_)
       {
         aid_t const& target = pr.first;
         pack& pk = base_t::basic_svc_.alloc_pack(target);
@@ -1147,12 +1341,64 @@ private:
 
         svc_.send(target, pk);
       }
+
+      BOOST_FOREACH(svcid_t const& des, pr.second.svcid_list_)
+      {
+        aid_t const& target = pr.first;
+        pack& pk = base_t::basic_svc_.alloc_pack(target);
+        aid_t aid = aid_nil;
+        aid.svc_ = des;
+        pk.tag_ = exit_t(exit_neterr, aid);
+        pk.recver_ = aid;
+        pk.skt_ = pr.first;
+        //pk.msg_ = m;
+        pk.setmsg(m);
+
+        svc_.send(target, pk);
+      }
     }
     straight_link_list_.clear();
 
+    BOOST_FOREACH(svc_straight_link_list_t::value_type& pr, svc_straight_link_list_)
+    {
+      aid_t target = base_t::basic_svc_.filter_svcid(pr.first);
+      if (target != aid_nil)
+      {
+        BOOST_FOREACH(aid_t const& des, pr.second.aid_list_)
+        {
+          //svcid_t const& target = pr.first;
+          pack& pk = base_t::basic_svc_.alloc_pack(target);
+          pk.tag_ = exit_t(exit_neterr, des);
+          pk.recver_ = target;
+          pk.skt_ = target;
+          //pk.msg_ = m;
+          pk.setmsg(m);
+
+          svc_.send(target, pk);
+        }
+
+        BOOST_FOREACH(svcid_t const& des, pr.second.svcid_list_)
+        {
+          pack& pk = base_t::basic_svc_.alloc_pack(target);
+          aid_t aid = aid_nil;
+          aid.svc_ = des;
+          pk.tag_ = exit_t(exit_neterr, aid);
+          pk.recver_ = aid;
+          pk.skt_ = target;
+          //pk.msg_ = m;
+          pk.setmsg(m);
+
+          svc_.send(target, pk);
+        }
+      }
+    }
+    svc_straight_link_list_.clear();
+
+    typedef std::map<aid_t, sktaid_t> aidskt_list_t;
+    typedef std::map<svcid_t, sktaid_t> svcidskt_list_t;
     BOOST_FOREACH(router_link_list_t::value_type& pr, router_link_list_)
     {
-      BOOST_FOREACH(router_link_list_t::mapped_type::value_type& des, pr.second)
+      BOOST_FOREACH(aidskt_list_t::value_type& des, pr.second.aid_list_)
       {
         aid_t const& target = des.second;
         pack& pk = base_t::basic_svc_.alloc_pack(target);
@@ -1164,8 +1410,57 @@ private:
 
         svc_.send(target, pk);
       }
+
+      BOOST_FOREACH(svcidskt_list_t::value_type& des, pr.second.svcid_list_)
+      {
+        aid_t const& target = des.second;
+        pack& pk = base_t::basic_svc_.alloc_pack(target);
+        aid_t aid = aid_nil;
+        aid.svc_ = des.first;
+        pk.tag_ = fwd_exit_t(exit_neterr, aid, self_aid);
+        pk.recver_ = pr.first;
+        pk.skt_ = target;
+        //pk.msg_ = m;
+        pk.setmsg(m);
+
+        svc_.send(target, pk);
+      }
     }
     router_link_list_.clear();
+
+    BOOST_FOREACH(svc_router_link_list_t::value_type& pr, svc_router_link_list_)
+    {
+      BOOST_FOREACH(aidskt_list_t::value_type& des, pr.second.aid_list_)
+      {
+        aid_t const& target = des.second;
+        pack& pk = base_t::basic_svc_.alloc_pack(target);
+        aid_t aid = aid_nil;
+        aid.svc_ = pr.first;
+        pk.tag_ = fwd_exit_t(exit_neterr, des.first, self_aid);
+        pk.recver_ = aid;
+        pk.skt_ = target;
+        //pk.msg_ = m;
+        pk.setmsg(m);
+
+        svc_.send(target, pk);
+      }
+
+      BOOST_FOREACH(svcidskt_list_t::value_type& des, pr.second.svcid_list_)
+      {
+        aid_t const& target = des.second;
+        pack& pk = base_t::basic_svc_.alloc_pack(target);
+        aid_t aid = aid_nil;
+        aid.svc_ = des.first;
+        pk.tag_ = fwd_exit_t(exit_neterr, aid, self_aid);
+        pk.recver_ = aid;
+        pk.skt_ = target;
+        //pk.msg_ = m;
+        pk.setmsg(m);
+
+        svc_.send(target, pk);
+      }
+    }
+    svc_router_link_list_.clear();
   }
 
   ctxid_pair_t sync_ctxid(ctxid_pair_t new_pr, ctxid_pair_t curr_pr)
@@ -1462,6 +1757,20 @@ private:
     errcode_t ec;
     if (stat_ == on)
     {
+      if (!init && opt_.reconn_wait_period > zero)
+      {
+        errcode_t ignored_ec;
+        sync_.expires_from_now(to_chrono(opt_.reconn_wait_period));
+        //sync_.async_wait(yield[ignored_ec]);
+        yielder ylder(host_, ignored_ec);
+        sync_.async_wait(ylder);
+        ylder.yield();
+        if (stat_ != on)
+        {
+          return ec;
+        }
+      }
+
       duration_t reconn_period = 
         init ? opt_.init_reconn_period : opt_.reconn_period;
       size_t const reconn_try = 
@@ -1691,13 +2000,27 @@ private:
   size_t curr_reconn_;
 
   /// remote links
-  typedef std::map<aid_t, std::set<aid_t> > straight_link_list_t;
+  struct straight_set
+  {
+    std::set<aid_t> aid_list_;
+    std::set<svcid_t> svcid_list_;
+  };
+  typedef std::map<aid_t, straight_set> straight_link_list_t;
   straight_link_list_t straight_link_list_;
-  std::set<aid_t> straight_dummy_;
+  typedef std::map<svcid_t, straight_set> svc_straight_link_list_t;
+  svc_straight_link_list_t svc_straight_link_list_;
+  straight_set const straight_dummy_;
 
-  typedef std::map<aid_t, std::map<aid_t, sktaid_t> > router_link_list_t;
+  struct router_set
+  {
+    std::map<aid_t, sktaid_t> aid_list_;
+    std::map<svcid_t, sktaid_t> svcid_list_;
+  };
+  typedef std::map<aid_t, router_set> router_link_list_t;
   router_link_list_t router_link_list_;
-  std::map<aid_t, sktaid_t> router_dummy_;
+  typedef std::map<svcid_t, router_set> svc_router_link_list_t;
+  svc_router_link_list_t svc_router_link_list_;
+  router_set const router_dummy_;
 
   /// remote spawn's funcs
   remote_func_list_t remote_func_list_;

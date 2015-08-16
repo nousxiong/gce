@@ -26,6 +26,13 @@ if (GCE_STATIC)
   set (GCE_LINK_PROP "${GCE_LINK_PROP} -static -static-libgcc -static-libstdc++")
 endif ()
 
+# Example cluster0.
+if (GCE_EXAMPLE_ALL OR GCE_EXAMPLE_CLUSTER)
+  if (${GCE_PACKER} EQUAL ${GCE_ADATA})
+    add_subdirectory (cluster0)
+  endif ()
+endif ()
+
 # Example cluster.
 if (GCE_EXAMPLE_ALL OR GCE_EXAMPLE_CLUSTER)
   if (${GCE_PACKER} EQUAL ${GCE_ADATA})

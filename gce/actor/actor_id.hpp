@@ -214,6 +214,11 @@ static adl::actor_id const aid_nil = adl::actor_id();
 
 namespace detail
 {
+inline bool valid(gce::adl::actor_id const& aid)
+{
+  return aid != aid_nil || aid.svc_ != svcid_nil;
+}
+
 inline bool check_local(gce::adl::actor_id const& aid, gce::ctxid_t ctxid)
 {
   if (aid == aid_nil)

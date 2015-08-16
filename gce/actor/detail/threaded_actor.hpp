@@ -124,12 +124,22 @@ public:
 
   void link(aid_t const& target)
   {
-    base_t::snd_.post(link_binder(*this, target));
+    base_t::snd_.post(link_binder<tag_link>(*this, target));
   }
 
   void monitor(aid_t const& target)
   {
-    base_t::snd_.post(monitor_binder(*this, target));
+    base_t::snd_.post(link_binder<tag_monitor>(*this, target));
+  }
+
+  void link(svcid_t const& target)
+  {
+    base_t::snd_.post(link_binder<tag_link>(*this, target));
+  }
+
+  void monitor(svcid_t const& target)
+  {
+    base_t::snd_.post(link_binder<tag_monitor>(*this, target));
   }
 
   aid_t recv(message& msg, pattern const& patt = pattern())
@@ -367,38 +377,59 @@ private:
     message const m_;
   };
 
+  struct tag_link {};
+  struct tag_monitor {};
+
+  template <typename Tag>
   struct link_binder
   {
     link_binder(base_t& self, aid_t const& target)
       : self_(self)
-      , target_(target)
+      , aid_(target)
+      , svcid_(svcid_nil)
     {
     }
 
-    void operator()() const
-    {
-      self_.pri_link(target_);
-    }
-
-    base_t& self_;
-    aid_t const target_;
-  };
-
-  struct monitor_binder
-  {
-    monitor_binder(base_t& self, aid_t const& target)
+    link_binder(base_t& self, svcid_t const& target)
       : self_(self)
-      , target_(target)
+      , aid_(aid_nil)
+      , svcid_(target)
     {
     }
 
     void operator()() const
     {
-      self_.pri_monitor(target_);
+      invoke(Tag());
+    }
+
+  private:
+    void invoke(tag_link) const
+    {
+      if (aid_ != aid_nil)
+      {
+        self_.pri_link(aid_);
+      }
+      else
+      {
+        self_.pri_link_svc(svcid_);
+      }
+    }
+
+    void invoke(tag_monitor) const
+    {
+      if (aid_ != aid_nil)
+      {
+        self_.pri_monitor(aid_);
+      }
+      else
+      {
+        self_.pri_monitor_svc(svcid_);
+      }
     }
 
     base_t& self_;
-    aid_t const target_;
+    aid_t const aid_;
+    svcid_t const svcid_;
   };
 
   struct try_recv_binder

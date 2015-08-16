@@ -311,9 +311,23 @@ public:
     link(link_t(linked, target), &basic_svc_);
   }
 
+  void pri_link_svc(svcid_t const& target)
+  {
+    aid_t aid = aid_nil;
+    aid.svc_ = target;
+    link_svc(link_t(linked, aid), &basic_svc_);
+  }
+
   void pri_monitor(aid_t const& target)
   {
     link(link_t(monitored, target), &basic_svc_);
+  }
+
+  void pri_monitor_svc(svcid_t const& target)
+  {
+    aid_t aid = aid_nil;
+    aid.svc_ = target;
+    link_svc(link_t(monitored, aid), &basic_svc_);
   }
 
   void pri_spawn(
@@ -349,9 +363,16 @@ protected:
     return ++req_id_;
   }
 
-  void add_link(aid_t const& target, sktaid_t skt = aid_t())
+  void add_link(aid_t const& target, sktaid_t skt = aid_nil)
   {
-    link_list_.insert(std::make_pair(target, skt));
+    if (target != aid_nil)
+    {
+      link_list_.insert(std::make_pair(target, skt));
+    }
+    else if (target.svc_ != svcid_nil)
+    {
+      svc_link_list_.insert(std::make_pair(target.svc_, skt));
+    }
   }
 
   void link(link_t l, service_t* svc = 0)
@@ -396,6 +417,67 @@ protected:
     }
   }
 
+  void link_svc(link_t l, service_t* svc = 0)
+  {
+    aid_t recver = l.get_aid();
+    svcid_t svc_recver = recver.svc_;
+    aid_t target = basic_svc_.filter_svcid(svc_recver);
+    if (target == aid_nil)
+    {
+      GCE_ASSERT(svc)(recver);
+      svc->send_already_exited(get_aid(), recver);
+      return;
+    }
+
+    bool is_local = svc_recver.ctxid_ == ctxid_nil || svc_recver.ctxid_ == ctxid_;
+    aid_t skt = is_local ? aid_nil : target;
+    /*aid_t skt;
+    bool is_local = svc_recver.ctxid_ == ctxid_;
+    if (!is_local)
+    {
+      GCE_ASSERT(svc)(recver);
+      skt = svc->select_socket(svc_recver.ctxid_);
+      if (skt == aid_nil)
+      {
+        svc->send_already_exited(get_aid(), recver);
+        return;
+      }
+    }*/
+
+    if (l.get_type() == linked)
+    {
+      add_link(recver, skt);
+    }
+    else
+    {
+      svc_monitor_list_.insert(svc_recver);
+    }
+
+    if (svc)
+    {
+      //aid_t target = is_local ? recver : skt;
+      //GCE_ASSERT(target != aid_nil)(recver);
+      pack& pk = svc->alloc_pack(target);
+      pk.tag_ = link_t(l.get_type(), get_aid());
+      if (is_local)
+      {
+        /// is local none socket actor
+        pk.recver_ = target;
+      }
+      else
+      {
+        pk.recver_ = recver;
+      }
+      //pk.svc_ = svc_recver;
+      pk.skt_ = skt;
+      message& msg = pk.getmsg();
+      msg.clear();
+      msg.set_type(msg_link);
+
+      svc->send(target, pk);
+    }
+  }
+
   void send_exit(aid_t const& self_aid, exit_code_t ec, std::string const& exit_msg)
   {
     message m(exit);
@@ -415,12 +497,49 @@ protected:
 
       basic_svc_.send(target, pk);
     }
+
+    BOOST_FOREACH(svc_link_list_t::value_type& pr, svc_link_list_)
+    {
+      aid_t const& target = pr.second != aid_nil ? pr.second : basic_svc_.filter_svcid(pr.first);
+      //GCE_ASSERT(target != aid_nil)(pr.first);
+      if (target != aid_nil)
+      {
+        pack& pk = basic_svc_.alloc_pack(target);
+        pk.tag_ = exit_t(ec, self_aid);
+        if (pr.first.ctxid_ == ctxid_nil || pr.first.ctxid_ == ctxid_)
+        {
+          /// is local none socket actor
+          pk.recver_ = target;
+        }
+        else
+        {
+          aid_t aid = aid_nil;
+          aid.svc_ = pr.first;
+          pk.recver_ = aid;
+        }
+        //pk.svc_ = pr.first;
+        pk.skt_ = target;
+        //pk.msg_ = m;
+        pk.setmsg(m);
+
+        basic_svc_.send(target, pk);
+      }
+    }
   }
 
   void remove_link(aid_t const& aid)
   {
-    link_list_.erase(aid);
-    monitor_list_.erase(aid);
+    if (aid != aid_nil)
+    {
+      link_list_.erase(aid);
+      monitor_list_.erase(aid);
+    }
+    
+    if (aid.svc_ != svcid_nil)
+    {
+      svc_link_list_.erase(aid.svc_);
+      svc_monitor_list_.erase(aid.svc_);
+    }
   }
 
   message* handle_pack(pack& pk)
@@ -461,6 +580,11 @@ protected:
     msg_pool_.free(msg);
   }
 
+  void set_aid_svc(svcid_t svcid)
+  {
+    aid_.svc_ = svcid;
+  }
+
 private:
   /// Ensure start from a new cache line.
   byte_t pad0_[GCE_CACHE_LINE_SIZE];
@@ -484,6 +608,12 @@ private:
   typedef std::set<aid_t> monitor_list_t;
   link_list_t link_list_;
   monitor_list_t monitor_list_;
+
+  typedef std::map<svcid_t, sktaid_t> svc_link_list_t;
+  typedef std::set<svcid_t> svc_monitor_list_t;
+  svc_link_list_t svc_link_list_;
+  svc_monitor_list_t svc_monitor_list_;
+
   log::logger_t& lg_;
 };
 }

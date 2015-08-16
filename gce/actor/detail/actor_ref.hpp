@@ -122,6 +122,16 @@ public:
     a_->monitor(target);
   }
 
+  void link(svcid_t const& target)
+  {
+    a_->link(target);
+  }
+
+  void monitor(svcid_t const& target)
+  {
+    a_->monitor(target);
+  }
+
   aid_t get_aid() const
   {
     return a_->get_aid();
@@ -331,6 +341,11 @@ public:
   {
     return base_t::a_->get_service();
   }
+
+  void register_service(match_t name)
+  {
+    base_t::a_->register_service(name);
+  }
 };
 
 ///------------------------------------------------------------------------------
@@ -479,6 +494,11 @@ public:
   service_t& get_service()
   {
     return base_t::a_->get_service();
+  }
+
+  void register_service(match_t name)
+  {
+    base_t::a_->register_service(name);
   }
 
 private:

@@ -162,7 +162,7 @@ public:
 
   aid_t find_service(match_t name)
   {
-    aid_t svc;
+    aid_t svc = aid_nil;
     service_list_t::iterator itr(service_list_.find(name));
     if (itr != service_list_.end())
     {
@@ -217,22 +217,27 @@ public:
     if (itr != global_service_list_.end())
     {
       global_ctxid_list_t::iterator ctxid_itr(global_ctxid_list_.find(ctxid));
-      GCE_ASSERT(ctxid_itr != global_ctxid_list_.end());
-      ctxid_itr->second.erase(name);
-      if (ctxid_itr->second.empty())
+      if (ctxid_itr != global_ctxid_list_.end())
       {
-        global_ctxid_list_.erase(ctxid_itr);
+        ctxid_itr->second.erase(name);
+        if (ctxid_itr->second.empty())
+        {
+          global_ctxid_list_.erase(ctxid_itr);
+        }
       }
 
       ctxid_list& ctx_list = itr->second;
       ctx_list_t::iterator ctx_itr = ctx_list.ctx_list_.find(ctxid);
-      ctx_list_t::iterator next_itr(ctx_itr);
-      bool is_curr = ctx_itr == ctx_list.curr_ctx_;
-      ++next_itr;
-      ctx_list.ctx_list_.erase(ctx_itr);
-      if (is_curr)
+      if (ctx_itr != ctx_list.ctx_list_.end())
       {
-        ctx_list.curr_ctx_ = next_itr;
+        ctx_list_t::iterator next_itr(ctx_itr);
+        bool is_curr = ctx_itr == ctx_list.curr_ctx_;
+        ++next_itr;
+        ctx_list.ctx_list_.erase(ctx_itr);
+        if (is_curr)
+        {
+          ctx_list.curr_ctx_ = next_itr;
+        }
       }
 
       if (ctx_list.ctx_list_.empty())

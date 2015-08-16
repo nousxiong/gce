@@ -18,6 +18,8 @@ namespace adata
       {load(L, value.heartbeat_period);lua_pop(L, 1);}
       lua_getfield(L, -1, "heartbeat_count");
       {load(L, value.heartbeat_count);lua_pop(L, 1);}
+      lua_getfield(L, -1, "reconn_wait_period");
+      {load(L, value.reconn_wait_period);lua_pop(L, 1);}
       lua_getfield(L, -1, "init_reconn_period");
       {load(L, value.init_reconn_period);lua_pop(L, 1);}
       lua_getfield(L, -1, "init_reconn_try");
@@ -34,7 +36,7 @@ namespace adata
 
     ADATA_INLINE void push( lua_State * L, ::gce::adl::net_option const& value, bool use_adata = true)
     {
-      lua_createtable(L, 0, 9);
+      lua_createtable(L, 0, 10);
       if(use_adata && !set_metatable(L, "ad_mt_gce_adl.net_option")){ luaL_error(L,"unknow type: gce_adl.net_option"); }
       {push(L, value.is_router);}
       lua_setfield(L, -2, "is_router");
@@ -42,6 +44,8 @@ namespace adata
       lua_setfield(L, -2, "heartbeat_period");
       {push(L, value.heartbeat_count);}
       lua_setfield(L, -2, "heartbeat_count");
+      {push(L, value.reconn_wait_period, use_adata);}
+      lua_setfield(L, -2, "reconn_wait_period");
       {push(L, value.init_reconn_period, use_adata);}
       lua_setfield(L, -2, "init_reconn_period");
       {push(L, value.init_reconn_try);}

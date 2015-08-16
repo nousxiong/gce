@@ -21,6 +21,7 @@ namespace gce
 template <typename Match>
 inline void register_service(stackful_actor self, Match name)
 {
+  self.register_service(to_match(name));
   detail::register_service(
     self.get_aid(), self.get_service(), to_match(name)
     );
@@ -37,6 +38,7 @@ inline void deregister_service(stackful_actor self, Match name)
 template <typename Match>
 inline void register_service(stackless_actor self, Match name)
 {
+  self.register_service(to_match(name));
   detail::register_service(
     self.get_aid(), self.get_service(), to_match(name)
     );

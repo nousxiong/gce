@@ -241,6 +241,16 @@ public:
     base_t::pri_monitor(target);
   }
 
+  void link(svcid_t const& target)
+  {
+    base_t::pri_link_svc(target);
+  }
+
+  void monitor(svcid_t const& target)
+  {
+    base_t::pri_monitor_svc(target);
+  }
+
   void recv(aid_t& sender, message& msg, pattern const& patt = pattern())
   {
     recv(recv_binder(*this, sender, msg), patt);
@@ -306,6 +316,11 @@ public:
   service_t& get_service()
   {
     return svc_;
+  }
+
+  void register_service(match_t name)
+  {
+    base_t::set_aid_svc(make_svcid(base_t::ctxid_, name));
   }
 
   void recv(recv_binder const& f, pattern const& patt = pattern())

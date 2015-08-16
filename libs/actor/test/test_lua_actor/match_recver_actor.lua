@@ -19,12 +19,5 @@ gce.actor(
       gce.send(base_id, 'catch', i)
       i = i + 1
       gce.send(base_id, 'catch', i)
-
-      ec, sender = gce.match('resp').recv()
-      assert (sender == base_id)
-      gce.send(sender, gce.exit)
-
-      i = i + 1
-      gce.send(base_id, 'catch', i)
     end
   end)

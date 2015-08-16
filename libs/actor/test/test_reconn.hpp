@@ -78,6 +78,8 @@ private:
       base.sleep_for(seconds(1));
 
       netopt_t opt = make_netopt();
+      opt.heartbeat_period = seconds(2);
+      opt.heartbeat_count = 2;
       opt.reconn_period = seconds(1);
       opt.reconn_try = 100;
       connect(base, "svr", "tcp://127.0.0.1:23333", opt);

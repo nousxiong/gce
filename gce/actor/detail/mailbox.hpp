@@ -110,12 +110,13 @@ public:
         exit_list_t::iterator itr(exit_list_.find(recver));
         if (itr != exit_list_.end())
         {
-          //recv_itr* rtr = recv_itr_pool_.get();
           recv_itr& rtr = *itr->second;
-          //recv_itr rtr = *itr->second;
-          message* tmp = msg_pool_.get();
+          /*message* tmp = msg_pool_.get();
           *tmp = *rtr.itr_->msg_;
-          msg = tmp;
+          msg = tmp;*/
+          msg = rtr.itr_->msg_;
+          erase_exit_msg(itr->second);
+          exit_list_.erase(itr);
           res = resp_t(res.get_id(), recver);
           return true;
         }
@@ -127,9 +128,12 @@ public:
         if (itr != svc_exit_list_.end())
         {
           recv_itr& rtr = *itr->second.second;
-          message* tmp = msg_pool_.get();
+          /*message* tmp = msg_pool_.get();
           *tmp = *rtr.itr_->msg_;
-          msg = tmp;
+          msg = tmp;*/
+          msg = rtr.itr_->msg_;
+          erase_exit_msg(itr->second.second);
+          svc_exit_list_.erase(itr);
           res = resp_t(res.get_id(), itr->second.first);
           return true;
         }
@@ -170,7 +174,7 @@ public:
   void push(request_t const& req, message* msg)
   {
     recv_t rcv(req);
-    add_match_msg(rcv, aid_t(), msg);
+    add_match_msg(rcv, aid_nil, msg);
     std::pair<wait_reply_list_t::iterator, bool> pr =
       wait_reply_list_.insert(std::make_pair(req.get_aid(), dummy_));
     pr.first->second.push_back(req);
@@ -215,34 +219,34 @@ private:
     }
     mtr = match_que->insert(match_que->end(), *rtr);
 
-    if (sender != aid_nil && boost::get<exit_t>(&rcv) != 0)
+    if (valid(sender) && boost::get<exit_t>(&rcv) != 0)
     {
       if (sender.svc_ != svcid_nil)
       {
         std::pair<aid_t, match_itr> p = std::make_pair(sender, mtr);
         std::pair<svc_exit_list_t::iterator, bool> pr = 
           svc_exit_list_.insert(std::make_pair(sender.svc_, p));
-        GCE_ASSERT(pr.second);
-        /*if (!pr.second)
+        //GCE_ASSERT(pr.second);
+        if (!pr.second)
         {
           recv_itr& rtr = *pr.first->second.second;
           recv_que_.erase_and_dispose(rtr.itr_, recv_pair_disposer(recv_pair_pool_));
           match_que->erase_and_dispose(pr.first->second.second, recv_itr_disposer(recv_itr_pool_));
           pr.first->second = p;
-        }*/
+        }
       }
       else
       {
         std::pair<exit_list_t::iterator, bool> pr = 
           exit_list_.insert(std::make_pair(sender, mtr));
-        GCE_ASSERT(pr.second);
-        /*if (!pr.second)
+        //GCE_ASSERT(pr.second);
+        if (!pr.second)
         {
           recv_itr& rtr = *pr.first->second;
           recv_que_.erase_and_dispose(rtr.itr_, recv_pair_disposer(recv_pair_pool_));
           match_que->erase_and_dispose(pr.first->second, recv_itr_disposer(recv_itr_pool_));
           pr.first->second = mtr;
-        }*/
+        }
       }
     }
   }
@@ -262,9 +266,12 @@ private:
         {
           recv_itr& rtr = *itr->second;
           src = rtr.itr_->rcv_;
-          message* tmp = msg_pool_.get();
+          /*message* tmp = msg_pool_.get();
           *tmp = *rtr.itr_->msg_;
-          msg = tmp;
+          msg = tmp;*/
+          msg = rtr.itr_->msg_;
+          erase_exit_msg(itr->second);
+          exit_list_.erase(itr);
           return true;
         }
       }
@@ -275,9 +282,12 @@ private:
         {
           recv_itr& rtr = *itr->second.second;
           src = rtr.itr_->rcv_;
-          message* tmp = msg_pool_.get();
+          /*message* tmp = msg_pool_.get();
           *tmp = *rtr.itr_->msg_;
-          msg = tmp;
+          msg = tmp;*/
+          msg = rtr.itr_->msg_;
+          erase_exit_msg(itr->second.second);
+          svc_exit_list_.erase(itr);
           return true;
         }
       }
@@ -287,21 +297,9 @@ private:
 
   bool fetch_match_msg(match_t type, recv_t& src, message*& msg)
   {
-    match_queue_t* match_que = 0;
-    match_queue_list_t::iterator mq_itr(match_queue_list_.end());
-    if (type.val_ >= 0 && type.val_ < cache_match_list_.size())
-    {
-      match_que = &cache_match_list_[type.val_].que_;
-    }
-    else
-    {
-      dummy2_.ty_ = type;
-      mq_itr = match_queue_list_.find(dummy2_);
-      if (mq_itr != match_queue_list_.end())
-      {
-        match_que = &mq_itr->que_;
-      }
-    }
+    std::pair<match_queue_t*, match_queue_list_t::iterator> pr = get_match_queue(type);
+    match_queue_t* match_que = pr.first;
+    match_queue_list_t::iterator& mq_itr = pr.second;
 
     if (match_que && !match_que->empty())
     {
@@ -326,7 +324,7 @@ private:
           sender = ex->get_aid();
         }
 
-        if (sender != aid_nil)
+        if (valid(sender))
         {
           if (sender.svc_ != svcid_nil)
           {
@@ -343,6 +341,44 @@ private:
     }
 
     return false;
+  }
+
+  std::pair<match_queue_t*, match_queue_list_t::iterator> get_match_queue(match_t type)
+  {
+    match_queue_t* match_que = 0;
+    match_queue_list_t::iterator mq_itr(match_queue_list_.end());
+    if (type.val_ >= 0 && type.val_ < cache_match_list_.size())
+    {
+      match_que = &cache_match_list_[type.val_].que_;
+    }
+    else
+    {
+      dummy2_.ty_ = type;
+      mq_itr = match_queue_list_.find(dummy2_);
+      if (mq_itr != match_queue_list_.end())
+      {
+        match_que = &mq_itr->que_;
+      }
+    }
+    return std::make_pair(match_que, mq_itr);
+  }
+
+  void erase_exit_msg(match_queue_t::iterator& mitr)
+  {
+    std::pair<match_queue_t*, match_queue_list_t::iterator> pr = get_match_queue(exit);
+    match_queue_t* match_que = pr.first;
+    match_queue_list_t::iterator& mq_itr = pr.second;
+    if (match_que != 0 && !match_que->empty())
+    {
+      recv_queue_t::iterator itr = mitr->itr_;
+      //match_que->pop_front_and_dispose(recv_itr_disposer(recv_itr_pool_));
+      match_que->erase_and_dispose(mitr, recv_itr_disposer(recv_itr_pool_));
+      if (match_que->empty() && mq_itr != match_queue_list_.end())
+      {
+        match_queue_list_.erase_and_dispose(mq_itr, match_queue_disposer(match_queue_pool_));
+      }
+      recv_que_.erase_and_dispose(itr, recv_pair_disposer(recv_pair_pool_));
+    }
   }
 
 private:

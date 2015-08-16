@@ -22,6 +22,7 @@ inline netopt_t make_netopt(
   bool is_router = false, /// if is router, set it true
   duration_t heartbeat_period = seconds(30),
   int32_t heartbeat_count = 3,
+  duration_t reconn_wait_period = seconds(0), /// when net error, how long waiting before reconn 
   duration_t init_reconn_period = seconds(3), /// init conn, between two connects' period
   int32_t init_reconn_try = 2, /// init conn, how many try to reconnect before give up
   duration_t reconn_period = seconds(10), /// in one reconn, between two connects' period
@@ -34,6 +35,7 @@ inline netopt_t make_netopt(
   opt.is_router = is_router ? 1 : 0;
   opt.heartbeat_period = heartbeat_period;
   opt.heartbeat_count = heartbeat_count;
+  opt.reconn_wait_period = reconn_wait_period;
   opt.init_reconn_period = init_reconn_period;
   opt.init_reconn_try = init_reconn_try;
   opt.reconn_period = reconn_period;
