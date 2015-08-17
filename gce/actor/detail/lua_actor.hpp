@@ -365,6 +365,7 @@ public:
 
   void register_service(match_t name)
   {
+    base_t::set_aid_svc(make_svcid(base_t::ctxid_, name));
     gce::detail::register_service(base_t::get_aid(), svc_, name);
   }
 

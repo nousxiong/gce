@@ -1093,13 +1093,13 @@ private:
     {
       if (src != aid_nil)
       {
-        std::pair<straight_link_list_t::iterator, bool> pr =
+        std::pair<typename straight_link_list_t::iterator, bool> pr =
           straight_link_list_.insert(std::make_pair(src, straight_dummy_));
         pr.first->second.aid_list_.insert(des);
       }
       else if (src.svc_ != svcid_nil)
       {
-        std::pair<svc_straight_link_list_t::iterator, bool> pr =
+        std::pair<typename svc_straight_link_list_t::iterator, bool> pr =
           svc_straight_link_list_.insert(std::make_pair(src.svc_, straight_dummy_));
         pr.first->second.aid_list_.insert(des);
       }
@@ -1108,13 +1108,13 @@ private:
     {
       if (src != aid_nil)
       {
-        std::pair<straight_link_list_t::iterator, bool> pr =
+        std::pair<typename straight_link_list_t::iterator, bool> pr =
           straight_link_list_.insert(std::make_pair(src, straight_dummy_));
         pr.first->second.svcid_list_.insert(des.svc_);
       }
       else if (src.svc_ != svcid_nil)
       {
-        std::pair<svc_straight_link_list_t::iterator, bool> pr =
+        std::pair<typename svc_straight_link_list_t::iterator, bool> pr =
           svc_straight_link_list_.insert(std::make_pair(src.svc_, straight_dummy_));
         pr.first->second.svcid_list_.insert(des.svc_);
       }
@@ -1128,7 +1128,7 @@ private:
     {
       if (src != aid_nil)
       {
-        straight_link_list_t::iterator itr(
+        typename straight_link_list_t::iterator itr(
           straight_link_list_.find(src)
           );
         if (itr != straight_link_list_.end())
@@ -1145,7 +1145,7 @@ private:
 
       if (src.svc_ != svcid_nil)
       {
-        svc_straight_link_list_t::iterator itr(
+        typename svc_straight_link_list_t::iterator itr(
           svc_straight_link_list_.find(src.svc_)
           );
         if (itr != svc_straight_link_list_.end())
@@ -1165,7 +1165,7 @@ private:
     {
       if (src != aid_nil)
       {
-        straight_link_list_t::iterator itr(
+        typename straight_link_list_t::iterator itr(
           straight_link_list_.find(src)
           );
         if (itr != straight_link_list_.end())
@@ -1182,7 +1182,7 @@ private:
 
       if (src.svc_ != svcid_nil)
       {
-        svc_straight_link_list_t::iterator itr(
+        typename svc_straight_link_list_t::iterator itr(
           svc_straight_link_list_.find(src.svc_)
           );
         if (itr != svc_straight_link_list_.end())
@@ -1206,13 +1206,13 @@ private:
     {
       if (src != aid_nil)
       {
-        std::pair<router_link_list_t::iterator, bool> pr =
+        std::pair<typename router_link_list_t::iterator, bool> pr =
           router_link_list_.insert(std::make_pair(src, router_dummy_));
         pr.first->second.aid_list_.insert(std::make_pair(des, skt));
       }
       else if (src.svc_ != svcid_nil)
       {
-        std::pair<svc_router_link_list_t::iterator, bool> pr =
+        std::pair<typename svc_router_link_list_t::iterator, bool> pr =
           svc_router_link_list_.insert(std::make_pair(src.svc_, router_dummy_));
         pr.first->second.aid_list_.insert(std::make_pair(des, skt));
       }
@@ -1221,13 +1221,13 @@ private:
     {
       if (src != aid_nil)
       {
-        std::pair<router_link_list_t::iterator, bool> pr =
+        std::pair<typename router_link_list_t::iterator, bool> pr =
           router_link_list_.insert(std::make_pair(src, router_dummy_));
         pr.first->second.svcid_list_.insert(std::make_pair(des.svc_, skt));
       }
       else if (src.svc_ != svcid_nil)
       {
-        std::pair<svc_router_link_list_t::iterator, bool> pr =
+        std::pair<typename svc_router_link_list_t::iterator, bool> pr =
           svc_router_link_list_.insert(std::make_pair(src.svc_, router_dummy_));
         pr.first->second.svcid_list_.insert(std::make_pair(des.svc_, skt));
       }
@@ -1241,7 +1241,7 @@ private:
     {
       if (src != aid_nil)
       {
-        router_link_list_t::iterator itr(
+        typename router_link_list_t::iterator itr(
           router_link_list_.find(src)
           );
         if (itr != router_link_list_.end())
@@ -1258,7 +1258,7 @@ private:
 
       if (src.svc_ != svcid_nil)
       {
-        svc_router_link_list_t::iterator itr(
+        typename svc_router_link_list_t::iterator itr(
           svc_router_link_list_.find(src.svc_)
           );
         if (itr != svc_router_link_list_.end())
@@ -1278,7 +1278,7 @@ private:
     {
       if (src != aid_nil)
       {
-        router_link_list_t::iterator itr(
+        typename router_link_list_t::iterator itr(
           router_link_list_.find(src)
           );
         if (itr != router_link_list_.end())
@@ -1295,7 +1295,7 @@ private:
 
       if (src.svc_ != svcid_nil)
       {
-        svc_router_link_list_t::iterator itr(
+        typename svc_router_link_list_t::iterator itr(
           svc_router_link_list_.find(src.svc_)
           );
         if (itr != svc_router_link_list_.end())
@@ -1327,7 +1327,7 @@ private:
     message m(exit);
     m << exit_neterr << errmsg;
 
-    BOOST_FOREACH(straight_link_list_t::value_type& pr, straight_link_list_)
+    BOOST_FOREACH(typename straight_link_list_t::value_type& pr, straight_link_list_)
     {
       BOOST_FOREACH(aid_t const& des, pr.second.aid_list_)
       {
@@ -1359,7 +1359,7 @@ private:
     }
     straight_link_list_.clear();
 
-    BOOST_FOREACH(svc_straight_link_list_t::value_type& pr, svc_straight_link_list_)
+    BOOST_FOREACH(typename svc_straight_link_list_t::value_type& pr, svc_straight_link_list_)
     {
       aid_t target = base_t::basic_svc_.filter_svcid(pr.first);
       if (target != aid_nil)
@@ -1396,7 +1396,7 @@ private:
 
     typedef std::map<aid_t, sktaid_t> aidskt_list_t;
     typedef std::map<svcid_t, sktaid_t> svcidskt_list_t;
-    BOOST_FOREACH(router_link_list_t::value_type& pr, router_link_list_)
+    BOOST_FOREACH(typename router_link_list_t::value_type& pr, router_link_list_)
     {
       BOOST_FOREACH(aidskt_list_t::value_type& des, pr.second.aid_list_)
       {
@@ -1428,7 +1428,7 @@ private:
     }
     router_link_list_.clear();
 
-    BOOST_FOREACH(svc_router_link_list_t::value_type& pr, svc_router_link_list_)
+    BOOST_FOREACH(typename svc_router_link_list_t::value_type& pr, svc_router_link_list_)
     {
       BOOST_FOREACH(aidskt_list_t::value_type& des, pr.second.aid_list_)
       {

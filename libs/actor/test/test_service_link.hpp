@@ -89,7 +89,7 @@ private:
 
       self->send(echo_svc, "end");
       self->recv(exit);
-      deregister_service(self, "echo_svc");
+      deregister_service(self, "other_svc");
     }
     catch (std::exception& ex)
     {

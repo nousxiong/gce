@@ -1630,6 +1630,26 @@ struct actor
     return 0;
   }
 
+  static int link_svc(lua_State* L)
+  {
+    proxy_t* o = to_obj<proxy_t>(L, 1, "actor");
+
+#if GCE_PACKER == GCE_AMSG
+    int arg2check = lua_isuserdata(L, 2);
+#elif GCE_PACKER == GCE_ADATA
+    int arg2check = lua_istable(L, 2);
+#endif
+    luaL_argcheck(L, arg2check, 2, "'service_id' expected");
+
+    svcid_t svcid;
+    load(L, 2, svcid);
+
+    proxy_t& a = *o;
+
+    a->link(svcid);
+    return 0;
+  }
+
   static int monitor(lua_State* L)
   {
     proxy_t* o = to_obj<proxy_t>(L, 1, "actor");
@@ -1647,6 +1667,26 @@ struct actor
     proxy_t& a = *o;
 
     a->monitor(aid);
+    return 0;
+  }
+
+  static int monitor_svc(lua_State* L)
+  {
+    proxy_t* o = to_obj<proxy_t>(L, 1, "actor");
+
+#if GCE_PACKER == GCE_AMSG
+    int arg2check = lua_isuserdata(L, 2);
+#elif GCE_PACKER == GCE_ADATA
+    int arg2check = lua_istable(L, 2);
+#endif
+    luaL_argcheck(L, arg2check, 2, "'service_id' expected");
+
+    svcid_t svcid;
+    load(L, 2, svcid);
+
+    proxy_t& a = *o;
+
+    a->monitor(svcid);
     return 0;
   }
 
@@ -2169,6 +2209,44 @@ inline int unpack_object(lua_State* L)
   }
 
   return 0;
+}
+///------------------------------------------------------------------------------
+/// make_svcid
+///------------------------------------------------------------------------------
+inline int make_svcid(lua_State* L)
+{
+  ctxid_t ctxid = ctxid_nil;
+  match_t name = match_nil;
+  int ty1 = lua_type(L, 1);
+  if (ty1 == LUA_TSTRING)
+  {
+    ctxid = to_match(lua_tostring(L, 1));
+  }
+  else if (ty1 == LUA_TNUMBER)
+  {
+    ctxid = to_match(lua_tointeger(L, 1));
+  }
+  else
+  {
+    load(L, 1, ctxid);
+  }
+
+  int ty2 = lua_type(L, 2);
+  if (ty2 == LUA_TSTRING)
+  {
+    name = to_match(lua_tostring(L, 2));
+  }
+  else if (ty1 == LUA_TNUMBER)
+  {
+    name = to_match(lua_tointeger(L, 2));
+  }
+  else
+  {
+    load(L, 2, name);
+  }
+
+  push(L, gce::make_svcid(ctxid, name));
+  return 1;
 }
 ///------------------------------------------------------------------------------
 /// print

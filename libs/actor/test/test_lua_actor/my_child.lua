@@ -11,6 +11,6 @@ local gce = require('gce')
 
 gce.actor(
   function ()
-		local ec, sender, msg = gce.recv()
+		local ec, sender = gce.recv()
 		gce.reply(sender)
   end)

@@ -132,13 +132,19 @@ function gce.reply(target, cfg, ...)
 end
 
 function gce.link(target)
-  assert (libgce.typeof(target) == gce.ty_actor_id)
-  libgce.self:link(target)
+  if libgce.typeof(target) == gce.ty_actor_id then
+    libgce.self:link(target)
+  else 
+    libgce.self:link_svc(target)
+  end
 end
 
 function gce.monitor(target)
-  assert (libgce.typeof(target) == gce.ty_actor_id)
-  libgce.self:monitor(target)
+  if libgce.typeof(target) == gce.ty_actor_id then
+    libgce.self:monitor(target)
+  else
+    libgce.self:monitor_svc(target)
+  end
 end
 
 function gce.match(...)
@@ -473,12 +479,16 @@ end
 
 function gce.service_id()
   if gce.packer == gce.pkr_amsg then
-    return libgce.make_svcid()
+    return libgce.make_service_id()
   elseif gce.packer == gce.pkr_adata then
     return svcid_adl.service_id()
   else
     error('gce.packer invalid')
   end
+end
+
+function gce.make_svcid(ctxid, name)
+  return libgce.make_svcid(ctxid, name)
 end
 
 function gce.pattern(...)
@@ -733,8 +743,8 @@ end
 libgce.receiver = {}
 
 -- guard
-function libgce.receiver.guard(aid)
-  libgce.receiver.recver = aid
+function libgce.receiver.guard(target)
+  libgce.receiver.recver = target
   return libgce.receiver
 end
 

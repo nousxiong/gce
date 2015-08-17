@@ -25,10 +25,11 @@ public:
   }
 
 private:
-  static void service(stackful_actor self)
+  static void service(stackful_actor self, aid_t const& base_aid)
   {
     log::logger_t& lg = self.get_context().get_logger();
     register_service(self, "echo_svc");
+    bool goon = true;
     while (true)
     {
       message msg;
@@ -41,23 +42,27 @@ private:
       }
       else
       {
+        msg >> goon;
         break;
       }
     }
+    self->send(base_aid, "end", goon);
     deregister_service(self, "echo_svc");
   }
 
-  static void server(size_t const reset_num, log::logger_t lg)
+  static void server(log::logger_t lg)
   {
-    for (size_t i=0; i<reset_num; ++i)
+    bool goon = true;
+    while (goon)
     {
       attributes attr;
       attr.id_ = atom("svr");
       attr.lg_ = lg;
       context ctx(attr);
       threaded_actor base = spawn(ctx);
-      gce::bind(base, "tcp://127.0.0.1:23333", remote_func_list_t());
-      spawn(base, boost::bind(&reconn_ut::service, _arg1), monitored);
+      gce::bind(base, "tcp://127.0.0.1:23333");
+      spawn(base, boost::bind(&reconn_ut::service, _arg1, base.get_aid()), monitored);
+      base->match("end").recv(goon);
       base->recv(exit);
     }
   }
@@ -74,39 +79,37 @@ private:
       attr.id_ = atom("cln");
       context ctx(attr);
       threaded_actor base = spawn(ctx);
-      boost::thread thr(boost::bind(&reconn_ut::server, reconn_num, lg));
-      base.sleep_for(seconds(1));
+      boost::thread thr(boost::bind(&reconn_ut::server, lg));
+      base.sleep_for(millisecs(300));
 
       netopt_t opt = make_netopt();
-      opt.heartbeat_period = seconds(2);
-      opt.heartbeat_count = 2;
-      opt.reconn_period = seconds(1);
-      opt.reconn_try = 100;
+      opt.reconn_wait_period = seconds(1);
       connect(base, "svr", "tcp://127.0.0.1:23333", opt);
 
       svcid_t svc = make_svcid("svr","echo_svc");
-      base->send(svc, "login");
-      aid_t svc_aid = base->recv("login_ret");
-
+      base.monitor(svc);
       for (size_t i=0; i<reconn_num; ++i)
       {
         while (true)
         {
           base->send(svc, "login");
           errcode_t ec;
-          aid_t sender = base->match("login_ret").guard(svc_aid, ec).recv();
-          if (!ec)
+          base->match("login_ret").guard(svc, ec).recv();
+          if (ec)
           {
-            svc_aid = sender;
-            base.monitor(svc_aid);
-            base->send(svc, "disconn");
-            base->recv(exit);
-            std::cout << "exit ok.\n";
+            std::cout << "broken\n";
+            base.monitor(svc);
             break;
+          }
+          else
+          {
+            base->send(svc, "disconn", true);
           }
         }
       }
 
+      base->send(svc, "end", false);
+      base->recv(exit);
       thr.join();
     }
     catch (std::exception& ex)
