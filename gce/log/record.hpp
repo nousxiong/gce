@@ -261,7 +261,7 @@ public:
   /// internal use
   void flush()
   {
-    if (lg_ && !flushed_)
+    if (!flushed_ && lg_)
     {
       flushed_ = true;
       lg_(*this);

@@ -843,10 +843,10 @@ private:
               /// send cached msgs
               send_cache_msg();
             }
-            else if (type == msg_add_svc || type == msg_rmv_svc)
+            /*else if (type == msg_add_svc || type == msg_rmv_svc)
             {
               handle_svc_msg(msg);
-            }
+            }*/
             else if (type != msg_hb)
             {
               handle_net_msg(msg);
