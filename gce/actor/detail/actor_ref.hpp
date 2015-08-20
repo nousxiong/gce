@@ -69,12 +69,6 @@ public:
     a_->send(recver, m);
   }
 
-  template <typename Recver>
-  void send(Recver recver, message const& m)
-  {
-    a_->send(recver, m);
-  }
-
   void relay(aid_t const& des, message& m)
   {
     a_->relay(des, m);
@@ -85,24 +79,12 @@ public:
     a_->relay(des, m);
   }
 
-  template <typename Recver>
-  void relay(Recver des, message& m)
-  {
-    a_->relay(des, m);
-  }
-
   resp_t request(aid_t const& recver, message const& m)
   {
     return a_->request(recver, m);
   }
 
   resp_t request(svcid_t const& recver, message const& m)
-  {
-    return a_->request(recver, m);
-  }
-
-  template <typename Recver>
-  resp_t request(Recver recver, message const& m)
   {
     return a_->request(recver, m);
   }

@@ -23,30 +23,3 @@ errcode
   fix_uint32 code_;
   fix_uint64 errcat_;
 }
-
-ctxid_list
-{
-  list<gce.adl.match> list_;
-}
-
-global_service_list
-{
-  map<gce.adl.match, ctxid_list> list_;
-}
-
-svc_pair
-{
-  gce.adl.match name_;
-  gce.adl.match ctxid_;
-}
-
-add_svc
-{
-  list<svc_pair> svcs_;
-}
-
-rmv_svc
-{
-  gce.adl.match ctxid_;
-  list<gce.adl.match> names_;
-}

@@ -319,46 +319,6 @@ public:
     }
   }
 
-  void add_service(match_t name, ctxid_t ctxid, detail::actor_type type, size_t concurrency_index)
-  {
-    for (size_t i=0; i<service_size_; ++i)
-    {
-      add_service(name, ctxid, threaded_service_list_[i]);
-      add_service(name, ctxid, stackful_service_list_[i]);
-      add_service(name, ctxid, stackless_service_list_[i]);
-#ifdef GCE_LUA
-      add_service(name, ctxid, lua_service_list_[i]);
-#endif
-      add_service(name, ctxid, socket_service_list_[i]);
-      add_service(name, ctxid, acceptor_service_list_[i]);
-    }
-
-    for (size_t i=0, size=nonblocked_actor_list_.size(); i<size; ++i)
-    {
-      nonblocked_actor_list_[i].add_service(name, ctxid, type, concurrency_index);
-    }
-  }
-
-  void rmv_service(match_t name, ctxid_t ctxid, detail::actor_type type, size_t concurrency_index)
-  {
-    for (size_t i=0; i<service_size_; ++i)
-    {
-      rmv_service(name, ctxid, threaded_service_list_[i]);
-      rmv_service(name, ctxid, stackful_service_list_[i]);
-      rmv_service(name, ctxid, stackless_service_list_[i]);
-#ifdef GCE_LUA
-      rmv_service(name, ctxid, lua_service_list_[i]);
-#endif
-      rmv_service(name, ctxid, socket_service_list_[i]);
-      rmv_service(name, ctxid, acceptor_service_list_[i]);
-    }
-
-    for (size_t i=0, size=nonblocked_actor_list_.size(); i<size; ++i)
-    {
-      nonblocked_actor_list_[i].rmv_service(name, ctxid, type, concurrency_index);
-    }
-  }
-
   void register_socket(
     detail::ctxid_pair_t ctxid_pr, aid_t const& skt, detail::actor_type type, size_t concurrency_index
     )
@@ -693,8 +653,6 @@ private:
 
   struct tag_reg {};
   struct tag_dereg {};
-  struct tag_add {};
-  struct tag_rmv {};
   struct tag_con {};
   struct tag_decon {};
 
@@ -730,16 +688,6 @@ private:
     {
       s_.deregister_service(name_, svc_);
     }
-
-    void invoke(tag_add) const
-    {
-      s_.add_service(name_, ctxid_);
-    }
-
-    void invoke(tag_rmv) const
-    {
-      s_.rmv_service(name_, ctxid_);
-    }
     
     Service& s_;
     match_t name_;
@@ -757,18 +705,6 @@ private:
   void deregister_service(match_t name, aid_t const& svc, Service& s)
   {
     s.get_strand().dispatch(service_binder<tag_dereg, Service>(s, name, svc));
-  }
-
-  template <typename Service>
-  void add_service(match_t name, ctxid_t ctxid, Service& s)
-  {
-    s.get_strand().dispatch(service_binder<tag_add, Service>(s, name, ctxid));
-  }
-
-  template <typename Service>
-  void rmv_service(match_t name, ctxid_t ctxid, Service& s)
-  {
-    s.get_strand().dispatch(service_binder<tag_rmv, Service>(s, name, ctxid));
   }
 
   template <typename Tag, typename Service>

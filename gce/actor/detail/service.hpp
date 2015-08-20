@@ -23,13 +23,6 @@ inline void register_service(aid_t aid, Service& svc, match_t name)
   typedef typename Service::context_t context_t;
   context_t& ctx = svc.get_context();
   ctx.register_service(name, aid, svc.get_type(), svc.get_index());
-
-  /*ctxid_t ctxid = ctx.get_ctxid();
-  if (!svc.has_service(name, ctxid))
-  {
-    ctx.add_service(name, ctxid, svc.get_type(), svc.get_index());
-    svc.broadcast_add_service(aid, name, ctxid);
-  }*/
 }
 
 template <typename Service>
@@ -38,13 +31,6 @@ inline void deregister_service(aid_t aid, Service& svc, match_t name)
   typedef typename Service::context_t context_t;
   context_t& ctx = svc.get_context();
   ctx.deregister_service(name, aid, svc.get_type(), svc.get_index());
-
-  /*ctxid_t ctxid = ctx.get_ctxid();
-  if (svc.has_service(name, ctxid))
-  {
-    ctx.rmv_service(name, ctxid, svc.get_type(), svc.get_index());
-    svc.broadcast_rmv_service(aid, name, ctxid);
-  }*/
 }
 }
 }

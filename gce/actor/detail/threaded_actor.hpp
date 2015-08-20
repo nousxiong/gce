@@ -73,12 +73,6 @@ public:
     base_t::snd_.post(send_binder<svcid_t>(*this, recver, m));
   }
 
-  template <typename Recver>
-  void send(Recver recver, message const& m)
-  {
-    base_t::snd_.post(send_binder<match_t>(*this, to_match(recver), m));
-  }
-
   void relay(aid_t const& des, message& m)
   {
     base_t::snd_.post(relay_binder<aid_t>(*this, des, m));
@@ -87,12 +81,6 @@ public:
   void relay(svcid_t const& des, message& m)
   {
     base_t::snd_.post(relay_binder<svcid_t>(*this, des, m));
-  }
-
-  template <typename Recver>
-  void relay(Recver des, message const& m)
-  {
-    base_t::snd_.post(relay_binder<match_t>(*this, to_match(des), m));
   }
 
   resp_t request(aid_t const& recver, message const& m)
@@ -106,14 +94,6 @@ public:
   {
     resp_t res(base_t::new_request(), base_t::get_aid(), recver);
     base_t::snd_.post(request_binder<svcid_t>(*this, res, recver, m));
-    return res;
-  }
-
-  template <typename Recver>
-  resp_t request(Recver recver, message const& m)
-  {
-    resp_t res(base_t::new_request(), base_t::get_aid());
-    base_t::snd_.post(request_binder<match_t>(*this, res, to_match(recver), m));
     return res;
   }
 
@@ -272,11 +252,6 @@ private:
     void invoke(svcid_t const& recver) const
     {
       self_.pri_send_svc(recver, m_);
-    }
-
-    void invoke(match_t const& recver) const
-    {
-      self_.pri_send_svcs(recver, m_);
     }
 
     base_t& self_;

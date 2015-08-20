@@ -92,11 +92,8 @@ function gce.send(target, cfg, ...)
   local m = gce.message(cfg, ...)
   if oty == gce.ty_actor_id then
     libgce.self:send(target, m)
-  elseif oty == gce.ty_service_id then
-    libgce.self:send2svc(target, m)
   else
-    local name = gce.atom(target)
-    libgce.self:send2svcs(name, m)
+    libgce.self:send2svc(target, m)
   end
 end
 
@@ -104,11 +101,8 @@ function gce.relay(target, m)
   local oty = libgce.typeof(target)
   if oty == gce.ty_actor_id then
     libgce.self:relay(target, m)
-  elseif oty == gce.ty_service_id then
-    libgce.self:relay2svc(target, m)
   else
-    local name = gce.atom(target)
-    libgce.self:relay2svcs(name, m)
+    libgce.self:relay2svc(target, m)
   end
 end
 
@@ -117,11 +111,8 @@ function gce.request(target, cfg, ...)
   local m = gce.message(cfg, ...)
   if oty == gce.ty_actor_id then
     return libgce.self:request(target, m)
-  elseif oty == gce.ty_service_id then
-    return libgce.self:request2svc(target, m)
   else
-    local name = gce.atom(target)
-    return libgce.self:request2svcs(name, m)
+    return libgce.self:request2svc(target, m)
   end
 end
 

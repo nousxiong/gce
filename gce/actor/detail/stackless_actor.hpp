@@ -182,12 +182,6 @@ public:
     base_t::pri_send_svc(recver, m);
   }
 
-  template <typename Recver>
-  void send(Recver recver, message const& m)
-  {
-    base_t::pri_send_svcs(recver, m);
-  }
-
   void relay(aid_t const& des, message& m)
   {
     base_t::pri_relay(des, m);
@@ -196,12 +190,6 @@ public:
   void relay(svcid_t const& des, message& m)
   {
     base_t::pri_relay_svc(des, m);
-  }
-
-  template <typename Recver>
-  void relay(Recver des, message& m)
-  {
-    base_t::pri_relay_svcs(des, m);
   }
 
   resp_t request(aid_t const& recver, message const& m)
@@ -215,14 +203,6 @@ public:
   {
     resp_t res(base_t::new_request(), base_t::get_aid(), recver);
     base_t::pri_request_svc(res, recver, m);
-    return res;
-  }
-
-  template <typename Recver>
-  resp_t request(Recver recver, message const& m)
-  {
-    resp_t res(base_t::new_request(), base_t::get_aid());
-    base_t::pri_request_svcs(res, recver, m);
     return res;
   }
 
