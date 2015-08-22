@@ -7,17 +7,19 @@
 /// See https://github.com/nousxiong/gce for latest version.
 ///
 
-#ifndef CLUSTER1_MASTER_MANAGER_HPP
-#define CLUSTER1_MASTER_MANAGER_HPP
+#ifndef CLUSTER2_MASTER_MANAGER_HPP
+#define CLUSTER2_MASTER_MANAGER_HPP
 
+#include "node_info.hpp"
 #include <gce/actor/all.hpp>
 #include <gce/log/all.hpp>
+#include <boost/thread.hpp>
 #include <boost/foreach.hpp>
 #include <boost/lexical_cast.hpp>
 #include <map>
 #include <vector>
 
-/// node的状态
+
 struct node_stat
 {
   node_stat()
@@ -25,28 +27,35 @@ struct node_stat
   {
   }
 
-  explicit node_stat(bool online)
+  explicit node_stat(bool online, cluster2::node_info const& ni)
     : online_(online)
+    , ni_(ni)
   {
   }
 
-  bool online_; /// 是否在线
+  bool online_;
+  cluster2::node_info const ni_; /// 节点信息，包括其ctxid和网络地址（ip地址+端口）
 };
 
 typedef std::map<gce::svcid_t, node_stat> node_stat_list_t;
-void update_node_stat(node_stat_list_t& node_stat_list, gce::svcid_t node_id, node_stat const& stat)
+
+/// 更新节点状态，如果找不到节点，返回false
+bool update_node_stat(node_stat_list_t& node_stat_list, gce::svcid_t node_id, bool online)
 {
   using namespace gce;
 
-  std::pair<node_stat_list_t::iterator, bool> pr = 
-    node_stat_list.insert(std::make_pair(node_id, stat));
-  if (!pr.second)
+  node_stat_list_t::iterator itr = node_stat_list.find(node_id);
+  if (itr != node_stat_list.end())
   {
-    pr.first->second = stat;
+    itr->second.online_ = online;
+    return true;
+  }
+  else
+  {
+    return false;
   }
 }
 
-/// master的管理actor
 static void master_manager(gce::stackful_actor self)
 {
   using namespace gce;
@@ -55,21 +64,27 @@ static void master_manager(gce::stackful_actor self)
   context& ctx = self.get_context();
   log::logger_t lg = ctx.get_logger();
 
-  /// 用于保存node(s)的状态
+  /** 
+   *   构建所有node的信息，用于node登录时，告之其它node的node_info，
+   * 使其能连接到其它node，建立node之间的全联通网络；此处未来可以通过配置（脚本）进行构建
+   */
   node_stat_list_t node_stat_list;
+  size_t node_num = boost::thread::hardware_concurrency();
+  std::string node_ep = "tcp://127.0.0.1:";
+  for (size_t i=0; i<node_num; ++i)
+  {
+    /// 根据i来决定node的端口，由于这里示例所有node均在一个计算机上，所以ip相同，只有端口不同
+    size_t port = 23333 + i;
+    cluster2::node_info ni = cluster2::make_node_info(to_match(i), node_ep + boost::lexical_cast<std::string>(port));
+    node_stat_list.insert(std::make_pair(make_svcid(ni.ctxid_, "node_mgr"), node_stat(false, ni)));
+  }
 
-  /// 当前的admin actor的aid
   aid_t admin_id = aid_nil;
-
-  /// 当前准备退出的node数量
   size_t ready_quit_num = 0;
-
-  /// 当前已经退出的node列表
   std::set<svcid_t> quited_node_list;
 
   GCE_INFO(lg) << "master start";
 
-  /// 主消息循环
   while (true)
   {
     try
@@ -77,20 +92,33 @@ static void master_manager(gce::stackful_actor self)
       message msg;
       errcode_t ec;
 
-      /**
-       *   接收来自admin和node的所有消息，有任何错误发生，打印错误，继续循环
-       */
       aid_t sender = self.recv(msg);
       match_t type = msg.get_type();
       if (type == atom("login"))
       {
-        /// 服务actor发来的消息，aid中都会自带svcid
         svcid_t node_id = sender.svc_;
         assert(node_id != svcid_nil);
+        if (update_node_stat(node_stat_list, node_id, true))
+        {
+          /// 告诉node需要连接的其它node(s)的信息
+          cluster2::node_info_list ni_list;
+          ni_list.list_.reserve(node_stat_list.size() - 1);
+          BOOST_FOREACH(node_stat_list_t::value_type const& pr, node_stat_list)
+          {
+            /// 不包括它自己
+            if (pr.second.ni_.ctxid_ != node_id.ctxid_)
+            {
+              ni_list.list_.push_back(pr.second.ni_);
+            }
+          }
 
-        /// 设置对应的node本地状态为online
-        update_node_stat(node_stat_list, node_id, node_stat(true));
-        self->send(sender, "login_ret");
+          self->send(sender, "login_ret", true, ni_list);
+        }
+        else
+        {
+          /// 返回错误
+          self->send(sender, "login_ret", false, "node not found");
+        }
       }
       else if (type == atom("status"))
       {
@@ -123,6 +151,7 @@ static void master_manager(gce::stackful_actor self)
           {
             ++ready_quit_num;
             self.send(pr.first, msg);
+            GCE_INFO(lg) << "send quit to node";
           }
         }
 
@@ -174,7 +203,7 @@ static void master_manager(gce::stackful_actor self)
         /// 当前除了node之外，没有其他actor和master链接（admin使用的是单向的），所以肯定是node
         svcid_t node_id = sender.svc_;
         assert(node_id != svcid_nil);
-        update_node_stat(node_stat_list, node_id, node_stat(false));
+        update_node_stat(node_stat_list, node_id, false);
       }
     }
     catch (std::exception& ex)
@@ -187,4 +216,4 @@ static void master_manager(gce::stackful_actor self)
   GCE_INFO(lg) << "master quit";
 }
 
-#endif /// CLUSTER1_MASTER_MANAGER_HPP
+#endif /// CLUSTER2_MASTER_MANAGER_HPP

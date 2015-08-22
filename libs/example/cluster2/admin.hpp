@@ -7,8 +7,8 @@
 /// See https://github.com/nousxiong/gce for latest version.
 ///
 
-#ifndef CLUSTER1_ADMIN_HPP
-#define CLUSTER1_ADMIN_HPP
+#ifndef CLUSTER2_ADMIN_HPP
+#define CLUSTER2_ADMIN_HPP
 
 #include <gce/actor/all.hpp>
 #include <gce/log/all.hpp>
@@ -120,4 +120,4 @@ void admin(gce::log::logger_t lgr)
   GCE_INFO(lg) << "admin quit.";
 }
 
-#endif /// CLUSTER1_ADMIN_HPP
+#endif /// CLUSTER2_ADMIN_HPP

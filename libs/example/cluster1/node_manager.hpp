@@ -7,6 +7,9 @@
 /// See https://github.com/nousxiong/gce for latest version.
 ///
 
+#ifndef CLUSTER1_NODE_MANAGER_HPP
+#define CLUSTER1_NODE_MANAGER_HPP
+
 #include <gce/actor/all.hpp>
 #include <gce/log/all.hpp>
 
@@ -119,3 +122,5 @@ static void node_manager(gce::stackful_actor self)
   deregister_service(self, "node_mgr");
   GCE_INFO(lg) << "node<" << ctxid << "> quit";
 }
+
+#endif /// CLUSTER1_NODE_MANAGER_HPP
