@@ -74,7 +74,7 @@ static void master_manager(gce::stackful_actor self)
   for (size_t i=0; i<node_num; ++i)
   {
     /// 根据i来决定node的端口，由于这里示例所有node均在一个计算机上，所以ip相同，只有端口不同
-    size_t port = 23333 + i;
+    size_t port = 23334 + i;
     cluster2::node_info ni = cluster2::make_node_info(to_match(i), node_ep + boost::lexical_cast<std::string>(port));
     node_stat_list.insert(std::make_pair(make_svcid(ni.ctxid_, "node_mgr"), node_stat(false, ni)));
   }
@@ -101,6 +101,7 @@ static void master_manager(gce::stackful_actor self)
         if (update_node_stat(node_stat_list, node_id, true))
         {
           /// 告诉node需要连接的其它node(s)的信息
+          std::string bind_ep;
           cluster2::node_info_list ni_list;
           ni_list.list_.reserve(node_stat_list.size() - 1);
           BOOST_FOREACH(node_stat_list_t::value_type const& pr, node_stat_list)
@@ -110,9 +111,14 @@ static void master_manager(gce::stackful_actor self)
             {
               ni_list.list_.push_back(pr.second.ni_);
             }
+            else
+            {
+              /// 构建这个node的bind的网络地址， 这里由于都是本机所以直接使用node_info中的ep即可
+              bind_ep = pr.second.ni_.ep_;
+            }
           }
 
-          self->send(sender, "login_ret", true, ni_list);
+          self->send(sender, "login_ret", true, bind_ep, ni_list);
         }
         else
         {
@@ -151,7 +157,6 @@ static void master_manager(gce::stackful_actor self)
           {
             ++ready_quit_num;
             self.send(pr.first, msg);
-            GCE_INFO(lg) << "send quit to node";
           }
         }
 

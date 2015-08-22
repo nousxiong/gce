@@ -15,7 +15,7 @@
 #include <gce/log/all.hpp>
 
 /// 返回是否登录成功+需要连接的其它node的信息
-static bool login(gce::stackful_actor& self, std::set<gce::ctxid_t>& connected_list)
+static bool login(gce::stackful_actor& self, bool& binded, std::set<gce::ctxid_t>& connected_list)
 {
   using namespace gce;
 
@@ -44,8 +44,23 @@ static bool login(gce::stackful_actor& self, std::set<gce::ctxid_t>& connected_l
       if (ret)
       {
         GCE_INFO(lg) << "node<" << ctxid << "> login master success";
+        std::string bind_ep;
         cluster2::node_info_list ni_list;
-        msg >> ni_list;
+        msg >> bind_ep >> ni_list;
+
+        if (!binded)
+        {
+          /// 如果没有bind过，则bind
+          binded = true;
+          gce::bind(self, bind_ep);
+
+          /**
+           *   等待其它node bind完毕，增加初次connect的成功率，不等待也可以，
+           * 但可能因为某些节点在bind之前connect从而导致初次连接失败，等待重连
+           */
+          self.sleep_for(seconds(1));
+        }
+
         /// 连接指定的其它node，来构建全联通
         BOOST_FOREACH(cluster2::node_info const& ni, ni_list.list_)
         {
@@ -83,6 +98,7 @@ static void node_manager(gce::stackful_actor self)
   register_service(self, "node_mgr");
 
   /// 保存已经建立过连接的node
+  bool binded = false;
   std::set<ctxid_t> connected_list;
 
   bool need_login = true;
@@ -93,7 +109,7 @@ static void node_manager(gce::stackful_actor self)
     try
     {
       /// 只有在需要登录的时候才进行
-      if (need_login && !login(self, connected_list))
+      if (need_login && !login(self, binded, connected_list))
       {
         break;
       }

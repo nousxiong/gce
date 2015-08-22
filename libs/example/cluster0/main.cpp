@@ -113,7 +113,7 @@ void node(size_t const id)
   threaded_actor base = spawn(ctx);
 
   /// connect到master，指定master的ctxid和其bind的地址端口
-  gce::connect(base, "master", "tcp://127.0.0.1:23333");
+  connect(base, "master", "tcp://127.0.0.1:23333");
 
   /// 通过master的服务"master_svc"来访问；svcid_t由ctxid和服务名字组成
   svcid_t svc = make_svcid("master", "master_svc");
