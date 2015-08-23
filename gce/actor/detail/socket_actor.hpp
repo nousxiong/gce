@@ -741,7 +741,7 @@ private:
           connect();
         }
 
-        //GCE_INFO(lg_) << base_t::ctxid_ << " connected to " << target.first << " ok";
+        GCE_INFO(lg_) << base_t::ctxid_ << " connected to " << target.first << " ok";
 
         message msg;
         while (stat_ == on)
