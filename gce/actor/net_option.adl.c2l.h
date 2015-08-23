@@ -32,11 +32,13 @@ namespace adata
       {load(L, value.rebind_period);lua_pop(L, 1);}
       lua_getfield(L, -1, "rebind_try");
       {load(L, value.rebind_try);lua_pop(L, 1);}
+      lua_getfield(L, -1, "reuse_conn");
+      {load(L, value.reuse_conn);lua_pop(L, 1);}
     }
 
     ADATA_INLINE void push( lua_State * L, ::gce::adl::net_option const& value, bool use_adata = true)
     {
-      lua_createtable(L, 0, 10);
+      lua_createtable(L, 0, 11);
       if(use_adata && !set_metatable(L, "ad_mt_gce_adl.net_option")){ luaL_error(L,"unknow type: gce_adl.net_option"); }
       {push(L, value.is_router);}
       lua_setfield(L, -2, "is_router");
@@ -58,6 +60,8 @@ namespace adata
       lua_setfield(L, -2, "rebind_period");
       {push(L, value.rebind_try);}
       lua_setfield(L, -2, "rebind_try");
+      {push(L, value.reuse_conn);}
+      lua_setfield(L, -2, "reuse_conn");
     }
 
   }

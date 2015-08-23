@@ -215,6 +215,11 @@ public:
 
   bool connect(ctxid_t target, std::string const& ep, netopt_t opt)
   {
+    if (opt.reuse_conn != 0 && get_service().has_socket(target))
+    {
+      return false;
+    }
+
     typedef typename context_t::socket_service_t socket_service_t;
     context_t& ctx = base_t::get_context();
     socket_service_t& svc = ctx.select_service<socket_service_t>();

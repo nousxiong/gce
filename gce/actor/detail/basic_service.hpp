@@ -180,6 +180,11 @@ public:
     }
   }
 
+  bool has_socket(ctxid_t ctxid) const
+  {
+    return pri_has_socket(conn_list_, ctxid);
+  }
+
   void register_socket(ctxid_pair_t ctxid_pr, aid_t const& skt)
   {
     if (ctxid_pr.second == socket_router)
@@ -447,6 +452,16 @@ private:
     skt_list_t::iterator curr_reconn_;
   };
   typedef std::map<ctxid_t, socket_list> conn_list_t;
+  
+  bool pri_has_socket(conn_list_t const& conn_list, ctxid_t ctxid) const
+  {
+    typename conn_list_t::const_iterator itr = conn_list.find(ctxid);
+    if (itr == conn_list.end())
+    {
+      return false;
+    }
+    return !itr->second.skt_list_.empty() || !itr->second.reconn_list_.empty();
+  }
 
   static aid_t pri_select_socket(
     conn_list_t& conn_list, 

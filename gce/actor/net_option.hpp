@@ -28,7 +28,8 @@ inline netopt_t make_netopt(
   duration_t reconn_period = seconds(10), /// in one reconn, between two connects' period
   int32_t reconn_try = 3, /// how many try to reconnect before drop cache msgs
   duration_t rebind_period = seconds(5), /// bind, between two bind' period
-  int32_t rebind_try = 3 /// bind, how many try to rebind before give up
+  int32_t rebind_try = 3, /// bind, how many try to rebind before give up
+  bool reuse_conn = true /// when connect, reuse connection if true
   )
 {
   netopt_t opt;
@@ -42,6 +43,7 @@ inline netopt_t make_netopt(
   opt.reconn_try = reconn_try;
   opt.rebind_period = rebind_period;
   opt.rebind_try = rebind_try;
+  opt.reuse_conn = reuse_conn ? 1 : 0;
   return opt;
 }
 }

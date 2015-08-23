@@ -14,24 +14,9 @@
 #include <gce/actor/all.hpp>
 #include <gce/log/all.hpp>
 
-/// 连接其它node
-static void connect2node(gce::stackful_actor& self, cluster3::node_info const& ni, std::set<gce::ctxid_t>& connected_list)
-{
-  using namespace gce;
-
-  std::pair<std::set<ctxid_t>::iterator, bool> pr = connected_list.insert(ni.svcid_.ctxid_);
-  if (pr.second)
-  {
-    /**
-      *   node进程启动之后，保证只调用一次gce::connect，否则每调用一次就会多一个连接，
-      * 虽然并无较大影响，但如果调用次数过多，连接会逐渐增多，最终可能会成为系统负担
-      */
-    connect(self, ni.svcid_.ctxid_, ni.ep_);
-  }
-}
 
 /// 返回是否登录成功+需要连接的其它node的信息
-static bool login(gce::stackful_actor& self, bool& binded, std::set<gce::ctxid_t>& connected_list)
+static bool login(gce::stackful_actor& self, bool& binded)
 {
   using namespace gce;
 
@@ -89,7 +74,7 @@ static bool login(gce::stackful_actor& self, bool& binded, std::set<gce::ctxid_t
             /// 连接指定的其它node，来构建全联通
             BOOST_FOREACH(cluster3::node_info const& ni, ni_list.list_)
             {
-              connect2node(self, ni, connected_list);
+              connect(self, ni.svcid_.ctxid_, ni.ep_);
             }
             return true;
           }
@@ -124,10 +109,7 @@ static void node_manager(gce::stackful_actor self)
   log::logger_t lg = ctx.get_logger();
   register_service(self, "node_mgr");
 
-  /// 保存已经建立过连接的node
   bool binded = false;
-  std::set<ctxid_t> connected_list;
-
   bool need_login = true;
   svcid_t master_mgr = make_svcid("master", "master_mgr");
   svcid_t node_mgr = make_svcid(ctxid, "node_mgr");
@@ -136,7 +118,7 @@ static void node_manager(gce::stackful_actor self)
     try
     {
       /// 只有在需要登录的时候才进行
-      if (need_login && !login(self, binded, connected_list))
+      if (need_login && !login(self, binded))
       {
         break;
       }
@@ -153,7 +135,7 @@ static void node_manager(gce::stackful_actor self)
           /// 连接指定的node
           cluster3::node_info ni;
           msg >> ni;
-          connect2node(self, ni, connected_list);
+          connect(self, ni.svcid_.ctxid_, ni.ep_);
         }
         else if (type == atom("quit"))
         {

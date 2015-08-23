@@ -206,6 +206,11 @@ public:
     return base_t::a_->spawn(type, func, ctxid, stack_size);
   }
 
+  bool has_socket(ctxid_t ctxid)
+  {
+    return base_t::a_->has_socket(ctxid);
+  }
+
   context_t& get_context()
   {
     return base_t::a_->get_context();

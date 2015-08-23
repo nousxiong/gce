@@ -8,6 +8,7 @@ namespace gce {namespace adl {
   struct net_option
   {
     int8_t is_router;
+    int8_t reuse_conn;
     int32_t heartbeat_count;
     int32_t init_reconn_try;
     int32_t reconn_try;
@@ -19,6 +20,7 @@ namespace gce {namespace adl {
     ::gce::adl::duration rebind_period;
     net_option()
     :    is_router(0),
+    reuse_conn(0),
     heartbeat_count(0),
     init_reconn_try(0),
     reconn_try(0),
@@ -51,6 +53,7 @@ namespace adata
     if(tag&128ULL)    {read(stream,value.reconn_try);{if(stream.error()){stream.trace_error("reconn_try",-1);return;}}}
     if(tag&256ULL)    {read(stream,value.rebind_period);{if(stream.error()){stream.trace_error("rebind_period",-1);return;}}}
     if(tag&512ULL)    {read(stream,value.rebind_try);{if(stream.error()){stream.trace_error("rebind_try",-1);return;}}}
+    if(tag&1024ULL)    {read(stream,value.reuse_conn);{if(stream.error()){stream.trace_error("reuse_conn",-1);return;}}}
     if(len_tag >= 0)
     {
       ::std::size_t read_len = stream.read_length() - offset;
@@ -69,7 +72,7 @@ namespace adata
   ADATA_INLINE int32_t size_of(const ::gce::adl::net_option& value)
   {
     int32_t size = 0;
-    uint64_t tag = 1023ULL;
+    uint64_t tag = 2047ULL;
     {
       size += size_of(value.is_router);
     }
@@ -100,6 +103,9 @@ namespace adata
     {
       size += size_of(value.rebind_try);
     }
+    {
+      size += size_of(value.reuse_conn);
+    }
     size += size_of(tag);
     size += size_of(size + size_of(size));
     return size;
@@ -108,7 +114,7 @@ namespace adata
   template<typename stream_ty>
   ADATA_INLINE void write(stream_ty& stream , const ::gce::adl::net_option&value)
   {
-    uint64_t tag = 1023ULL;
+    uint64_t tag = 2047ULL;
     write(stream,tag);
     if(stream.error()){return;}
     write(stream,size_of(value));
@@ -123,6 +129,7 @@ namespace adata
     {write(stream,value.reconn_try);{if(stream.error()){stream.trace_error("reconn_try",-1);return;}}}
     {write(stream,value.rebind_period);{if(stream.error()){stream.trace_error("rebind_period",-1);return;}}}
     {write(stream,value.rebind_try);{if(stream.error()){stream.trace_error("rebind_try",-1);return;}}}
+    {write(stream,value.reuse_conn);{if(stream.error()){stream.trace_error("reuse_conn",-1);return;}}}
     return;
   }
 

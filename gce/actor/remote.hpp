@@ -45,6 +45,11 @@ inline errcode_t connect(
   remote_func_list_t const& remote_func_list = remote_func_list_t()
   )
 {
+  if (opt.reuse_conn != 0 && sire.has_socket(to_match(target)))
+  {
+    return errcode_t();
+  }
+
   typedef context::socket_service_t service_t;
   typedef context::nonblocked_actor_t nonblocked_actor_t;
   context& ctx = sire.get_context();
@@ -73,6 +78,12 @@ inline errcode_t connect(
   remote_func_list_t const& remote_func_list = remote_func_list_t()
   )
 {
+  typedef context::stackful_service_t stackful_service_t;
+  if (opt.reuse_conn != 0 && sire.get_service().has_socket(to_match(target)))
+  {
+    return errcode_t();
+  }
+
   typedef context::socket_service_t service_t;
   context& ctx = sire.get_context();
   service_t& svc = ctx.select_service<service_t>();
@@ -100,6 +111,11 @@ inline void connect(
   remote_func_list_t const& remote_func_list = remote_func_list_t()
   )
 {
+  if (opt.reuse_conn != 0 && sire.get_service().has_socket(to_match(target)))
+  {
+    return errcode_t();
+  }
+
   typedef context::socket_service_t service_t;
   typedef context::stackless_actor_t stackless_actor_t;
   context& ctx = sire.get_context();
