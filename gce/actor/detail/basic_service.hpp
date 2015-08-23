@@ -190,9 +190,13 @@ public:
     {
       pri_register_socket(joint_list_, curr_joint_list_, ctxid_pr.first, skt);
     }
+    else if (ctxid_pr.second == socket_conn)
+    {
+      pri_register_socket(conn_list_, curr_conn_list_, ctxid_pr.first, skt);
+    }
     else
     {
-      pri_register_socket(conn_list_, curr_socket_list_, ctxid_pr.first, skt);
+      pri_register_socket(bind_list_, curr_bind_list_, ctxid_pr.first, skt);
     }
   }
 
@@ -208,7 +212,12 @@ public:
 
   aid_t select_straight_socket(ctxid_t ctxid = ctxid_nil, ctxid_t* target = 0)
   {
-    return pri_select_socket(conn_list_, curr_socket_list_, ctxid, target);
+    aid_t skt = pri_select_socket(conn_list_, curr_conn_list_, ctxid, target);
+    if (skt == aid_nil)
+    {
+      skt = pri_select_socket(bind_list_, curr_bind_list_, ctxid, target);
+    }
+    return skt;
   }
 
   aid_t select_joint_socket(ctxid_t ctxid = ctxid_nil, ctxid_t* target = 0)
@@ -277,9 +286,13 @@ public:
     {
       pri_deregister_socket(joint_list_, ctxid_pr.first, skt);
     }
-    else
+    else if (ctxid_pr.second == socket_conn)
     {
       pri_deregister_socket(conn_list_, ctxid_pr.first, skt);
+    }
+    else
+    {
+      pri_deregister_socket(bind_list_, ctxid_pr.first, skt);
     }
   }
 
@@ -293,9 +306,13 @@ public:
     {
       pri_conn_socket(joint_list_, ctxid_pr.first, skt);
     }
-    else
+    else if (ctxid_pr.second == socket_conn)
     {
       pri_conn_socket(conn_list_, ctxid_pr.first, skt);
+    }
+    else
+    {
+      pri_conn_socket(bind_list_, ctxid_pr.first, skt);
     }
   }
 
@@ -309,9 +326,13 @@ public:
     {
       pri_disconn_socket(joint_list_, ctxid_pr.first, skt);
     }
-    else
+    else if (ctxid_pr.second == socket_conn)
     {
       pri_disconn_socket(conn_list_, ctxid_pr.first, skt);
+    }
+    else
+    {
+      pri_disconn_socket(bind_list_, ctxid_pr.first, skt);
     }
   }
 
@@ -426,23 +447,6 @@ private:
     skt_list_t::iterator curr_reconn_;
   };
   typedef std::map<ctxid_t, socket_list> conn_list_t;
-
-  void broadcast2socket(conn_list_t const& conn_list, aid_t const& from, message const& m)
-  {
-    BOOST_FOREACH(typename conn_list_t::value_type const& pr, conn_list)
-    {
-      skt_list_t const& skt_list = pr.second.skt_list_;
-      skt_list_t const& reconn_list = pr.second.reconn_list_;
-      if (!skt_list.empty())
-      {
-        send2skt(from, *skt_list.begin(), m);
-      }
-      else if (!reconn_list.empty())
-      {
-        send2skt(from, *reconn_list.begin(), m);
-      }
-    }
-  }
 
   static aid_t pri_select_socket(
     conn_list_t& conn_list, 
@@ -644,10 +648,12 @@ protected:
 
 private:
   conn_list_t conn_list_;
+  conn_list_t bind_list_;
   conn_list_t joint_list_;
   conn_list_t router_list_;
+  typename conn_list_t::iterator curr_conn_list_;
+  typename conn_list_t::iterator curr_bind_list_;
   typename conn_list_t::iterator curr_router_list_;
-  typename conn_list_t::iterator curr_socket_list_;
   typename conn_list_t::iterator curr_joint_list_;
   socket_list const skt_dummy_;
 

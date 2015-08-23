@@ -117,7 +117,7 @@ public:
     ctxid_pair_t ctxid_pr =
       std::make_pair(
         target,
-        target_is_router ? socket_router : socket_comm
+        target_is_router ? socket_router : socket_conn
         );
     svc_.register_socket(ctxid_pr, base_t::get_aid());
 
@@ -842,7 +842,7 @@ private:
     ctxid_pair_t curr_pr =
       std::make_pair(
         ctxid_nil,
-        is_router_ ? socket_joint : socket_comm
+        is_router_ ? socket_joint : socket_bind
         );
 
     if (!svc_.stopped())
@@ -877,7 +877,7 @@ private:
               ctxid_pair_t ctxid_pr =
                 std::make_pair(
                   ctxid_nil,
-                  is_router_ ? socket_joint : socket_comm
+                  is_router_ ? socket_joint : socket_bind
                   );
               msg >> ctxid_pr.first;
               curr_pr = sync_ctxid(ctxid_pr, curr_pr);
@@ -887,7 +887,7 @@ private:
               m->set_type(msg_login_ret);
               *m << std::make_pair(
                 base_t::ctxid_,
-                is_router_ ? socket_router : socket_comm
+                is_router_ ? socket_router : socket_conn
                 );
 
               send(m);

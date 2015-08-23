@@ -106,7 +106,8 @@ static match_t const msg_new_bind = atom("gce_new_bind");
 
 enum socket_type
 {
-  socket_comm = 0,
+  socket_conn = 0,
+  socket_bind,
   socket_router,
   socket_joint
 };
