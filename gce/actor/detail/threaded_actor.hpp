@@ -229,15 +229,26 @@ public:
     return f.get();
   }
 
+  bool has_acceptor(std::string const& ep)
+  {
+    hasacpr_promise_t p;
+    hasacpr_future_t f = p.get_future();
+
+    base_t::snd_.post(has_acceptor_binder(*this, p, ep));
+    return f.get();
+  }
+
 private:
   typedef boost::optional<recv_t> recv_optional_t;
   typedef boost::optional<resp_t> res_optional_t;
   typedef boost::promise<recv_optional_t> recv_promise_t;
   typedef boost::promise<res_optional_t> res_promise_t;
   typedef boost::promise<bool> hasskt_promise_t;
+  typedef boost::promise<bool> hasacpr_promise_t;
   typedef boost::unique_future<recv_optional_t> recv_future_t;
   typedef boost::unique_future<res_optional_t> res_future_t;
   typedef boost::unique_future<bool> hasskt_future_t;
+  typedef boost::unique_future<bool> hasacpr_future_t;
 
   template <typename Recver>
   struct send_binder
@@ -530,6 +541,25 @@ private:
     ctxid_t& ctxid_;
   };
 
+  struct has_acceptor_binder
+  {
+    has_acceptor_binder(self_t& self, hasacpr_promise_t& p, std::string const& ep)
+      : self_(self)
+      , p_(p)
+      , ep_(ep)
+    {
+    }
+
+    void operator()() const
+    {
+      self_.pri_has_acceptor(p_, ep_);
+    }
+
+    self_t& self_;
+    hasacpr_promise_t& p_;
+    std::string const& ep_;
+  };
+
   void try_recv(recv_promise_t& p, message& msg, pattern const& patt)
   {
     recv_t rcv;
@@ -587,6 +617,12 @@ private:
   void pri_has_socket(hasskt_promise_t& p, ctxid_t& ctxid)
   {
     bool ret = base_t::basic_svc_.has_socket(ctxid);
+    p.set_value(ret);
+  }
+
+  void pri_has_acceptor(hasacpr_promise_t& p, std::string const& ep)
+  {
+    bool ret = base_t::basic_svc_.has_acceptor(ep);
     p.set_value(ret);
   }
 

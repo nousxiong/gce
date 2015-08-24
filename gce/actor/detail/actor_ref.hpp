@@ -211,6 +211,11 @@ public:
     return base_t::a_->has_socket(ctxid);
   }
 
+  bool has_acceptor(std::string const& ep)
+  {
+    return base_t::a_->has_acceptor(ep);
+  }
+
   context_t& get_context()
   {
     return base_t::a_->get_context();

@@ -84,9 +84,12 @@ public:
       remote_func_list_.insert(std::make_pair(f.first, f.second));
     }
 
+    ep_ = ep;
+    base_t::ctx_.register_acceptor(ep_, base_t::get_aid(), svc_.get_index());
+
     boost::asio::spawn(
       base_t::snd_,
-      run_binder(*this, sire, ep), 
+      run_binder(*this, sire, ep_), 
       /*boost::bind(
         &self_t::run, this, sire, ep, _arg1
         ),*/
@@ -462,9 +465,10 @@ private:
   void quit(exit_code_t exc, std::string const& exit_msg)
   {
     acpr_.reset();
-
-    svc_.remove_actor(this);
+    
     aid_t self_aid = base_t::get_aid();
+    base_t::ctx_.deregister_acceptor(ep_, self_aid, svc_.get_index());
+    svc_.remove_actor(this);
     base_t::send_exit(self_aid, exc, exit_msg);
     base_t::snd_.post(free_self_binder(*this));
   }
@@ -498,6 +502,7 @@ private:
   GCE_CACHE_ALIGNED_VAR(netopt_t, opt_)
 
   /// coro local vars
+  std::string ep_;
   host host_;
   service_t& svc_;
   boost::optional<tcp::acceptor> acpr_;

@@ -140,19 +140,47 @@ inline void connect(
 ///------------------------------------------------------------------------------
 /// Bind using given NONE stackless_actor
 ///------------------------------------------------------------------------------
+namespace detail
+{
 template <typename ActorRef>
+inline void bind(ActorRef& sire, std::string const& ep, remote_func_list_t const& remote_func_list, netopt_t opt)
+{
+  typedef context::acceptor_service_t service_t;
+  context& ctx = sire.get_context();
+  service_t& svc = ctx.select_service<service_t>();
+  bind<context>(sire.get_aid(), svc, ep, opt, remote_func_list);
+  sire->recv(msg_new_bind);
+}
+}
+
 inline void bind(
-  ActorRef sire,
+  threaded_actor sire,
   std::string const& ep, /// endpoint
   remote_func_list_t const& remote_func_list = remote_func_list_t(),
   netopt_t opt = make_netopt()
   )
 {
-  typedef context::acceptor_service_t service_t;
-  context& ctx = sire.get_context();
-  service_t& svc = ctx.select_service<service_t>();
-  detail::bind<context>(sire.get_aid(), svc, ep, opt, remote_func_list);
-  sire->recv(detail::msg_new_bind);
+  if (sire.has_acceptor(ep))
+  {
+    return;
+  }
+
+  detail::bind(sire, ep, remote_func_list, opt);
+}
+
+inline void bind(
+  stackful_actor sire,
+  std::string const& ep, /// endpoint
+  remote_func_list_t const& remote_func_list = remote_func_list_t(),
+  netopt_t opt = make_netopt()
+  )
+{
+  if (sire.get_service().has_acceptor(ep))
+  {
+    return;
+  }
+
+  detail::bind(sire, ep, remote_func_list, opt);
 }
 
 ///------------------------------------------------------------------------------
@@ -165,6 +193,11 @@ inline void bind(
   netopt_t opt = make_netopt()
   )
 {
+  if (sire.get_service().has_acceptor(ep))
+  {
+    return;
+  }
+
   typedef context::acceptor_service_t service_t;
   typedef context::stackless_actor_t stackless_actor_t;
   context& ctx = sire.get_context();

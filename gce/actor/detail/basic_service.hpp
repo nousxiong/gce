@@ -301,6 +301,25 @@ public:
     }
   }
 
+  void register_acceptor(std::string const& ep, aid_t const& acpr)
+  {
+    acceptor_list_.insert(std::make_pair(ep, acpr));
+  }
+
+  bool has_acceptor(std::string const& ep) const
+  {
+    return acceptor_list_.find(ep) != acceptor_list_.end();
+  }
+
+  void deregister_acceptor(std::string const& ep, aid_t const& acpr)
+  {
+    acceptor_list_t::iterator itr = acceptor_list_.find(ep);
+    if (itr != acceptor_list_.end() && itr->second == acpr)
+    {
+      acceptor_list_.erase(itr);
+    }
+  }
+
   void conn_socket(ctxid_pair_t ctxid_pr, aid_t const& skt)
   {
     if (ctxid_pr.second == socket_router)
@@ -674,6 +693,9 @@ private:
 
   typedef std::map<match_t, aid_t> service_list_t;
   service_list_t service_list_;
+
+  typedef std::map<std::string, aid_t> acceptor_list_t;
+  acceptor_list_t acceptor_list_;
 
   bool stopped_;
 };

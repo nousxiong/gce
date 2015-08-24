@@ -198,6 +198,11 @@ public:
 
   bool bind(std::string const& ep, netopt_t opt)
   {
+    if (get_service().has_acceptor(ep))
+    {
+      return false;
+    }
+
     typedef typename context_t::acceptor_service_t acceptor_service_t;
     context_t& ctx = base_t::get_context();
     acceptor_service_t& svc = ctx.select_service<acceptor_service_t>();

@@ -363,6 +363,46 @@ public:
     }
   }
 
+  void register_acceptor(std::string const& ep, aid_t const& acpr, size_t concurrency_index)
+  {
+    for (size_t i=0; i<service_size_; ++i)
+    {
+      register_acceptor(ep, acpr, threaded_service_list_[i]);
+      register_acceptor(ep, acpr, stackful_service_list_[i]);
+      register_acceptor(ep, acpr, stackless_service_list_[i]);
+#ifdef GCE_LUA
+      register_acceptor(ep, acpr, lua_service_list_[i]);
+#endif
+      register_acceptor(ep, acpr, socket_service_list_[i]);
+      register_acceptor(ep, acpr, acceptor_service_list_[i]);
+    }
+
+    for (size_t i=0, size=nonblocked_actor_list_.size(); i<size; ++i)
+    {
+      nonblocked_actor_list_[i].register_acceptor(ep, acpr, detail::actor_acceptor, concurrency_index);
+    }
+  }
+
+  void deregister_acceptor(std::string const& ep, aid_t const& acpr, size_t concurrency_index)
+  {
+    for (size_t i=0; i<service_size_; ++i)
+    {
+      deregister_acceptor(ep, acpr, threaded_service_list_[i]);
+      deregister_acceptor(ep, acpr, stackful_service_list_[i]);
+      deregister_acceptor(ep, acpr, stackless_service_list_[i]);
+#ifdef GCE_LUA
+      deregister_acceptor(ep, acpr, lua_service_list_[i]);
+#endif
+      deregister_acceptor(ep, acpr, socket_service_list_[i]);
+      deregister_acceptor(ep, acpr, acceptor_service_list_[i]);
+    }
+
+    for (size_t i=0, size=nonblocked_actor_list_.size(); i<size; ++i)
+    {
+      nonblocked_actor_list_[i].deregister_acceptor(ep, acpr, detail::actor_acceptor, concurrency_index);
+    }
+  }
+
   void conn_socket(
     detail::ctxid_pair_t ctxid_pr, aid_t const& skt, detail::actor_type type, size_t concurrency_index
     )
@@ -748,6 +788,37 @@ private:
     aid_t skt_;
   };
 
+  template <typename Tag, typename Service>
+  struct acceptor_binder
+  {
+    acceptor_binder(Service& s, std::string const& ep, aid_t const& acpr)
+      : s_(s)
+      , ep_(ep)
+      , acpr_(acpr)
+    {
+    }
+
+    void operator()() const
+    {
+      invoke(Tag());
+    }
+
+  private:
+    void invoke(tag_reg) const
+    {
+      s_.register_acceptor(ep_, acpr_);
+    }
+
+    void invoke(tag_dereg) const
+    {
+      s_.deregister_acceptor(ep_, acpr_);
+    }
+    
+    Service& s_;
+    std::string const ep_;
+    aid_t acpr_;
+  };
+
   template <typename Service>
   void register_socket(detail::ctxid_pair_t ctxid_pr, aid_t const& skt, Service& s)
   {
@@ -758,6 +829,18 @@ private:
   void deregister_socket(detail::ctxid_pair_t ctxid_pr, aid_t const& skt, Service& s)
   {
     s.get_strand().dispatch(socket_binder<tag_dereg, Service>(s, ctxid_pr, skt));
+  }
+
+  template <typename Service>
+  void register_acceptor(std::string const& ep, aid_t const& acpr, Service& s)
+  {
+    s.get_strand().dispatch(acceptor_binder<tag_reg, Service>(s, ep, acpr));
+  }
+
+  template <typename Service>
+  void deregister_acceptor(std::string const& ep, aid_t const& acpr, Service& s)
+  {
+    s.get_strand().dispatch(acceptor_binder<tag_dereg, Service>(s, ep, acpr));
   }
 
   template <typename Service>

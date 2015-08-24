@@ -65,9 +65,9 @@ struct connect_impl
     typedef Context context_t;
     typedef typename context_t::socket_actor_t socket_actor_t;
 
-    GCE_VERIFY(target_ != ctxid_nil);
+    GCE_VERIFY(target_ != ctxid_nil).abort();
     GCE_VERIFY(svc_.get_context().get_ctxid() != ctxid_nil)
-      .msg("ctxid haven't set, please set it before connect");
+      .msg("ctxid haven't set, please set it before connect").abort();
 
     socket_actor_t* s = svc_.make_actor();
     s->init(opt_);
@@ -126,7 +126,7 @@ struct bind_impl
     typedef typename context_t::acceptor_actor_t acceptor_actor_t;
 
     GCE_VERIFY(svc_.get_context().get_ctxid() != ctxid_nil)
-      .msg("ctxid haven't set, please set it before bind");
+      .msg("ctxid haven't set, please set it before bind").abort();
 
     acceptor_actor_t* a = svc_.make_actor();
     a->init(opt_);

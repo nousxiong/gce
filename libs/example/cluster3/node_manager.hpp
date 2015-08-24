@@ -16,7 +16,7 @@
 
 
 /// 返回是否登录成功+需要连接的其它node的信息
-static bool login(gce::stackful_actor& self, bool& binded)
+static bool login(gce::stackful_actor& self)
 {
   using namespace gce;
 
@@ -48,12 +48,7 @@ static bool login(gce::stackful_actor& self, bool& binded)
         std::string bind_ep;
         msg >> bind_ep;
 
-        if (!binded)
-        {
-          /// 如果没有bind过，则bind
-          binded = true;
-          gce::bind(self, bind_ep);
-        }
+        gce::bind(self, bind_ep);
 
         /// 告诉master已经准备好连接其它node，等待master命令
         self->send(master_mgr, "ready");
@@ -109,7 +104,6 @@ static void node_manager(gce::stackful_actor self)
   log::logger_t lg = ctx.get_logger();
   register_service(self, "node_mgr");
 
-  bool binded = false;
   bool need_login = true;
   svcid_t master_mgr = make_svcid("master", "master_mgr");
   svcid_t node_mgr = make_svcid(ctxid, "node_mgr");
@@ -118,7 +112,7 @@ static void node_manager(gce::stackful_actor self)
     try
     {
       /// 只有在需要登录的时候才进行
-      if (need_login && !login(self, binded))
+      if (need_login && !login(self))
       {
         break;
       }

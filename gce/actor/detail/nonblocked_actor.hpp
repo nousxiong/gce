@@ -302,6 +302,24 @@ public:
     on_recv(pk);
   }
 
+  void register_acceptor(std::string const& ep, aid_t const& acpr, actor_type type, size_t concurrency_index)
+  {
+    pack pk = make_pack(type, concurrency_index);
+    message m(msg_reg_acpr);
+    m << ep << acpr;
+    pk.msg_ = m;
+    on_recv(pk);
+  }
+
+  void deregister_acceptor(std::string const& ep, aid_t const& acpr, actor_type type, size_t concurrency_index)
+  {
+    pack pk = make_pack(type, concurrency_index);
+    message m(msg_dereg_acpr);
+    m << ep << acpr;
+    pk.msg_ = m;
+    on_recv(pk);
+  }
+
   void conn_socket(ctxid_pair_t ctxid_pr, aid_t const& skt, actor_type type, size_t concurrency_index)
   {
     pack pk = make_pack(type, concurrency_index);
@@ -400,6 +418,20 @@ private:
         aid_t skt;
         pk.msg_ >> ctxid_pr >> skt;
         base_t::basic_svc_.deregister_socket(ctxid_pr, skt);
+      }
+      else if (type == msg_reg_acpr)
+      {
+        std::string ep;
+        aid_t acpr;
+        pk.msg_ >> ep >> acpr;
+        base_t::basic_svc_.register_acceptor(ep, acpr);
+      }
+      else if (type == msg_dereg_acpr)
+      {
+        std::string ep;
+        aid_t acpr;
+        pk.msg_ >> ep >> acpr;
+        base_t::basic_svc_.deregister_acceptor(ep, acpr);
       }
       else if (type == msg_con_skt)
       {
