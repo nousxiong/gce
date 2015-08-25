@@ -35,7 +35,7 @@ private:
       message msg;
       aid_t sender = self.recv(msg);
       match_t type = msg.get_type();
-      //GCE_INFO(lg) << atom(type);
+//      GCE_INFO(lg) << atom(type);
       if (atom(type) == "login")
       {
         self->send(sender, "login_ret");
@@ -43,6 +43,10 @@ private:
       else
       {
         msg >> goon;
+        if (atom(type) == "end")
+        {
+          self->send(sender, "quit");
+        }
         break;
       }
     }
@@ -108,8 +112,20 @@ private:
         }
       }
 
-      base->send(svc, "end", false);
-      base->recv(exit);
+      while (true)
+      {
+        base->send(svc, "end", false);
+        errcode_t ec;
+        base->match("quit").guard(svc, ec).recv();
+        if (ec)
+        {
+          base.monitor(svc);
+        }
+        else
+        {
+          break;
+        }
+      }
       thr.join();
     }
     catch (std::exception& ex)

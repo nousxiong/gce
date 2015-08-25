@@ -31,15 +31,12 @@ static void node_quit(gce::stackful_actor self)
 
   cluster3::node_info_list ni_list;
   errcode_t ec;
-  message msg;
-  self->match("init").guard(master_mgr, ec).raw(msg).recv();
+  self->match("init").guard(master_mgr, ec).recv(ni_list);
   if (ec)
   {
     GCE_ERROR(lg) << "master quited, no quit will handle";
     return;
   }
-
-  msg >> ni_list;
 
   /// 根据要quit的node信息，发送quit给node(s)
   BOOST_FOREACH(cluster3::node_info const& ni, ni_list.list_)
