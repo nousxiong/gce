@@ -19,5 +19,5 @@ node_info
 
 node_info_list
 {
-  list<node_info> list_;
+  list<cluster3.node_info> list_;
 }

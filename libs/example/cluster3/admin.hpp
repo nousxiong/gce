@@ -55,6 +55,15 @@ void admin(gce::log::logger_t lgr)
     std::string errmsg;
     if (cmd == "status")
     {
+      // admin查询master中所有node状态时序图
+      // 
+      // admin          master_manager
+      //   |                  |
+      //   | status           |
+      //   |----------------->|
+      //   |                  |
+      //   |       status_ret |
+      //   |<-----------------|
       base->send(master_mgr, "status");
       std::string total_desc;
       base->match("status_ret", "error", type).guard(master_mgr, ec).raw(msg).recv(total_desc);
