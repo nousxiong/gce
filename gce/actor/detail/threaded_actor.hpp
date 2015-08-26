@@ -567,7 +567,7 @@ private:
     if (!base_t::mb_.pop(rcv, pmsg, patt.match_list_, patt.recver_))
     {
       duration_t tmo = patt.timeout_;
-      if (tmo > zero)
+      if (tmo >= zero) /// change > to >= for yielding when timeout == 0
       {
         recv_msg_ = &msg;
         recv_p_ = &p;
@@ -593,7 +593,7 @@ private:
     message* pmsg = 0;
     if (!base_t::mb_.pop(res, pmsg))
     {
-      if (tmo > zero)
+      if (tmo >= zero) /// change > to >= for yielding when timeout == 0
       {
         res_msg_ = &msg;
         res_p_ = &p;

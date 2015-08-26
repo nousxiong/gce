@@ -146,7 +146,7 @@ public:
     if (!base_t::mb_.pop(rcv, pmsg, patt.match_list_, patt.recver_))
     {
       duration_t tmo = patt.timeout_;
-      if (tmo > zero)
+      if (tmo >= zero) /// change > to >= for yielding when timeout == 0
       {
         scoped_bool<bool> scp(recving_);
         if (tmo < infin)
@@ -203,7 +203,7 @@ public:
     recving_res_ = res;
     if (!base_t::mb_.pop(res, pmsg))
     {
-      if (tmo > zero)
+      if (tmo >= zero) /// change > to >= for yielding when timeout == 0
       {
         scoped_bool<bool> scp(responsing_);
         if (tmo < infin)
