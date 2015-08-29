@@ -7,8 +7,8 @@
 /// See https://github.com/nousxiong/gce for latest version.
 ///
 
-#ifndef CLUSTER3_NODE_MANAGER_HPP
-#define CLUSTER3_NODE_MANAGER_HPP
+#ifndef CLUSTER4_NODE_MANAGER_HPP
+#define CLUSTER4_NODE_MANAGER_HPP
 
 #include "node_info.hpp"
 #include <gce/actor/all.hpp>
@@ -63,11 +63,11 @@ static bool login(gce::stackful_actor& self)
           {
             GCE_INFO(lg) << "node<" << ctxid << "> ready success, will connect to other node(s)";
 
-            cluster3::node_info_list ni_list;
+            cluster4::node_info_list ni_list;
             msg >> ni_list;
 
             /// 连接指定的其它node，来构建全联通
-            BOOST_FOREACH(cluster3::node_info const& ni, ni_list.list_)
+            BOOST_FOREACH(cluster4::node_info const& ni, ni_list.list_)
             {
               connect(self, ni.svcid_.ctxid_, ni.ep_);
             }
@@ -111,7 +111,6 @@ static void node_manager(gce::stackful_actor self)
   {
     try
     {
-      /// 只有在需要登录的时候才进行
       if (need_login && !login(self))
       {
         break;
@@ -127,7 +126,7 @@ static void node_manager(gce::stackful_actor self)
         if (type == atom("conn"))
         {
           /// 连接指定的node
-          cluster3::node_info ni;
+          cluster4::node_info ni;
           msg >> ni;
           connect(self, ni.svcid_.ctxid_, ni.ep_);
         }
@@ -158,4 +157,4 @@ static void node_manager(gce::stackful_actor self)
   GCE_INFO(lg) << "node<" << ctxid << "> quit";
 }
 
-#endif /// CLUSTER3_NODE_MANAGER_HPP
+#endif /// CLUSTER4_NODE_MANAGER_HPP

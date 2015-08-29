@@ -7,14 +7,13 @@
 /// See https://github.com/nousxiong/gce for latest version.
 ///
 
-#ifndef CLUSTER3_NODE_QUIT_HPP
-#define CLUSTER3_NODE_QUIT_HPP
+#ifndef CLUSTER4_NODE_QUIT_HPP
+#define CLUSTER4_NODE_QUIT_HPP
 
 #include "node_info.hpp"
 #include <gce/actor/all.hpp>
 #include <boost/foreach.hpp>
 
-/// 我们使用一个actor来处理node quit的事务
 static void node_quit(gce::stackful_actor self)
 {
   using namespace gce;
@@ -29,7 +28,7 @@ static void node_quit(gce::stackful_actor self)
   size_t ready_quit_num = 0;
   std::set<svcid_t> quited_node_list;
 
-  cluster3::node_info_list ni_list;
+  cluster4::node_info_list ni_list;
   errcode_t ec;
   self->match("init").guard(master_mgr, ec).recv(ni_list);
   if (ec)
@@ -39,7 +38,7 @@ static void node_quit(gce::stackful_actor self)
   }
 
   /// 根据要quit的node信息，发送quit给node(s)
-  BOOST_FOREACH(cluster3::node_info const& ni, ni_list.list_)
+  BOOST_FOREACH(cluster4::node_info const& ni, ni_list.list_)
   {
     ++ready_quit_num;
     self->send(ni.svcid_, "quit");
@@ -102,4 +101,4 @@ static void node_quit(gce::stackful_actor self)
   self->send(master_mgr, "quit_ret", total_desc);
 }
 
-#endif /// CLUSTER3_NODE_QUIT_HPP
+#endif /// CLUSTER4_NODE_QUIT_HPP
