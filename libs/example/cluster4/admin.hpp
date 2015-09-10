@@ -70,8 +70,7 @@ void admin(gce::log::logger_t lgr)
     if (cmd == "status")
     {
       base->send(master_mgr, "status");
-      std::string total_desc;
-      base->match("status_ret", "error", type).guard(master_mgr, ec).raw(msg).recv(total_desc);
+      base->match("status_ret", "error", type).guard(master_mgr, ec).raw(msg).recv();
       if (ec)
       {
         GCE_ERROR(lg) << cmd << " error";
@@ -80,6 +79,8 @@ void admin(gce::log::logger_t lgr)
 
       if (type == atom("status_ret"))
       {
+        std::string total_desc;
+        msg >> total_desc;
         std::string node_status = "node(s) status: ";
         node_status += total_desc;
         GCE_INFO(lg) << node_status;

@@ -1846,7 +1846,7 @@ struct actor
 
     proxy_t& a = *o;
 
-    a->log_info(boost::string_ref(str, len));
+    a->log_error(boost::string_ref(str, len));
     return 0;
   }
 
