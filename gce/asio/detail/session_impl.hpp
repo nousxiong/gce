@@ -265,7 +265,14 @@ protected:
     stat_ = on;
     expire();
     start_idle_timer();
-    self_->send(sire_, asio::sn_open);
+    if (opt_.id == snid_nil)
+    {
+      self_->send(sire_, asio::sn_open);
+    }
+    else
+    {
+      self_->send(sire_, asio::sn_open, opt_.id);
+    }
 
     /// invoke child cb
     end_open();
@@ -293,7 +300,14 @@ protected:
     {
       if ((*tmr_)->expires_at() <= boost::chrono::system_clock::now())
       {
-        self_->send(sire_, asio::sn_idle);
+        if (opt_.id == snid_nil)
+        {
+          self_->send(sire_, asio::sn_idle);
+        }
+        else
+        {
+          self_->send(sire_, asio::sn_idle, opt_.id);
+        }
         expire();
       }
       start_idle_timer();
@@ -444,7 +458,14 @@ protected:
   void send_close(errcode_t ec)
   {
     closed_ = true;
-    self_->send(sire_, asio::sn_close, ec);
+    if (opt_.id == snid_nil)
+    {
+      self_->send(sire_, asio::sn_close, ec);
+    }
+    else
+    {
+      self_->send(sire_, asio::sn_close, opt_.id, ec);
+    }
     if (exited_)
     {
       self_->send(self_.get_aid(), "exited");
@@ -611,6 +632,11 @@ protected:
 
   void begin_recv()
   {
+    if (netmsg_.size() == 0 && base_t::opt_.id != snid_nil)
+    {
+      netmsg_ << base_t::opt_.id;
+    }
+
     while (true)
     {
       if (base_t::stat_ != base_t::off && !parse_message(netmsg_))
@@ -721,15 +747,17 @@ protected:
       {
         if (curr_hdr_.body_size_ - remain_size >= GCE_SOCKET_BIG_MSG_SIZE)
         {
+          size_t size = msg.size();
+
           /// change msg to large msg
-          msg.to_large(curr_hdr_.body_size_ + max_header_size_);
+          msg.to_large(curr_hdr_.body_size_ + max_header_size_ + size);
 
           /// copy already recved data to msg
           msg << message::chunk(recv_cache_.get_read_data(), remain_size);
 
           /// reset recv_cache_ to msg buffer
           recv_cache_.clear();
-          recv_cache_.reset(const_cast<byte_t*>(msg.data()), curr_hdr_.body_size_ + max_header_size_);
+          recv_cache_.reset(const_cast<byte_t*>(msg.data() + size), curr_hdr_.body_size_ + max_header_size_);
           recv_cache_.write(remain_size);
 
           /// prepare for writing last data
@@ -864,6 +892,10 @@ protected:
 
       message msg(asio::sn_recv);
       boost::asio::const_buffer buf = b_.data();
+      if (base_t::opt_.id != snid_nil)
+      {
+        msg << base_t::opt_.id;
+      }
       msg << message::chunk(
         boost::asio::buffer_cast<byte_t const*>(buf), 
         bytes_transferred

@@ -12,6 +12,7 @@
 
 #include <gce/asio/config.hpp>
 #include <gce/asio/sn_option.adl.h>
+#include <gce/asio/detail/session_fwd.hpp>
 
 namespace gce
 {
@@ -23,6 +24,7 @@ inline snopt_t make_snopt()
   snopt_t opt;
   opt.idle_period = seconds(30);
   opt.bigmsg_size = GCE_SOCKET_BIG_MSG_SIZE;
+  opt.id = snid_nil;
   return opt;
 }
 }

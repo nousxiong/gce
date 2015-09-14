@@ -3,12 +3,14 @@
 
 #include <gce/adata/cpp/adata.hpp>
 #include <gce/actor/duration.adl.h>
+#include <gce/actor/match.adl.h>
 
 namespace gce {namespace asio {namespace adl {
   struct sn_option
   {
     int32_t bigmsg_size;
     ::gce::adl::duration idle_period;
+    ::gce::adl::match id;
     sn_option()
     :    bigmsg_size(0)
     {}
@@ -31,6 +33,7 @@ namespace adata
 
     if(tag&1ULL)    {read(stream,value.idle_period);{if(stream.error()){stream.trace_error("idle_period",-1);return;}}}
     if(tag&2ULL)    {read(stream,value.bigmsg_size);{if(stream.error()){stream.trace_error("bigmsg_size",-1);return;}}}
+    if(tag&4ULL)    {read(stream,value.id);{if(stream.error()){stream.trace_error("id",-1);return;}}}
     if(len_tag >= 0)
     {
       ::std::size_t read_len = stream.read_length() - offset;
@@ -49,12 +52,15 @@ namespace adata
   ADATA_INLINE int32_t size_of(const ::gce::asio::adl::sn_option& value)
   {
     int32_t size = 0;
-    uint64_t tag = 3ULL;
+    uint64_t tag = 7ULL;
     {
       size += size_of(value.idle_period);
     }
     {
       size += size_of(value.bigmsg_size);
+    }
+    {
+      size += size_of(value.id);
     }
     size += size_of(tag);
     size += size_of(size + size_of(size));
@@ -64,13 +70,14 @@ namespace adata
   template<typename stream_ty>
   ADATA_INLINE void write(stream_ty& stream , const ::gce::asio::adl::sn_option&value)
   {
-    uint64_t tag = 3ULL;
+    uint64_t tag = 7ULL;
     write(stream,tag);
     if(stream.error()){return;}
     write(stream,size_of(value));
     if(stream.error()){return;}
     {write(stream,value.idle_period);{if(stream.error()){stream.trace_error("idle_period",-1);return;}}}
     {write(stream,value.bigmsg_size);{if(stream.error()){stream.trace_error("bigmsg_size",-1);return;}}}
+    {write(stream,value.id);{if(stream.error()){stream.trace_error("id",-1);return;}}}
     return;
   }
 

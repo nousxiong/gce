@@ -36,6 +36,7 @@ static std::size_t const test_count = 1;
 # include "test_ssl.hpp"
 #endif
 #include "test_tcp_session.hpp"
+#include "test_tcp_sessions.hpp"
 #include "test_tcp_session_idle.hpp"
 #ifdef GCE_OPENSSL
 # include "test_ssl_session.hpp"
@@ -59,6 +60,7 @@ int main()
 #endif
 
     gce::asio::tcp_session_ut::run();
+    gce::asio::tcp_sessions_ut::run();
     gce::asio::tcp_session_idle_ut::run();
 
 #ifdef GCE_OPENSSL

@@ -3,6 +3,7 @@
 
 #include <gce/adata/cpp/adata_cpp2lua.hpp>
 #include <gce/actor/duration.adl.c2l.h>
+#include <gce/actor/match.adl.c2l.h>
 
 #include "sn_option.adl.h"
 
@@ -16,16 +17,20 @@ namespace adata
       {load(L, value.idle_period);lua_pop(L, 1);}
       lua_getfield(L, -1, "bigmsg_size");
       {load(L, value.bigmsg_size);lua_pop(L, 1);}
+      lua_getfield(L, -1, "id");
+      {load(L, value.id);lua_pop(L, 1);}
     }
 
     ADATA_INLINE void push( lua_State * L, ::gce::asio::adl::sn_option const& value, bool use_adata = true)
     {
-      lua_createtable(L, 0, 2);
+      lua_createtable(L, 0, 3);
       if(use_adata && !set_metatable(L, "ad_mt_gce_asio_adl.sn_option")){ luaL_error(L,"unknow type: gce_asio_adl.sn_option"); }
       {push(L, value.idle_period, use_adata);}
       lua_setfield(L, -2, "idle_period");
       {push(L, value.bigmsg_size);}
       lua_setfield(L, -2, "bigmsg_size");
+      {push(L, value.id, use_adata);}
+      lua_setfield(L, -2, "id");
     }
 
   }

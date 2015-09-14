@@ -18,9 +18,11 @@ local regist_layout_c = adata_m.regist_layout;
 local set_layout_mt_c = adata_m.set_layout_mt;
 
 regist_field('bigmsg_size');
+regist_field('id');
 regist_field('idle_period');
 
 require'duration_adl'
+require'match_adl'
 
 local mt = {};
 
@@ -32,15 +34,16 @@ m.sn_option = function()
   local obj = {
     idle_period = ns.gce_adl.duration(),
     bigmsg_size = 0,
+    id = ns.gce_adl.match(),
   };
   setmetatable(obj,mt[1]);
   return obj;
 end
 
 local layout_gce_asio_adl_sn_option = regist_layout_c(
-  '\2\0\24\11\105\100\108\101\95\112\101\114\105\111\100\22\0\0\0\11\98\105\103\109\115\103\95\115\105\122\101\13\0\0\0',
-  {fields.idle_period,fields.bigmsg_size,},
-  {layouts.gce_adl_duration,});
+  '\3\0\27\11\105\100\108\101\95\112\101\114\105\111\100\22\0\0\0\11\98\105\103\109\115\103\95\115\105\122\101\13\0\0\0\2\105\100\22\0\0\0',
+  {fields.idle_period,fields.bigmsg_size,fields.id,},
+  {layouts.gce_adl_duration,layouts.gce_adl_match,});
 layouts.gce_asio_adl_sn_option = layout_gce_asio_adl_sn_option
 
 local mc = {};

@@ -16,6 +16,9 @@ namespace gce
 {
 namespace asio
 {
+typedef match_t snid_t;
+static snid_t const snid_nil = make_match(u64_nil);
+
 static match_t const sn_open = atom("sn_open");
 static match_t const sn_recv = atom("sn_recv");
 static match_t const sn_idle = atom("sn_idle");

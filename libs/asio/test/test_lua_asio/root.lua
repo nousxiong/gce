@@ -29,6 +29,7 @@ gce.actor(
 			test('ssl_ut')
 		end
 		test('tcpsn_ut')
+		test('tcpsns_ut')
 		test('tcpsn_idle_ut')
 		if gce.openssl ~= 0 then
 			test('sslsn_ut')

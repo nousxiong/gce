@@ -8,6 +8,7 @@
 //
 
 include = gce.actor.duration;
+include = gce.actor.match;
 
 namespace = gce.asio.adl;
 
@@ -15,4 +16,5 @@ sn_option
 {
   gce.adl.duration idle_period;
   int32 bigmsg_size;
+  gce.adl.match id;
 }

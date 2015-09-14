@@ -496,7 +496,7 @@ end
 
 function gce.atom(v)
   if v == nil then
-    return gce.make_match(gce.match_nil.val_)
+    return gce.make_match(v)
   end
 
   local ty = type(v)
@@ -522,6 +522,11 @@ end
 function gce.deatom(v)
   assert (libgce.typeof(v) == gce.ty_match)
   return libgce.deatom(v)
+end
+
+function gce.match2number(v)
+  assert (libgce.typeof(v) == gce.ty_match)
+  return libgce.match2number(v)
 end
 
 function gce.stacksize()
@@ -585,7 +590,11 @@ function gce.make_match(v)
     return libgce.make_match(v)
   elseif gce.packer == gce.pkr_adata then
     local mt = mt_adl.match()
-    mt.val_ = v
+    if v == nil then
+      mt.val_ = gce.match_nil.val_
+    else
+      mt.val_ = v
+    end
     return mt
   else
     error('gce.packer invalid')

@@ -465,6 +465,14 @@ struct match
     gce::lualib::setmetatab(L, "match");
     return &wrap->obj_;
   }
+
+  static int tonumber(lua_State* L)
+  {
+    gce::match_t* o = to_obj<match>(L, 1);
+    lua_Number n = (lua_Number)o->val_;
+    lua_pushnumber(L, n);
+    return 1;
+  }
 #elif GCE_PACKER == GCE_ADATA
   static int tostring(lua_State* L)
   {
@@ -476,6 +484,19 @@ struct match
 
     std::string str = gce::to_string(o);
     lua_pushlstring(L, str.c_str(), str.size());
+    return 1;
+  }
+
+  static int tonumber(lua_State* L)
+  {
+    luaL_argcheck(L, lua_istable(L, 1), 1, "'match' expected");
+    
+    /// using adata cpp2lua to load from lua
+    match_t o;
+    load(L, 1, o);
+
+    lua_Number n = (lua_Number)o.val_;
+    lua_pushnumber(L, n);
     return 1;
   }
 #endif 

@@ -224,6 +224,7 @@ public:
         .end_userdata()
         .add_function("atom", lua::s2i)
         .add_function("deatom", lua::i2s)
+        .add_function("match2number", lua::match::tonumber)
         .add_function("pack_number", lua::pack_number)
         .add_function("pack_string", lua::pack_string)
         .add_function("pack_boolean", lua::pack_boolean)
