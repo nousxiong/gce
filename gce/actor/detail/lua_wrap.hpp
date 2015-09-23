@@ -307,6 +307,13 @@ struct actor_id
     return 1;
   }
 
+  static int get_svcid(lua_State* L)
+  {
+    gce::aid_t* o = to_obj<actor_id>(L, 1);
+    push(L, o->svc_);
+    return 1;
+  }
+
   static aid_t* create(lua_State* L, gce::aid_t const& aid = gce::aid_t())
   {
     void* block = lua_newuserdata(L, sizeof(actor_id));

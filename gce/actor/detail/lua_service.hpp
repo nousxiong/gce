@@ -158,6 +158,7 @@ public:
         .add_function("make_aid", lua::actor_id::make)
         .begin_userdata("actor_id")
           .add_function("gcety", lua::actor_id::gcety)
+          .add_function("get_svcid", lua::actor_id::get_svcid)
           .add_function("__tostring", lua::actor_id::tostring)
           .add_function("__eq", lua::actor_id::eq)
           .add_function("__gc", lua::actor_id::gc)

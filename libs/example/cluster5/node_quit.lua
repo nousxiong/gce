@@ -59,7 +59,7 @@ gce.actor(
       else
         local ty = msg:getty()
         if ty == gce.atom('quit_ret') then
-          local node_id = sender.svc_
+          local node_id = gce.get_svcid(sender)
           assert (node_id ~= gce.svcid_nil)
 
           -- 将退出的node插入列表

@@ -280,11 +280,13 @@ public:
 
   void pri_link(aid_t const& target)
   {
+    GCE_ASSERT(target != aid_nil);
     link(link_t(linked, target), &basic_svc_);
   }
 
   void pri_link_svc(svcid_t const& target)
   {
+    GCE_ASSERT(target != svcid_nil);
     aid_t aid = aid_nil;
     aid.svc_ = target;
     link_svc(link_t(linked, aid), &basic_svc_);
@@ -292,11 +294,13 @@ public:
 
   void pri_monitor(aid_t const& target)
   {
+    GCE_ASSERT(target != aid_nil);
     link(link_t(monitored, target), &basic_svc_);
   }
 
   void pri_monitor_svc(svcid_t const& target)
   {
+    GCE_ASSERT(target != svcid_nil);
     aid_t aid = aid_nil;
     aid.svc_ = target;
     link_svc(link_t(monitored, aid), &basic_svc_);

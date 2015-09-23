@@ -296,7 +296,7 @@ public:
     end_read(pkr_);
 
     GCE_VERIFY(index < shared_list_.size())(index);
-    GCE_ASSERT(shared_list_[index])(index);
+    //GCE_ASSERT(shared_list_[index])(index);
 
     p = boost::static_pointer_cast<T>(shared_list_[index]);
     shared_list_[index].reset();

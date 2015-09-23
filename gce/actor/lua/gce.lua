@@ -468,6 +468,16 @@ function gce.actor_id()
   end
 end
 
+function gce.get_svcid(aid)
+  if gce.packer == gce.pkr_amsg then
+    return aid:get_svcid()
+  elseif gce.packer == gce.pkr_adata then
+    return aid.svc_
+  else
+    error('gce.packer invalid')
+  end
+end
+
 function gce.service_id()
   if gce.packer == gce.pkr_amsg then
     return libgce.make_service_id()

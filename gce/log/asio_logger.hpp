@@ -24,7 +24,8 @@ class asio_logger
 typedef boost::asio::io_service io_service_t;
 public:
   asio_logger()
-    : work_(boost::in_place(boost::ref(ios_)))
+    : ios_(1)
+    , work_(boost::in_place(boost::ref(ios_)))
     , thr_(boost::in_place(boost::bind(&io_service_t::run, &ios_)))
   {
   }

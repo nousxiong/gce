@@ -125,7 +125,7 @@ gce.actor(
       ec, sender, args, msg = gce.recv()
       local ty = msg:getty()
       if ty == gce.atom('login') then
-        local node_id = sender.svc_
+        local node_id = gce.get_svcid(sender)
         assert (node_id ~= gce.svcid_nil)
 
         if update_node_stat(node_stat_list, node_id, node_stat.login) then
@@ -141,7 +141,7 @@ gce.actor(
           gce.send(sender, 'login_ret', false, 'node not found')
         end
       elseif ty == gce.atom('ready') then
-        local node_id = sender.svc_
+        local node_id = gce.get_svcid(sender)
         assert (node_id ~= gce.svcid_nil)
 
         if update_node_stat(node_stat_list, node_id, node_stat.online) then
@@ -251,13 +251,13 @@ gce.actor(
         gce.sleep_for(gce.seconds(1))
         break
       elseif ty == gce.atom('error') then
-        local node_id = sender.svc_
+        local node_id = gce.get_svcid(sender)
         assert (node_id ~= gce.svcid_nil)
 
         gce.send(admin_id, msg)
       elseif ty == gce.exit then
         -- 当前除了node之外，没有其他actor和master链接（admin使用的是单向的），所以肯定是node
-        local node_id = sender.svc_
+        local node_id = gce.get_svcid(sender)
         assert (node_id ~= gce.svcid_nil)
         --gce.info('node exit: ', tostring(node_id))
         update_node_stat(node_stat_list, node_id, node_stat.offline)
