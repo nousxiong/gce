@@ -13,6 +13,7 @@
 #include <gce/actor/config.hpp>
 #include <gce/actor/message.hpp>
 #include <gce/actor/pattern.hpp>
+#include <gce/actor/chrono.hpp>
 #include <gce/actor/net_option.hpp>
 #include <gce/actor/exception.hpp>
 #include <gce/actor/detail/socket_actor.hpp>
@@ -308,11 +309,9 @@ private:
           bind(ep);
         }
 
-        typedef boost::chrono::system_clock system_clock_t;
-        typedef system_clock_t::time_point time_point_t;
         boost::asio::system_timer tmr(base_t::get_context().get_io_service());
-        time_point_t const min_tp = (time_point_t::min)();
-        time_point_t last_tp = min_tp;
+        sysclock_t::time_point const min_tp = (sysclock_t::time_point::min)();
+        sysclock_t::time_point last_tp = min_tp;
         int curr_rebind_num = 0;
 
         yielder ylder(host_);
@@ -336,7 +335,7 @@ private:
               {
                 if (last_tp != min_tp)
                 {
-                  duration_t diff = from_chrono(system_clock_t::now() - last_tp);
+                  duration_t diff = from_chrono(sysclock_t::now() - last_tp);
                   if (diff < opt_.rebind_period)
                   {
                     errcode_t ignored_ec;
@@ -347,7 +346,7 @@ private:
                   }
                 }
                 bind(ep);
-                last_tp = system_clock_t::now();
+                last_tp = sysclock_t::now();
                 continue;
               }
               else

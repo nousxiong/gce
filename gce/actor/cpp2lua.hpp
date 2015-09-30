@@ -86,15 +86,25 @@ typedef detail::lua::chunk chunk;
 
 /// helper function
 template <typename Tag>
-typename Tag::object_t* from_lua(lua_State* L, int arg)
+static typename Tag::object_t* from_lua(lua_State* L, int arg)
 {
   return detail::lua::to_obj<Tag>(L, arg);
 }
 
 template <typename Object>
-Object* from_lua(lua_State* L, int arg, char const* name)
+static Object* from_lua(lua_State* L, int arg, char const* name)
 {
   return detail::lua::to_obj<Object>(L, arg, name);
+}
+
+static bool is_argnil(lua_State* L, int arg)
+{
+  return detail::lua::is_argnil(L, arg);
+}
+
+static bool is_argnil(lua_State* L, int arg, int ty)
+{
+  return detail::lua::is_argnil(L, arg, ty);
 }
 ///------------------------------------------------------------------------------
 }

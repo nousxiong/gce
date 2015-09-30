@@ -105,7 +105,7 @@ public:
 public:
   explicit context(attributes const& attrs = attributes())
     : attrs_(attrs)
-    , timestamp_((timestamp_t)boost::chrono::system_clock::now().time_since_epoch().count())
+    , timestamp_((timestamp_t)sysclock_t::now().time_since_epoch().count())
     , stopped_(false)
     , service_size_(
         attrs_.thread_num_ == 0 ? 
@@ -142,7 +142,7 @@ public:
 
   explicit context(init_t const& in)
     : attrs_(in.attrs_)
-    , timestamp_((timestamp_t)boost::chrono::system_clock::now().time_since_epoch().count())
+    , timestamp_((timestamp_t)sysclock_t::now().time_since_epoch().count())
     , stopped_(false)
     , service_size_(
         attrs_.thread_num_ == 0 ? 

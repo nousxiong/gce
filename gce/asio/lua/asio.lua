@@ -75,6 +75,9 @@ if gce.openssl ~= 0 then
   asio.server = libasio.server
 end
 
+function asio.session_id(v)
+  return gce.atom(v)
+end
 
 function asio.timer()
   return libasio.make_system_timer(libgce.self)

@@ -328,7 +328,7 @@ template <typename Context>
 inline void handle_remote_spawn(
   actor_ref<stackless, Context> self, aid_t aid,
   message msg, link_type type,
-  boost::chrono::system_clock::time_point begin_tp,
+  sysclock_t::time_point begin_tp,
   sid_t sid, duration_t tmo, duration_t curr_tmo,
   boost::function<void (actor_ref<stackless, Context>, aid_t)> const& hdr
   )
@@ -354,11 +354,11 @@ inline void handle_remote_spawn(
 
     if (tmo != infin)
     {
-      duration_t pass_time = boost::chrono::system_clock::now() - begin_tp;
+      duration_t pass_time = sysclock_t::now() - begin_tp;
       curr_tmo -= pass_time;
     }
 
-    begin_tp = boost::chrono::system_clock::now();
+    begin_tp = sysclock_t::now();
     pattern patt;
     patt.add_match(detail::msg_spawn_ret);
     patt.timeout_ = curr_tmo;
@@ -407,7 +407,7 @@ inline aid_t spawn_remote(
   sid_t ret_sid = sid_nil;
 
   duration_t curr_tmo = tmo;
-  typedef boost::chrono::system_clock clock_t;
+  typedef sysclock_t clock_t;
   clock_t::time_point begin_tp;
 
   do
@@ -513,7 +513,7 @@ inline void spawn_remote(
   sid_t sid = sire.spawn(spw, func, ctxid, stack_size);
 
   duration_t curr_tmo = tmo;
-  typedef boost::chrono::system_clock clock_t;
+  typedef sysclock_t clock_t;
   clock_t::time_point begin_tp = clock_t::now();
   pattern patt;
   patt.add_match(detail::msg_spawn_ret);

@@ -86,13 +86,13 @@ private:
         }
         else if (type == sn_open)
         {
-          session_list_t::iterator itr = session_list.find(snid);
+          typename session_list_t::iterator itr = session_list.find(snid);
           GCE_ASSERT(itr != session_list.end())(snid);
           itr->second.first->send(m);
         }
         else if (type == sn_recv)
         {
-          session_list_t::iterator itr = session_list.find(snid);
+          typename session_list_t::iterator itr = session_list.find(snid);
           GCE_ASSERT(itr != session_list.end())(snid);
 
           boost::shared_ptr<session_t> sn = itr->second.first;

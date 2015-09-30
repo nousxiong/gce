@@ -298,7 +298,7 @@ protected:
 
     if (stat_ != off)
     {
-      if ((*tmr_)->expires_at() <= boost::chrono::system_clock::now())
+      if ((*tmr_)->expires_at() <= sysclock_t::now())
       {
         if (opt_.id == snid_nil)
         {

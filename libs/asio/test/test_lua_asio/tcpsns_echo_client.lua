@@ -32,7 +32,7 @@ gce.actor(
       end
       local skt_impl = asio.tcp_socket_impl()
       local opt = asio.sn_option()
-      opt.id = gce.atom(i)
+      opt.id = asio.session_id(i)
       local sn = asio.session(parser, skt_impl, eitr, opt)
       local sn_data = {}
       sn_data.sn_ = sn
@@ -47,7 +47,7 @@ gce.actor(
     
     while true do
       ec, sender, args, msg = 
-        gce.match(asio.sn_open, asio.sn_recv, asio.sn_close).recv(gce.atom)
+        gce.match(asio.sn_open, asio.sn_recv, asio.sn_close).recv(asio.session_id)
       if msg:getty() == asio.sn_close then
         local snid = args[1]
         session_list[gce.match2number(snid)] = nil

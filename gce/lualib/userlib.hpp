@@ -21,9 +21,13 @@ namespace gce
 namespace lualib
 {
 /// helper functions
-inline std::string metatab_name(char const* userdata_name)
+inline std::string metatab_name(char const* libname, char const* userdata_name)
 {
-  return std::string(userdata_name) + "_metatab";
+  std::string name = libname;
+  name += "_";
+  name += userdata_name;
+  name += "_metatab";
+  return name;
 }
 
 class userlib
@@ -35,7 +39,7 @@ class userlib
       : ul_(ul)
       , L_(L)
       , name_(name)
-      , metaname_(metatab_name(name))
+      , metaname_(metatab_name(ul.get_name().c_str(), name))
     {
     }
 
@@ -147,6 +151,11 @@ public:
     }
   }
 
+  std::string const& get_name() const
+  {
+    return name_;
+  }
+
 private:
   lua_State* L_;
   std::string name_;
@@ -169,9 +178,9 @@ inline userlib open(lua_State* L)
 }
 
 /// set userdata's metatable
-inline void setmetatab(lua_State* L, char const* userdata_name)
+inline void setmetatab(lua_State* L, char const* libname, char const* userdata_name)
 {
-  std::string metatab = gce::lualib::metatab_name(userdata_name);
+  std::string metatab = gce::lualib::metatab_name(libname, userdata_name);
   luaL_getmetatable(L, metatab.c_str());
   lua_setmetatable(L, -2);
 }

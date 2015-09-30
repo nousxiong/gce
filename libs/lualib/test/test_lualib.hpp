@@ -40,7 +40,7 @@ private:
       }
       kvdb* o = new (block) kvdb;
 
-      gce::lualib::setmetatab(L, "kvdb");
+      gce::lualib::setmetatab(L, "libkv", "kvdb");
       return 1;
     }
 
@@ -155,7 +155,7 @@ private:
       }
       aid* o = new (block) aid;
 
-      gce::lualib::setmetatab(L, "aid");
+      gce::lualib::setmetatab(L, "libkv", "aid");
       return 1;
     }
 
@@ -442,7 +442,7 @@ private:
       }
       meta* o = new (block) meta;
 
-      gce::lualib::setmetatab(L, "meta");
+      gce::lualib::setmetatab(L, "libmeta", "meta");
       return 1;
     }
 

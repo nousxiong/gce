@@ -339,8 +339,7 @@ public:
     base_t::pri_spawn(sid, sty, func, ctxid, stack_size);
 
     duration_t curr_tmo = tmo;
-    typedef boost::chrono::system_clock clock_t;
-    clock_t::time_point begin_tp = clock_t::now();
+    sysclock_t::time_point begin_tp = sysclock_t::now();
     spw_hdr_ = spawn_handler_t(*this, (link_type)type, begin_tp, sid, tmo, curr_tmo);
 
     aid_t sender;
@@ -1042,7 +1041,7 @@ private:
     handle_remote_spawn_binder(
       self_t& self, 
       link_type type, 
-      boost::chrono::system_clock::time_point const& begin_tp,
+      sysclock_t::time_point const& begin_tp,
       sid_t sid, 
       duration_t const& tmo,
       duration_t const& curr_tmo
@@ -1085,7 +1084,7 @@ private:
 
     self_t* self_;
     link_type type_;
-    boost::chrono::system_clock::time_point begin_tp_;
+    sysclock_t::time_point begin_tp_;
     sid_t sid_;
     duration_t tmo_;
     duration_t curr_tmo_;
@@ -1094,7 +1093,7 @@ private:
   bool handle_remote_spawn(
     aid_t aid,
     message& msg, link_type type,
-    boost::chrono::system_clock::time_point begin_tp,
+    sysclock_t::time_point begin_tp,
     sid_t sid, duration_t tmo, duration_t curr_tmo
     )
   {
@@ -1113,11 +1112,11 @@ private:
 
         if (tmo != infin)
         {
-          duration_t pass_time = from_chrono(boost::chrono::system_clock::now() - begin_tp);
+          duration_t pass_time = from_chrono(sysclock_t::now() - begin_tp);
           curr_tmo = curr_tmo - pass_time;
         }
 
-        begin_tp = boost::chrono::system_clock::now();
+        begin_tp = sysclock_t::now();
         pattern patt;
         patt.add_match(msg_spawn_ret);
         patt.timeout_ = curr_tmo;

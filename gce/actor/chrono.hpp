@@ -13,4 +13,9 @@
 #include <gce/actor/config.hpp>
 #include <boost/chrono.hpp>
 
+namespace gce
+{
+typedef boost::chrono::system_clock sysclock_t;
+}
+
 #endif /// GCE_ACTOR_CHRONO_HPP

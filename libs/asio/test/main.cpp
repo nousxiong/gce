@@ -9,7 +9,6 @@
 
 #define GCE_POOL_CHECK
 
-#include <gce/actor/all.hpp>
 #include <gce/asio/all.hpp>
 #include <boost/asio.hpp>
 #include <boost/shared_ptr.hpp>

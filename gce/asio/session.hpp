@@ -62,7 +62,7 @@ class session
 
 public:
   session(
-    actor_t& a, 
+    actor_t a, 
     boost::shared_ptr<parser_t> parser, 
     boost::shared_ptr<socket_t> skt, 
     resolver_t::iterator eitr = resolver_t::iterator(), 
@@ -157,7 +157,7 @@ private:
 #endif
 
 private:
-  actor_t& a_;
+  actor_t a_;
   aid_t sa_;
 
   /// for quit

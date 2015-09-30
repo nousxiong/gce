@@ -42,7 +42,7 @@ inline gce::adl::duration make_dur(int64_t val, dur_type ty)
 inline gce::adl::duration make_zero()
 {
   gce::adl::duration o;
-  o.val_ = boost::chrono::system_clock::duration::zero().count();
+  o.val_ = sysclock_t::duration::zero().count();
   o.ty_ = dur_raw;
   return o;
 }
@@ -50,7 +50,7 @@ inline gce::adl::duration make_zero()
 inline gce::adl::duration make_infin()
 {
   gce::adl::duration o;
-  o.val_ = (boost::chrono::system_clock::duration::max)().count();
+  o.val_ = (sysclock_t::duration::max)().count();
   o.ty_ = dur_raw;
   return o;
 }
@@ -92,7 +92,7 @@ inline adl::duration hours(int64_t v)
   return detail::make_dur(v, dur_hour);
 }
 
-inline adl::duration from_chrono(boost::chrono::system_clock::duration const& dur)
+inline adl::duration from_chrono(sysclock_t::duration const& dur)
 {
   return duration(dur.count());
 }
@@ -122,7 +122,7 @@ inline adl::duration from_chrono(boost::chrono::hours const& dur)
   return hours(dur.count());
 }
 
-inline boost::chrono::system_clock::duration to_chrono(adl::duration const& dur)
+inline sysclock_t::duration to_chrono(adl::duration const& dur)
 {
   switch(dur.ty_)
   {
@@ -131,7 +131,7 @@ inline boost::chrono::system_clock::duration to_chrono(adl::duration const& dur)
   case dur_second: return boost::chrono::seconds(dur.val_);
   case dur_minute: return boost::chrono::minutes(dur.val_);
   case dur_hour: return boost::chrono::hours(dur.val_);
-  default: return boost::chrono::system_clock::duration(dur.val_);
+  default: return sysclock_t::duration(dur.val_);
   }
 }
 
@@ -140,15 +140,15 @@ namespace detail
 inline int64_t to_raw_val(adl::duration const& dur)
 {
   static int64_t microsec_den = 
-    boost::chrono::system_clock::duration::period::den / BOOST_RATIO_INTMAX_C(1000000);
+    sysclock_t::duration::period::den / BOOST_RATIO_INTMAX_C(1000000);
   static int64_t millisec_den = 
-    boost::chrono::system_clock::duration::period::den / BOOST_RATIO_INTMAX_C(1000);
+    sysclock_t::duration::period::den / BOOST_RATIO_INTMAX_C(1000);
   static int64_t second_den = 
-    boost::chrono::system_clock::duration::period::den;
+    sysclock_t::duration::period::den;
   static int64_t minute_den = 
-    boost::chrono::system_clock::duration::period::den * BOOST_RATIO_INTMAX_C(60);
+    sysclock_t::duration::period::den * BOOST_RATIO_INTMAX_C(60);
   static int64_t hour_den = 
-    boost::chrono::system_clock::duration::period::den * BOOST_RATIO_INTMAX_C(3600);
+    sysclock_t::duration::period::den * BOOST_RATIO_INTMAX_C(3600);
   switch(dur.ty_)
   {
   case dur_microsec: return dur.val_ * microsec_den;
@@ -171,15 +171,15 @@ namespace detail
 inline int64_t from_raw_val(int64_t dur, dur_type ty)
 {
   static int64_t microsec_den = 
-    boost::chrono::system_clock::duration::period::den / BOOST_RATIO_INTMAX_C(1000000);
+    sysclock_t::duration::period::den / BOOST_RATIO_INTMAX_C(1000000);
   static int64_t millisec_den = 
-    boost::chrono::system_clock::duration::period::den / BOOST_RATIO_INTMAX_C(1000);
+    sysclock_t::duration::period::den / BOOST_RATIO_INTMAX_C(1000);
   static int64_t second_den = 
-    boost::chrono::system_clock::duration::period::den;
+    sysclock_t::duration::period::den;
   static int64_t minute_den = 
-    boost::chrono::system_clock::duration::period::den * BOOST_RATIO_INTMAX_C(60);
+    sysclock_t::duration::period::den * BOOST_RATIO_INTMAX_C(60);
   static int64_t hour_den = 
-    boost::chrono::system_clock::duration::period::den * BOOST_RATIO_INTMAX_C(3600);
+    sysclock_t::duration::period::den * BOOST_RATIO_INTMAX_C(3600);
 
   switch(ty)
   {

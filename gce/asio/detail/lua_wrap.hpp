@@ -79,7 +79,7 @@ struct timer
     lua_pushvalue(L, -1);
     int k = gce::lualib::make_ref(L, "libasio");
     (*a)->add_addon("libasio", k, o);
-    gce::lualib::setmetatab(L, type().c_str());
+    gce::lualib::setmetatab(L, "libasio", type().c_str());
     return 1;
   }
 
@@ -165,7 +165,7 @@ struct signal
     lua_pushvalue(L, -1);
     int k = gce::lualib::make_ref(L, "libasio");
     (*a)->add_addon("libasio", k, o);
-    gce::lualib::setmetatab(L, "signal");
+    gce::lualib::setmetatab(L, "libasio", "signal");
     return 1;
   }
 
@@ -303,8 +303,7 @@ struct serial_port
         char const* device = lua_tostring(L, 2);
         o = new (block) asio::serial_port(*a, device);
 
-        int ty = lua_type(L, 3);
-        if (ty != LUA_TNONE || ty != LUA_TNIL)
+        if (!gce::lua::is_argnil(L, 3))
         {
           sptopt_t opt;
           load(L, 3, opt);
@@ -340,7 +339,7 @@ struct serial_port
       lua_pushvalue(L, -1);
       int k = gce::lualib::make_ref(L, "libasio");
       (*a)->add_addon("libasio", k, o);
-      gce::lualib::setmetatab(L, "serial_port");
+      gce::lualib::setmetatab(L, "libasio", "serial_port");
     }
     catch (std::exception& ex)
     {
@@ -853,7 +852,7 @@ struct ssl_context
         }
       }
 
-      gce::lualib::setmetatab(L, "ssl_context");
+      gce::lualib::setmetatab(L, "libasio", "ssl_context");
     }
     catch (std::exception& ex)
     {
@@ -1049,7 +1048,7 @@ struct tcp_endpoint_itr
 
     tcp_endpoint_itr* wrap = new (block) tcp_endpoint_itr;
     wrap->obj_ = boost::make_shared<tcp_endpoint_itr_t>();
-    gce::lualib::setmetatab(L, name());
+    gce::lualib::setmetatab(L, "libasio", name());
     return 1;
   }
 
@@ -1118,7 +1117,7 @@ struct tcp_socket_impl
     gce::io_service_t& ios = (*a)->get_context().get_io_service();
     tcp_socket_impl* wrap = new (block) tcp_socket_impl;
     wrap->obj_ = boost::make_shared<tcp_socket_t>(boost::ref(ios));
-    gce::lualib::setmetatab(L, name());
+    gce::lualib::setmetatab(L, "libasio", name());
     return 1;
   }
 
@@ -1230,7 +1229,7 @@ struct ssl_stream_impl
         }
       }
 
-      gce::lualib::setmetatab(L, name());
+      gce::lualib::setmetatab(L, "libasio", name());
     }
     catch (std::exception& ex)
     {
@@ -1292,7 +1291,7 @@ struct tcp_resolver
     lua_pushvalue(L, -1);
     int k = gce::lualib::make_ref(L, "libasio");
     (*a)->add_addon("libasio", k, o);
-    gce::lualib::setmetatab(L, "tcp_resolver");
+    gce::lualib::setmetatab(L, "libasio", "tcp_resolver");
     return 1;
   }
 
@@ -1357,7 +1356,7 @@ struct tcp_acceptor
     lua_pushvalue(L, -1);
     int k = gce::lualib::make_ref(L, "libasio");
     (*a)->add_addon("libasio", k, o);
-    gce::lualib::setmetatab(L, "tcp_acceptor");
+    gce::lualib::setmetatab(L, "libasio", "tcp_acceptor");
     return 1;
   }
 
@@ -1510,7 +1509,7 @@ struct tcp_socket
     lua_pushvalue(L, -1);
     int k = gce::lualib::make_ref(L, "libasio");
     (*a)->add_addon("libasio", k, o);
-    gce::lualib::setmetatab(L, "tcp_socket");
+    gce::lualib::setmetatab(L, "libasio", "tcp_socket");
     return 1;
   }
 
@@ -1703,7 +1702,7 @@ struct ssl_stream
       lua_pushvalue(L, -1);
       int k = gce::lualib::make_ref(L, "libasio");
       (*a)->add_addon("libasio", k, o);
-      gce::lualib::setmetatab(L, name());
+      gce::lualib::setmetatab(L, "libasio", name());
     }
     catch (std::exception& ex)
     {
@@ -1937,7 +1936,7 @@ struct simple_length
 
     new (block) simple_length;
 
-    gce::lualib::setmetatab(L, "simple_length");
+    gce::lualib::setmetatab(L, "libasio", "simple_length");
     return 1;
   }
 
@@ -1979,7 +1978,7 @@ struct simple_regex
     char const* r = luaL_checkstring(L, 1);
     new (block) simple_regex(r);
 
-    gce::lualib::setmetatab(L, "simple_regex");
+    gce::lualib::setmetatab(L, "libasio", "simple_regex");
     return 1;
   }
 
@@ -2012,7 +2011,7 @@ struct session
 
   static char const* name()
   {
-    return "session";
+    return "asio::session";
   }
 
   static int make(lua_State* L)
@@ -2026,8 +2025,7 @@ struct session
         gce::lua::from_lua<gce::lua::basic_object>(L, 3, "socket");
 
       resolver_t::iterator eitr = resolver_t::iterator();
-      int ty4 = lua_type(L, 4);
-      if (ty4 != LUA_TNIL && ty4 != LUA_TNONE)
+      if (!gce::lua::is_argnil(L, 4))
       {
         tcp_endpoint_itr* itr = 
           gce::lua::from_lua<tcp_endpoint_itr>(L, 4, "tcp_endpoint_itr");
@@ -2035,8 +2033,7 @@ struct session
       }
 
       snopt_t opt = make_snopt();
-      int ty5 = lua_type(L, 5);
-      if (ty5 != LUA_TNIL && ty5 != LUA_TNONE)
+      if (!gce::lua::is_argnil(L, 5))
       {
         load(L, 5, opt);
       }
@@ -2089,7 +2086,7 @@ struct session
       lua_pushvalue(L, -1);
       int k = gce::lualib::make_ref(L, "libasio");
       (*a)->add_addon("libasio", k, o);
-      gce::lualib::setmetatab(L, name());
+      gce::lualib::setmetatab(L, "libasio", name());
     }
     catch (std::exception& ex)
     {
@@ -2127,8 +2124,7 @@ struct session
   {
     detail::basic_session* o = gce::lua::from_lua<detail::basic_session>(L, 1, name());
     bool grateful = true;
-    int ty2 = lua_type(L, 2);
-    if (ty2 != LUA_TNIL || ty2 != LUA_TNONE)
+    if (!gce::lua::is_argnil(L, 2))
     {
       grateful = lua_toboolean(L, 2) != 0;
     }

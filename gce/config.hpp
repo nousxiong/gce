@@ -18,7 +18,7 @@
 
 /// Suppress some vc warnings.
 #if BOOST_COMP_MSVC
-# pragma warning(disable : 4251 4231 4660 4275 4355 4244 4307 4996 4819 4267)
+# pragma warning(disable : 4251 4231 4660 4275 4355 4244 4307 4996 4819 4267 4018)
 #endif
 
 #if BOOST_OS_WINDOWS

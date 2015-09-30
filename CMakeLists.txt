@@ -22,8 +22,9 @@ include (util)
 # Provide user options to customise the build process.
 option (GCE_LUA "Allow gce using lua actor" OFF)
 option (GCE_OPENSSL "Allow gce using openssl" OFF)
+option (GCE_MYSQL "Allow gce using mysql sub library to connect mysqlserver" OFF)
 set (GCE_ASIO_ALLOC_HANDLER_SIZE "1024" CACHE STRING "Boost.Asio handler allocator size")
-set (GCE_PACKER "amsg" CACHE STRING "GCE pack lib type, option are: adata amsg")
+set (GCE_PACKER "adata" CACHE STRING "GCE pack lib type, option are: adata amsg, default: adata")
 
 if (GCE_LUA)
   set (GCE_LUA_VERSION "5.1" CACHE STRING "GCE lua version, option are: 5.1 5.2 5.3")
@@ -94,6 +95,18 @@ if (GCE_OPENSSL)
   gce_set_lib (OpenSSL ${OPENSSL_LIBSSL_NAME})
   gce_set_lib (OpenSSL ${OPENSSL_LIBCRYPTO_NAME})
   set (OpenSSL_LIBRARIES ${${OPENSSL_LIBSSL_NAME}_LIBRARIES} ${${OPENSSL_LIBCRYPTO_NAME}_LIBRARIES})
+endif ()
+
+# Set mysqlclient
+if (GCE_MYSQL)
+  if (MSVC)
+    gce_add_library (mysqlclient)
+    gce_set_lib (mysqlclient libmysql)
+    set (Mysqlclient_LIBRARIES ${libmysql_LIBRARIES})
+  else ()
+    gce_add_library (mysqlclient)
+    gce_set_lib (mysqlclient Mysqlclient)
+  endif ()
 endif ()
 
 # Add the source and build tree to the search path for include gce header files.

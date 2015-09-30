@@ -75,6 +75,18 @@ static Object* to_obj(lua_State* L, int arg, char const* name)
   luaL_argcheck(L, o != 0, arg, errmsg);
   return o;
 }
+
+inline bool is_argnil(lua_State* L, int arg)
+{
+  int ty = lua_type(L, arg);
+  return ty == LUA_TNONE || ty == LUA_TNIL;
+}
+
+inline bool is_argnil(lua_State* L, int arg, int ty)
+{
+  GCE_ASSERT(lua_type(L, arg) == ty);
+  return ty == LUA_TNONE || ty == LUA_TNIL;
+}
 ///------------------------------------------------------------------------------
 /// service_id
 ///------------------------------------------------------------------------------
@@ -180,7 +192,7 @@ struct service_id
 
     service_id* wrap = new (block) service_id;
     wrap->obj_ = svcid;
-    gce::lualib::setmetatab(L, "service_id");
+    gce::lualib::setmetatab(L, "libgce", "service_id");
     return &wrap->obj_;
   }
 #elif GCE_PACKER == GCE_ADATA
@@ -325,7 +337,7 @@ struct actor_id
 
     actor_id* wrap = new (block) actor_id;
     wrap->obj_ = aid;
-    gce::lualib::setmetatab(L, "actor_id");
+    gce::lualib::setmetatab(L, "libgce", "actor_id");
     return &wrap->obj_;
   }
 #elif GCE_PACKER == GCE_ADATA
@@ -469,7 +481,7 @@ struct match
     }
     match* wrap = new (block) match;
     wrap->obj_ = mt;
-    gce::lualib::setmetatab(L, "match");
+    gce::lualib::setmetatab(L, "libgce", "match");
     return &wrap->obj_;
   }
 
@@ -609,7 +621,7 @@ struct message
     }
     message* wrap = new (block) message;
     wrap->obj_ = m;
-    gce::lualib::setmetatab(L, "message");
+    gce::lualib::setmetatab(L, "libgce", "message");
     return &wrap->obj_;
   }
 
@@ -660,7 +672,7 @@ struct response
       return 0;
     }
     gce::resp_t* o = new (block) gce::resp_t(resp);
-    gce::lualib::setmetatab(L, "response");
+    gce::lualib::setmetatab(L, "libgce", "response");
     return o;
   }
 
@@ -867,7 +879,7 @@ struct duration
     }
     duration* wrap = new (block) duration;
     wrap->obj_ = dur;
-    gce::lualib::setmetatab(L, "duration");
+    gce::lualib::setmetatab(L, "libgce", "duration");
     return &wrap->obj_;
   }
 #elif GCE_PACKER == GCE_ADATA
@@ -1025,7 +1037,7 @@ struct pattern
       return luaL_error(L, "lua_newuserdata for pattern failed");
     }
     new (block) gce::pattern;
-    gce::lualib::setmetatab(L, "pattern");
+    gce::lualib::setmetatab(L, "libgce", "pattern");
     return 1;
   }
 
@@ -1158,7 +1170,7 @@ struct chunk
 
     chunk* wrap = new (block) chunk;
     int luaty = lua_type(L, 1);
-    if (luaty == LUA_TNONE || luaty == LUA_TNIL)
+    if (is_argnil(L, 1, luaty))
     {
       wrap->obj_ = gce::message::chunk();
     }
@@ -1174,7 +1186,7 @@ struct chunk
       wrap->obj_ = gce::message::chunk(len);
     }
 
-    gce::lualib::setmetatab(L, "chunk");
+    gce::lualib::setmetatab(L, "libgce", "chunk");
     return 1;
   }
 
@@ -1298,7 +1310,7 @@ struct errcode
     }
     errcode* wrap = new (block) errcode;
     wrap->obj_ = ec;
-    gce::lualib::setmetatab(L, "errcode");
+    gce::lualib::setmetatab(L, "libgce", "errcode");
     return &wrap->obj_;
   }
 
@@ -1363,7 +1375,7 @@ struct actor
       return luaL_error(L, "lua_newuserdata for actor failed");
     }
     new (block) proxy_t(impl);
-    gce::lualib::setmetatab(L, "actor");
+    gce::lualib::setmetatab(L, "libgce", "actor");
     return gce::lualib::make_ref(L, "libgce");
   }
 

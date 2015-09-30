@@ -587,7 +587,11 @@ function gce.check_exit(pre, printer)
   local ec, sender, args = gce.match(gce.exit).recv(gce.atom, '')
   local mt = args[1]
   if mt ~= gce.exit_normal then
-    printer(pre, ' ', gce.deatom(mt), ': ', args[2])
+    local errmsg = pre .. ' ' .. gce.deatom(mt) .. ': ' .. args[2]
+    printer(errmsg)
+    return mt, errmsg
+  else
+    return mt, nil
   end
 end
 
