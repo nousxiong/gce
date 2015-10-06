@@ -28,7 +28,18 @@
 #ifndef FMT_FORMAT_H_
 #define FMT_FORMAT_H_
 
-#include <stdint.h>
+/// nousxiong: change to fit vc9
+#ifdef _MSC_VER
+# if _MSC_VER <= 1500
+#   include "stdint.hpp"
+# else
+#   include <cstdint>
+# endif
+#elif __cplusplus < 201103L
+# include <stdint.h>
+#else
+# include <cstdint>
+#endif
 
 #include <cassert>
 #include <cmath>
