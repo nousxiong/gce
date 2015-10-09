@@ -97,7 +97,6 @@ public:
   StringBuffer &operator=(StringBuffer &&other)
   {
     assert(this != &other);
-    free();
     move(other);
     return *this;
   }
