@@ -13,11 +13,6 @@
 #include <gce/log/config.hpp>
 #include <gce/log/record.hpp>
 #include <boost/chrono/chrono_io.hpp>
-#include <boost/optional.hpp>
-/// for compatibility with >= 1.59 (using boost::in_place)
-#include <boost/utility/in_place_factory.hpp>
-#include <boost/utility/typed_in_place_factory.hpp>
-
 #include <boost/foreach.hpp>
 #include <boost/bind.hpp>
 #include <boost/ref.hpp>
