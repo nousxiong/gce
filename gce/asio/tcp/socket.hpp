@@ -13,6 +13,10 @@
 #include <gce/asio/config.hpp>
 #include <gce/asio/socket_fwd.hpp>
 #include <boost/optional.hpp>
+/// for compatibility with >= 1.59 (using boost::in_place)
+#include <boost/utility/in_place_factory.hpp>
+#include <boost/utility/typed_in_place_factory.hpp>
+
 #include <boost/array.hpp>
 
 namespace gce

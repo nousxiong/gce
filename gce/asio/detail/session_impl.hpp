@@ -21,6 +21,11 @@
 # include <boost/mpl/if.hpp>
 # include <boost/type_traits.hpp>
 #endif
+#include <boost/optional.hpp>
+/// for compatibility with >= 1.59 (using boost::in_place)
+#include <boost/utility/in_place_factory.hpp>
+#include <boost/utility/typed_in_place_factory.hpp>
+
 
 #ifndef GCE_SESSION_RECV_BUFFER_MIN_SIZE
 # define GCE_SESSION_RECV_BUFFER_MIN_SIZE 60000

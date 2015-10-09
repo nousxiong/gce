@@ -24,6 +24,10 @@
 #include <gce/actor/detail/send.hpp>
 #include <gce/actor/detail/tcp/acceptor.hpp>
 #include <boost/optional.hpp>
+/// for compatibility with >= 1.59 (using boost::in_place)
+#include <boost/utility/in_place_factory.hpp>
+#include <boost/utility/typed_in_place_factory.hpp>
+
 #include <vector>
 
 namespace gce
