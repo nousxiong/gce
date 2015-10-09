@@ -212,6 +212,10 @@
 ///   |                  |------------------------------->|
 ///   |                                                   |
 
+/// include these before include gce/actor/message.hpp
+#include "endpoint.adl.h"
+#include "node_info.adl.h"
+#include "param.adl.h"
 
 #include "util.hpp"
 #include "admin.hpp"

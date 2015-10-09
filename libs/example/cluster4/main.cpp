@@ -216,11 +216,14 @@
 ///   |                  |------------------------------->|
 ///   |                                                   |
 
+/// include these before include gce/actor/message.hpp
+#include "endpoint.adl.h"
+#include "node_info.adl.h"
 
-#include "string_hash.hpp"
 #include "master_manager.hpp"
 #include "node_manager.hpp"
 #include "admin.hpp"
+#include "string_hash.hpp"
 
 #include <gce/actor/all.hpp>
 #include <gce/log/all.hpp>
