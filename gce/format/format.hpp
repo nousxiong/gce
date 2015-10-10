@@ -155,7 +155,7 @@ typedef BasicStringWriter<std::wstring> WStringWriter;
     assert(str == message);
   \endrst
 */
-inline std::string const& sformat(std::string& str, StringRef format_str, ArgList args)
+inline std::string const& sformat(std::string& str, CStringRef format_str, ArgList args)
 {
   StringWriter w(str);
   w.write(format_str, args);
@@ -163,7 +163,7 @@ inline std::string const& sformat(std::string& str, StringRef format_str, ArgLis
   return str;
 }
 
-inline std::wstring const& sformat(std::wstring& str, WStringRef format_str, ArgList args)
+inline std::wstring const& sformat(std::wstring& str, WCStringRef format_str, ArgList args)
 {
   WStringWriter w(str);
   w.write(format_str, args);
@@ -174,8 +174,8 @@ inline std::wstring const& sformat(std::wstring& str, WStringRef format_str, Arg
 
 namespace fmt 
 {
-FMT_VARIADIC(std::string const&, sformat, std::string&, StringRef)
-FMT_VARIADIC(std::wstring const&, sformat, std::wstring&, WStringRef)
+FMT_VARIADIC(std::string const&, sformat, std::string&, CStringRef)
+FMT_VARIADIC(std::wstring const&, sformat, std::wstring&, WCStringRef)
 }
 
 #endif /// FMT_FORMAT_HPP
