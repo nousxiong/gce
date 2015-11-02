@@ -30,7 +30,7 @@ namespace detail
 class sql_category : public boost::system::error_category
 {
 public:
-  char const* name() const
+  char const* name() const BOOST_SYSTEM_NOEXCEPT
   {
     return "gce.mysql.sql";
   }
