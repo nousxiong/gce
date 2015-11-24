@@ -19,6 +19,8 @@
 # include <gce/adata/cpp/adata.hpp>
 #endif
 
+#include <typeinfo>
+
 namespace gce
 {
 class packer
@@ -68,7 +70,11 @@ public:
 #elif GCE_PACKER == GCE_ADATA
     adata::read(stream_, t);
 #endif
-    GCE_VERIFY(!stream_.bad()).msg(stream_.message());
+    if (stream_.bad())
+    {
+      char const* t_name = typeid(t).name();
+      GCE_VERIFY(!stream_.bad())(t_name).msg(stream_.message());
+    }
   }
 
   template <typename T>
@@ -93,7 +99,11 @@ public:
 #elif GCE_PACKER == GCE_ADATA
     adata::write(stream_, t);
 #endif
-    GCE_VERIFY(!stream_.bad()).msg(stream_.message());
+    if (stream_.bad())
+    {
+      char const* t_name = typeid(t).name();
+      GCE_VERIFY(!stream_.bad())(t_name).msg(stream_.message());
+    }
   }
 
   template <typename T>
