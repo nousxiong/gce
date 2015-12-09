@@ -199,7 +199,7 @@ struct conn_impl
         break;
       }
 
-      res_list.push_back(std::make_pair(my_res, mysql_affected_rows(mysql_)));
+      res_list.push_back(std::make_pair(my_res, (size_t)mysql_affected_rows(mysql_)));
 
       /// more results? -1 = no, >0 = error, 0 = yes (keep looping)
       if ((status = mysql_next_result(mysql_)) > 0)
