@@ -63,11 +63,9 @@ gce.actor(
         local uid = get_uid(snid, index)
         assert (sn_data ~= nil)
         if msg:getty() == mysql.sn_open then
-          sn_data.sn_:execute(string.format([[
-            SELECT * FROM sample1 where uid='%d'
-            ]], uid), 
-            sn_data.res_
-            )
+          sn_data.sn_
+            :sql([[SELECT * FROM sample1 where uid='{}']], uid)
+            :execute(sn_data.res_)
         else
           args = gce.unpack(msg, sn_data.res_)
           local res = args[1]
@@ -80,27 +78,23 @@ gce.actor(
             end
           else
             if sn_data.ecount_ % 3 == 0 then
-              sn_data.sn_:execute(string.format([[
-                insert into sample1 (`uid`, `m1`, `dt_reg`) values('%d','%d','%s') 
-                ON DUPLICATE KEY UPDATE `m1`=VALUES(`m1`),`dt_reg`=VALUES(`dt_reg`)
-                ]], uid, sn_data.ecount_*10000, '2042-09-25 11:00:42'),
-                sn_data.res_
-                )
+              sn_data.sn_:sql([[insert into sample1 (`uid`, `m1`, `dt_reg`) values]])
+                :sql([[('{}','{}','{}'),]], uid, sn_data.ecount_*10000, '2042-09-25 11:00:42')
+                :sql([[('{}','{}','{}')]], uid*100, sn_data.ecount_*10001, '2043-09-25 11:00:43') 
+                :sql([[ ON DUPLICATE KEY UPDATE `m1`=VALUES(`m1`),`dt_reg`=VALUES(`dt_reg`)]])
+                :execute(sn_data.res_)
             elseif sn_data.ecount_ % 5 == 0 then
-              sn_data.sn_:execute(string.format([[
+              sn_data.sn_:sql([[
                 start transaction; 
-                insert into sample1 (`uid`, `energy`) values('%d','%d') ON DUPLICATE KEY UPDATE `energy`=VALUES(`energy`); 
-                update sample1 set quid='%s' where uid='%d'; 
+                insert into sample1 (`uid`, `energy`) values('{0}','{1}) ON DUPLICATE KEY UPDATE `energy`=VALUES(`energy`); 
+                update sample1 set quid='{2}' where uid='{0}'; 
                 commit;
-                ]], uid, 42, 'NewQuid', uid),
-                sn_data.res_
-                )
+                ]], uid, 42, 'NewQuid', uid
+                ):execute(sn_data.res_)
             else
-              sn_data.sn_:execute(string.format([[
-                SELECT * FROM sample1 where uid='%d'
-                ]], uid), 
-                sn_data.res_
-                )
+              sn_data.sn_
+                :sql([[SELECT * FROM sample1 where uid='{}']], uid)
+                :execute(sn_data.res_)
             end
           end
         end

@@ -10,6 +10,9 @@
 #ifndef FORMAT_ALL_HPP
 #define FORMAT_ALL_HPP
 
-#include "format.hpp"
+#ifndef FMT_HEADER_ONLY
+# define FMT_HEADER_ONLY
+#endif
+#include "format.h"
 
 #endif /// FORMAT_ALL_HPP

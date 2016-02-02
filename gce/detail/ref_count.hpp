@@ -22,6 +22,8 @@ namespace detail
 class ref_count
 {
   ref_count();
+  ref_count(ref_count const&);
+  ref_count& operator=(ref_count const&);
 public:
   template <typename D>
   explicit ref_count(D d) : deleter_(d), count_(0) {}
@@ -61,6 +63,8 @@ private:
 class ref_count_st
 {
   ref_count_st();
+  ref_count_st(ref_count_st const&);
+  ref_count_st& operator=(ref_count_st const&);
 public:
   template <typename D>
   explicit ref_count_st(D d) : deleter_(d), count_(0) {}

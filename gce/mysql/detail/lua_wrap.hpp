@@ -416,26 +416,211 @@ struct session
     return 0;
   }
 
+  static int sql(lua_State* L)
+  {
+    mysql::session* o = gce::lua::from_lua<mysql::session>(L, 1, name());
+    size_t len = 0;
+    char const* str = luaL_checklstring(L, 2, &len);
+    mysql::session::luactx luactx = o->get_luactx();
+
+    int argn = 3;
+    boost::string_ref sqlstr(str, len);
+    if (gce::lua::is_argnil(L, argn + 0))
+    {
+      o->sql(sqlstr);
+    }
+    else if (gce::lua::is_argnil(L, argn + 1))
+    {
+      char const* arg1 = arg(L, luactx, argn + 0);
+      o->sql(sqlstr, arg1);
+    }
+    else if (gce::lua::is_argnil(L, argn + 2))
+    {
+      char const* arg1 = arg(L, luactx, argn + 0);
+      char const* arg2 = arg(L, luactx, argn + 1);
+      o->sql(sqlstr, arg1, arg2);
+    }
+    else if (gce::lua::is_argnil(L, argn + 3))
+    {
+      char const* arg1 = arg(L, luactx, argn + 0);
+      char const* arg2 = arg(L, luactx, argn + 1);
+      char const* arg3 = arg(L, luactx, argn + 2);
+      o->sql(sqlstr, arg1, arg2, arg3);
+    }
+    else if (gce::lua::is_argnil(L, argn + 4))
+    {
+      char const* arg1 = arg(L, luactx, argn + 0);
+      char const* arg2 = arg(L, luactx, argn + 1);
+      char const* arg3 = arg(L, luactx, argn + 2);
+      char const* arg4 = arg(L, luactx, argn + 3);
+      o->sql(sqlstr, arg1, arg2, arg3, arg4);
+    }
+    else if (gce::lua::is_argnil(L, argn + 5))
+    {
+      char const* arg1 = arg(L, luactx, argn + 0);
+      char const* arg2 = arg(L, luactx, argn + 1);
+      char const* arg3 = arg(L, luactx, argn + 2);
+      char const* arg4 = arg(L, luactx, argn + 3);
+      char const* arg5 = arg(L, luactx, argn + 4);
+      o->sql(sqlstr, arg1, arg2, arg3, arg4, arg5);
+    }
+    else if (gce::lua::is_argnil(L, argn + 6))
+    {
+      char const* arg1 = arg(L, luactx, argn + 0);
+      char const* arg2 = arg(L, luactx, argn + 1);
+      char const* arg3 = arg(L, luactx, argn + 2);
+      char const* arg4 = arg(L, luactx, argn + 3);
+      char const* arg5 = arg(L, luactx, argn + 4);
+      char const* arg6 = arg(L, luactx, argn + 5);
+      o->sql(sqlstr, arg1, arg2, arg3, arg4, arg5, arg6);
+    }
+    else if (gce::lua::is_argnil(L, argn + 7))
+    {
+      char const* arg1 = arg(L, luactx, argn + 0);
+      char const* arg2 = arg(L, luactx, argn + 1);
+      char const* arg3 = arg(L, luactx, argn + 2);
+      char const* arg4 = arg(L, luactx, argn + 3);
+      char const* arg5 = arg(L, luactx, argn + 4);
+      char const* arg6 = arg(L, luactx, argn + 5);
+      char const* arg7 = arg(L, luactx, argn + 6);
+      o->sql(sqlstr, arg1, arg2, arg3, arg4, arg5, arg6, arg7);
+    }
+    else if (gce::lua::is_argnil(L, argn + 8))
+    {
+      char const* arg1 = arg(L, luactx, argn + 0);
+      char const* arg2 = arg(L, luactx, argn + 1);
+      char const* arg3 = arg(L, luactx, argn + 2);
+      char const* arg4 = arg(L, luactx, argn + 3);
+      char const* arg5 = arg(L, luactx, argn + 4);
+      char const* arg6 = arg(L, luactx, argn + 5);
+      char const* arg7 = arg(L, luactx, argn + 6);
+      char const* arg8 = arg(L, luactx, argn + 7);
+      o->sql(sqlstr, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8);
+    }
+    else if (gce::lua::is_argnil(L, argn + 9))
+    {
+      char const* arg1 = arg(L, luactx, argn + 0);
+      char const* arg2 = arg(L, luactx, argn + 1);
+      char const* arg3 = arg(L, luactx, argn + 2);
+      char const* arg4 = arg(L, luactx, argn + 3);
+      char const* arg5 = arg(L, luactx, argn + 4);
+      char const* arg6 = arg(L, luactx, argn + 5);
+      char const* arg7 = arg(L, luactx, argn + 6);
+      char const* arg8 = arg(L, luactx, argn + 7);
+      char const* arg9 = arg(L, luactx, argn + 8);
+      o->sql(sqlstr, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, arg9);
+    }
+    else if (gce::lua::is_argnil(L, argn + 10))
+    {
+      char const* arg1 = arg(L, luactx, argn + 0);
+      char const* arg2 = arg(L, luactx, argn + 1);
+      char const* arg3 = arg(L, luactx, argn + 2);
+      char const* arg4 = arg(L, luactx, argn + 3);
+      char const* arg5 = arg(L, luactx, argn + 4);
+      char const* arg6 = arg(L, luactx, argn + 5);
+      char const* arg7 = arg(L, luactx, argn + 6);
+      char const* arg8 = arg(L, luactx, argn + 7);
+      char const* arg9 = arg(L, luactx, argn + 8);
+      char const* arg10 = arg(L, luactx, argn + 9);
+      o->sql(sqlstr, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, arg9, arg10);
+    }
+    else
+    {
+      return luaL_error(L, "arg num can't over 10");
+    }
+
+    /// return session itself
+    lua_pushvalue(L, 1);
+    return 1;
+  }
+
+private:
+  static void pri_sql(lua_State* L, mysql::session* o)
+  {
+  }
+
+  static char const* arg(lua_State* L, mysql::session::luactx& luactx, int objidx)
+  {
+    std::deque<gce::intbuf_t>& tmp_num_list = luactx.tmp_num_list_;
+    std::deque<gce::detail::buffer_st>& tmp_escape_string_list = luactx.tmp_escape_string_list_;
+    gce::message& tmp_msg = luactx.tmp_msg_;
+    int ty = lua_type(L, objidx);
+    switch (ty)
+    {
+    case LUA_TNUMBER: 
+    {
+      lua_Number num = luaL_checknumber(L, objidx);
+      tmp_num_list.push_back(boost::lexical_cast<intbuf_t>(num));
+      return tmp_num_list.back().cbegin();
+    }break;
+    case LUA_TBOOLEAN:
+    {
+      int b = lua_toboolean(L, objidx);
+      tmp_num_list.push_back(boost::lexical_cast<intbuf_t>(b));
+      return tmp_num_list.back().cbegin();
+    }break;
+    case LUA_TSTRING: 
+    {
+      return luaL_checkstring(L, objidx);
+    }break;
+    case LUA_TTABLE:
+    case LUA_TUSERDATA:
+    case LUA_TLIGHTUSERDATA:
+    {
+      tmp_msg.clear();
+      gce::lua::pack_object(L, tmp_msg, objidx);
+      tmp_escape_string_list.push_back(gce::detail::buffer_st());
+      gce::detail::buffer_st& buf = tmp_escape_string_list.back();
+      buf.resize(2 * tmp_msg.size() + 1);
+      mysql_real_escape_string(
+        luactx.mysql_, 
+        (char*)buf.data(), 
+        (char const*)tmp_msg.data(), tmp_msg.size()
+        );
+      return (char const*)buf.data();
+    }break;
+    default:
+    {
+      luaL_error(L, "metatable not found!");
+    }break;
+    }
+    return 0;
+  }
+
+public:
   static int execute(lua_State* L)
   {
     mysql::session* o = gce::lua::from_lua<mysql::session>(L, 1, name());
-    std::string& qry = o->get_query_buffer();
+    if (gce::lua::is_argnil(L, 2) || (!gce::lua::is_argnil(L, 2) && lua_type(L, 2) != LUA_TSTRING))
+    {
+      mysql::result_ptr res_ptr;
+      if (!gce::lua::is_argnil(L, 2))
+      {
+        result::object_t* res = gce::lua::from_lua<result>(L, 2);
+        if (!*res)
+        {
+          *res = boost::make_shared<mysql::result>();
+        }
+        res_ptr = *res;
+      }
+      o->execute(res_ptr);
+      return 0;
+    }
+
     size_t len = 0;
     char const* str = luaL_checklstring(L, 2, &len);
-    qry.assign(str, len);
 
     mysql::result_ptr res_ptr;
     if (!gce::lua::is_argnil(L, 3))
     {
       result::object_t* res = gce::lua::from_lua<result>(L, 3);
-      mysql::result_ptr& res_ptr = *res;
       if (!*res)
       {
         *res = boost::make_shared<mysql::result>();
       }
       res_ptr = *res;
     }
-    o->execute(qry, res_ptr);
+    o->execute(boost::string_ref(str, len), res_ptr);
     return 0;
   }
 

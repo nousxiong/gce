@@ -14,7 +14,9 @@
 #include <gce/mysql/result.hpp>
 #include <gce/mysql/conn_option.hpp>
 #include <gce/mysql/errno.hpp>
+#include <gce/format/all.hpp>
 #include <gce/detail/index_table.hpp>
+#include <boost/shared_ptr.hpp>
 
 namespace gce
 {
@@ -177,9 +179,9 @@ struct conn_impl
     return std::make_pair(errno_nil, std::string());
   }
 
-  std::pair<errno_t, std::string> query(std::string const& qry, result_ptr& res)
+  std::pair<errno_t, std::string> query(fmt::MemoryWriter const& qry, result_ptr& res)
   {
-    if (mysql_real_query(mysql_, qry.c_str(), qry.size()) != 0)
+    if (mysql_real_query(mysql_, qry.data(), qry.size()) != 0)
     {
       return std::make_pair(make_errno(mysql_errno(mysql_)), mysql_error(mysql_));
     }
@@ -246,7 +248,7 @@ struct conn_impl
   MYSQL* mysql_;
 
   int ref_;
-  gce::detail::index_table<std::string> query_buffer_list_;
+  gce::detail::index_table<boost::shared_ptr<fmt::MemoryWriter> > query_buffer_list_;
 };
 } /// namespace detail
 } /// namespace mysql

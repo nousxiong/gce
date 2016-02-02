@@ -14,6 +14,14 @@
 #include <gce/mysql/session_fwd.hpp>
 #include <gce/mysql/conn.hpp>
 #include <gce/mysql/detail/conn_impl.hpp>
+#include <gce/format/all.hpp>
+#include <gce/detail/buffer.hpp>
+#include <boost/utility/string_ref.hpp>
+#include <boost/utility/enable_if.hpp>
+#include <boost/type_traits/is_arithmetic.hpp>
+#include <boost/make_shared.hpp>
+#include <boost/tuple/tuple.hpp>
+#include <deque>
 
 namespace gce
 {
@@ -71,14 +79,188 @@ public:
   }
 
   /// execute sql(s), will return sn_query msg
-  void execute(std::string const& qry, result_ptr res = result_ptr())
+  void execute(boost::string_ref qry, result_ptr res = result_ptr())
   {
     GCE_ASSERT(qry_ != 0).msg("please do open before execute");
     GCE_ASSERT(!querying_);
-    if (&qry != qry_)
-    {
-      *qry_ = qry;
-    }
+    prepare_execute(res);
+    qry_->write(qry.data());
+    querying_ = true;
+    ci_->snd_.post(handle_execute_binder(base_t::get_strand(), scp_.get(), ci_, *qry_, res, snid_));
+  }
+
+  ///----------------------------------------------------------------------------
+  /// set sql with args
+  ///----------------------------------------------------------------------------
+  self_t& sql(boost::string_ref sqlstr)
+  {
+    /// format last sqlstr and args
+    GCE_ASSERT(qry_ != 0).msg("please do open before sql");
+    GCE_ASSERT(!querying_);
+    qry_->write(sqlstr.data());
+    return *this;
+  }
+
+  template <typename A1>
+  self_t& sql(boost::string_ref sqlstr, A1 const& a1)
+  {
+    /// format last sqlstr and args
+    GCE_ASSERT(qry_ != 0).msg("please do open before sql");
+    GCE_ASSERT(!querying_);
+    qry_->write(sqlstr.data(), arg(a1));
+    return *this;
+  }
+
+  template <typename A1, typename A2>
+  self_t& sql(boost::string_ref sqlstr, A1 const& a1, A2 const& a2)
+  {
+    /// format last sqlstr and args
+    GCE_ASSERT(qry_ != 0).msg("please do open before sql");
+    GCE_ASSERT(!querying_);
+    qry_->write(sqlstr.data(), arg(a1), arg(a2));
+    return *this;
+  }
+
+  template <typename A1, typename A2, typename A3>
+  self_t& sql(boost::string_ref sqlstr, A1 const& a1, A2 const& a2, A3 const& a3)
+  {
+    /// format last sqlstr and args
+    GCE_ASSERT(qry_ != 0).msg("please do open before sql");
+    GCE_ASSERT(!querying_);
+    qry_->write(sqlstr.data(), arg(a1), arg(a2), arg(a3));
+    return *this;
+  }
+
+  template <typename A1, typename A2, typename A3, typename A4>
+  self_t& sql(boost::string_ref sqlstr, A1 const& a1, A2 const& a2, A3 const& a3, A4 const& a4)
+  {
+    /// format last sqlstr and args
+    GCE_ASSERT(qry_ != 0).msg("please do open before sql");
+    GCE_ASSERT(!querying_);
+    qry_->write(sqlstr.data(), arg(a1), arg(a2), arg(a3), arg(a4));
+    return *this;
+  }
+
+  template <typename A1, typename A2, typename A3, typename A4, typename A5>
+  self_t& sql(boost::string_ref sqlstr, A1 const& a1, A2 const& a2, A3 const& a3, A4 const& a4, A5 const& a5)
+  {
+    /// format last sqlstr and args
+    GCE_ASSERT(qry_ != 0).msg("please do open before sql");
+    GCE_ASSERT(!querying_);
+    qry_->write(sqlstr.data(), arg(a1), arg(a2), arg(a3), arg(a4), arg(a5));
+    return *this;
+  }
+
+  template <
+    typename A1, typename A2, typename A3, typename A4, typename A5,
+    typename A6
+    >
+  self_t& sql(
+    boost::string_ref sqlstr, 
+    A1 const& a1, A2 const& a2, A3 const& a3, A4 const& a4, A5 const& a5,
+    A6 const& a6
+    )
+  {
+    /// format last sqlstr and args
+    GCE_ASSERT(qry_ != 0).msg("please do open before sql");
+    GCE_ASSERT(!querying_);
+    qry_->write(
+      sqlstr.data(), 
+      arg(a1), arg(a2), arg(a3), arg(a4), arg(a5), 
+      arg(a6)
+      );
+    return *this;
+  }
+
+  template <
+    typename A1, typename A2, typename A3, typename A4, typename A5,
+    typename A6, typename A7
+    >
+  self_t& sql(
+    boost::string_ref sqlstr, 
+    A1 const& a1, A2 const& a2, A3 const& a3, A4 const& a4, A5 const& a5,
+    A6 const& a6, A7 const& a7
+    )
+  {
+    /// format last sqlstr and args
+    GCE_ASSERT(qry_ != 0).msg("please do open before sql");
+    GCE_ASSERT(!querying_);
+    qry_->write(
+      sqlstr.data(), 
+      arg(a1), arg(a2), arg(a3), arg(a4), arg(a5), 
+      arg(a6), arg(a7)
+      );
+    return *this;
+  }
+
+  template <
+    typename A1, typename A2, typename A3, typename A4, typename A5,
+    typename A6, typename A7, typename A8
+    >
+  self_t& sql(
+    boost::string_ref sqlstr, 
+    A1 const& a1, A2 const& a2, A3 const& a3, A4 const& a4, A5 const& a5,
+    A6 const& a6, A7 const& a7, A8 const& a8
+    )
+  {
+    /// format last sqlstr and args
+    GCE_ASSERT(qry_ != 0).msg("please do open before sql");
+    GCE_ASSERT(!querying_);
+    qry_->write(
+      sqlstr.data(), 
+      arg(a1), arg(a2), arg(a3), arg(a4), arg(a5), 
+      arg(a6), arg(a7), arg(a8)
+      );
+    return *this;
+  }
+
+  template <
+    typename A1, typename A2, typename A3, typename A4, typename A5,
+    typename A6, typename A7, typename A8, typename A9
+    >
+  self_t& sql(
+    boost::string_ref sqlstr, 
+    A1 const& a1, A2 const& a2, A3 const& a3, A4 const& a4, A5 const& a5,
+    A6 const& a6, A7 const& a7, A8 const& a8, A9 const& a9
+    )
+  {
+    /// format last sqlstr and args
+    GCE_ASSERT(qry_ != 0).msg("please do open before sql");
+    GCE_ASSERT(!querying_);
+    qry_->write(
+      sqlstr.data(), 
+      arg(a1), arg(a2), arg(a3), arg(a4), arg(a5), 
+      arg(a6), arg(a7), arg(a8), arg(a9)
+      );
+    return *this;
+  }
+
+  template <
+    typename A1, typename A2, typename A3, typename A4, typename A5,
+    typename A6, typename A7, typename A8, typename A9, typename A10
+    >
+  self_t& sql(
+    boost::string_ref sqlstr, 
+    A1 const& a1, A2 const& a2, A3 const& a3, A4 const& a4, A5 const& a5,
+    A6 const& a6, A7 const& a7, A8 const& a8, A9 const& a9, A10 const& a10
+    )
+  {
+    /// format last sqlstr and args
+    GCE_ASSERT(qry_ != 0).msg("please do open before sql");
+    GCE_ASSERT(!querying_);
+    qry_->write(
+      sqlstr.data(), 
+      arg(a1), arg(a2), arg(a3), arg(a4), arg(a5), 
+      arg(a6), arg(a7), arg(a8), arg(a9), arg(a10)
+      );
+    return *this;
+  }
+
+  /// execute query that setted before
+  void execute(result_ptr res = result_ptr())
+  {
+    GCE_ASSERT(qry_ != 0).msg("please do open before execute");
+    GCE_ASSERT(!querying_);
     if (res)
     {
       res->clear();
@@ -95,18 +277,90 @@ public:
     ci_->snd_.post(handle_ping_binder(base_t::get_strand(), scp_.get(), ci_, snid_));
   }
 
-  std::string& get_query_buffer()
-  {
-    GCE_ASSERT(qry_ != 0);
-    return *qry_;
-  }
-
   snid_t const& get_snid() const
   {
     return snid_;
   }
 
+#ifdef GCE_LUA
+  /// internal use
+  struct luactx
+  {
+    luactx(
+      MYSQL* mysql,
+      std::deque<intbuf_t>& tmp_num_list,
+      std::deque<gce::detail::buffer_st>& tmp_escape_string_list,
+      gce::message& tmp_msg
+      )
+      : mysql_(mysql)
+      , tmp_num_list_(tmp_num_list)
+      , tmp_escape_string_list_(tmp_escape_string_list)
+      , tmp_msg_(tmp_msg)
+    {
+    }
+
+    MYSQL* mysql_;
+    std::deque<intbuf_t>& tmp_num_list_;
+    std::deque<gce::detail::buffer_st>& tmp_escape_string_list_;
+    gce::message& tmp_msg_;
+  };
+
+  luactx get_luactx()
+  {
+    tmp_num_list_.clear();
+    tmp_escape_string_list_.clear();
+    tmp_msg_.clear();
+    return luactx(ci_->mysql_, tmp_num_list_, tmp_escape_string_list_, tmp_msg_);
+  }
+#endif
+
 private:
+  void prepare_execute(result_ptr& res)
+  {
+    qry_->clear();
+    if (res)
+    {
+      res->clear();
+    }
+  }
+
+  ///----------------------------------------------------------------------------
+  /// args, if built-in type(e.g. int long), will be convert to string; 
+  /// if not built-in type, using gce::packer serialize it and mysql_real_escape_string.
+  ///----------------------------------------------------------------------------
+  template <class T>
+  typename boost::enable_if<boost::is_arithmetic<T>, T>::type arg(T t)
+  {
+    return t;
+  }
+
+  char const* arg(char const* str)
+  {
+    return str;
+  }
+
+  char const* arg(std::string const& str)
+  {
+    return str.c_str();
+  }
+
+  template <class T>
+  typename boost::enable_if_c<!boost::is_arithmetic<T>::value, char const*>::type arg(T const& t)
+  {
+    tmp_msg_.clear();
+    tmp_escape_string_list_.push_back(gce::detail::buffer_st());
+    gce::detail::buffer_st& buf = tmp_escape_string_list_.back();
+
+    tmp_msg_ << t;
+    buf.resize(2 * tmp_msg_.size() + 1);
+    mysql_real_escape_string(
+      ci_->mysql_, 
+      (char*)buf.data(), 
+      (char const*)tmp_msg_.data(), tmp_msg_.size()
+      );
+    return (char const*)buf.data();
+  }
+
   ///----------------------------------------------------------------------------
   /// open
   ///----------------------------------------------------------------------------
@@ -150,17 +404,17 @@ private:
 
     if (qry_idx == size_nil)
     {
-      qry_idx = ci->query_buffer_list_.add(std::string());
+      qry_idx = ci->query_buffer_list_.add(boost::make_shared<fmt::MemoryWriter>());
     }
-    std::string* qry_buf = ci->query_buffer_list_.get(qry_idx);
-    GCE_ASSERT(qry_buf != 0);
+    boost::shared_ptr<fmt::MemoryWriter>* qry_buf_ptr = ci->query_buffer_list_.get(qry_idx);
+    GCE_ASSERT(qry_buf_ptr != 0);
 
-    snd.post(end_open_binder(guard, m, qry_idx, qry_buf));
+    snd.post(end_open_binder(guard, m, qry_idx, qry_buf_ptr->get()));
   }
 
   struct end_open_binder
   {
-    end_open_binder(guard_ptr guard, message& msg, size_t qry_idx, std::string* qry_buf)
+    end_open_binder(guard_ptr guard, message& msg, size_t qry_idx, fmt::MemoryWriter* qry_buf)
       : guard_(guard)
       , msg_(msg)
       , qry_idx_(qry_idx)
@@ -176,10 +430,10 @@ private:
     guard_ptr guard_;
     message msg_;
     size_t qry_idx_;
-    std::string* qry_buf_;
+    fmt::MemoryWriter* qry_buf_;
   };
 
-  static void end_open(guard_ptr guard, message const& m, size_t qry_idx, std::string* qry_buf)
+  static void end_open(guard_ptr guard, message const& m, size_t qry_idx, fmt::MemoryWriter* qry_buf)
   {
     self_t* o = guard->get();
     if (!o)
@@ -199,7 +453,7 @@ private:
   {
     handle_execute_binder(
       strand_t snd, guard_ptr guard, detail::conn_impl* ci, 
-      std::string const& qry, result_ptr res, snid_t const& snid
+      fmt::MemoryWriter const& qry, result_ptr res, snid_t const& snid
       )
       : snd_(snd)
       , guard_(guard)
@@ -218,14 +472,14 @@ private:
     strand_t snd_;
     guard_ptr guard_;
     detail::conn_impl* ci_;
-    std::string const& qry_;
+    fmt::MemoryWriter const& qry_;
     result_ptr res_;
     snid_t const snid_;
   };
 
   static void handle_execute(
     strand_t snd, guard_ptr guard, detail::conn_impl* ci, 
-    std::string const& qry, result_ptr res, snid_t const& snid
+    fmt::MemoryWriter const& qry, result_ptr res, snid_t const& snid
     )
   {
     message m(sn_query);
@@ -277,6 +531,7 @@ private:
 
     o->querying_ = false;
     o->qry_->clear();
+    o->tmp_escape_string_list_.clear();
     o->send2actor(m);
   }
   ///----------------------------------------------------------------------------
@@ -414,7 +669,16 @@ private:
   detail::conn_impl* ci_;
 
   size_t qry_idx_;
-  std::string* qry_;
+  //std::string* qry_;
+  fmt::MemoryWriter* qry_;
+
+  /// cached sql args
+  message tmp_msg_;
+  std::deque<gce::detail::buffer_st> tmp_escape_string_list_;
+
+#ifdef GCE_LUA
+  std::deque<gce::intbuf_t> tmp_num_list_;
+#endif
 
   /// for quit
   scope_t scp_;

@@ -45,7 +45,7 @@ private:
       mysql::conn_t c;
       bool shared = false;
       size_t index;
-      self->match("init").recv(sql_ctxid, c, shared, index);
+      aid_t base_aid = self->match("init").recv(sql_ctxid, c, shared, index);
 
       typedef boost::shared_ptr<mysql::session> session_ptr;
       typedef std::pair<session_ptr, size_t> session_data;
@@ -90,22 +90,17 @@ private:
           continue;
         }
 
+        session_data& sndata = itr->second;
         int64_t uid = get_uid(snid, index);
         if (type == mysql::sn_open)
         {
-          std::string& qry_buf = itr->second.first->get_query_buffer();
-          itr->second.first->execute(
-            fmt::sformat(qry_buf, 
-              "SELECT * FROM sample1 where uid='{}'",
-              uid
-              )
-            );
+          sndata.first->sql("SELECT * FROM sample1 where uid='{}'", uid).execute();
         }
         else
         {
           mysql::result_ptr res;
           msg >> res;
-          if (--itr->second.second == 0)
+          if (--sndata.second == 0)
           {
             session_list.erase(itr);
             if (session_list.empty())
@@ -115,36 +110,39 @@ private:
           }
           else
           {
-            std::string& qry_buf = itr->second.first->get_query_buffer();
-            if (itr->second.second % 3 == 0)
+            if (sndata.second % 3 == 0)
             {
-              itr->second.first->execute(
-                fmt::sformat(qry_buf, 
-                  "insert into sample1 (`uid`, `m1`, `dt_reg`) values('{}','{}','{}') \
-                   ON DUPLICATE KEY UPDATE `m1`=VALUES(`m1`),`dt_reg`=VALUES(`dt_reg`)", 
-                  uid, itr->second.second*10000, "2042-09-25 11:00:42")
-                );
+              /*sndata.first->execute(
+                "insert into sample1 (`uid`, `m1`, `dt_reg`) values('{}','{}','{}') \
+                 ON DUPLICATE KEY UPDATE `m1`=VALUES(`m1`),`dt_reg`=VALUES(`dt_reg`)",
+                uid, sndata.second*10000, "2042-09-25 11:00:42"
+                );*/
+              sndata.first->sql("insert into sample1 (`uid`, `m1`, `dt_reg`) values")
+                .sql("('{}','{}','{}'),", uid, itr->second.second*10000, "2042-09-25 11:00:42")
+                .sql("('{}','{}','{}')", uid*100, itr->second.second*10001, "2043-09-25 11:00:43")
+                .sql(" ON DUPLICATE KEY UPDATE `m1`=VALUES(`m1`),`dt_reg`=VALUES(`dt_reg`)")
+                .execute();
             }
-            else if (itr->second.second % 5 == 0)
+            else if (sndata.second % 5 == 0)
             {
-              itr->second.first->execute(
-                fmt::sformat(qry_buf, 
-                  "start transaction; \
+              /*sndata.first->execute(
+                "start transaction; \
+                 insert into sample1 (`uid`, `energy`) values('{0}','{1}') ON DUPLICATE KEY UPDATE `energy`=VALUES(`energy`); \
+                 update sample1 set quid='{2}' where uid='{0}'; \
+                 commit;", 
+                 uid, 42, "NewQuid"
+                );*/
+              sndata.first->sql(
+                "start transaction; \
                   insert into sample1 (`uid`, `energy`) values('{0}','{1}') ON DUPLICATE KEY UPDATE `energy`=VALUES(`energy`); \
                   update sample1 set quid='{2}' where uid='{0}'; \
-                  commit;", 
-                  uid, 42, "NewQuid")
-                );
+                  commit;",
+                  uid, 42, base_aid
+                ).execute();
             }
             else
             {
-              std::string& qry_buf = itr->second.first->get_query_buffer();
-              itr->second.first->execute(
-                fmt::sformat(qry_buf, 
-                  "SELECT * FROM sample1 where uid='{}'",
-                  uid
-                  )
-                );
+              sndata.first->sql("SELECT * FROM sample1 where uid='{}'", uid).execute();
             }
           }
         }
@@ -173,6 +171,7 @@ private:
       //attr.thread_num_ = 5;
       context ctx(attr);
       threaded_actor base = spawn(ctx);
+      aid_t base_aid = base.get_aid();
       mysql::errno_t errn = mysql::errno_nil;
       std::string errmsg;
       mysql::ctxid_t sql_ctxid = sql_ctx.get_ctxid();
@@ -200,7 +199,7 @@ private:
         sql_sn.execute(
           "CREATE TABLE `sample1` (\
            `uid` bigint(20) NOT NULL, \
-           `quid` varchar(128) NOT NULL DEFAULT '', \
+           `quid` blob(128), \
            `sid` char(10) NOT NULL DEFAULT '', \
            `energy` smallint(6) NOT NULL DEFAULT '1', \
            `m1` int(11) NOT NULL DEFAULT '0', \
@@ -211,12 +210,20 @@ private:
         base->match(mysql::sn_query).recv(errn, errmsg);
         GCE_VERIFY(errn == mysql::errno_nil)(errmsg);
 
-        std::string& qry_buf = sql_sn.get_query_buffer();
-        sql_sn.execute(
-          fmt::sformat(qry_buf, 
+        /*sql_sn.execute(
+          fmt::format(
             "INSERT INTO `sample1` VALUES('{}','{}','{}','{}','{}','{}')", 
-            int64_t(42), "Global", "42-sid", int16_t(100), int32_t(9000), "2015-09-25 12:02:55")
+            int64_t(42), base_aid, "42-sid", int16_t(100), int32_t(9000), "2015-09-25 12:02:55"
+            )
           );
+        base->match(mysql::sn_query).recv(errn, errmsg);
+        GCE_VERIFY(errn == mysql::errno_nil)(errmsg);*/
+
+        /// syntactic sugar
+        sql_sn.sql(
+          "INSERT INTO `sample1` VALUES('{}','{}','{}','{}','{}','{}')", 
+          42, base_aid, "43-sid", 101, 9001, "2015-09-26 12:02:56"
+          ).execute();
         base->match(mysql::sn_query).recv(errn, errmsg);
         GCE_VERIFY(errn == mysql::errno_nil)(errmsg);
 
@@ -243,7 +250,8 @@ private:
 
         size_t rowsize = fch.row_size(0);
         int64_t uid;
-        std::string quid, sid;
+        std::string sid;
+        aid_t quid;
         int16_t energy;
         int32_t m1;
         mysql::datetime dt_reg;
@@ -257,13 +265,21 @@ private:
 
           /// fetch fields using ref (will throw exception if error)
           GCE_VERIFY(row(0, uid) == &uid);
-          GCE_VERIFY(row(1, quid, mysql::var) == &quid);
+          if (row(1, quid) != 0)
+          {
+            GCE_VERIFY(row(1, quid) == &quid);
+            GCE_VERIFY(quid == base_aid);
+          }
           GCE_VERIFY(row(2, sid, !mysql::var) == &sid);
           GCE_VERIFY(row(3, energy) == &energy);
           GCE_VERIFY(row(4, m1) == &m1);
           GCE_VERIFY(row(5, dt_reg) == &dt_reg);
           GCE_VERIFY(row("uid", uid) == &uid);
-          GCE_VERIFY(row("quid", quid, mysql::var) == &quid);
+          if (row("quid", quid) != 0)
+          {
+            GCE_VERIFY(row("quid", quid) == &quid);
+            GCE_VERIFY(quid == base_aid);
+          }
           GCE_VERIFY(row("sid", sid, !mysql::var) == &sid);
           GCE_VERIFY(row("energy", energy) == &energy);
           GCE_VERIFY(row("m1", m1) == &m1);
@@ -272,13 +288,21 @@ private:
           /// fetch fields using ref with errcode (set ec if error)
           errcode_t ec;
           GCE_VERIFY(row(0, uid, ec) == &uid);
-          GCE_VERIFY(row(1, quid, mysql::var, ec) == &quid);
+          if (row(1, quid, ec) != 0)
+          {
+            GCE_VERIFY(row(1, quid, ec) == &quid);
+            GCE_VERIFY(quid == base_aid);
+          }
           GCE_VERIFY(row(2, sid, !mysql::var, ec) == &sid);
           GCE_VERIFY(row(3, energy, ec) == &energy);
           GCE_VERIFY(row(4, m1, ec) == &m1);
           GCE_VERIFY(row(5, dt_reg, ec) == &dt_reg);
           GCE_VERIFY(row("uid", uid, ec) == &uid);
-          GCE_VERIFY(row("quid", quid, mysql::var, ec) == &quid);
+          if (row("quid", quid, ec) != 0)
+          {
+            GCE_VERIFY(row("quid", quid, ec) == &quid);
+            GCE_VERIFY(quid == base_aid);
+          }
           GCE_VERIFY(row("sid", sid, !mysql::var, ec) == &sid);
           GCE_VERIFY(row("energy", energy, ec) == &energy);
           GCE_VERIFY(row("m1", m1, ec) == &m1);

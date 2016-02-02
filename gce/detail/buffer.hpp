@@ -21,12 +21,14 @@ namespace gce
 {
 namespace detail
 {
-class buffer
-  : public ref_count
+template <typename RefCount>
+class basic_buffer
+  : public RefCount
 {
+  typedef basic_buffer<RefCount> self_t;
   struct free_binder
   {
-    explicit free_binder(buffer* p)
+    explicit free_binder(self_t* p)
       : p_(p)
     {
     }
@@ -36,29 +38,56 @@ class buffer
       delete p_;
     }
 
-    buffer* p_;
+    self_t* p_;
   };
 
 public:
-  buffer()
-    : ref_count(free_binder(this))
+  basic_buffer()
+    : RefCount(free_binder(this))
     , data_(0)
     , size_(0)
   {
   }
 
-  explicit buffer(size_t size)
-    : ref_count(free_binder(this))
+  explicit basic_buffer(size_t size)
+    : RefCount(free_binder(this))
     , data_((byte_t*)std::malloc(size))
     , size_(size)
   {
-    if (size > 0 && !data_)
+    if (size > 0 && data_ == 0)
     {
       throw std::bad_alloc();
     }
   }
 
-  ~buffer()
+  basic_buffer(basic_buffer const& other)
+    : RefCount(free_binder(this))
+    , data_((byte_t*)std::malloc(other.size_))
+    , size_(other.size_)
+  {
+    if (size_ > 0 && data_ == 0)
+    {
+      throw std::bad_alloc();
+    }
+
+    std::memcpy(data_, other.data_, size_);
+  }
+
+  basic_buffer& operator=(basic_buffer const& rhs)
+  {
+    if (this != &rhs)
+    {
+      if (size_ < rhs.size_)
+      {
+        data_ = (byte_t*)std::realloc(data_, rhs.size_);
+      }
+      size_ = rhs.size_;
+      std::memcpy(data_, rhs.data_, size_);
+    }
+    return *this;
+  }
+
+  ~basic_buffer()
   {
     if (data_)
     {
@@ -89,6 +118,8 @@ private:
   size_t size_;
 };
 
+typedef basic_buffer<ref_count> buffer;
+typedef basic_buffer<ref_count_st> buffer_st;
 typedef boost::intrusive_ptr<buffer> buffer_ptr;
 }
 }

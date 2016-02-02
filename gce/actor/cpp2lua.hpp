@@ -106,6 +106,11 @@ static bool is_argnil(lua_State* L, int arg, int ty)
 {
   return detail::lua::is_argnil(L, arg, ty);
 }
+
+static int pack_object(lua_State* L, gce::message& msg, int objidx)
+{
+  return detail::lua::packobj2msg(L, &msg, objidx);
+}
 ///------------------------------------------------------------------------------
 }
 }

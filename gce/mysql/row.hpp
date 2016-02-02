@@ -287,6 +287,24 @@ struct row
     return fetch_string(i, t, is_var ? MYSQL_TYPE_VAR_STRING : MYSQL_TYPE_STRING, ec);
   }
 
+  template <typename T>
+  T* operator()(int i, T& t, errcode_t& ec)
+  {
+    return fetch_blob(i, t, ec);
+  }
+
+  template <typename T>
+  T* operator()(char const* name, T& t, errcode_t& ec)
+  {
+    size_t i = find_field_index(name);
+    if (i == size_nil)
+    {
+      ec = make_errcode(field_name_not_found);
+      GCE_VERIFY(!ec).except(ec);
+    }
+    return fetch_blob(i, t, ec);
+  }
+
   datetime* operator()(int i, datetime& t, errcode_t& ec)
   {
     std::string* str = fetch_string(i, t.val_, MYSQL_TYPE_DATETIME, ec);
@@ -533,6 +551,24 @@ struct row
     return rt;
   }
 
+  template <typename T>
+  T* operator()(int i, T& t)
+  {
+    errcode_t ec;
+    T* rt = (*this)(i, t, ec);
+    GCE_VERIFY(!ec)(i).except(ec);
+    return rt;
+  }
+
+  template <typename T>
+  T* operator()(char const* name, T& t)
+  {
+    errcode_t ec;
+    T* rt = (*this)(name, t, ec);
+    GCE_VERIFY(!ec)(name).except(ec);
+    return rt;
+  }
+
   datetime* operator()(int i, datetime& t)
   {
     errcode_t ec;
@@ -629,6 +665,37 @@ public:
     }
 
     t = boost::string_ref(row_[i], lengths_[i]);
+    return &t;
+  }
+
+  template <typename T>
+  T* fetch_blob(int i, T& t, errcode_t& ec)
+  {
+    if (!check(i, ec))
+    {
+      return 0;
+    }
+
+    MYSQL_FIELD& my_field = fields_[i];
+    if (
+      my_field.type != MYSQL_TYPE_TINY_BLOB &&
+      my_field.type != MYSQL_TYPE_MEDIUM_BLOB &&
+      my_field.type != MYSQL_TYPE_LONG_BLOB &&
+      my_field.type != MYSQL_TYPE_BLOB
+      )
+    {
+      ec = make_errcode(field_type_incorrect);
+      return 0;
+    }
+
+    gce::packer pkr;
+    pkr.set_read((gce::byte_t const*)row_[i], lengths_[i]);
+    gce::packer::error_code_t errc = gce::packer::ok();
+    pkr.read(t, errc);
+    if (errc != gce::packer::ok())
+    {
+      return 0;
+    }
     return &t;
   }
 
