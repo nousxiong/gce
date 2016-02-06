@@ -25,6 +25,7 @@ gce.actor(
     local sql_ctxid = args[1]
     local c = args[2]
     local index = args[3]
+    local base_aid = sender
 
     local session_list = {}
     for i=1, cln_count do
@@ -79,8 +80,8 @@ gce.actor(
           else
             if sn_data.ecount_ % 3 == 0 then
               sn_data.sn_:sql([[insert into sample1 (`uid`, `m1`, `dt_reg`) values]])
-                :sql([[('{}','{}','{}'),]], uid, sn_data.ecount_*10000, '2042-09-25 11:00:42')
-                :sql([[('{}','{}','{}')]], uid*100, sn_data.ecount_*10001, '2043-09-25 11:00:43') 
+                :sql([[('{}','{}','{}'),]], uid, base_aid, '2042-09-25 11:00:42')
+                :sql([[('{}','{}','{}')]], uid*100, base_aid, '2043-09-25 11:00:43') 
                 :sql([[ ON DUPLICATE KEY UPDATE `m1`=VALUES(`m1`),`dt_reg`=VALUES(`dt_reg`)]])
                 :execute(sn_data.res_)
             elseif sn_data.ecount_ % 5 == 0 then
@@ -89,7 +90,7 @@ gce.actor(
                 insert into sample1 (`uid`, `energy`) values('{0}','{1}) ON DUPLICATE KEY UPDATE `energy`=VALUES(`energy`); 
                 update sample1 set quid='{2}' where uid='{0}'; 
                 commit;
-                ]], uid, 42, 'NewQuid', uid
+                ]], uid, 42, base_aid, uid
                 ):execute(sn_data.res_)
             else
               sn_data.sn_

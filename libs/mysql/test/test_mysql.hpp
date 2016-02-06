@@ -200,7 +200,7 @@ private:
           "CREATE TABLE `sample1` (\
            `uid` bigint(20) NOT NULL, \
            `quid` blob(128), \
-           `sid` char(10) NOT NULL DEFAULT '', \
+           `sid` blob(128), \
            `energy` smallint(6) NOT NULL DEFAULT '1', \
            `m1` int(11) NOT NULL DEFAULT '0', \
            `dt_reg` datetime NOT NULL DEFAULT '2015-09-25 13:02:00', \
@@ -222,7 +222,7 @@ private:
         /// syntactic sugar
         sql_sn.sql(
           "INSERT INTO `sample1` VALUES('{}','{}','{}','{}','{}','{}')", 
-          42, base_aid, "43-sid", 101, 9001, "2015-09-26 12:02:56"
+          42, base_aid, base_aid, 101, 9001, "2015-09-26 12:02:56"
           ).execute();
         base->match(mysql::sn_query).recv(errn, errmsg);
         GCE_VERIFY(errn == mysql::errno_nil)(errmsg);
@@ -250,7 +250,7 @@ private:
 
         size_t rowsize = fch.row_size(0);
         int64_t uid;
-        std::string sid;
+        aid_t sid;
         aid_t quid;
         int16_t energy;
         int32_t m1;
@@ -270,7 +270,11 @@ private:
             GCE_VERIFY(row(1, quid) == &quid);
             GCE_VERIFY(quid == base_aid);
           }
-          GCE_VERIFY(row(2, sid, !mysql::var) == &sid);
+          if (row(1, sid) != 0)
+          {
+            GCE_VERIFY(row(2, sid) == &sid);
+            GCE_VERIFY(sid == base_aid);
+          }
           GCE_VERIFY(row(3, energy) == &energy);
           GCE_VERIFY(row(4, m1) == &m1);
           GCE_VERIFY(row(5, dt_reg) == &dt_reg);
@@ -280,7 +284,11 @@ private:
             GCE_VERIFY(row("quid", quid) == &quid);
             GCE_VERIFY(quid == base_aid);
           }
-          GCE_VERIFY(row("sid", sid, !mysql::var) == &sid);
+          if (row("sid", sid) != 0)
+          {
+            GCE_VERIFY(row("sid", sid) == &sid);
+            GCE_VERIFY(sid == base_aid);
+          }
           GCE_VERIFY(row("energy", energy) == &energy);
           GCE_VERIFY(row("m1", m1) == &m1);
           GCE_VERIFY(row("dt_reg", dt_reg) == &dt_reg);
@@ -293,7 +301,11 @@ private:
             GCE_VERIFY(row(1, quid, ec) == &quid);
             GCE_VERIFY(quid == base_aid);
           }
-          GCE_VERIFY(row(2, sid, !mysql::var, ec) == &sid);
+          if (row(1, sid, ec) != 0)
+          {
+            GCE_VERIFY(row(2, sid, ec) == &sid);
+            GCE_VERIFY(sid == base_aid);
+          }
           GCE_VERIFY(row(3, energy, ec) == &energy);
           GCE_VERIFY(row(4, m1, ec) == &m1);
           GCE_VERIFY(row(5, dt_reg, ec) == &dt_reg);
@@ -303,7 +315,11 @@ private:
             GCE_VERIFY(row("quid", quid, ec) == &quid);
             GCE_VERIFY(quid == base_aid);
           }
-          GCE_VERIFY(row("sid", sid, !mysql::var, ec) == &sid);
+          if (row("sid", sid, ec) != 0)
+          {
+            GCE_VERIFY(row("sid", sid, ec) == &sid);
+            GCE_VERIFY(sid == base_aid);
+          }
           GCE_VERIFY(row("energy", energy, ec) == &energy);
           GCE_VERIFY(row("m1", m1, ec) == &m1);
           GCE_VERIFY(row("dt_reg", dt_reg, ec) == &dt_reg);

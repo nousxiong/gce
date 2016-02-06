@@ -16,6 +16,7 @@ gce.actor(
     local ty_int = 0
     ec, sender, args = gce.match('init').recv(mysql.context_id)
     local sql_ctxid = args[1]
+    local base_aid = gce.get_aid()
 
     local opt = mysql.conn_option()
     opt.reconnect = 1
@@ -38,11 +39,11 @@ gce.actor(
     
     sql_sn:execute([[
       CREATE TABLE `sample1` (
-       `uid` bigint(20) NOT NULL, 
-       `quid` varchar(128) NOT NULL DEFAULT '', 
-        `sid` char(10) NOT NULL DEFAULT '', 
+        `uid` bigint(20) NOT NULL, 
+        `quid` blob(128), 
+        `sid` blob(128), 
         `energy` smallint(6) NOT NULL DEFAULT '1', 
-        `m1` int(11) NOT NULL DEFAULT '0', 
+        `m1` blob(128), 
         `dt_reg` datetime NOT NULL DEFAULT '2015-09-25 13:02:00', 
         PRIMARY KEY (`uid`) 
       ) ENGINE=InnoDB DEFAULT CHARSET=utf8;
@@ -52,10 +53,10 @@ gce.actor(
     errmsg = args[2]
     assert(errn == mysql.errno_nil, errmsg)
     
-    sql_sn:execute(string.format([[
-      INSERT INTO `sample1` VALUES('%d','%s','%s','%d','%d','%s')
-      ]], 42, 'Global', '42-sid', 100, 9000, '2015-09-25 12:02:55'
-      ))
+    sql_sn:sql([[
+      INSERT INTO `sample1` VALUES('{}','{}','{}','{}','{}','{}')
+      ]], 42, base_aid, base_aid, 100, base_aid, '2015-09-25 12:02:55'
+      ):execute()
     ec, sender, args = gce.match(mysql.sn_query).recv(mysql.errno, '')
     errn = args[1]
     errmsg = args[2]
@@ -92,23 +93,52 @@ gce.actor(
     local row = {}
     local uid, quid, sid, energy, m1, dt_reg
     for i=1,rowsize do
-      uid, quid, sid, energy, m1, dt_reg = res:fetch(1, i)
+      uid, quid, sid, energy, m1, dt_reg = 
+        mysql.blob(gce.actor_id).blob(gce.actor_id).blob(gce.actor_id).fetch(res, 1, i)
+      if quid ~= nil then
+        assert(quid == base_aid)
+      end
+      if sid ~= nil then
+        assert(sid == base_aid)
+      end
+      if m1 ~= nil then
+        assert(m1 == base_aid)
+      end
       --gce.info(uid, quid, sid, energy, m1, dt_reg)
+      --gce.info(uid, energy, m1, dt_reg)
 
-      row = res:fetch(1, i, row, 'a')
+      row = mysql.blob(gce.actor_id).blob(gce.actor_id).blob(gce.actor_id).fetch(res, 1, i, row, 'a')
       assert(row.uid == uid)
       assert(row.quid == quid)
       assert(row.sid == sid)
       assert(row.energy == energy)
       assert(row.m1 == m1)
       assert(row.dt_reg == dt_reg)
+      if quid ~= nil then
+        assert(quid == base_aid)
+      end
+      if sid ~= nil then
+        assert(sid == base_aid)
+      end
+      if m1 ~= nil then
+        assert(m1 == base_aid)
+      end
       
-      row = res:fetch(1, i, row, 'n')
+      row = mysql.blob(gce.actor_id).blob(gce.actor_id).blob(gce.actor_id).fetch(res, 1, i, row, 'n')
       assert(row[1] == uid)
       assert(row[2] == quid)
       assert(row[3] == sid)
       assert(row[4] == energy)
       assert(row[5] == m1)
       assert(row[6] == dt_reg)
+      if quid ~= nil then
+        assert(quid == base_aid)
+      end
+      if sid ~= nil then
+        assert(sid == base_aid)
+      end
+      if m1 ~= nil then
+        assert(m1 == base_aid)
+      end
     end
   end)

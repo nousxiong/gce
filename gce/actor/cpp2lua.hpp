@@ -109,7 +109,17 @@ static bool is_argnil(lua_State* L, int arg, int ty)
 
 static int pack_object(lua_State* L, gce::message& msg, int objidx)
 {
-  return detail::lua::packobj2msg(L, &msg, objidx);
+  return detail::lua::pri_pack_object(L, &msg, objidx);
+}
+
+static int unpack_object(lua_State* L, gce::message& msg, int objidx)
+{
+  return detail::lua::pri_unpack_object(L, &msg, objidx);
+}
+
+static int unpack_object(lua_State* L, gce::packer& pkr, int objidx)
+{
+  return detail::lua::pri_unpack_object(L, pkr, objidx);
 }
 ///------------------------------------------------------------------------------
 }

@@ -134,6 +134,16 @@ struct service_id
     msg >> obj_;
   }
 
+  virtual void pack(gce::packer& pkr)
+  {
+    pkr.write(obj_);
+  }
+
+  virtual void unpack(gce::packer& pkr)
+  {
+    pkr.read(obj_);
+  }
+
   virtual int gcety() const
   {
     return gce::lua::ty_service_id;
@@ -270,6 +280,16 @@ struct actor_id
   virtual void unpack(gce::message& msg)
   {
     msg >> obj_;
+  }
+
+  virtual void pack(gce::packer& pkr)
+  {
+    pkr.write(obj_);
+  }
+
+  virtual void unpack(gce::packer& pkr)
+  {
+    pkr.read(obj_);
   }
 
   virtual int gcety() const
@@ -418,6 +438,16 @@ struct match
     msg >> obj_;
   }
 
+  virtual void pack(gce::packer& pkr)
+  {
+    pkr.write(obj_);
+  }
+
+  virtual void unpack(gce::packer& pkr)
+  {
+    pkr.read(obj_);
+  }
+
   virtual int gcety() const
   {
     return gce::lua::ty_match;
@@ -563,6 +593,16 @@ struct message
   virtual void unpack(gce::message& msg)
   {
     msg >> obj_;
+  }
+
+  virtual void pack(gce::packer& pkr)
+  {
+    obj_.pack(pkr);
+  }
+
+  virtual void unpack(gce::packer& pkr)
+  {
+    obj_.unpack(pkr);
   }
 
   virtual int gcety() const
@@ -745,6 +785,16 @@ struct duration
   virtual void unpack(gce::message& msg)
   {
     msg >> obj_;
+  }
+
+  virtual void pack(gce::packer& pkr)
+  {
+    pkr.write(obj_);
+  }
+
+  virtual void unpack(gce::packer& pkr)
+  {
+    pkr.read(obj_);
   }
 
   virtual int gcety() const
@@ -1155,6 +1205,17 @@ struct chunk
     msg >> obj_;
   }
 
+  virtual void pack(gce::packer& pkr)
+  {
+    pkr.write(obj_.data(), obj_.size());
+  }
+
+  virtual void unpack(gce::packer& pkr)
+  {
+    obj_.len_ = pkr.read_buffer_size();
+    obj_.data_ = pkr.skip_read(obj_.len_);
+  }
+
   virtual int gcety() const
   {
     return gce::lua::ty_chunk;
@@ -1260,6 +1321,23 @@ struct errcode
   virtual void unpack(gce::message& msg)
   {
     msg >> obj_;
+  }
+
+  virtual void pack(gce::packer& pkr)
+  {
+    int32_t code = (int32_t)obj_.value();
+    uint64_t errcat = (uint64_t)(&obj_.category());
+    gce::adl::detail::errcode e = detail::make_errcode(code, errcat);
+    pkr.write(e);
+  }
+
+  virtual void unpack(gce::packer& pkr)
+  {
+    gce::adl::detail::errcode e;
+    pkr.read(e);
+    boost::system::error_category const* errcat_ptr =
+      (boost::system::error_category const*)e.errcat_;
+    obj_ = errcode_t((int)e.code_, *errcat_ptr);
   }
 
   virtual int gcety() const
@@ -1971,18 +2049,18 @@ inline int pack_boolean(lua_State* L)
   return 0;
 }
 ///------------------------------------------------------------------------------
-inline int packobj2msg(lua_State* L, gce::message* msg, int n)
+inline int pri_pack_object(lua_State* L, gce::message* msg, int argn)
 {
-  int ty = lua_type(L, n);
+  int ty = lua_type(L, argn);
 #if GCE_PACKER == GCE_AMSG
   luaL_argcheck(
     L, (ty == LUA_TUSERDATA || ty == LUA_TLIGHTUSERDATA), 
-    n, "'userdata' or 'lightuserdata' expected"
+    argn, "'userdata' or 'lightuserdata' expected"
     );
 #elif GCE_PACKER == GCE_ADATA
   luaL_argcheck(
     L, (ty == LUA_TUSERDATA || ty == LUA_TLIGHTUSERDATA || ty == LUA_TTABLE), 
-    n, "'table' or 'userdata'/'lightuserdata' expected"
+    argn, "'table' or 'userdata'/'lightuserdata' expected"
     );
 #endif
 
@@ -1991,7 +2069,7 @@ inline int packobj2msg(lua_State* L, gce::message* msg, int n)
 #if GCE_PACKER == GCE_ADATA
     /// adata obj
     /// call 'size_of' to get serilaizing size
-    if (luaL_callmeta(L, n, "size_of") == 0)
+    if (luaL_callmeta(L, argn, "size_of") == 0)
     {
       return luaL_error(L, "metatable not found!");
     }
@@ -2000,40 +2078,43 @@ inline int packobj2msg(lua_State* L, gce::message* msg, int n)
     lua_pop(L, 1);
 
     /// get obj's metatable
-    if (lua_getmetatable(L, n) == 0)
+    if (lua_getmetatable(L, argn) == 0)
     {
       return luaL_error(L, "object must have a metatable!");
     }
 
+    /// adata raw write
+    gce::packer pkr;
     try
     {
-      /// adata raw write
-      packer pkr;
       msg->pre_write(pkr, len);
-      lua_getfield(L, -1, "write");
-      lua_pushvalue(L, n);
-      lua_pushlightuserdata(L, &pkr.get_stream());
-      if (lua_pcall(L, 2, 1, 0) != 0)
-      {
-        return luaL_error(L, lua_tostring(L, -1));
-      }
-
-      lua_Integer ec = lua_tointeger(L, -1);
-      lua_pop(L, 1);
-      if (ec != adata::success)
-      {
-        adata::zero_copy_buffer& stream = pkr.get_stream();
-        return luaL_error(L, stream.message());
-      }
-      msg->end_write(pkr);
-
-      /// pop obj's metatable
-      lua_pop(L, 1);
     }
     catch (std::exception& ex)
     {
+      /// pop obj's metatable
+      lua_pop(L, 1);
       return luaL_error(L, ex.what());
     }
+
+    lua_getfield(L, -1, "write");
+    lua_pushvalue(L, argn);
+    lua_pushlightuserdata(L, &pkr.get_stream());
+    if (lua_pcall(L, 2, 1, 0) != 0)
+    {
+      /// pop obj's metatable
+      lua_pop(L, 1);
+      return luaL_error(L, lua_tostring(L, -1));
+    }
+
+    lua_Integer ec = lua_tointeger(L, -1);
+    /// pop ec and obj's metatable
+    lua_pop(L, 2);
+    if (ec != adata::success)
+    {
+      adata::zero_copy_buffer& stream = pkr.get_stream();
+      return luaL_error(L, stream.message());
+    }
+    msg->end_write(pkr);
 #endif
   }
   else
@@ -2042,7 +2123,7 @@ inline int packobj2msg(lua_State* L, gce::message* msg, int n)
     /// call virtual method pack
     try
     {
-      gce::lua::basic_object* o = to_obj<gce::lua::basic_object>(L, n, "lua basic_object");
+      gce::lua::basic_object* o = to_obj<gce::lua::basic_object>(L, argn, "lua basic_object");
       o->pack(*msg);
     }
     catch (std::exception& ex)
@@ -2056,7 +2137,7 @@ inline int packobj2msg(lua_State* L, gce::message* msg, int n)
 inline int pack_object(lua_State* L)
 {
   gce::message* msg = to_obj<message>(L, 1);
-  return packobj2msg(L, msg, 2);
+  return pri_pack_object(L, msg, 2);
 
   /*int ty = lua_type(L, 2);
 #if GCE_PACKER == GCE_AMSG
@@ -2191,11 +2272,148 @@ inline int unpack_boolean(lua_State* L)
   return 1;
 }
 ///------------------------------------------------------------------------------
+inline int pri_unpack_object(lua_State* L, gce::message* msg, int argn)
+{
+  int ty = lua_type(L, argn);
+#if GCE_PACKER == GCE_AMSG
+  luaL_argcheck(
+    L, (ty == LUA_TUSERDATA || ty == LUA_TLIGHTUSERDATA), 
+    argn, "'userdata' or 'lightuserdata' expected"
+    );
+#elif GCE_PACKER == GCE_ADATA
+  luaL_argcheck(
+    L, (ty == LUA_TUSERDATA || ty == LUA_TLIGHTUSERDATA || ty == LUA_TTABLE), 
+    argn, "'table' or 'userdata'/'lightuserdata' expected"
+    );
+#endif
+
+  if (ty == LUA_TTABLE)
+  {
+#if GCE_PACKER == GCE_ADATA
+    /// get obj's metatable
+    if (lua_getmetatable(L, argn) == 0)
+    {
+      return luaL_error(L, "object must have a metatable!");
+    }
+
+    /// adata obj
+    /// adata raw read
+    gce::packer pkr;
+    msg->pre_read(pkr);
+    lua_getfield(L, -1, "read");
+    lua_pushvalue(L, argn);
+    lua_pushlightuserdata(L, &pkr.get_stream());
+    if (lua_pcall(L, 2, 1, 0) != 0)
+    {
+      /// pop obj's metatable
+      lua_pop(L, 1);
+      return luaL_error(L, lua_tostring(L, -1));
+    }
+
+    lua_Integer ec = lua_tointeger(L, -1);
+    /// pop ec and obj's metatable
+    lua_pop(L, 2);
+    if (ec != adata::success)
+    {
+      adata::zero_copy_buffer& stream = pkr.get_stream();
+      return luaL_error(L, stream.message());
+    }
+    msg->end_read(pkr);
+
+    /*/// pop obj's metatable
+    lua_pop(L, 1);*/
+#endif
+  }
+  else
+  {
+    /// gce obj
+    /// call virtual method unpack
+    try
+    {
+      gce::lua::basic_object* o = to_obj<gce::lua::basic_object>(L, argn, "lua basic_object");
+      o->unpack(*msg);
+    }
+    catch (std::exception& ex)
+    {
+      return luaL_error(L, ex.what());
+    }
+  }
+
+  return 0;
+}
+///------------------------------------------------------------------------------
+inline int pri_unpack_object(lua_State* L, gce::packer& pkr, int argn)
+{
+  int ty = lua_type(L, argn);
+#if GCE_PACKER == GCE_AMSG
+  luaL_argcheck(
+    L, (ty == LUA_TUSERDATA || ty == LUA_TLIGHTUSERDATA), 
+    argn, "'userdata' or 'lightuserdata' expected"
+    );
+#elif GCE_PACKER == GCE_ADATA
+  luaL_argcheck(
+    L, (ty == LUA_TUSERDATA || ty == LUA_TLIGHTUSERDATA || ty == LUA_TTABLE), 
+    argn, "'table' or 'userdata'/'lightuserdata' expected"
+    );
+#endif
+
+  if (ty == LUA_TTABLE)
+  {
+#if GCE_PACKER == GCE_ADATA
+    /// get obj's metatable
+    if (lua_getmetatable(L, argn) == 0)
+    {
+      return luaL_error(L, "object must have a metatable!");
+    }
+
+    lua_getfield(L, -1, "read");
+    lua_pushvalue(L, argn);
+    lua_pushlightuserdata(L, &pkr.get_stream());
+    if (lua_pcall(L, 2, 1, 0) != 0)
+    {
+      /// pop obj's metatable
+      lua_pop(L, 1);
+      return luaL_error(L, lua_tostring(L, -1));
+    }
+
+    lua_Integer ec = lua_tointeger(L, -1);
+    /// pop ec and obj's metatable
+    lua_pop(L, 2);
+    if (ec != adata::success)
+    {
+      adata::zero_copy_buffer& stream = pkr.get_stream();
+      return luaL_error(L, stream.message());
+    }
+    //msg->end_read(pkr);
+
+    /*/// pop obj's metatable
+    lua_pop(L, 1);*/
+#endif
+  }
+  else
+  {
+    /// gce obj
+    /// call virtual method unpack
+    try
+    {
+      gce::lua::basic_object* o = to_obj<gce::lua::basic_object>(L, argn, "lua basic_object");
+      o->unpack(pkr);
+    }
+    catch (std::exception& ex)
+    {
+      return luaL_error(L, ex.what());
+    }
+  }
+
+  return 0;
+}
+///------------------------------------------------------------------------------
 inline int unpack_object(lua_State* L)
 {
   gce::message* msg = to_obj<message>(L, 1);
+  return pri_unpack_object(L, msg, 2);
 
-  int ty = lua_type(L, 2);
+  /*int ty = lua_type(L, 2);
 #if GCE_PACKER == GCE_AMSG
   luaL_argcheck(
     L, (ty == LUA_TUSERDATA || ty == LUA_TLIGHTUSERDATA), 
@@ -2264,7 +2482,7 @@ inline int unpack_object(lua_State* L)
     }
   }
 
-  return 0;
+  return 0;*/
 }
 ///------------------------------------------------------------------------------
 /// make_svcid

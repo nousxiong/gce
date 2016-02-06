@@ -48,6 +48,8 @@ struct basic_object
 {
   virtual void pack(gce::message&) = 0;
   virtual void unpack(gce::message&) = 0;
+  virtual void pack(gce::packer&) = 0;
+  virtual void unpack(gce::packer&) = 0;
   virtual int gcety() const = 0;
 };
 }

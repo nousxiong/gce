@@ -41,6 +41,12 @@ public:
 #endif
   }
 
+  packer()
+    : read_buffer_size_(0)
+    , write_buffer_size_(0)
+  {
+  }
+
 public:
   template <typename T>
   static size_t size_of(T const& t)
@@ -54,11 +60,13 @@ public:
 
   void set_read(byte_t const* buffer, size_t len)
   {
+    read_buffer_size_ = len;
     stream_.set_read(buffer, len);
   }
 
   void set_write(byte_t* buffer, size_t len)
   {
+    write_buffer_size_ = len;
     stream_.set_write(buffer, len);
   }
 
@@ -155,6 +163,16 @@ public:
     return stream_.write_length();
   }
 
+  size_t read_buffer_size() const
+  {
+    return read_buffer_size_;
+  }
+
+  size_t write_buffer_size() const
+  {
+    return write_buffer_size_;
+  }
+
 #if GCE_PACKER == GCE_AMSG
   amsg::zero_copy_buffer& get_stream()
   {
@@ -173,6 +191,8 @@ private:
 #elif GCE_PACKER == GCE_ADATA
   adata::zero_copy_buffer stream_;
 #endif
+  size_t read_buffer_size_;
+  size_t write_buffer_size_;
 };
 }
 

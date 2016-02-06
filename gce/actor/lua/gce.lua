@@ -16,6 +16,8 @@ gce.pkr_adata = libgce.pkr_adata
 gce.packer = libgce.packer
 gce.openssl = libgce.openssl
 
+gce.delimiter = ' '
+
 local mt_adl = nil
 local dur_adl = nil
 local netopt_adl = nil
@@ -617,14 +619,15 @@ end
 
 function gce.concat(...)
   local t = {}
-  for _,v in ipairs{...} do
+  for _,v in pairs{...} do
     t[#t + 1] = tostring(v)
+    t[#t + 1] = gce.delimiter
   end
   return table.concat(t)
 end
 
 function gce.serialize(m, o)
-  ty = type(o)
+  local ty = type(o)
   if ty == 'number' then
     libgce.pack_number(m, o)
   elseif ty == 'string' then
@@ -637,7 +640,7 @@ function gce.serialize(m, o)
 end
 
 function gce.deserialize(m, o)
-  ty = type(o)
+  local ty = type(o)
   if ty == 'number' then
     return libgce.unpack_number(m)
   elseif ty == 'string' then

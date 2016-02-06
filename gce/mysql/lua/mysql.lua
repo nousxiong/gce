@@ -56,8 +56,37 @@ function mysql.result()
   return libmysql.make_result()
 end
 
+function mysql.blob(o)
+  return libmysql.fetcher.blob(o)
+end
+
 mysql.sn_open = gce.atom('sn_open')
 mysql.sn_query = gce.atom('sn_query')
 mysql.sn_ping = gce.atom('sn_ping')
+
+-- fetcher
+libmysql.fetcher = {}
+libmysql.fetcher.blobs = {}
+libmysql.fetcher.blobs.size = 0
+
+-- set blob field obj type, order from left to right
+-- o is obj type or obj itself, like gce.deserialize
+function libmysql.fetcher.blob(o)
+  local ty = type(o)
+  if ty == 'function' then
+    o = o()
+    if (type(o) == 'function') then
+      o = o()
+    end
+  end
+  libmysql.fetcher.blobs.size = libmysql.fetcher.blobs.size + 1;
+  libmysql.fetcher.blobs[libmysql.fetcher.blobs.size] = o
+  return libmysql.fetcher
+end
+
+-- finally fetch fields before setted.
+function libmysql.fetcher.fetch(res, tabidx, rowidx, row, tag)
+  return res:fetch(tabidx, rowidx, libmysql.fetcher.blobs, row, tag)
+end
 
 return mysql

@@ -40,7 +40,7 @@ int main()
     gce::mysql_ut::run();
 
 #ifdef GCE_LUA
-    //gce::lua_mysql_ut::run();
+    gce::lua_mysql_ut::run();
 #endif
   }
   catch (std::exception& ex)

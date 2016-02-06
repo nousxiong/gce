@@ -362,6 +362,31 @@ public:
     return *this;
   }
 
+  void pack(packer& pkr)
+  {
+    GCE_ASSERT(shared_list_.empty());
+    detail::header_t hdr = detail::make_header((uint32_t)size(), get_type(), tag_offset_);
+
+    size_t size = packer::size_of(hdr);
+    size += hdr.size_;
+
+    pkr.write(hdr);
+    pkr.write(data(), hdr.size_);
+  }
+
+  void unpack(packer& pkr)
+  {
+    detail::header_t hdr;
+
+    pkr.read(hdr);
+    byte_t const* body = pkr.skip_read(hdr.size_);
+
+    clear();
+    type_ = type_;
+    tag_offset_ = tag_offset_;
+    (*this) << chunk(body, hdr.size_);
+  }
+
   message& operator<<(std::string const& str)
   {
     uint32_t len = (uint32_t)str.size();

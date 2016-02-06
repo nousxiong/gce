@@ -695,6 +695,28 @@ struct ssl_context
     }
   }
 
+  virtual void pack(gce::packer& pkr)
+  {
+    pkr.write(obj_);
+    pkr.write(ref_list_.size());
+    BOOST_FOREACH(int k, ref_list_)
+    {
+      pkr.write(k);
+    }
+  }
+
+  virtual void unpack(gce::packer& pkr)
+  {
+    std::vector<int>::size_type size = 0;
+    pkr.read(obj_);
+    pkr.read(size);
+    ref_list_.resize(size);
+    BOOST_FOREACH(int& k, ref_list_)
+    {
+      pkr.read(k);
+    }
+  }
+
   virtual int gcety() const
   {
     return (int)gce::asio::lua::ty_ssl_context;
@@ -950,6 +972,16 @@ struct tcp_endpoint
     msg >> obj_;
   }
 
+  virtual void pack(gce::packer& pkr)
+  {
+    pkr.write(obj_);
+  }
+
+  virtual void unpack(gce::packer& pkr)
+  {
+    pkr.read(obj_);
+  }
+
   virtual int gcety() const
   {
     return gce::asio::lua::ty_tcp_endpoint;
@@ -1033,6 +1065,16 @@ struct tcp_endpoint_itr
     msg >> obj_;
   }
 
+  virtual void pack(gce::packer& pkr)
+  {
+    pkr.write(obj_);
+  }
+
+  virtual void unpack(gce::packer& pkr)
+  {
+    pkr.read(obj_);
+  }
+
   virtual int gcety() const
   {
     return gce::asio::lua::ty_tcp_endpoint_itr;
@@ -1097,6 +1139,16 @@ struct tcp_socket_impl
   virtual void unpack(gce::message& msg)
   {
     msg >> obj_;
+  }
+
+  virtual void pack(gce::packer& pkr)
+  {
+    pkr.write(obj_);
+  }
+
+  virtual void unpack(gce::packer& pkr)
+  {
+    pkr.read(obj_);
   }
 
   virtual int gcety() const
@@ -1178,6 +1230,28 @@ struct ssl_stream_impl
     BOOST_FOREACH(int& k, ref_list_)
     {
       msg >> k;
+    }
+  }
+
+  virtual void pack(gce::packer& pkr)
+  {
+    pkr.write(obj_);
+    pkr.write(ref_list_.size());
+    BOOST_FOREACH(int k, ref_list_)
+    {
+      pkr.write(k);
+    }
+  }
+
+  virtual void unpack(gce::packer& pkr)
+  {
+    std::vector<int>::size_type size = 0;
+    pkr.read(obj_);
+    pkr.read(size);
+    ref_list_.resize(size);
+    BOOST_FOREACH(int& k, ref_list_)
+    {
+      pkr.read(k);
     }
   }
 
