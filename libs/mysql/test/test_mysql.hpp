@@ -94,7 +94,7 @@ private:
         int64_t uid = get_uid(snid, index);
         if (type == mysql::sn_open)
         {
-          sndata.first->sql("SELECT * FROM sample1 where uid='{}'", uid).execute();
+          sndata.first->query("SELECT * FROM sample1 where uid='{}'", uid);
         }
         else
         {
@@ -132,17 +132,17 @@ private:
                  commit;", 
                  uid, 42, "NewQuid"
                 );*/
-              sndata.first->sql(
+              sndata.first->query(
                 "start transaction; \
                   insert into sample1 (`uid`, `energy`) values('{0}','{1}') ON DUPLICATE KEY UPDATE `energy`=VALUES(`energy`); \
                   update sample1 set quid='{2}' where uid='{0}'; \
                   commit;",
                   uid, 42, base_aid
-                ).execute();
+                );
             }
             else
             {
-              sndata.first->sql("SELECT * FROM sample1 where uid='{}'", uid).execute();
+              sndata.first->query("SELECT * FROM sample1 where uid='{}'", uid);
             }
           }
         }
@@ -192,11 +192,11 @@ private:
       {
         boost::timer::auto_cpu_timer t;
 
-        sql_sn.execute("DROP TABLE IF EXISTS `sample1`");
+        sql_sn.query("DROP TABLE IF EXISTS `sample1`");
         base->match(mysql::sn_query).recv(errn, errmsg);
         GCE_VERIFY(errn == mysql::errno_nil)(errmsg);
 
-        sql_sn.execute(
+        sql_sn.query(
           "CREATE TABLE `sample1` (\
            `uid` bigint(20) NOT NULL, \
            `quid` blob(128), \
@@ -238,7 +238,7 @@ private:
           base->recv(exit);
         }
 
-        sql_sn.execute("SELECT * FROM sample1");
+        sql_sn.query("SELECT * FROM sample1");
         mysql::result_ptr res; 
         base->match(mysql::sn_query).recv(errn, errmsg, res);
         GCE_VERIFY(errn == mysql::errno_nil)(errmsg);

@@ -79,14 +79,75 @@ public:
   }
 
   /// execute sql(s), will return sn_query msg
-  void execute(boost::string_ref qry, result_ptr res = result_ptr())
+  void query(boost::string_ref sqlstr, result_ptr res = result_ptr())
   {
-    GCE_ASSERT(qry_ != 0).msg("please do open before execute");
-    GCE_ASSERT(!querying_);
-    prepare_execute(res);
-    qry_->write(qry.data());
-    querying_ = true;
-    ci_->snd_.post(handle_execute_binder(base_t::get_strand(), scp_.get(), ci_, *qry_, res, snid_));
+    sql(sqlstr).execute(res);
+  }
+
+  template <typename A1>
+  void query(boost::string_ref sqlstr, A1 const& a1, result_ptr res = result_ptr())
+  {
+    sql(sqlstr, a1).execute(res);
+  }
+
+  template <typename A1, typename A2>
+  void query(boost::string_ref sqlstr, A1 const& a1, A2 const& a2, result_ptr res = result_ptr())
+  {
+    sql(sqlstr, a1, a2).execute(res);
+  }
+
+  template <typename A1, typename A2, typename A3>
+  void query(boost::string_ref sqlstr, A1 const& a1, A2 const& a2, A3 const& a3, result_ptr res = result_ptr())
+  {
+    sql(sqlstr, a1, a2, a3).execute(res);
+  }
+
+  template <typename A1, typename A2, typename A3, typename A4>
+  void query(
+    boost::string_ref sqlstr, 
+    A1 const& a1, A2 const& a2, A3 const& a3, A4 const& a4, 
+    result_ptr res = result_ptr()
+    )
+  {
+    sql(sqlstr, a1, a2, a3, a4).execute(res);
+  }
+
+  template <typename A1, typename A2, typename A3, typename A4, typename A5>
+  void query(
+    boost::string_ref sqlstr, 
+    A1 const& a1, A2 const& a2, A3 const& a3, A4 const& a4, A5 const& a5, 
+    result_ptr res = result_ptr()
+    )
+  {
+    sql(sqlstr, a1, a2, a3, a4, a5).execute(res);
+  }
+
+  template <
+    typename A1, typename A2, typename A3, typename A4, typename A5, 
+    typename A6
+  >
+  void query(
+    boost::string_ref sqlstr, 
+    A1 const& a1, A2 const& a2, A3 const& a3, A4 const& a4, A5 const& a5, 
+    A6 const& a6,
+    result_ptr res = result_ptr()
+    )
+  {
+    sql(sqlstr, a1, a2, a3, a4, a5, a6).execute(res);
+  }
+
+  template <
+    typename A1, typename A2, typename A3, typename A4, typename A5, 
+    typename A6, typename A7
+  >
+  void query(
+    boost::string_ref sqlstr, 
+    A1 const& a1, A2 const& a2, A3 const& a3, A4 const& a4, A5 const& a5, 
+    A6 const& a6, A7 const& a7,
+    result_ptr res = result_ptr()
+    )
+  {
+    sql(sqlstr, a1, a2, a3, a4, a5, a6, a7).execute(res);
   }
 
   ///----------------------------------------------------------------------------
@@ -315,15 +376,6 @@ public:
 #endif
 
 private:
-  void prepare_execute(result_ptr& res)
-  {
-    qry_->clear();
-    if (res)
-    {
-      res->clear();
-    }
-  }
-
   ///----------------------------------------------------------------------------
   /// args, if built-in type(e.g. int long), will be convert to string; 
   /// if not built-in type, using gce::packer serialize it and mysql_real_escape_string.
@@ -559,7 +611,6 @@ private:
 
   static void handle_add(detail::conn_impl* ci)
   {
-    ci->connect();
     ci->add_ref();
   }
   ///----------------------------------------------------------------------------
@@ -654,8 +705,7 @@ private:
 
   static void handle_close(detail::conn_impl* ci, size_t qry_idx)
   {
-    ci->query_buffer_list_.rmv(qry_idx);
-    ci->sub_ref();
+    ci->sub_ref(qry_idx);
   }
 
 private:

@@ -31,13 +31,13 @@ gce.actor(
     errmsg = args[2]
     assert(errn == mysql.errno_nil, errmsg)
 
-    sql_sn:execute([[DROP TABLE IF EXISTS `sample1`]])
+    sql_sn:query([[DROP TABLE IF EXISTS `sample1`]])
     ec, sender, args = gce.match(mysql.sn_query).recv(mysql.errno, '')
     errn = args[1]
     errmsg = args[2]
     assert(errn == mysql.errno_nil, errmsg)
     
-    sql_sn:execute([[
+    sql_sn:query([[
       CREATE TABLE `sample1` (
         `uid` bigint(20) NOT NULL, 
         `quid` blob(128), 
@@ -77,7 +77,7 @@ gce.actor(
     end
     assert(has_err == false)
     
-    sql_sn:execute([[SELECT * FROM sample1]])
+    sql_sn:query([[SELECT * FROM sample1]])
     ec, sender, args = gce.match(mysql.sn_query).recv(mysql.errno, '', mysql.result)
     errn = args[1]
     errmsg = args[2]

@@ -64,9 +64,7 @@ gce.actor(
         local uid = get_uid(snid, index)
         assert (sn_data ~= nil)
         if msg:getty() == mysql.sn_open then
-          sn_data.sn_
-            :sql([[SELECT * FROM sample1 where uid='{}']], uid)
-            :execute(sn_data.res_)
+          sn_data.sn_:query([[SELECT * FROM sample1 where uid='{}']], uid)
         else
           args = gce.unpack(msg, sn_data.res_)
           local res = args[1]
@@ -85,17 +83,15 @@ gce.actor(
                 :sql([[ ON DUPLICATE KEY UPDATE `m1`=VALUES(`m1`),`dt_reg`=VALUES(`dt_reg`)]])
                 :execute(sn_data.res_)
             elseif sn_data.ecount_ % 5 == 0 then
-              sn_data.sn_:sql([[
+              sn_data.sn_:query([[
                 start transaction; 
                 insert into sample1 (`uid`, `energy`) values('{0}','{1}) ON DUPLICATE KEY UPDATE `energy`=VALUES(`energy`); 
                 update sample1 set quid='{2}' where uid='{0}'; 
                 commit;
                 ]], uid, 42, base_aid, uid
-                ):execute(sn_data.res_)
+                )
             else
-              sn_data.sn_
-                :sql([[SELECT * FROM sample1 where uid='{}']], uid)
-                :execute(sn_data.res_)
+              sn_data.sn_:query([[SELECT * FROM sample1 where uid='{}']], uid)
             end
           end
         end

@@ -283,6 +283,7 @@ v1.2
 * gce::connect and gce::bind remove "is_router_", move to net_option
 * message can now serialize Boost.Shared_ptr, limit local process
 * message max limit removed
+* add gce.mysql and gce.redis
 
 v1.1 
 * gce::mixin_t change to gce::actor<gce::threaded>

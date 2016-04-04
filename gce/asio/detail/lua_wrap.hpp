@@ -697,24 +697,12 @@ struct ssl_context
 
   virtual void pack(gce::packer& pkr)
   {
-    pkr.write(obj_);
-    pkr.write(ref_list_.size());
-    BOOST_FOREACH(int k, ref_list_)
-    {
-      pkr.write(k);
-    }
+    GCE_ASSERT(false);
   }
 
   virtual void unpack(gce::packer& pkr)
   {
-    std::vector<int>::size_type size = 0;
-    pkr.read(obj_);
-    pkr.read(size);
-    ref_list_.resize(size);
-    BOOST_FOREACH(int& k, ref_list_)
-    {
-      pkr.read(k);
-    }
+    GCE_ASSERT(false);
   }
 
   virtual int gcety() const
@@ -974,12 +962,12 @@ struct tcp_endpoint
 
   virtual void pack(gce::packer& pkr)
   {
-    pkr.write(obj_);
+    GCE_ASSERT(false);
   }
 
   virtual void unpack(gce::packer& pkr)
   {
-    pkr.read(obj_);
+    GCE_ASSERT(false);
   }
 
   virtual int gcety() const
@@ -1067,12 +1055,12 @@ struct tcp_endpoint_itr
 
   virtual void pack(gce::packer& pkr)
   {
-    pkr.write(obj_);
+    GCE_ASSERT(false);
   }
 
   virtual void unpack(gce::packer& pkr)
   {
-    pkr.read(obj_);
+    GCE_ASSERT(false);
   }
 
   virtual int gcety() const
@@ -1143,12 +1131,12 @@ struct tcp_socket_impl
 
   virtual void pack(gce::packer& pkr)
   {
-    pkr.write(obj_);
+    GCE_ASSERT(false);
   }
 
   virtual void unpack(gce::packer& pkr)
   {
-    pkr.read(obj_);
+    GCE_ASSERT(false);
   }
 
   virtual int gcety() const
@@ -1235,24 +1223,12 @@ struct ssl_stream_impl
 
   virtual void pack(gce::packer& pkr)
   {
-    pkr.write(obj_);
-    pkr.write(ref_list_.size());
-    BOOST_FOREACH(int k, ref_list_)
-    {
-      pkr.write(k);
-    }
+    GCE_ASSERT(false);
   }
 
   virtual void unpack(gce::packer& pkr)
   {
-    std::vector<int>::size_type size = 0;
-    pkr.read(obj_);
-    pkr.read(size);
-    ref_list_.resize(size);
-    BOOST_FOREACH(int& k, ref_list_)
-    {
-      pkr.read(k);
-    }
+    GCE_ASSERT(false);
   }
 
   virtual int gcety() const

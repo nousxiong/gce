@@ -17,6 +17,7 @@
 #include <gce/mysql/conn_option.hpp>
 #include <gce/mysql/exception.hpp>
 #include <gce/mysql/detail/conn_impl.hpp>
+#include <gce/detail/unique_ptr.hpp>
 #include <boost/thread.hpp>
 #include <boost/lockfree/queue.hpp>
 #include <boost/optional.hpp>

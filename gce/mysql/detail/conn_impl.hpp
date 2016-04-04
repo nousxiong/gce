@@ -38,8 +38,9 @@ struct conn_impl
     ++ref_;
   }
 
-  void sub_ref()
+  void sub_ref(size_t qry_idx)
   {
+    query_buffer_list_.rmv(qry_idx);
     if (--ref_ == 0)
     {
       disconnect();

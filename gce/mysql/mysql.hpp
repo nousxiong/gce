@@ -7,8 +7,8 @@
 /// See https://github.com/nousxiong/gce for latest version.
 ///
 
-#ifndef GCE_MYSQL_ASIO_HPP
-#define GCE_MYSQL_ASIO_HPP
+#ifndef GCE_MYSQL_HPP
+#define GCE_MYSQL_HPP
 
 #include <gce/mysql/config.hpp>
 #ifdef GCE_LUA
@@ -23,7 +23,7 @@ namespace mysql
 {
 static void make_libmysql(lua_State* L)
 {
-  /// register libasio
+  /// register libmysql
   gce::lualib::open(L)
     .begin("libmysql")
       .add_function("make_ctxid", detail::lua::context_id::make)
@@ -34,7 +34,9 @@ static void make_libmysql(lua_State* L)
         .add_function("open", detail::lua::session::open)
         .add_function("sql", detail::lua::session::sql)
         .add_function("execute", detail::lua::session::execute)
+        .add_function("query", detail::lua::session::query)
         .add_function("ping", detail::lua::session::ping)
+        .add_function("get_snid", detail::lua::session::get_snid)
         .add_function("__gc", detail::lua::session::gc)
       .end_userdata()
       .add_function("make_result", detail::lua::result::make)
@@ -69,4 +71,4 @@ static void make_libmysql(lua_State* L)
 }
 #endif
 
-#endif /// GCE_MYSQL_ASIO_HPP
+#endif /// GCE_MYSQL_HPP

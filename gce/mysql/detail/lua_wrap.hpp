@@ -295,169 +295,6 @@ struct result
 
   static int fetch(lua_State* L)
   {
-    return pri_fetch(L);
-    /*try
-    {
-      object_t& o = *gce::lua::from_lua<result>(L, 1);
-      GCE_VERIFY(o).msg("result is empty, fetch failed!");
-
-      size_t tabidx = (size_t)luaL_checkinteger(L, 2) - 1;
-      size_t rowidx = (size_t)luaL_checkinteger(L, 3) - 1;
-      GCE_VERIFY(lua_istable(L, 4)).msg("arg type incorrect");
-
-      /// get blob table size
-      lua_pushstring(L, "size");
-      lua_rawget(L, 4);
-      int const blob_size = luaL_checkint(L, -1);
-      lua_pop(L, 1);
-
-      int blobi = 1;
-
-      mysql::fetcher fch(o);
-      mysql::row row = fch.get_row(tabidx, rowidx);
-
-      int field_size = (int)row.field_size();
-      int ty5 = lua_type(L, 5);
-      gce::packer pkr;
-      if (gce::lua::is_argnil(L, 5, ty5))
-      {
-        /// fetch args directly
-        for (int i=0; i<field_size; ++i)
-        {
-          errcode_t ec;
-          MYSQL_FIELD& field = row.get_field(i);
-          boost::string_ref fstr = row.fetch_raw(i, ec);
-          GCE_ASSERT(!ec);
-          if (!fstr.empty())
-          {
-            if (
-              field.type == MYSQL_TYPE_TINY_BLOB || 
-              field.type == MYSQL_TYPE_MEDIUM_BLOB ||
-              field.type == MYSQL_TYPE_LONG_BLOB ||
-              field.type == MYSQL_TYPE_BLOB
-              )
-            {
-              /// using packer deserialize
-              if (blobi <= blob_size)
-              {
-                pkr.set_read((gce::byte_t const*)fstr.data(), fstr.size());
-                lua_rawgeti(L, 4, blobi);
-                /// 5 + i is lua_rawgeti, don't use -1, bcz unpack_object not know -1
-                gce::lua::unpack_object(L, pkr, 5 + i);
-                ++blobi;
-              }
-            }
-            else
-            {
-              pushvalue(L, fstr.data(), fstr.size());
-            }
-          }
-          else
-          {
-            lua_pushnil(L);
-          }
-        }
-        return field_size;
-      }
-      else
-      {
-        /// fetch args into table
-        GCE_VERIFY(lua_istable(L, 5));
-        char const* opts = luaL_optstring(L, 6, "n");
-        if (std::strchr(opts, 'n') != NULL)
-        {
-          for (int i=0; i<field_size; ++i) 
-          {
-            MYSQL_FIELD& field = row.get_field(i);
-            errcode_t ec;
-            boost::string_ref fstr = row.fetch_raw(i, ec);
-            GCE_ASSERT(!ec);
-            if (!fstr.empty())
-            {
-              if (
-                field.type == MYSQL_TYPE_TINY_BLOB || 
-                field.type == MYSQL_TYPE_MEDIUM_BLOB ||
-                field.type == MYSQL_TYPE_LONG_BLOB ||
-                field.type == MYSQL_TYPE_BLOB
-                )
-              {
-                /// using packer deserialize
-                if (blobi <= blob_size)
-                {
-                  pkr.set_read((gce::byte_t const*)fstr.data(), fstr.size());
-                  lua_rawgeti(L, 4, blobi);
-                  /// 7 + i is lua_rawgeti, don't use -1, bcz unpack_object not know -1
-                  gce::lua::unpack_object(L, pkr, 7 + i);
-                  ++blobi;
-                }
-              }
-              else
-              {
-                pushvalue(L, fstr.data(), fstr.size());
-              }
-            }
-            else
-            {
-              lua_pushnil(L);
-            }
-            lua_rawseti(L, 5, i+1);
-          }
-        }
-        else if (std::strchr(opts, 'a') != NULL)
-        {
-          for (int i=0; i<field_size; ++i)
-          {
-            MYSQL_FIELD& field = row.get_field(i);
-            errcode_t ec;
-            boost::string_ref fstr = row.fetch_raw(i, ec);
-            GCE_ASSERT(!ec);
-
-            lua_pushstring(L, field.name);
-            if (!fstr.empty())
-            {
-              if (
-                field.type == MYSQL_TYPE_TINY_BLOB || 
-                field.type == MYSQL_TYPE_MEDIUM_BLOB ||
-                field.type == MYSQL_TYPE_LONG_BLOB ||
-                field.type == MYSQL_TYPE_BLOB
-                )
-              {
-                /// using packer deserialize
-                if (blobi <= blob_size)
-                {
-                  pkr.set_read((gce::byte_t const*)fstr.data(), fstr.size());
-                  lua_rawgeti(L, 4, blobi);
-                  /// 7 + i is lua_rawgeti, don't use -1, bcz unpack_object not know -1
-                  gce::lua::unpack_object(L, pkr, 7 + i);
-                  ++blobi;
-                }
-              }
-              else
-              {
-                pushvalue(L, fstr.data(), fstr.size());
-              }
-            }
-            else
-            {
-              lua_pushnil(L);
-            }
-            lua_rawset(L, 5);
-          }
-        }
-        lua_pushvalue(L, 5);
-        return 1;
-      }
-    }
-    catch (std::exception& ex)
-    {
-      return luaL_error(L, ex.what());
-    }
-    return 1;*/
-  }
-
-private:
-  static int pri_fetch(lua_State* L)
-  {
     object_t& o = *gce::lua::from_lua<result>(L, 1);
     GCE_VERIFY(o).msg("result is empty, fetch failed!");
 
@@ -493,7 +330,6 @@ private:
     mysql::row row = fch.get_row(tabidx, rowidx);
 
     int field_size = (int)row.field_size();
-    gce::packer pkr;
 
     /*
       bcz lua res:fetch is like this, so lua_gettop == 6(opt != 1 is 7)
@@ -509,24 +345,6 @@ private:
       MYSQL_FIELD& field = row.get_field(i);
       boost::string_ref fstr = row.fetch_raw(i, ec);
       GCE_ASSERT(!ec);
-      
-      /*int stack_size = lua_gettop(L);
-      int tytop = lua_type(L, stack_size);
-      if (i == 0 && !row.fetch_raw(1, ec).empty())
-      {
-        if (opt == 1)
-        {
-          fstr.size();
-        }
-        else if (opt == 2)
-        {
-          fstr.size();
-        }
-        else
-        {
-          fstr.size();
-        }
-      }*/
 
       if (opt == 2)
       {
@@ -544,13 +362,10 @@ private:
         /// using packer deserialize
         if (!fstr.empty())
         {
-          /*int stack_size = lua_gettop(L);
-          int tytop = lua_type(L, stack_size);*/
-
-          pkr.set_read((gce::byte_t const*)fstr.data(), fstr.size());
+          o->pkr_.set_read((gce::byte_t const*)fstr.data(), fstr.size());
           lua_rawgeti(L, 4, blobi);
           /// argn + i/1 is lua_rawgeti, don't use -1, bcz unpack_object not know -1
-          gce::lua::unpack_object(L, pkr, opt == 0 ? argn + i : argn + 1);
+          gce::lua::unpack_object(L, o->pkr_, opt == 0 ? argn + i : argn + 1);
 
           /// clear blob index value
           lua_pushnil(L);
@@ -593,8 +408,6 @@ private:
     }
     return opt == 0 ? field_size : 1;
   }
-
-public:
 
   static int gc(lua_State* L)
   {
@@ -780,10 +593,6 @@ struct session
   }
 
 private:
-  static void pri_sql(lua_State* L, mysql::session* o)
-  {
-  }
-
   static char const* arg(lua_State* L, mysql::session::luactx& luactx, int objidx)
   {
     std::deque<gce::intbuf_t>& tmp_num_list = luactx.tmp_num_list_;
@@ -836,36 +645,132 @@ public:
   static int execute(lua_State* L)
   {
     mysql::session* o = gce::lua::from_lua<mysql::session>(L, 1, name());
-    if (gce::lua::is_argnil(L, 2) || (!gce::lua::is_argnil(L, 2) && lua_type(L, 2) != LUA_TSTRING))
-    {
-      mysql::result_ptr res_ptr;
-      if (!gce::lua::is_argnil(L, 2))
-      {
-        result::object_t* res = gce::lua::from_lua<result>(L, 2);
-        if (!*res)
-        {
-          *res = boost::make_shared<mysql::result>();
-        }
-        res_ptr = *res;
-      }
-      o->execute(res_ptr);
-      return 0;
-    }
-
-    size_t len = 0;
-    char const* str = luaL_checklstring(L, 2, &len);
-
     mysql::result_ptr res_ptr;
-    if (!gce::lua::is_argnil(L, 3))
+    if (!gce::lua::is_argnil(L, 2))
     {
-      result::object_t* res = gce::lua::from_lua<result>(L, 3);
+      result::object_t* res = gce::lua::from_lua<result>(L, 2);
       if (!*res)
       {
         *res = boost::make_shared<mysql::result>();
       }
       res_ptr = *res;
     }
-    o->execute(boost::string_ref(str, len), res_ptr);
+    o->execute(res_ptr);
+    return 0;
+  }
+
+  static int query(lua_State* L)
+  {
+    mysql::session* o = gce::lua::from_lua<mysql::session>(L, 1, name());
+    size_t len = 0;
+    char const* str = luaL_checklstring(L, 2, &len);
+    mysql::session::luactx luactx = o->get_luactx();
+
+    int argn = 3;
+    boost::string_ref sqlstr(str, len);
+    if (gce::lua::is_argnil(L, argn + 0))
+    {
+      o->sql(sqlstr).execute();
+    }
+    else if (gce::lua::is_argnil(L, argn + 1))
+    {
+      char const* arg1 = arg(L, luactx, argn + 0);
+      o->sql(sqlstr, arg1).execute();
+    }
+    else if (gce::lua::is_argnil(L, argn + 2))
+    {
+      char const* arg1 = arg(L, luactx, argn + 0);
+      char const* arg2 = arg(L, luactx, argn + 1);
+      o->sql(sqlstr, arg1, arg2).execute();
+    }
+    else if (gce::lua::is_argnil(L, argn + 3))
+    {
+      char const* arg1 = arg(L, luactx, argn + 0);
+      char const* arg2 = arg(L, luactx, argn + 1);
+      char const* arg3 = arg(L, luactx, argn + 2);
+      o->sql(sqlstr, arg1, arg2, arg3).execute();
+    }
+    else if (gce::lua::is_argnil(L, argn + 4))
+    {
+      char const* arg1 = arg(L, luactx, argn + 0);
+      char const* arg2 = arg(L, luactx, argn + 1);
+      char const* arg3 = arg(L, luactx, argn + 2);
+      char const* arg4 = arg(L, luactx, argn + 3);
+      o->sql(sqlstr, arg1, arg2, arg3, arg4).execute();
+    }
+    else if (gce::lua::is_argnil(L, argn + 5))
+    {
+      char const* arg1 = arg(L, luactx, argn + 0);
+      char const* arg2 = arg(L, luactx, argn + 1);
+      char const* arg3 = arg(L, luactx, argn + 2);
+      char const* arg4 = arg(L, luactx, argn + 3);
+      char const* arg5 = arg(L, luactx, argn + 4);
+      o->sql(sqlstr, arg1, arg2, arg3, arg4, arg5).execute();
+    }
+    else if (gce::lua::is_argnil(L, argn + 6))
+    {
+      char const* arg1 = arg(L, luactx, argn + 0);
+      char const* arg2 = arg(L, luactx, argn + 1);
+      char const* arg3 = arg(L, luactx, argn + 2);
+      char const* arg4 = arg(L, luactx, argn + 3);
+      char const* arg5 = arg(L, luactx, argn + 4);
+      char const* arg6 = arg(L, luactx, argn + 5);
+      o->sql(sqlstr, arg1, arg2, arg3, arg4, arg5, arg6).execute();
+    }
+    else if (gce::lua::is_argnil(L, argn + 7))
+    {
+      char const* arg1 = arg(L, luactx, argn + 0);
+      char const* arg2 = arg(L, luactx, argn + 1);
+      char const* arg3 = arg(L, luactx, argn + 2);
+      char const* arg4 = arg(L, luactx, argn + 3);
+      char const* arg5 = arg(L, luactx, argn + 4);
+      char const* arg6 = arg(L, luactx, argn + 5);
+      char const* arg7 = arg(L, luactx, argn + 6);
+      o->sql(sqlstr, arg1, arg2, arg3, arg4, arg5, arg6, arg7).execute();
+    }
+    else if (gce::lua::is_argnil(L, argn + 8))
+    {
+      char const* arg1 = arg(L, luactx, argn + 0);
+      char const* arg2 = arg(L, luactx, argn + 1);
+      char const* arg3 = arg(L, luactx, argn + 2);
+      char const* arg4 = arg(L, luactx, argn + 3);
+      char const* arg5 = arg(L, luactx, argn + 4);
+      char const* arg6 = arg(L, luactx, argn + 5);
+      char const* arg7 = arg(L, luactx, argn + 6);
+      char const* arg8 = arg(L, luactx, argn + 7);
+      o->sql(sqlstr, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8).execute();
+    }
+    else if (gce::lua::is_argnil(L, argn + 9))
+    {
+      char const* arg1 = arg(L, luactx, argn + 0);
+      char const* arg2 = arg(L, luactx, argn + 1);
+      char const* arg3 = arg(L, luactx, argn + 2);
+      char const* arg4 = arg(L, luactx, argn + 3);
+      char const* arg5 = arg(L, luactx, argn + 4);
+      char const* arg6 = arg(L, luactx, argn + 5);
+      char const* arg7 = arg(L, luactx, argn + 6);
+      char const* arg8 = arg(L, luactx, argn + 7);
+      char const* arg9 = arg(L, luactx, argn + 8);
+      o->sql(sqlstr, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, arg9).execute();
+    }
+    else if (gce::lua::is_argnil(L, argn + 10))
+    {
+      char const* arg1 = arg(L, luactx, argn + 0);
+      char const* arg2 = arg(L, luactx, argn + 1);
+      char const* arg3 = arg(L, luactx, argn + 2);
+      char const* arg4 = arg(L, luactx, argn + 3);
+      char const* arg5 = arg(L, luactx, argn + 4);
+      char const* arg6 = arg(L, luactx, argn + 5);
+      char const* arg7 = arg(L, luactx, argn + 6);
+      char const* arg8 = arg(L, luactx, argn + 7);
+      char const* arg9 = arg(L, luactx, argn + 8);
+      char const* arg10 = arg(L, luactx, argn + 9);
+      o->sql(sqlstr, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, arg9, arg10).execute();
+    }
+    else
+    {
+      return luaL_error(L, "arg num can't over 10");
+    }
     return 0;
   }
 
@@ -874,6 +779,14 @@ public:
     mysql::session* o = gce::lua::from_lua<mysql::session>(L, 1, name());
     o->ping();
     return 0;
+  }
+
+  static int get_snid(lua_State* L)
+  {
+    mysql::session* o = gce::lua::from_lua<mysql::session>(L, 1, name());
+    gce::mysql::snid_t const& snid = o->get_snid();
+    gce::lua::push(L, snid);
+    return 1;
   }
 
   static int gc(lua_State* L)

@@ -39,6 +39,7 @@ struct result
     res_list_.clear();
   }
 
+  gce::packer pkr_;
   std::vector<result_pair> res_list_;
 };
 typedef boost::shared_ptr<result> result_ptr;
