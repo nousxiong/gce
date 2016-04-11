@@ -33,4 +33,6 @@ static context* get_context(ctxid_t const& ctxid)
 }
 }
 
+GCE_PACK(gce::mysql::ctxid_t, (v.ptr_));
+
 #endif /// GCE_MYSQL_CONTEXT_ID_HPP

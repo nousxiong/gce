@@ -35,4 +35,6 @@ static detail::conn_impl<Session>* get_conn_impl(conn_t const& c)
 }
 }
 
+GCE_PACK(gce::redis::conn_t, (v.ptr_));
+
 #endif /// GCE_REDIS_CONN_HPP

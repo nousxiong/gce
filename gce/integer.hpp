@@ -34,12 +34,12 @@ namespace gce
 typedef boost::mpl::if_<
   boost::is_same<boost::mpl::int_<sizeof(void*)>, boost::mpl::int_<4> >,
     int32_t, int64_t
-  >::type intptr_t;
+  >::type intptr;
 
 typedef boost::mpl::if_<
   boost::is_same<boost::mpl::int_<sizeof(void*)>, boost::mpl::int_<4> >,
     uint32_t, uint64_t
-  >::type uintptr_t;
+  >::type uintptr;
 
 typedef boost::array<char, 32> intbuf_t;
 

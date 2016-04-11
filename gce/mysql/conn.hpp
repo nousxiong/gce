@@ -34,4 +34,6 @@ static detail::conn_impl* get_conn_impl(conn_t const& c)
 }
 }
 
+GCE_PACK(gce::mysql::conn_t, (v.ptr_));
+
 #endif /// GCE_MYSQL_CONN_HPP

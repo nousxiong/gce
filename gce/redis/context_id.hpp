@@ -33,4 +33,6 @@ static context* get_context(ctxid_t const& ctxid)
 }
 }
 
+GCE_PACK(gce::redis::ctxid_t, (v.ptr_));
+
 #endif /// GCE_REDIS_CONTEXT_ID_HPP
