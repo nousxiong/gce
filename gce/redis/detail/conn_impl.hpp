@@ -573,7 +573,7 @@ private:
         if (resp_res.value().type() == resp::ty_array)
         {
           resp::unique_array<resp::unique_value> const& arr = resp_res.value().array();
-          if (arr[0].type() == resp::ty_bulkstr)
+          if (arr.size() > 0 && arr[0].type() == resp::ty_bulkstr)
           {
             resp::buffer const& cmd = arr[0].bulkstr();
             bool unsub = (cmd == "unsubscribe" || cmd == "punsubscribe") && arr.size() == 3;
