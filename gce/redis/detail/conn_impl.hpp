@@ -92,8 +92,10 @@ struct request
 {
   explicit request(size_t sn_idx)
     : sn_idx_(sn_idx)
+    , curr_large_arg_(0)
     , used_(false)
   {
+    large_args_.push_back(message());
   }
 
   bool used() const
@@ -118,15 +120,62 @@ struct request
   void clear()
   {
     send_buffers_.clear();
-    large_args_buffer_.reset_read();
-    large_args_buffer_.reset_write();
+    /*large_args_buffer_.reset_read();
+    large_args_buffer_.reset_write();*/
+    //large_args_.clear();
+    for (size_t i=0; i<large_args_.size(); ++i)
+    {
+      message& large_arg = large_args_[i];
+      large_arg.reset_read();
+      large_arg.reset_write();
+    }
+    curr_large_arg_ = 0;
     resp_buffers_.clear();
     used(false);
   }
 
+  message& reserve_large_arg(size_t len)
+  {
+    len = len > GCE_SMALL_MSG_SIZE + 8 ? len : GCE_SMALL_MSG_SIZE + 8;
+    message* large_arg = &large_args_[curr_large_arg_];
+    if (large_arg->size() == 0)
+    {
+      large_arg->to_large(len);
+    }
+    else if (large_arg->capacity() - large_arg->size() < len)
+    {
+      message msg;
+      msg.to_large(len);
+      large_args_.push_back(msg);
+      ++curr_large_arg_;
+      large_arg = &large_args_[curr_large_arg_];
+    }
+    return *large_arg;
+  }
+
+  message& reserve_large_arg()
+  {
+    message* large_arg = &large_args_[curr_large_arg_];
+    if (large_arg->size() > 0)
+    {
+      large_arg->to_large();
+    }
+    else
+    {
+      message msg;
+      msg.to_large();
+      large_args_.push_back(msg);
+      ++curr_large_arg_;
+      large_arg = &large_args_[curr_large_arg_];
+    }
+    return *large_arg;
+  }
+
   size_t const sn_idx_;
   send_buffers_t send_buffers_;
-  message large_args_buffer_;
+  //message large_args_buffer_;
+  std::deque<message> large_args_;
+  size_t curr_large_arg_;
   std::vector<resp::buffer> resp_buffers_;
   std::queue<response_handler<Session> > responses_;
   volatile bool used_;
@@ -367,6 +416,7 @@ private:
     ci->conning(false);
     ci->tmr_.cancel();
     errcode_t errc = ci->tmr_.timed_out() ? boost::asio::error::timed_out : ec;
+    ci->errc_ = errc;
     while (!ci->connect_queue_.empty())
     {
       connect_t h = ci->connect_queue_.front();
@@ -477,8 +527,8 @@ private:
     if (ec)
     {
       ci->querying(false);
-      ci->tmr_.cancel();
       ci->clear_buffers();
+      ci->close();
     }
     else
     {

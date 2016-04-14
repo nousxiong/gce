@@ -783,7 +783,6 @@ private:
     )
   {
     resp::encoder<resp::buffer>::command& cmd = luactx.cmd_;
-    message& large_args_buffer = luactx.curr_req_->large_args_buffer_;
 
     int ty = lua_type(L, objidx);
     switch (ty)
@@ -807,11 +806,11 @@ private:
     case LUA_TUSERDATA:
     case LUA_TLIGHTUSERDATA:
     {
-      large_args_buffer.to_large(RESP_LARGE_BUFFER_SIZE);
-      byte_t const* begin_buf = large_args_buffer.reset_write(0);
+      message& large_arg = luactx.curr_req_->reserve_large_arg();
       //large_args_buffer << t;
-      gce::lua::pack_object(L, large_args_buffer, objidx);
-      byte_t const* end_buf = large_args_buffer.reset_write(0);
+      gce::lua::pack_object(L, large_arg, objidx);
+      byte_t const* begin_buf = large_arg.data();
+      byte_t const* end_buf = large_arg.reset_write(0);
       cmd.arg(resp::buffer((char const*)begin_buf, end_buf - begin_buf));
     }break;
     default:

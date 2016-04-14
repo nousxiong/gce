@@ -357,10 +357,9 @@ private:
     }
     else
     {
-      message& large_args_buffer = curr_req_->large_args_buffer_;
-      large_args_buffer.to_large(RESP_LARGE_BUFFER_SIZE);
-      byte_t const* buf = large_args_buffer.reset_write(0);
-      large_args_buffer << message::chunk((byte_t const*)str, len);
+      message& large_arg = curr_req_->reserve_large_arg(len);
+      byte_t const* buf = large_arg.reset_write(0);
+      large_arg << message::chunk((byte_t const*)str, len);
       cmd_.arg(resp::buffer((char const*)buf, len));
     }
   }
@@ -378,10 +377,9 @@ private:
     }
     else
     {
-      message& large_args_buffer = curr_req_->large_args_buffer_;
-      large_args_buffer.to_large(RESP_LARGE_BUFFER_SIZE);
-      byte_t const* buf = large_args_buffer.reset_write(0);
-      large_args_buffer << message::chunk((byte_t const*)str.data(), len);
+      message& large_arg = curr_req_->reserve_large_arg(len);
+      byte_t const* buf = large_arg.reset_write(0);
+      large_arg << message::chunk((byte_t const*)str.data(), len);
       cmd_.arg(resp::buffer((char const*)buf, len));
     }
   }
@@ -389,11 +387,11 @@ private:
   template <class T>
   typename boost::enable_if_c<!boost::is_arithmetic<T>::value, void>::type arg(T const& t)
   {
-    message& large_args_buffer = curr_req_->large_args_buffer_;
-    large_args_buffer.to_large(RESP_LARGE_BUFFER_SIZE);
-    byte_t const* begin_buf = large_args_buffer.reset_write(0);
-    large_args_buffer << t;
-    byte_t const* end_buf = large_args_buffer.reset_write(0);
+    size_t len = packer::size_of(t);
+    message& large_arg = curr_req_->reserve_large_arg(len);
+    byte_t const* begin_buf = large_arg.reset_write(0);
+    large_arg << t;
+    byte_t const* end_buf = large_arg.reset_write(0);
     cmd_.arg(resp::buffer((char const*)begin_buf, end_buf - begin_buf));
   }
 
