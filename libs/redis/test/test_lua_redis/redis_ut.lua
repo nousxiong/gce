@@ -20,7 +20,7 @@ gce.actor(
     local base_aid = sender
 
     local rsv = asio.tcp_resolver()
-    rsv:async_resolve('192.168.0.135', '10641')
+    rsv:async_resolve('127.0.0.1', '6379')
     ec, sender, args = 
       gce.match(asio.as_resolve).recv(gce.errcode, asio.tcp_endpoint_itr)
     err = args[1]
