@@ -540,6 +540,11 @@ private:
   void async_send()
   {
     GCE_ASSERT(!sending());
+    if (request_buffer_arr_[sending_buffer_].send_buffers_.empty())
+    {
+      return;
+    }
+
     if (!querying())
     {
       querying(true);
