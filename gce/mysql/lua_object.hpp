@@ -25,6 +25,9 @@ enum
   /// both in adata and amsg means userdata
   ty_result = gce::lua::ty_num + 100,
 
+  ty_ctxid,
+  ty_conn,
+
   ty_num
 };
 

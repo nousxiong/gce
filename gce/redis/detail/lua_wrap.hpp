@@ -36,24 +36,7 @@ namespace lua
 ///------------------------------------------------------------------------------
 /// context_id
 ///------------------------------------------------------------------------------
-struct context_id
-{
-  static int make(lua_State* L)
-  {
-    create(L);
-    return 1;
-  }
-
-  static void create(lua_State* L, ctxid_t const& ctxid = make_ctxid())
-  {
-#if GCE_PACKER == GCE_AMSG
-    adata::lua::push(L, ctxid, false);
-#elif GCE_PACKER == GCE_ADATA
-    adata::lua::push(L, ctxid);
-#endif
-  }
-};
-
+#if GCE_PACKER == GCE_ADATA
 static void load(lua_State* L, int arg, ctxid_t& ctxid)
 {
   if (arg != -1)
@@ -66,18 +49,212 @@ static void load(lua_State* L, int arg, ctxid_t& ctxid)
     lua_pop(L, 1);
   }
 }
+#endif
+
+struct context_id
+#if GCE_PACKER == GCE_AMSG
+  : public gce::lua::basic_object
+#endif
+{
+#if GCE_PACKER == GCE_AMSG
+  typedef ctxid_t object_t;
+  object_t obj_;
+
+  object_t* object()
+  {
+    return &obj_;
+  }
+
+  static char const* name()
+  {
+    return "redis_ctxid";
+  }
+
+  virtual void pack(gce::message& msg)
+  {
+    msg << obj_;
+  }
+
+  virtual void unpack(gce::message& msg)
+  {
+    msg >> obj_;
+  }
+
+  virtual void pack(gce::packer& pkr)
+  {
+    pkr.write(obj_);
+  }
+
+  virtual void unpack(gce::packer& pkr)
+  {
+    pkr.read(obj_);
+  }
+
+  virtual int gcety() const
+  {
+    return gce::redis::lua::ty_ctxid;
+  }
+
+  static int gc(lua_State* L)
+  {
+    ctxid_t* wrap = static_cast<ctxid_t*>(lua_touserdata(L, 1));
+    if (wrap)
+    {
+      wrap->~ctxid_t();
+    }
+    return 0;
+  }
+
+  static int gcety(lua_State* L)
+  {
+    context_id* wrap = gce::detail::lua::to_wrap<context_id>(L, 1);
+
+    lua_pushinteger(L, wrap->gcety());
+    return 1;
+  }
+
+  static ctxid_t* create(lua_State* L, ctxid_t const& ctxid = make_ctxid())
+  {
+    void* block = lua_newuserdata(L, sizeof(context_id));
+    if (!block)
+    {
+      luaL_error(L, "lua_newuserdata for redis_ctxid failed");
+      return 0;
+    }
+
+    context_id* wrap = new (block) context_id;
+    wrap->obj_ = ctxid;
+    gce::lualib::setmetatab(L, "libredis", "redis_ctxid");
+    return &wrap->obj_;
+  }
+#elif GCE_PACKER == GCE_ADATA
+  static void create(lua_State* L, ctxid_t const& ctxid = make_ctxid())
+  {
+    adata::lua::push(L, ctxid);
+  }
+#endif
+
+  static int make(lua_State* L)
+  {
+    create(L);
+    return 1;
+  }
+};
+
+#if GCE_PACKER == GCE_AMSG
+static void load(lua_State* L, int arg, ctxid_t& ctxid)
+{
+  ctxid = *gce::lua::from_lua<context_id>(L, arg);
+}
+#endif
 
 static void push(lua_State* L, ctxid_t const& ctxid)
 {
+#if GCE_PACKER == GCE_AMSG
   context_id::create(L, ctxid);
+#elif GCE_PACKER == GCE_ADATA
+  adata::lua::push(L, ctxid);
+#endif
 }
 ///------------------------------------------------------------------------------
 /// conn
 ///------------------------------------------------------------------------------
+#if GCE_PACKER == GCE_ADATA
+static void load(lua_State* L, int arg, conn_t& c)
+{
+  if (arg != -1)
+  {
+    lua_pushvalue(L, arg);
+  }
+  adata::lua::load(L, c);
+  if (arg != -1)
+  {
+    lua_pop(L, 1);
+  }
+}
+#endif
+
 struct conn
+#if GCE_PACKER == GCE_AMSG
+  : public gce::lua::basic_object
+#endif
 {
   typedef boost::asio::ip::tcp::resolver resolver_t;
   typedef gce::asio::detail::lua::tcp_endpoint_itr endpoint_t;
+
+#if GCE_PACKER == GCE_AMSG
+  typedef conn_t object_t;
+  object_t obj_;
+
+  object_t* object()
+  {
+    return &obj_;
+  }
+
+  static char const* name()
+  {
+    return "redis_conn";
+  }
+
+  virtual void pack(gce::message& msg)
+  {
+    msg << obj_;
+  }
+
+  virtual void unpack(gce::message& msg)
+  {
+    msg >> obj_;
+  }
+
+  virtual void pack(gce::packer& pkr)
+  {
+    pkr.write(obj_);
+  }
+
+  virtual void unpack(gce::packer& pkr)
+  {
+    pkr.read(obj_);
+  }
+
+  virtual int gcety() const
+  {
+    return gce::redis::lua::ty_conn;
+  }
+
+  static int gc(lua_State* L)
+  {
+    conn_t* wrap = static_cast<conn_t*>(lua_touserdata(L, 1));
+    if (wrap)
+    {
+      wrap->~conn_t();
+    }
+    return 0;
+  }
+
+  static int gcety(lua_State* L)
+  {
+    conn* wrap = gce::detail::lua::to_wrap<conn>(L, 1);
+
+    lua_pushinteger(L, wrap->gcety());
+    return 1;
+  }
+
+  static conn_t* create(lua_State* L, conn_t const& c = make_conn())
+  {
+    void* block = lua_newuserdata(L, sizeof(conn));
+    if (!block)
+    {
+      luaL_error(L, "lua_newuserdata for redis_conn failed");
+      return 0;
+    }
+
+    conn* wrap = new (block) conn;
+    wrap->obj_ = c;
+    gce::lualib::setmetatab(L, "libredis", "conn");
+    return &wrap->obj_;
+  }
+#endif
+
   static int make(lua_State* L)
   {
     try
@@ -134,32 +311,28 @@ struct conn
     return 1;
   }
 
-  static void create(lua_State* L, conn_t const& c = conn_t())
+#if GCE_PACKER == GCE_ADATA
+  static void create(lua_State* L, conn_t const& c = make_conn())
   {
-#if GCE_PACKER == GCE_AMSG
-    adata::lua::push(L, c, false);
-#elif GCE_PACKER == GCE_ADATA
     adata::lua::push(L, c);
-#endif
   }
+#endif
 };
 
+#if GCE_PACKER == GCE_AMSG
 static void load(lua_State* L, int arg, conn_t& c)
 {
-  if (arg != -1)
-  {
-    lua_pushvalue(L, arg);
-  }
-  adata::lua::load(L, c);
-  if (arg != -1)
-  {
-    lua_pop(L, 1);
-  }
+  c = *gce::lua::from_lua<conn>(L, arg);
 }
+#endif
 
 static void push(lua_State* L, conn_t const& c)
 {
+#if GCE_PACKER == GCE_AMSG
   conn::create(L, c);
+#elif GCE_PACKER == GCE_ADATA
+  adata::lua::push(L, c);
+#endif
 }
 ///------------------------------------------------------------------------------
 /// array_ref

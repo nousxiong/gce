@@ -311,7 +311,7 @@ private:
       redis::ctxid_t ctxid = rctx.get_ctxid();
 
       asio::tcp::resolver rsv(base);
-      tcp_resolver_t::query qry("127.0.0.1", "6379");
+      tcp_resolver_t::query qry("192.168.0.135", "10641");
       rsv.async_resolve(qry);
       boost::shared_ptr<tcp_resolver_t::iterator> eitr;
       base->match(asio::tcp::as_resolve).recv(ec, eitr);

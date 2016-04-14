@@ -305,6 +305,7 @@ struct conn_impl
   template <typename Handler>
   void async_connect(Handler const& h)
   {
+    errc_.clear();
     connect_queue_.push(h);
     if (conning())
     {
@@ -313,6 +314,7 @@ struct conn_impl
 
     conning(true);
     async_wait();
+
     if (ep_.address().is_unspecified())
     {
       /// using eitr_ to connect
@@ -374,6 +376,9 @@ private:
 
     if (!errc)
     {
+      ci->skt_.set_option(boost::asio::socket_base::receive_buffer_size(640000));
+      ci->skt_.set_option(boost::asio::socket_base::send_buffer_size(640000));
+      ci->skt_.set_option(boost::asio::ip::tcp::no_delay(true));
       ci->async_response();
     }
   }
@@ -427,6 +432,12 @@ public:
       h.channel_.clear();
       response_queue_.push(h);
       responses.pop();
+    }
+
+    if (errc_)
+    {
+      response_error(errc_);
+      return;
     }
 
     size_t index = sending() ? holding_buffer_ : sending_buffer_;
@@ -625,6 +636,7 @@ private:
 
   void response_error(errcode_t const& ec)
   {
+    errc_ = ec;
     resp::result resp_res;
     tmr_.cancel();
     querying(false);
@@ -701,6 +713,9 @@ public:
   bool sending_;
   bool querying_;
   bool timing_;
+
+  /// current error
+  errcode_t errc_;
 
   /// RESP
   resp::decoder dec_;
