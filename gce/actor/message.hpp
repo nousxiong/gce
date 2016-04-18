@@ -350,8 +350,8 @@ public:
     else
     {
       msg.clear();
-      msg.type_ = type_;
-      msg.tag_offset_ = tag_offset_;
+      msg.type_ = hdr.type_;
+      msg.tag_offset_ = hdr.tag_offset_;
       msg << chunk(body, hdr.size_);
 
       msg.shared_list_.reserve(shared_size);
@@ -383,8 +383,8 @@ public:
     byte_t const* body = pkr.skip_read(hdr.size_);
 
     clear();
-    type_ = type_;
-    tag_offset_ = tag_offset_;
+    type_ = hdr.type_;
+    tag_offset_ = hdr.tag_offset_;
     (*this) << chunk(body, hdr.size_);
   }
 
