@@ -27,6 +27,8 @@
 #include <queue>
 #include <utility>
 
+#define GCE_REDIS_RECV_BUFFER_SIZE 1024 * 16
+
 namespace gce
 {
 namespace redis
@@ -233,7 +235,7 @@ struct conn_impl
     , sending_(false)
     , querying_(false)
     , timing_(false)
-    , recv_buffer_(1024 * 16)
+    , recv_buffer_(GCE_REDIS_RECV_BUFFER_SIZE)
     , ref_(0)
   {
   }
@@ -254,7 +256,7 @@ struct conn_impl
     , sending_(false)
     , querying_(false)
     , timing_(false)
-    , recv_buffer_(1024 * 16)
+    , recv_buffer_(GCE_REDIS_RECV_BUFFER_SIZE)
     , ref_(0)
   {
   }
@@ -417,6 +419,7 @@ private:
     ci->tmr_.cancel();
     errcode_t errc = ci->tmr_.timed_out() ? boost::asio::error::timed_out : ec;
     ci->errc_ = errc;
+    ci->dec_ = resp::decoder();
     while (!ci->connect_queue_.empty())
     {
       connect_t h = ci->connect_queue_.front();
@@ -578,10 +581,10 @@ private:
     std::swap(sending_buffer_, holding_buffer_);
   }
 
-  void async_response()
+  void async_response(size_t offset_size = 0)
   {
     skt_.async_read_some(
-      boost::asio::buffer(recv_buffer_.data(), recv_buffer_.size()), 
+      boost::asio::buffer(recv_buffer_.data() + offset_size, recv_buffer_.size() - offset_size), 
       snd_.wrap(
         gce::detail::make_asio_alloc_handler(
           resp_ha_, 
@@ -628,7 +631,16 @@ private:
 
       if (resp_res == resp::incompleted)
       {
-        ci->async_response();
+        /// Move last data to buffer head.
+        curr_decoded_size += resp_res.size();
+        size_t last_size = bytes_transferred - curr_decoded_size;
+        std::memmove(
+          ci->recv_buffer_.data(), 
+          (char const*)ci->recv_buffer_.data() + curr_decoded_size, 
+          last_size
+          );
+        ci->recv_buffer_.resize(last_size + GCE_REDIS_RECV_BUFFER_SIZE);
+        ci->async_response(last_size);
         break;
       }
       else if (resp_res == resp::completed)
