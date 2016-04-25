@@ -581,10 +581,10 @@ private:
     std::swap(sending_buffer_, holding_buffer_);
   }
 
-  void async_response(size_t offset_size = 0)
+  void async_response()
   {
     skt_.async_read_some(
-      boost::asio::buffer(recv_buffer_.data() + offset_size, recv_buffer_.size() - offset_size), 
+      boost::asio::buffer(recv_buffer_.data(), recv_buffer_.size()), 
       snd_.wrap(
         gce::detail::make_asio_alloc_handler(
           resp_ha_, 
@@ -631,16 +631,11 @@ private:
 
       if (resp_res == resp::incompleted)
       {
-        /// Move last data to buffer head.
-        curr_decoded_size += resp_res.size();
-        size_t last_size = bytes_transferred - curr_decoded_size;
-        std::memmove(
-          ci->recv_buffer_.data(), 
-          (char const*)ci->recv_buffer_.data() + curr_decoded_size, 
-          last_size
-          );
-        ci->recv_buffer_.resize(last_size + GCE_REDIS_RECV_BUFFER_SIZE);
-        ci->async_response(last_size);
+        if (!ci->querying())
+        {
+          ci->querying(true);
+        }
+        ci->async_response();
         break;
       }
       else if (resp_res == resp::completed)
