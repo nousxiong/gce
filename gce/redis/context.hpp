@@ -107,7 +107,7 @@ private:
 
 private:
   ctxid_t ctxid_;
-  bool stopped_;
+  boost::atomic_bool stopped_;
   gce::threaded_actor base_;
 
   io_service_t& ios_;

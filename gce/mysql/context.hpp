@@ -161,7 +161,7 @@ private:
 private:
   attributes attrs_;
   ctxid_t ctxid_;
-  volatile bool stopped_;
+  boost::atomic_bool stopped_;
 
   io_service_t ios_;
   boost::optional<io_service_t::work> work_;

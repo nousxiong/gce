@@ -970,8 +970,7 @@ private:
   GCE_CACHE_ALIGNED_VAR(attributes, attrs_)
   GCE_CACHE_ALIGNED_VAR(timestamp_t const, timestamp_)
 
-  typedef volatile bool volatile_bool_t;
-  GCE_CACHE_ALIGNED_VAR(volatile_bool_t, stopped_)
+  GCE_CACHE_ALIGNED_VAR(boost::atomic_bool, stopped_)
 
   /// select service
   GCE_CACHE_ALIGNED_VAR(size_t, service_size_)
