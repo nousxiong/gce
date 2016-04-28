@@ -420,6 +420,11 @@ private:
     errcode_t errc = ci->tmr_.timed_out() ? boost::asio::error::timed_out : ec;
     ci->errc_ = errc;
     ci->dec_ = resp::decoder();
+    if (errc)
+    {
+      ci->close();
+    }
+
     while (!ci->connect_queue_.empty())
     {
       connect_t h = ci->connect_queue_.front();
