@@ -706,13 +706,13 @@ private:
     resp::result resp_res;
     tmr_.cancel();
     querying(false);
+    close();
     while (!response_queue_.empty())
     {
       response_t h = response_queue_.front();
       response_queue_.pop();
       h(ec, resp_res, false);
     }
-    close();
   }
 
 public:
