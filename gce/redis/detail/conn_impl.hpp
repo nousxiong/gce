@@ -694,7 +694,6 @@ private:
       else
       {
         /// error, close conn
-        ci->close();
         ci->response_error(boost::asio::error::invalid_argument);
         break;
       }
@@ -713,6 +712,7 @@ private:
       response_queue_.pop();
       h(ec, resp_res, false);
     }
+    close();
   }
 
 public:
