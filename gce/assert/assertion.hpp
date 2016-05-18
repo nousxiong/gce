@@ -146,7 +146,7 @@ public:
   {
   }
 
-  ~assertion()
+  ~assertion() BOOST_NOEXCEPT_IF(false) // Under gcc -std=c++11, default is noexcept(true), so must set false.
   {
     if (msg_)
     {
