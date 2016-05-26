@@ -123,10 +123,21 @@ public:
 
   static int regist_lib(lua_State * L)
   {
-    lua_reg_ptr* lib = lib_.get();
+    //lua_reg_ptr* lib = lib_.get();
+    lua_reg_ptr* lib = current_lib();
     luaL_checkversion(L);
     luaL_newlib(L, lib->p_);
     return 1;
+  }
+
+  static lua_reg_ptr* current_lib(luaL_Reg* lib = 0)
+  {
+    static boost::thread_specific_ptr<lua_reg_ptr> reg_lib;
+    if (lib != 0)
+    {
+      reg_lib.reset(new lua_reg_ptr(lib));
+    }
+    return reg_lib.get();
   }
 #endif
 
@@ -143,7 +154,8 @@ public:
 #if LUA_VERSION_NUM == 501
       luaL_register(L_, name_.c_str(), lib);
 #else
-      lib_.reset(new lua_reg_ptr(lib));
+      //lib_.reset(new lua_reg_ptr(lib));
+      current_lib(lib);
       luaL_requiref(L_, name_.c_str(), userlib::regist_lib, 1);
 #endif
       lua_newtable(L_);
@@ -161,15 +173,15 @@ private:
   std::string name_;
   std::vector<luaL_Reg> reg_list_;
 
-#if LUA_VERSION_NUM > 501
-public:
-  static boost::thread_specific_ptr<lua_reg_ptr> lib_;
-#endif
+//#if LUA_VERSION_NUM > 501
+//public:
+//  static boost::thread_specific_ptr<lua_reg_ptr> lib_;
+//#endif
 };
 
-#if LUA_VERSION_NUM > 501
-boost::thread_specific_ptr<userlib::lua_reg_ptr> userlib::lib_;
-#endif
+//#if LUA_VERSION_NUM > 501
+//boost::thread_specific_ptr<userlib::lua_reg_ptr> userlib::lib_;
+//#endif
 
 /// open a userlib
 inline userlib open(lua_State* L)
