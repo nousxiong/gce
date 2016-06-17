@@ -265,6 +265,20 @@ int main()
 }
 ```
 
+### Amazing  open source projects:
+
+**NoahGameFrame**
+* Auther: ketoo
+* GitHub: https://github.com/ketoo/NoahGameFrame
+* Description: NF is a lightweight, fast, scalable, distributed plugin framework.Greatly inspired by OGRE and Bigworld.
+
+**breeze**
+* Auther: zsummer
+* Github: https://github.com/zsummer/breeze
+* Description:A fast, scalable, distributed game server framework for C++
+
+
+
 Changelog
 ---------------
 v1.2
