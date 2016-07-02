@@ -74,10 +74,11 @@ public:
     {
     }
 
-    explicit recv_binder(self_t& self)
+    recv_binder(self_t& self, int32_t& port)
       : ty_(bind)
       , self_(&self)
       , omsg_(0)
+      , port_(&port)
     {
     }
 
@@ -102,7 +103,7 @@ public:
       {
       case recv: self_->recv_handler(aid, m, *osender_, *omsg_); break;
       case spawn: self_->spawn_handler(aid, lty_, *osender_); break;
-      case bind: self_->bind_handler(); break;
+      case bind: self_->bind_handler(m, *port_); break;
       case conn: self_->conn_handler(aid, m, *sire_, *ec_); break;
       default: GCE_ASSERT(false)(ty_); break;
       }
@@ -121,6 +122,7 @@ public:
     message* omsg_;
     service_t* sire_;
     errcode_t* ec_;
+    int32_t* port_;
   };
 
   struct wait_binder
@@ -548,8 +550,9 @@ public:
     run();
   }
 
-  void bind_handler()
+  void bind_handler(message& msg, int32_t& port)
   {
+    msg >> port;
     run();
   }
 

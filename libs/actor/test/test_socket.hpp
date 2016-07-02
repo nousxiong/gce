@@ -42,7 +42,7 @@ public:
       threaded_actor base1 = spawn(ctx1);
       threaded_actor base2 = spawn(ctx2);
 
-      gce::bind(base2, "tcp://127.0.0.1:14923");
+      int32_t port = gce::bind(base2, "tcp://127.0.0.1");
 
       aid_t echo_aid =
         spawn(
@@ -55,7 +55,9 @@ public:
 
       netopt_t opt = make_netopt();
       opt.reconn_period = seconds(1);
-      connect(base1, "two", "tcp://127.0.0.1:14923", opt);
+      std::string ep = "tcp://127.0.0.1:";
+      ep += boost::lexical_cast<std::string>(port);
+      connect(base1, "two", ep, opt);
 
       for (std::size_t i=0; i<echo_num; ++i)
       {

@@ -11,5 +11,7 @@ local gce = require('gce')
 
 gce.actor(
   function ()
-  	gce.bind('tcp://127.0.0.1:14923')
+    local ec, sender = gce.recv('init')
+  	local port = gce.bind('tcp://127.0.0.1')
+    gce.send(sender, 'port', port)
   end)

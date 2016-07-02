@@ -143,17 +143,19 @@ inline void connect(
 namespace detail
 {
 template <typename ActorRef>
-inline void bind(ActorRef& sire, std::string const& ep, remote_func_list_t const& remote_func_list, netopt_t opt)
+inline int32_t bind(ActorRef& sire, std::string const& ep, remote_func_list_t const& remote_func_list, netopt_t opt)
 {
   typedef context::acceptor_service_t service_t;
   context& ctx = sire.get_context();
   service_t& svc = ctx.select_service<service_t>();
   bind<context>(sire.get_aid(), svc, ep, opt, remote_func_list);
-  sire->recv(msg_new_bind);
+  int32_t port = -1;
+  sire->recv(msg_new_bind, port);
+  return port;
 }
 }
 
-inline void bind(
+inline int32_t bind(
   threaded_actor sire,
   std::string const& ep, /// endpoint
   remote_func_list_t const& remote_func_list = remote_func_list_t(),
@@ -162,13 +164,13 @@ inline void bind(
 {
   if (sire.has_acceptor(ep))
   {
-    return;
+    return -1;
   }
 
-  detail::bind(sire, ep, remote_func_list, opt);
+  return detail::bind(sire, ep, remote_func_list, opt);
 }
 
-inline void bind(
+inline int32_t bind(
   stackful_actor sire,
   std::string const& ep, /// endpoint
   remote_func_list_t const& remote_func_list = remote_func_list_t(),
@@ -177,10 +179,10 @@ inline void bind(
 {
   if (sire.get_service().has_acceptor(ep))
   {
-    return;
+    return -1;
   }
 
-  detail::bind(sire, ep, remote_func_list, opt);
+  return detail::bind(sire, ep, remote_func_list, opt);
 }
 
 ///------------------------------------------------------------------------------
@@ -189,6 +191,7 @@ inline void bind(
 inline void bind(
   stackless_actor sire,
   std::string const& ep, /// endpoint
+  int32_t& port,
   remote_func_list_t const& remote_func_list = remote_func_list_t(),
   netopt_t opt = make_netopt()
   )
@@ -208,7 +211,7 @@ inline void bind(
   pattern patt;
   patt.match_list_.push_back(detail::msg_new_bind);
   sire.recv(
-    stackless_actor_t::recv_binder(a), 
+    stackless_actor_t::recv_binder(a, port), 
     /*boost::bind(
       &detail::handle_bind<context>, _arg1, _arg2, _arg3
       ), */

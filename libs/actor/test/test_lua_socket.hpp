@@ -43,12 +43,16 @@ public:
       threaded_actor base1 = spawn(ctx1);
       threaded_actor base2 = spawn(ctx2);
 
-      spawn(base2, "test_lua_actor/socket_bind.lua", monitored);
+      aid_t bind_aid = spawn(base2, "test_lua_actor/socket_bind.lua", monitored);
+      base2->send(bind_aid, "init");
+      lua_Number port = -1;
+      base2->recv("port", port);
       base2->recv(gce::exit);
 
       aid_t svr_aid = spawn(base2, "test_lua_actor/socket_echo_server.lua", monitored);
 
-      spawn(base1, "test_lua_actor/socket_conn.lua", monitored);
+      aid_t conn_aid = spawn(base1, "test_lua_actor/socket_conn.lua", monitored);
+      base1->send(conn_aid, "init", port);
       base1->recv(gce::exit);
 
       aid_t cln_aid = spawn(base1, "test_lua_actor/socket_echo_client.lua");

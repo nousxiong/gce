@@ -24,7 +24,7 @@ public:
   virtual ~basic_acceptor() {}
 
 public:
-  virtual void bind() = 0;
+  virtual int32_t bind() = 0; /// Return port, if <= 0 error.
   virtual socket_ptr accept(yielder) = 0;
   virtual void close() = 0;
 };

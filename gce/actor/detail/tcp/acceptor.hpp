@@ -39,7 +39,7 @@ public:
   }
 
 public:
-  void bind()
+  int32_t bind()
   {
     boost::asio::ip::address addr;
     addr.from_string(host_);
@@ -57,6 +57,11 @@ public:
     acpr_.set_option(boost::asio::ip::tcp::no_delay(true));
     acpr_.set_option(boost::asio::socket_base::keep_alive(true));
     acpr_.set_option(boost::asio::socket_base::enable_connection_aborted(true));
+
+    /// Get local ep to get port(may be random).
+    boost::asio::ip::tcp::endpoint local_ep = acpr_.local_endpoint();
+    port_ = local_ep.port();
+    return port_;
   }
 
   gce::detail::socket_ptr accept(yielder ylder)
@@ -77,7 +82,7 @@ private:
   strand_t& snd_;
   boost::asio::ip::tcp::acceptor acpr_;
   std::string const host_;
-  uint16_t const port_;
+  uint16_t port_;
 };
 }
 }

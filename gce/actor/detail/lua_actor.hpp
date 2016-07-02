@@ -208,12 +208,15 @@ public:
     acceptor_service_t& svc = ctx.select_service<acceptor_service_t>();
 
     gce::detail::bind<context_t>(base_t::get_aid(), svc, ep, opt);
+    message msg;
+    aid_t sender;
+
     pattern patt;
     patt.add_match(msg_new_bind);
-    bool is_yield = recv_match(patt);
+    bool is_yield = pri_recv_match(patt, sender, msg);
     if (!is_yield)
     {
-      handle_bind();
+      handle_bind(msg);
     }
     return is_yield;
   }
@@ -235,7 +238,7 @@ public:
 
     pattern patt;
     patt.add_match(msg_new_conn);
-    bool is_yield =  pri_recv_match(patt, sender, msg);
+    bool is_yield = pri_recv_match(patt, sender, msg);
     if (!is_yield)
     {
       handle_connect(sender, msg);
@@ -952,7 +955,7 @@ private:
       else if (msg_type == msg_new_bind)
       {
         need_resume = false;
-        handle_bind();
+        handle_bind(*msg);
       }
       else if (msg_type == msg_new_conn)
       {
@@ -973,8 +976,16 @@ private:
     }
   }
 
-  void handle_bind()
+  void handle_bind(message& msg)
   {
+    int32_t port = -1;
+    msg >> port;
+
+    lua_getglobal(L_, "libgce");
+    lua_pushinteger(L_, port);
+    lua_setfield(L_, -2, "bind_port");
+    lua_pop(L_, 1);
+
     if (yielding_)
     {
       resume();

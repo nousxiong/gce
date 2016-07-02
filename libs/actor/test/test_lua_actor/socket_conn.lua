@@ -11,7 +11,10 @@ local gce = require('gce')
 
 gce.actor(
   function ()
+    local ec, sender, args = gce.recv('init', 1)
+    local port = args[1]
+
   	local opt = gce.net_option()
   	opt.reconn_period = gce.seconds(1)
-  	gce.connect('two', 'tcp://127.0.0.1:14923', opt)
+  	gce.connect('two', 'tcp://127.0.0.1:' .. port, opt)
   end)

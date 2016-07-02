@@ -89,12 +89,16 @@ public:
       remote_func_list_.insert(std::make_pair(f.first, f.second));
     }
 
-    ep_ = ep;
-    base_t::ctx_.register_acceptor(ep_, base_t::get_aid(), svc_.get_index());
+    size_t pos = ep.find_last_of(":");
+    if (pos != std::string::npos && ep.substr(pos + 1) != "0")
+    {
+      ep_ = ep;
+      base_t::ctx_.register_acceptor(ep_, base_t::get_aid(), svc_.get_index());
+    }
 
     boost::asio::spawn(
       base_t::snd_,
-      run_binder(*this, sire, ep_), 
+      run_binder(*this, sire, ep), 
       /*boost::bind(
         &self_t::run, this, sire, ep, _arg1
         ),*/
@@ -241,32 +245,52 @@ private:
   }
 
 private:
-  void send_ret(aid_t const& sire)
+  void send_ret(aid_t const& sire, int32_t port)
   {
-    gce::detail::send(*this, sire, msg_new_bind);
+    gce::detail::send(*this, sire, msg_new_bind, port);
   }
 
   struct send_ret_binder
   {
-    send_ret_binder(self_t& self, aid_t const& sire)
+    send_ret_binder(self_t& self, aid_t const& sire, int32_t& port)
       : self_(self)
       , sire_(sire)
+      , port_(port)
     {
     }
 
     void operator()() const
     {
-      self_.send_ret(sire_);
+      self_.send_ret(sire_, port_);
     }
 
     self_t& self_;
     aid_t const& sire_;
+    int32_t& port_;
   };
 
-  void bind(std::string const& ep)
+  int32_t bind(std::string& ep)
   {
     make_acceptor(ep);
-    acpr_->bind();
+    int32_t port = acpr_->bind();
+    size_t pos = ep.find_last_of(":");
+    size_t fpos = ep.find_first_of(":");
+    if (pos == fpos || pos != std::string::npos && ep.substr(pos + 1) == "0")
+    {
+      /// Replace old port (0) to new port.
+      char const* port_str = boost::lexical_cast<intbuf_t>(port).cbegin();
+      if (pos == fpos)
+      {
+        ep = ep + ":" + port_str;
+      }
+      else
+      {
+        ep = ep.substr(0, pos) + ":" + port_str;
+      }
+      ep_ = ep;
+      base_t::ctx_.register_acceptor(ep_, base_t::get_aid(), svc_.get_index());
+    }
+    return port;
   }
 
   struct spawn_socket_binder
@@ -295,7 +319,7 @@ private:
     socket_ptr prot_;
   };
 
-  void run(aid_t const& sire, std::string const& ep, yield_t yld)
+  void run(aid_t const& sire, std::string ep, yield_t yld)
   {
     yld_ = boost::in_place(yld);
     exit_code_t exc = exit_normal;
@@ -309,8 +333,9 @@ private:
       {
         stat_ = on;
         {
-          scope scp(send_ret_binder(*this, sire));
-          bind(ep);
+          int32_t port = -1;
+          scope scp(send_ret_binder(*this, sire, port));
+          port = bind(ep);
         }
 
         boost::asio::system_timer tmr(base_t::get_context().get_io_service());
@@ -417,19 +442,27 @@ private:
       /// Parse address
       size_t begin = pos + 3;
       pos = ep.find(':', begin);
-      GCE_VERIFY(pos != std::string::npos)(ep)
-        .log(lg_, "tcp address parse failed");
+      /*GCE_VERIFY(pos != std::string::npos)(ep)
+        .log(lg_, "tcp address parse failed");*/
+      std::string address;
+      uint16_t port = 0;
+      if (pos != std::string::npos)
+      {
+        address = ep.substr(begin, pos - begin);
+        /// Parse port
+        begin = pos + 1;
+        pos = ep.size();
 
-      std::string address = ep.substr(begin, pos - begin);
+        uint16_t port =
+          boost::lexical_cast<uint16_t>(
+            ep.substr(begin, pos - begin)
+            );
+      }
+      else
+      {
+        address = ep.substr(begin);
+      }
 
-      /// Parse port
-      begin = pos + 1;
-      pos = ep.size();
-
-      uint16_t port =
-        boost::lexical_cast<uint16_t>(
-          ep.substr(begin, pos - begin)
-          );
       acpr_ = boost::in_place(boost::ref(base_t::snd_), address, port);
     }
     else

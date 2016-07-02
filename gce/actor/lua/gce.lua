@@ -281,6 +281,7 @@ function gce.bind(ep, opt)
   if co ~= nil then
     coroutine.yield(co)
   end
+  return libgce.bind_port
 end
 
 function gce.connect(target, ep, opt)
