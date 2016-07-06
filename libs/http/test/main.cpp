@@ -31,7 +31,7 @@ static std::size_t const test_count = 1;
 #include <boost/timer/timer.hpp>
 #include "test_http.hpp"
 #ifdef GCE_OPENSSL
-//# include "test_https.hpp"
+# include "test_https.hpp"
 #endif
 #ifdef GCE_LUA
 //# include "test_lua_http.hpp"
@@ -45,7 +45,7 @@ int main()
     gce::http::http_ut::run();
 
 #ifdef GCE_OPENSSL
-    //gce::http::https_ut::run();
+    gce::http::https_ut::run();
 #endif
 
     /// script test

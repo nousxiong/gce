@@ -16,6 +16,9 @@
 #include <gce/http/detail/request_parser.hpp>
 #include <boost/array.hpp>
 #include <boost/lexical_cast.hpp>
+#ifdef GCE_OPENSSL
+# include <boost/asio/ssl.hpp>
+#endif
 
 namespace gce
 {
@@ -38,12 +41,19 @@ class connection
   
   typedef boost::asio::ip::tcp::socket tcp_socket_t;
 
+#ifdef GCE_OPENSSL
+  typedef boost::asio::ssl::stream<tcp_socket_t> ssl_socket_t;
+#endif
+
   struct core
   {
     /// Socket.
-    boost::shared_ptr<tcp_socket_t> skt_;
+    boost::shared_ptr<tcp_socket_t> tcp_skt_;
+#ifdef GCE_OPENSSL
+    boost::shared_ptr<ssl_socket_t> ssl_skt_;
+#endif
     /// Recv buffer
-    boost::array<char, 8192> recv_buffer_;
+    boost::array<char, GCE_HTTP_SERVER_RECV_BUFFER_SIZE> recv_buffer_;
     /// The incoming request.
     std::deque<request_ptr> requests_;
     /// The reply to be sent back to the client.
@@ -60,7 +70,7 @@ class connection
 
 public:
   template <typename Actor>
-  connection(Actor a, boost::shared_ptr<tcp_socket_t> skt, size_t recv_buffer_size = 8192)
+  connection(Actor a, boost::shared_ptr<tcp_socket_t> skt)
     : addon_t(a)
     , snd_(base_t::get_strand())
     , recving_(false)
@@ -68,10 +78,28 @@ public:
     , closing_(false)
     , closed_(false)
     , goon_(false)
+    , tcp_(true)
     , scp_(this)
   {
-    scp_.get()->get_attachment().skt_ = skt;
+    scp_.get()->get_attachment().tcp_skt_ = skt;
   }
+
+#ifdef GCE_OPENSSL
+  template <typename Actor>
+  connection(Actor a, boost::shared_ptr<ssl_socket_t> skt)
+    : addon_t(a)
+    , snd_(base_t::get_strand())
+    , recving_(false)
+    , sending_(false)
+    , closing_(false)
+    , closed_(false)
+    , goon_(false)
+    , tcp_(false)
+    , scp_(this)
+  {
+    scp_.get()->get_attachment().ssl_skt_ = skt;
+  }
+#endif
 
   ~connection()
   {
@@ -147,11 +175,30 @@ public:
   void dispose()
   {
     scp_.notify();
-    errcode_t ignored_ec;
-    scp_.get()->get_attachment().skt_->close(ignored_ec);
+    close_socket();
   }
 
 private:
+  void close_socket()
+  {
+    errcode_t ignored_ec;
+    if (tcp_)
+    {
+      boost::shared_ptr<tcp_socket_t> skt = scp_.get()->get_attachment().tcp_skt_;
+      skt->shutdown(boost::asio::ip::tcp::socket::shutdown_both, ignored_ec);
+      skt->close(ignored_ec);
+    }
+    else
+    {
+#ifdef GCE_OPENSSL
+      boost::shared_ptr<ssl_socket_t> skt = scp_.get()->get_attachment().ssl_skt_;
+      skt->shutdown(ignored_ec);
+      skt->lowest_layer().shutdown(boost::asio::ip::tcp::socket::shutdown_both, ignored_ec);
+      skt->lowest_layer().close(ignored_ec);
+#endif
+    }
+  }
+
   void start_recv(request_ptr req)
   {
     std::deque<request_ptr>& requests = scp_.get()->get_attachment().requests_;
@@ -178,7 +225,23 @@ private:
 
   void async_recv(request_ptr req)
   {
-    scp_.get()->get_attachment().skt_->async_read_some(
+    if (tcp_)
+    {
+      pri_async_recv(scp_.get()->get_attachment().tcp_skt_, req);
+    }
+    else
+    {
+#ifdef GCE_OPENSSL
+      pri_async_recv(scp_.get()->get_attachment().ssl_skt_, req);
+#endif
+    }
+    recving_ = true;
+  }
+
+  template <typename SocketPtr>
+  void pri_async_recv(SocketPtr skt, request_ptr req)
+  {
+    skt->async_read_some(
       boost::asio::buffer(scp_.get()->get_attachment().recv_buffer_), 
       snd_.wrap(
         gce::detail::make_asio_alloc_handler(
@@ -190,7 +253,6 @@ private:
           )
         )
       );
-    recving_ = true;
   }
 
   static void handle_recv(guard_ptr guard, request_ptr req, errcode_t const& ec, size_t bytes_transferred)
@@ -210,7 +272,7 @@ private:
     if (!ec)
     {
       std::deque<request_ptr>& requests = scp_.get()->get_attachment().requests_;
-      boost::array<char, 8192> const& recv_buffer = scp_.get()->get_attachment().recv_buffer_;
+      boost::array<char, GCE_HTTP_SERVER_RECV_BUFFER_SIZE> const& recv_buffer = scp_.get()->get_attachment().recv_buffer_;
       if (parser_.is_upgrade())
       {
         GCE_ASSERT(requests.empty());
@@ -273,8 +335,25 @@ private:
     size_t size = to_send_buffers();
     if (size > 0)
     {
-      boost::asio::async_write(
-      *(scp_.get()->get_attachment().skt_), send_buffers_, 
+      if (tcp_)
+      {
+        async_send(*(scp_.get()->get_attachment().tcp_skt_), size);
+      }
+      else
+      {
+#ifdef GCE_OPENSSL
+        async_send(*(scp_.get()->get_attachment().ssl_skt_), size);
+#endif
+      }
+      sending_ = true;
+    }
+  }
+
+  template <typename Socket>
+  void async_send(Socket& skt, size_t size)
+  {
+    boost::asio::async_write(
+      skt, send_buffers_, 
       snd_.wrap(
         gce::detail::make_asio_alloc_handler(
           scp_.get()->get_attachment().ha_arr_[ha_send],
@@ -285,8 +364,6 @@ private:
           )
         )
       );
-      sending_ = true;
-    }
   }
 
   static void handle_send(guard_ptr guard, size_t size, errcode_t const& ec, size_t bytes_transferred)
@@ -369,11 +446,7 @@ private:
   void pri_handle_close()
   {
     // Initiate graceful connection closure.
-    errcode_t ignored_ec;
-    boost::shared_ptr<tcp_socket_t> skt = scp_.get()->get_attachment().skt_;
-    skt->shutdown(boost::asio::ip::tcp::socket::shutdown_both, ignored_ec);
-    skt->close(ignored_ec);
-
+    close_socket();
     closed_ = true;
     if (!recving_)
     {
@@ -410,6 +483,7 @@ private:
   bool closing_;
   bool closed_;
   bool goon_;
+  bool tcp_;
   message recv_msg_;
   message close_msg_;
   message const msg_nil_;

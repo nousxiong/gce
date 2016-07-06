@@ -23,6 +23,18 @@ file (GLOB_RECURSE GCE_HTTP_UNIT_TEST_FILES ${GCE_HTTP_UNIT_TEST_FILES} "${CMAKE
 
 add_executable (gce_http_ut ${GCE_HTTP_UNIT_TEST_FILES})
 
+# Copy test used openssl files
+if (GCE_OPENSSL)
+  add_custom_command (
+    TARGET gce_http_ut
+    POST_BUILD
+    COMMAND ${CMAKE_COMMAND} -E echo "copy openssl files to gce.http.test build dir..."
+    COMMAND ${CMAKE_COMMAND} -E copy_directory ${CMAKE_CURRENT_SOURCE_DIR}/test_https ${PROJECT_BINARY_DIR}/libs/http/test/test_https
+    COMMAND ${CMAKE_COMMAND} -E echo "done."
+    VERBATIM
+    )
+endif ()
+
 if (GCE_LINK_PROP)
   set_target_properties (gce_http_ut PROPERTIES LINK_FLAGS "${GCE_LINK_PROP}")
 endif ()
@@ -32,3 +44,6 @@ if (TESTS_LINK_LIBS)
 endif ()
 
 install (TARGETS gce_http_ut RUNTIME DESTINATION bin)
+if (GCE_OPENSSL)
+  install (DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/test_https DESTINATION bin)
+endif ()

@@ -19,4 +19,8 @@
 #include <gce/detail/asio_alloc_handler.hpp>
 #include <boost/asio.hpp>
 
+#ifndef GCE_HTTP_SERVER_RECV_BUFFER_SIZE 
+# define GCE_HTTP_SERVER_RECV_BUFFER_SIZE 8192
+#endif
+
 #endif /// GCE_HTTP_CONFIG_HPP
