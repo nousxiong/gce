@@ -58,6 +58,14 @@ install (
   PATTERN ".svn" EXCLUDE
   )
 
+install (
+  DIRECTORY ${PROJECT_SOURCE_DIR}/gce/http_parser DESTINATION include/gce
+  PATTERN "impl" EXCLUDE
+  PATTERN "CVS" EXCLUDE
+  PATTERN ".svn" EXCLUDE
+  PATTERN "lua" EXCLUDE
+  )
+
 file (GLOB GCE_HTTP_GLOB_DEPEN_FILES "${PROJECT_SOURCE_DIR}/gce/*.hpp")
 install (
   FILES ${GCE_HTTP_GLOB_DEPEN_FILES} DESTINATION include/gce

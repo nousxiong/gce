@@ -155,19 +155,22 @@ private:
   void start_recv(request_ptr req)
   {
     std::deque<request_ptr>& requests = scp_.get()->get_attachment().requests_;
+    bool sent_req = false;
     if (!requests.empty())
     {
       if (goon_ && requests.size() > 1)
       {
         send_request();
+        sent_req = true;
       }
       else if (!goon_)
       {
         send_request();
+        sent_req = true;
       }
     }
 
-    if (!recving_)
+    if (!sent_req && !recving_)
     {
       async_recv(req);
     }
