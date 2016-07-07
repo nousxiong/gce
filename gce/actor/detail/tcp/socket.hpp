@@ -83,6 +83,21 @@ public:
   }
 
 public:
+  std::string remote_endpoint()
+  {
+    errcode_t ec;
+    std::string epstr;
+    boost::asio::ip::tcp::endpoint rep = sock_.remote_endpoint(ec);
+    if (!ec)
+    {
+      epstr += "tcp://";
+      epstr += rep.address().to_string();
+      epstr += ":";
+      epstr += boost::lexical_cast<intbuf_t>(rep.port()).cbegin();
+    }
+    return epstr;
+  }
+
   void init(strand_t& snd, msg_pool_t& msg_pool)
   {
     snd_ = &snd;

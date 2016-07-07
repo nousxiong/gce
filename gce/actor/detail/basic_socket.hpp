@@ -27,6 +27,7 @@ public:
   virtual ~basic_socket() {}
 
 public:
+  virtual std::string remote_endpoint() = 0;
   virtual void init(strand_t&, msg_pool_t&) = 0;
   virtual void send(message*) = 0;
   virtual size_t recv(byte_t*, size_t, yielder) = 0;

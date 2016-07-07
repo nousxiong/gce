@@ -391,6 +391,10 @@ private:
             last_tp = min_tp;
           }
 
+          /// Get remote endpoint and send to sire.
+          std::string rep = prot->remote_endpoint();
+          gce::detail::send(*this, sire, msg_remote_ep, rep);
+
           socket_service_t& svc = 
             base_t::ctx_.select_service<socket_service_t>();
           svc.get_strand().post(spawn_socket_binder(*this, svc, remote_func_list_, prot));
@@ -453,7 +457,7 @@ private:
         begin = pos + 1;
         pos = ep.size();
 
-        uint16_t port =
+        port =
           boost::lexical_cast<uint16_t>(
             ep.substr(begin, pos - begin)
             );

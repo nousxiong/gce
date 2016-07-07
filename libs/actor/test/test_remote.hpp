@@ -61,6 +61,10 @@ public:
       opt.reconn_period = seconds(1);
       connect(base_svr, "client", "tcp://127.0.0.1:14923", opt);
 
+      std::string rep;
+      base_cln->recv(msg_remote_ep, rep);
+      std::cout << "cln remote ep: " << rep << std::endl;
+
       aid_t svr =
         spawn(
           base_svr,
