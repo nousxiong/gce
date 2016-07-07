@@ -81,12 +81,12 @@ private:
   static bool verify_certificate(bool preverified, boost::asio::ssl::verify_context& ctx, log::logger_t& lg)
   {
     // In this example we will simply print the certificate's subject name.
-    /*char subject_name[256];
+    char subject_name[256];
     X509* cert = X509_STORE_CTX_get_current_cert(ctx.native_handle());
-    X509_NAME_oneline(X509_get_subject_name(cert), subject_name, 256);*/
+    X509_NAME_oneline(X509_get_subject_name(cert), subject_name, 256);
     //GCE_INFO(lg) << "Verifying " << subject_name << ", " << preverified;
-    //return preverified;
-    return true;
+    return preverified;
+    //return true;
   }
 
   static void echo_session(stackful_actor self)
@@ -399,8 +399,8 @@ private:
 
     try
     {
-      size_t cln_count = boost::thread::hardware_concurrency();
-      //size_t cln_count = 1;
+      //size_t cln_count = boost::thread::hardware_concurrency();
+      size_t cln_count = 1;
       errcode_t ec;
       attributes attrs;
       attrs.lg_ = lg;
