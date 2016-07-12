@@ -291,30 +291,30 @@ private:
     {
     }
 
-    void operator()() const
+    void operator()()
     {
       invoke(des_);
     }
 
   private:
-    void invoke(aid_t const& des) const
+    void invoke(aid_t const& des)
     {
       self_.pri_relay(des, m_);
     }
 
-    void invoke(svcid_t const& des) const
+    void invoke(svcid_t const& des)
     {
       self_.pri_relay_svc(des, m_);
     }
 
-    void invoke(match_t const& des) const
+    void invoke(match_t const& des)
     {
       self_.pri_relay_svcs(des, m_);
     }
 
     base_t& self_;
     Recver const des_;
-    message const m_;
+    message m_;
   };
 
   template <typename Recver>

@@ -89,9 +89,12 @@ private:
           );
       }
 
+      /// Just for vc test compile
+      base.relay(base.get_aid(), message());
+
       for (std::size_t i=0; i<root_num; ++i)
       {
-        base->recv();
+        base->recv(exit);
       }
     }
     catch (std::exception& ex)
