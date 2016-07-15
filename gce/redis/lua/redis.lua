@@ -77,10 +77,10 @@ function redis.get(res, o)
   return res:get(o)
 end
 
-redis.sn_open = gce.atom('sn_open')
-redis.sn_ping = gce.atom('sn_ping')
-redis.sn_query = gce.atom('sn_query')
-redis.sn_pubmsg = gce.atom('sn_pubmsg')
+redis.sn_open = gce.atom('redis_open')
+redis.sn_ping = gce.atom('redis_ping')
+redis.sn_query = gce.atom('redis_query')
+redis.sn_pubmsg = gce.atom('redis_pubmsg')
 
 
 return redis

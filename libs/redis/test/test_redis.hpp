@@ -63,6 +63,12 @@ private:
     self->match(redis::sn_query).recv(errn, errmsg, res);
     GCE_VERIFY(errn == redis::errno_nil)(errmsg);
     GCE_VERIFY(res->bulkstr() == "value");
+    
+    /// hset key
+    redsn.query("HSET", key_prefix+"hkey", "hfield", 1);
+    self->match(redis::sn_query).recv(errn, errmsg, res);
+    GCE_VERIFY(errn == redis::errno_nil)(errmsg);
+    GCE_VERIFY(res->type() == resp::ty_integer);
 
     /// set binary data
     redsn.query("SET", key_prefix+"base_aid", base_aid);
@@ -150,6 +156,12 @@ private:
     self->match(redis::sn_query).recv(errn, errmsg, res);
     GCE_VERIFY(errn == redis::errno_nil)(errmsg);
     GCE_VERIFY(res->bulkstr() == "value");
+    
+    /// hset key
+    redsn.query("HSET", key_prefix+"hkey", "hfield", 1);
+    self->match(redis::sn_query).recv(errn, errmsg, res);
+    GCE_VERIFY(errn == redis::errno_nil)(errmsg);
+    GCE_VERIFY(res->type() == resp::ty_integer);
 
     /// set binary data
     redsn.query("SET", key_prefix+"base_aid", base_aid);
@@ -340,6 +352,12 @@ private:
         base->match(redis::sn_query).recv(errn, errmsg, res);
         GCE_VERIFY(errn == redis::errno_nil)(errmsg);
         GCE_VERIFY(res->bulkstr() == "value");
+
+        /// hset key
+        redsn.query("HSET", "hkey", "hfield", 1);
+        base->match(redis::sn_query).recv(errn, errmsg, res);
+        GCE_VERIFY(errn == redis::errno_nil)(errmsg);
+        GCE_VERIFY(res->type() == resp::ty_integer);
 
         /// set binary data
         redsn.query("SET", "base_aid", base_aid);

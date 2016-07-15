@@ -24,7 +24,7 @@ namespace gce
 {
 namespace http
 {
-static match_t const as_close = atom("as_close");
+static match_t const as_close = atom("http_close");
 namespace server
 {
 class connection

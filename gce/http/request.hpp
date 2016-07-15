@@ -18,7 +18,7 @@ namespace gce
 {
 namespace http
 {
-static match_t const as_request = atom("as_request");
+static match_t const as_request = atom("http_request");
 
 /// Http request from client.
 struct request

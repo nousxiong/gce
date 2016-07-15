@@ -19,9 +19,9 @@ namespace mysql
 typedef match_t snid_t;
 static snid_t const snid_nil = make_match(u64_nil);
 
-static match_t const sn_open = atom("sn_open");
-static match_t const sn_ping = atom("sn_ping");
-static match_t const sn_query = atom("sn_query");
+static match_t const sn_open = atom("mysql_open");
+static match_t const sn_ping = atom("mysql_ping");
+static match_t const sn_query = atom("mysql_query");
 }
 }
 

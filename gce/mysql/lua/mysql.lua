@@ -60,9 +60,9 @@ function mysql.blob(o)
   return libmysql.fetcher.blob(o)
 end
 
-mysql.sn_open = gce.atom('sn_open')
-mysql.sn_query = gce.atom('sn_query')
-mysql.sn_ping = gce.atom('sn_ping')
+mysql.sn_open = gce.atom('mysql_open')
+mysql.sn_query = gce.atom('mysql_query')
+mysql.sn_ping = gce.atom('mysql_ping')
 
 -- fetcher
 libmysql.fetcher = {}
