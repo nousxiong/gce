@@ -354,10 +354,10 @@ int http_body_is_final(const http_parser *parser);
 #endif
 
 #ifdef HTTP_HEADER_ONLY
-# define HTTP_FUNC inline
+# define HTTP_PARSER_FUNC inline
 # include "http_parser.cpp"
 #else
-# define HTTP_FUNC 
+# define HTTP_PARSER_FUNC 
 #endif
 
 #endif
