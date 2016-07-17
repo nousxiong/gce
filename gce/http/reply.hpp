@@ -127,7 +127,7 @@ const std::string bad_gateway =
 const std::string service_unavailable =
   "HTTP/1.0 503 Service Unavailable\r\n";
 
-boost::asio::const_buffer to_buffer(reply::status stat)
+static boost::asio::const_buffer to_buffer(reply::status stat)
 {
   switch (stat)
   {

@@ -24,7 +24,9 @@ struct mapping
 {
   char const* extension_;
   char const* mime_type_;
-} mappings[] =
+};
+
+static mapping mappings[] =
 {
   { "gif", "image/gif" },
   { "htm", "text/html" },
