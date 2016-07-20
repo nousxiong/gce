@@ -693,35 +693,43 @@ private:
       self_t& self, 
       aid_t const& sire, 
       ctxid_pair_t const& ctxid_pr, 
+      std::string const& ep,
       errcode_t& ec
       )
       : self_(self)
       , sire_(sire)
       , ctxid_pr_(ctxid_pr)
+      , ep_(ep)
       , ec_(ec)
     {
     }
 
     void operator()() const
     {
-      self_.send_ret(sire_, ctxid_pr_, ec_);
+      self_.send_ret(sire_, ctxid_pr_, ep_, ec_);
     }
 
     self_t& self_;
     aid_t const& sire_;
     ctxid_pair_t const& ctxid_pr_;
+    std::string const& ep_;
     errcode_t& ec_;
   };
 
-  void send_ret(aid_t const& sire, ctxid_pair_t ctxid_pr, errcode_t& ec)
+  void send_ret(aid_t const& sire, ctxid_pair_t ctxid_pr, std::string const& ep, errcode_t& ec)
   {
     gce::detail::send(*this, sire, msg_new_conn, ctxid_pr, ec);
-    send_conn_update(sire, ec);
+    send_conn_update(sire, ep, ec);
   }
 
-  void send_conn_update(aid_t const& sire, errcode_t& ec)
+  void send_conn_update(aid_t const& sire, std::string const& ep, errcode_t ec)
   {
-    gce::detail::send(*this, sire, msg_conn_update, ec);
+    gce::detail::send(*this, sire, msg_conn_update, ep, ec);
+  }
+
+  void send_reconn_err(aid_t const& sire, std::string const& ep, errcode_t ec)
+  {
+    gce::detail::send(*this, sire, msg_reconn_err, ep, ec);
   }
 
   void run_conn(aid_t const& sire, ctxid_pair_t target, std::string const& ep, yield_t yld)
@@ -742,7 +750,7 @@ private:
         stat_ = on;
         {
           errcode_t ec;
-          scope_handler<send_ret_binder> scp(send_ret_binder(*this, sire, target, ec));
+          scope_handler<send_ret_binder> scp(send_ret_binder(*this, sire, target, ep, ec));
           skt_ = make_socket(ep);
           ec = connect(true);
         }
@@ -750,9 +758,13 @@ private:
         if (!conn_)
         {
           errcode_t ec = connect();
+          if (ec)
+          {
+            send_reconn_err(sire, ep, ec);
+          }
           if (conn_)
           {
-            send_conn_update(sire, ec);
+            send_conn_update(sire, ep, ec);
           }
         }
 
@@ -767,7 +779,7 @@ private:
           {
             if (conn_)
             {
-              send_conn_update(sire, ec);
+              send_conn_update(sire, ep, ec);
             }
             on_neterr(base_t::get_aid(), ec);
             --curr_reconn_;
@@ -788,9 +800,13 @@ private:
             ec = connect();
             if (!ec)
             {
-              send_conn_update(sire, ec);
+              send_conn_update(sire, ep, ec);
               svc_.conn_socket(curr_pr, skt);
               ctx.conn_socket(curr_pr, skt, actor_socket, svc_.get_index());
+            }
+            else
+            {
+              send_reconn_err(sire, ep, ec);
             }
           }
           else
