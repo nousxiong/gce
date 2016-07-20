@@ -48,7 +48,7 @@ public:
           )
         );
 
-      base->recv();
+      base->recv("notify");
       BOOST_FOREACH(aid_t const& aid, quiter_list)
       {
         base.link(aid);
@@ -58,7 +58,7 @@ public:
 
       for (std::size_t i=0; i<quiter_num; ++i)
       {
-        base->recv();
+        base->recv(exit);
       }
     }
     catch (std::exception& ex)

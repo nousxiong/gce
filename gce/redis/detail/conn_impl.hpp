@@ -235,6 +235,7 @@ struct conn_impl
     , sending_(false)
     , querying_(false)
     , timing_(false)
+    , opened_(false)
     , recv_buffer_(GCE_REDIS_RECV_BUFFER_SIZE)
     , ref_(0)
   {
@@ -277,7 +278,8 @@ struct conn_impl
 
   bool is_open() const
   {
-    return skt_.is_open();
+    //return skt_.is_open();
+    return opened_;
   }
 
   bool conning() const
@@ -339,6 +341,7 @@ struct conn_impl
   void close()
   {
     tmr_.cancel();
+    opened_ = false;
     errcode_t ignored_ec;
     skt_.close(ignored_ec);
   }
@@ -356,13 +359,13 @@ struct conn_impl
   template <typename Handler>
   void async_connect(Handler const& h)
   {
-    errc_.clear();
     connect_queue_.push(h);
     if (conning())
     {
       return;
     }
-
+    
+    errc_.clear();
     conning(true);
     async_wait();
 
@@ -423,6 +426,10 @@ private:
     if (errc)
     {
       ci->close();
+    }
+    else
+    {
+      ci->opened_ = true;
     }
 
     while (!ci->connect_queue_.empty())
@@ -780,6 +787,7 @@ public:
   bool sending_;
   bool querying_;
   bool timing_;
+  bool opened_;
 
   /// current error
   errcode_t errc_;

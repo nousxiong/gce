@@ -1,8 +1,8 @@
-#ifndef service_id_adl_cpp2lua_h_
-#define service_id_adl_cpp2lua_h_
+#ifndef gce_adl_service_id_adl_cpp2lua_h_
+#define gce_adl_service_id_adl_cpp2lua_h_
 
 #include <gce/adata/cpp/adata_cpp2lua.hpp>
-#include <gce/actor/match.adl.c2l.h>
+#include "gce/actor/match.adl.c2l.h"
 
 #include "service_id.adl.h"
 
@@ -23,7 +23,7 @@ namespace adata
     ADATA_INLINE void push( lua_State * L, ::gce::adl::service_id const& value, bool use_adata = true)
     {
       lua_createtable(L, 0, 3);
-      if(use_adata && !set_metatable(L, "ad_mt_gce_adl.service_id")){ luaL_error(L,"unknow type: gce_adl.service_id"); }
+      if(use_adata && !set_metatable(L, "ad.mt.gce.adl.service_id")){ luaL_error(L,"unknow type: gce.adl.service_id"); }
       {push(L, value.valid_);}
       lua_setfield(L, -2, "valid_");
       {push(L, value.ctxid_, use_adata);}

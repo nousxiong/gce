@@ -1,8 +1,8 @@
-#ifndef internal_adl_h_adata_header_define
-#define internal_adl_h_adata_header_define
+#ifndef gce_adl_detail_internal_adl_h_adata_header_define
+#define gce_adl_detail_internal_adl_h_adata_header_define
 
 #include <gce/adata/cpp/adata.hpp>
-#include <gce/actor/match.adl.h>
+#include "gce/actor/match.adl.h"
 
 namespace gce {namespace adl {namespace detail {
   struct header
@@ -30,8 +30,23 @@ namespace gce {namespace adl {namespace detail {
 
 namespace adata
 {
+template<>
+struct is_adata<gce::adl::detail::header>
+{
+  static const bool value = true;
+};
+
+template<>
+struct is_adata<gce::adl::detail::errcode>
+{
+  static const bool value = true;
+};
+
+}
+namespace adata
+{
   template<typename stream_ty>
-  ADATA_INLINE void read( stream_ty& stream, ::gce::adl::detail::header& value)
+  inline void read( stream_ty& stream, ::gce::adl::detail::header& value)
   {
     ::std::size_t offset = stream.read_length();
     uint64_t tag = 0;
@@ -53,13 +68,12 @@ namespace adata
   }
 
   template <typename stream_ty>
-  ADATA_INLINE void skip_read(stream_ty& stream, ::gce::adl::detail::header* value)
+  inline void skip_read(stream_ty& stream, ::gce::adl::detail::header*)
   {
-    (value);
     skip_read_compatible(stream);
   }
 
-  ADATA_INLINE int32_t size_of(const ::gce::adl::detail::header& value)
+  inline int32_t size_of(const ::gce::adl::detail::header& value)
   {
     int32_t size = 0;
     uint64_t tag = 7ULL;
@@ -78,7 +92,7 @@ namespace adata
   }
 
   template<typename stream_ty>
-  ADATA_INLINE void write(stream_ty& stream , const ::gce::adl::detail::header&value)
+  inline void write(stream_ty& stream , const ::gce::adl::detail::header&value)
   {
     uint64_t tag = 7ULL;
     write(stream,tag);
@@ -92,7 +106,7 @@ namespace adata
   }
 
   template<typename stream_ty>
-  ADATA_INLINE void read( stream_ty& stream, ::gce::adl::detail::errcode& value)
+  inline void read( stream_ty& stream, ::gce::adl::detail::errcode& value)
   {
     ::std::size_t offset = stream.read_length();
     uint64_t tag = 0;
@@ -113,13 +127,12 @@ namespace adata
   }
 
   template <typename stream_ty>
-  ADATA_INLINE void skip_read(stream_ty& stream, ::gce::adl::detail::errcode* value)
+  inline void skip_read(stream_ty& stream, ::gce::adl::detail::errcode*)
   {
-    (value);
     skip_read_compatible(stream);
   }
 
-  ADATA_INLINE int32_t size_of(const ::gce::adl::detail::errcode& value)
+  inline int32_t size_of(const ::gce::adl::detail::errcode& value)
   {
     int32_t size = 0;
     uint64_t tag = 3ULL;
@@ -135,7 +148,7 @@ namespace adata
   }
 
   template<typename stream_ty>
-  ADATA_INLINE void write(stream_ty& stream , const ::gce::adl::detail::errcode&value)
+  inline void write(stream_ty& stream , const ::gce::adl::detail::errcode&value)
   {
     uint64_t tag = 3ULL;
     write(stream,tag);

@@ -1,5 +1,5 @@
-#ifndef duration_adl_cpp2lua_h_
-#define duration_adl_cpp2lua_h_
+#ifndef gce_adl_duration_adl_cpp2lua_h_
+#define gce_adl_duration_adl_cpp2lua_h_
 
 #include <gce/adata/cpp/adata_cpp2lua.hpp>
 
@@ -20,7 +20,7 @@ namespace adata
     ADATA_INLINE void push( lua_State * L, ::gce::adl::duration const& value, bool use_adata = true)
     {
       lua_createtable(L, 0, 2);
-      if(use_adata && !set_metatable(L, "ad_mt_gce_adl.duration")){ luaL_error(L,"unknow type: gce_adl.duration"); }
+      if(use_adata && !set_metatable(L, "ad.mt.gce.adl.duration")){ luaL_error(L,"unknow type: gce.adl.duration"); }
       {push(L, value.val_);}
       lua_setfield(L, -2, "val_");
       {push(L, value.ty_);}

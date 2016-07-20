@@ -32,14 +32,10 @@ namespace adata {
         size = 65535;
       }
 
-      // Nous Xiong: change to malloc, for resize realloc
-      uint8_t* buffer = (uint8_t*)std::malloc(size);
-      if (buffer == 0)
-      {
-        return luaL_error(L, "buffer alloc failed");
-      }
+      uint8_t* buffer = (uint8_t*)malloc(size);
 
       void * obj = lua_newuserdata(L, sizeof(adata::zero_copy_buffer));
+      
       adata::zero_copy_buffer * zbuf = new (obj)adata::zero_copy_buffer;
       zbuf->set_write(buffer, size);
 #if LUA_VERSION_NUM == 501
@@ -912,116 +908,386 @@ namespace adata {
 
     typedef struct adata_type
     {
-      char * name;
       adata_member * members;
-      size_t member_count;
-      int32_t   mt_idx;
+      int32_t member_count;
+      int32_t mt_idx;
+      char * name;
     }adata_type;
 
     typedef struct adata_paramter_type
     {
-      int type;
-      int size;
+      int32_t type;
+      int32_t size;
+      char * type_name;
       adata_type * type_define;
     }adata_paramter_type;
 
     typedef struct adata_member
     {
-      int type;
-      int del;
-      int size;
-      int filed_idx;
+      int32_t type;
+      int32_t del;
+      int32_t size;
+      int32_t field_idx;
       char * name;
+      char * type_name;
       adata_type * type_define;
       adata_paramter_type * paramter_type[2];
     }adata_member;
 
-    static int regist_layout(lua_State * L)
+    struct load_contex
     {
-      size_t len;
-      char * layout_buffer = (char *)lua_tolstring(L, 1, &len);
-      zero_copy_buffer buf;
-      buf.set_read(layout_buffer, len);
+      enum
+      {
+        filename_idx = 1,
+        str_pool_idx,
+        str_idx_idx,
+        type_table_idx,
+        mt_list_idx,
+      };
+      int namespace_table_idx;
+      std::string ns;
+      std::vector<char*> namespace_str_pool;
+      std::vector<int32_t> namespace_str_idx;
+      std::vector<adata_type *> types;
+      load_contex()
+        :namespace_table_idx(-1)
+      {}
+    };
+
+    ADATA_INLINE void decode_default_value(lua_State * L, adata::zero_copy_buffer& buf, adata_member * mb, int32_t typename_sid , int member_idx, int construct_list_idx)
+    {
+      switch (mb->type)
+      {
+      case adata_et_fix_int8:
+      case adata_et_fix_int16:
+      case adata_et_fix_int32:
+      case adata_et_fix_int64:
+      case adata_et_int8:
+      case adata_et_int16:
+      case adata_et_int32:
+      case adata_et_int64:
+      {
+        int64_t value = 0;
+        adata::read(buf, value);
+        lua_pushint64(L, value);
+        lua_rawseti(L, construct_list_idx, member_idx);
+        break;
+      }
+      case adata_et_fix_uint8:
+      case adata_et_fix_uint16:
+      case adata_et_fix_uint32:
+      case adata_et_fix_uint64:
+      case adata_et_uint8:
+      case adata_et_uint16:
+      case adata_et_uint32:
+      case adata_et_uint64:
+      {
+        uint64_t value = 0;
+        adata::read(buf, value);
+        lua_pushuint64(L, value);
+        lua_rawseti(L, construct_list_idx, member_idx);
+        break;
+      }
+      case adata_et_float32:
+      {
+        float value = 0;
+        adata::read(buf, value);
+        lua_pushnumber(L, value);
+        lua_rawseti(L, construct_list_idx, member_idx);
+        break;
+      }
+      case adata_et_float64:
+      {
+        double value = 0;
+        adata::read(buf, value);
+        lua_pushnumber(L, value);
+        lua_rawseti(L, construct_list_idx, member_idx);
+        break;
+      }
+      case adata_et_string:
+      {
+        lua_pushstring(L, "");
+        lua_rawseti(L, construct_list_idx, member_idx);
+        break;
+      }
+      case adata_et_type:
+      {
+        lua_rawgeti(L, load_contex::str_idx_idx, typename_sid);
+        lua_rawseti(L, construct_list_idx, member_idx);
+        break;
+      }
+      default:
+      {
+        lua_pushnil(L);
+        lua_rawseti(L, construct_list_idx, member_idx);
+        break;
+      }
+      }
+    }
+
+    ADATA_INLINE int32_t get_lua_len(lua_State * L, int idx)
+    {
+#if LUA_VERSION_NUM == 501
+      return (int32_t)lua_objlen(L, idx);
+#else
+      return (int32_t)lua_rawlen(L, idx);
+#endif
+    }
+
+    ADATA_INLINE int load_type(lua_State * L, adata::zero_copy_buffer& buf, load_contex& context)
+    {
+      //type { layout , name , {field list} , { construct list }  ,  metatable }
+      enum
+      {
+        idx_layout = 1,
+        idx_name,
+        idx_field_list,
+        idx_construct_list,
+        idx_metatable
+      };
+
+      lua_createtable(L, 6, 0);             //define type
+      int type_idx = lua_gettop(L);
+
       uint32_t member_count;
       uint32_t param_type_count;
-      uint32_t string_buffer_size;
       read(buf, member_count);
       read(buf, param_type_count);
-      read(buf, string_buffer_size);
-      uint32_t total_size = sizeof(adata_type) + sizeof(adata_member)*member_count + sizeof(adata_paramter_type)*param_type_count + string_buffer_size;
+      uint32_t total_size = sizeof(adata_type) + sizeof(adata_member)*member_count + sizeof(adata_paramter_type)*param_type_count;
       char * type_buffer = (char *)lua_newuserdata(L, total_size);
       adata_type * type = (adata_type *)type_buffer;
       char * adata_member_buffer = type_buffer + sizeof(adata_type);
       char * adata_paramter_type_buffer = adata_member_buffer + sizeof(adata_member)*member_count;
-      char * string_buffer = adata_paramter_type_buffer + sizeof(adata_paramter_type)*param_type_count;
+
+      lua_pushvalue(L, -1);                   //copy layout for register
+      lua_rawseti(L, type_idx, idx_layout);   //set type layout
+
+      context.types.push_back(type);
 
       type->member_count = member_count;
       type->members = (adata_member *)adata_member_buffer;
 
-      int type_idx = 1;
+      int32_t type_name_sid;
+
+      read(buf, type_name_sid);
+      int member_list_count = 1;
+
+      type->name = context.namespace_str_pool[type_name_sid];
+      type_name_sid = context.namespace_str_idx[type_name_sid];
+      lua_rawgeti(L, load_contex::str_idx_idx, type_name_sid);
+      lua_rawseti(L, type_idx, idx_name);   //set type name
+
+      std::string type_fullname = context.ns;
+      type_fullname.append(".");
+      type_fullname.append(type->name);
+      lua_pushlstring(L, type_fullname.data(), type_fullname.length());
+      lua_pushvalue(L, -2);
+      lua_settable(L, context.type_table_idx);  //register type full name layout to global table
+      lua_pop(L, 1);
+      lua_createtable(L, member_count, 0);  // field name list
+      int field_list_idx = lua_gettop(L);
+      lua_createtable(L, member_count, 0);  // construct list
+      int construct_list_idx = lua_gettop(L);
 
       for (uint32_t i = 0; i < member_count; ++i)
       {
         adata_member * mb = &type->members[i];
         mb->paramter_type[0] = NULL;
         mb->paramter_type[1] = NULL;
-        uint32_t slen = 0;
-        read(buf, slen);
-        buf.read(string_buffer, slen);
-        mb->name = string_buffer;
-        mb->name[slen] = 0;
-        string_buffer += (slen + 1);
-        uint32_t value;
-        read(buf, value);
-        mb->type = (int)value;
-        read(buf, value);
-        mb->del = (int)value;
-        read(buf, value);
-        mb->size = (int)value;
-        read(buf, value);
-        param_type_count = value;
-        lua_rawgeti(L, 2, i + 1);
-        mb->filed_idx = (int)lua_tointeger(L, -1);
-        lua_pop(L, 1);
+        int32_t member_name_sid;
+        read(buf, member_name_sid);
+        mb->name = context.namespace_str_pool[member_name_sid];
+        mb->field_idx = context.namespace_str_idx[member_name_sid];
+        read(buf, mb->type);
+        int32_t member_typename_sid = 0;
 
         if (mb->type == adata_et_type)
         {
-          lua_rawgeti(L, 3, type_idx++);
-          mb->type_define = (adata_type *)lua_touserdata(L, -1);
-          lua_pop(L, 1);
+          read(buf, member_typename_sid);
+          mb->type_name = context.namespace_str_pool[member_typename_sid];
+          member_typename_sid = context.namespace_str_idx[member_typename_sid];
+
+          int32_t namespace_idx = 0;
+          read(buf, namespace_idx);
+          if (namespace_idx != -1)
+          {
+            mb->type_define = context.types[namespace_idx];
+          }
+          else
+          {
+            lua_rawgeti(L, load_contex::str_idx_idx, member_typename_sid);
+            lua_gettable(L, load_contex::type_table_idx);
+            mb->type_define = (adata_type *)lua_touserdata(L, -1);
+            lua_pop(L,1);
+            if (NULL == mb->type_define)
+            {
+              luaL_error(L, "undefined type %s", mb->type_name);
+              return 0;
+            }
+          }
         }
+        else
+        {
+          mb->type_define = NULL;
+        }
+        read(buf, mb->del);
+        if (mb->del == 0)
+        {
+          lua_rawgeti(L, load_contex::str_idx_idx, mb->field_idx);
+          lua_rawseti(L, field_list_idx, member_list_count);
+          decode_default_value(L, buf, mb, member_typename_sid , member_list_count++, construct_list_idx);
+        }
+        read(buf, mb->size);
+        read(buf, param_type_count);
         for (uint32_t p = 0; p < param_type_count; ++p)
         {
           mb->paramter_type[p] = (adata_paramter_type*)adata_paramter_type_buffer;
           adata_paramter_type_buffer += sizeof(adata_paramter_type);
           adata_paramter_type * ptype = mb->paramter_type[p];
-          read(buf, value);
-          ptype->type = (int)value;
-          read(buf, value);
-          ptype->size = (int)value;
+          read(buf, ptype->type);
           if (ptype->type == adata_et_type)
           {
-            lua_rawgeti(L, 3, type_idx++);
-            ptype->type_define = (adata_type *)lua_touserdata(L, -1);
-            lua_pop(L, 1);
+            int ptype_typename_sid;
+
+            read(buf, ptype_typename_sid);
+            ptype->type_name = context.namespace_str_pool[ptype_typename_sid];
+            ptype_typename_sid = context.namespace_str_idx[ptype_typename_sid];
+            int32_t namespace_idx = 0;
+            read(buf, namespace_idx);
+            if (namespace_idx != -1)
+            {
+              ptype->type_define = context.types[namespace_idx];
+            }
+            else
+            {
+              lua_rawgeti(L, load_contex::str_idx_idx, ptype_typename_sid);
+              lua_gettable(L, load_contex::type_table_idx);
+              ptype->type_define = (adata_type *)lua_touserdata(L, -1);
+              lua_pop(L, 1);
+              if (NULL == ptype->type_define)
+              {
+                luaL_error(L, "undefined type %s", ptype->type_name);
+                return 0;
+              }
+            }
           }
           else
           {
             ptype->type_define = NULL;
           }
+          read(buf, ptype->size);
         }
       }
+      lua_createtable(L,4,0);
+      lua_pushvalue(L, -1);
+      int32_t mt_len = 0;
+      mt_len = get_lua_len(L, load_contex::mt_list_idx) + 1;
+      lua_rawseti(L, load_contex::mt_list_idx, mt_len);
+      type->mt_idx = mt_len;                              //assign metatable to type layout
+      lua_pushvalue(L, -1);
+      type_fullname = "ad.mt." + type_fullname;
+      type_fullname.append("\0");
+      lua_setfield(L, LUA_REGISTRYINDEX, type_fullname.c_str());  //register global metatable table for cpp2lua
+      lua_rawseti(L, type_idx, idx_metatable);
+      lua_rawseti(L, type_idx, idx_construct_list);
+      lua_rawseti(L, type_idx, idx_field_list);
       return 1;
     }
 
-    static int set_layout_mt(lua_State * L)
+    ADATA_INLINE void load_namespace(lua_State * L, adata::zero_copy_buffer& buf, load_contex& context)
     {
-      adata_type * type = (adata_type *)lua_touserdata(L, 1);
-      type->mt_idx = (int)lua_tointeger(L, 2);
-      const char * str = lua_tostring(L, 3);
-      lua_pushvalue(L, 4);
-      lua_setfield(L, LUA_REGISTRYINDEX, str);
-      return 0;
+      //{ namespace , {type...} }
+      lua_createtable(L, 2, 0);
+      context.namespace_table_idx = lua_gettop(L);
+      adata::read(buf, context.ns);
+      lua_pushlstring(L, context.ns.data(), context.ns.length());
+      lua_rawseti(L, context.namespace_table_idx, 1);
+      uint32_t string_pool_count = 0;
+      adata::read(buf, string_pool_count);
+      std::string pool_value;
+      context.namespace_str_pool.clear();
+      context.types.clear();
+      int32_t str_idx_len = get_lua_len(L, load_contex::str_idx_idx) + 1;
+
+      for (uint32_t i = 0; i < string_pool_count; ++i)
+      {
+        adata::read(buf, pool_value);
+        lua_pushlstring(L, pool_value.data(), pool_value.length());
+        lua_pushvalue(L, -1);
+        lua_pushvalue(L, -1);
+        char * str = (char *)lua_tostring(L, -1);
+        context.namespace_str_pool.push_back(str);
+        lua_gettable(L, load_contex::str_pool_idx);
+        if (lua_isnil(L, -1))
+        {
+          lua_pop(L, 1);
+          lua_pushinteger(L, str_idx_len);
+          lua_settable(L, load_contex::str_pool_idx);
+          lua_rawseti(L, load_contex::str_idx_idx, str_idx_len);
+          context.namespace_str_idx.push_back(str_idx_len++);
+        }
+        else
+        {
+          int32_t str_idx = (int32_t)lua_tointeger(L, -1);
+          context.namespace_str_idx.push_back(str_idx);
+          lua_pop(L, 3);
+        }
+      }
+      uint32_t type_count = 0;
+      adata::read(buf, type_count);
+      lua_createtable(L, type_count, 0);
+      int type_list_idx = lua_gettop(L);
+      for (uint32_t i = 0; i < type_count; ++i)
+      {
+        load_type(L, buf, context);
+        lua_rawseti(L, type_list_idx, i + 1);
+      }
+      lua_rawseti(L, context.namespace_table_idx, 2);
+    }
+
+    struct buffer_guard
+    {
+      buffer_guard(char * buffer)
+        :buffer_(buffer)
+      {}
+      ~buffer_guard()
+      {
+        std::free(buffer_);
+      }
+    private:
+      char * buffer_;
+    };
+
+    static int lua_load_pack(lua_State * L)
+    {
+      const char * filename = lua_tostring(L, load_contex::filename_idx);
+      FILE * fp = std::fopen(filename, "rb");
+      if (NULL == fp)
+      {
+        luaL_error(L, "can't open %s", filename);
+        return 0;
+      }
+      std::fseek(fp, 0, SEEK_END);
+      size_t len = std::ftell(fp);
+      char * layout_buffer = (char *)std::malloc(len);
+      buffer_guard bg(layout_buffer);
+      std::fseek(fp, 0, SEEK_SET);
+      std::fread(layout_buffer, len, 1, fp);
+      fclose(fp);
+
+      zero_copy_buffer buf;
+      buf.set_read(layout_buffer, len);
+      int32_t count = 0;
+      adata::read(buf, count);
+      lua_createtable(L, count, 0);
+      int namespace_list_idx = lua_gettop(L);
+      for (int32_t i = 0; i < count; ++i)
+      {
+        load_contex contex;
+        load_namespace(L, buf, contex);
+        lua_rawseti(L, namespace_list_idx, i + 1);
+      }
+      return 1;
     }
 
     inline bool set_metatable(lua_State * L, const char * name)
@@ -1133,13 +1399,7 @@ namespace adata {
     {
       (L);
       (type);
-      uint64_t data_tag = 0;
-      int32_t  data_len = 0;
-      ::std::size_t offset_beg = buf->read_length();
-      adata::read(*buf, data_tag);
-      adata::read(*buf, data_len);
-      ::std::size_t offset_cur = buf->read_length();
-      buf->skip_read(data_len - (offset_cur - offset_beg));
+      adata::skip_read_compatible(*buf);
       if (buf->error())
       {
         return 0;
@@ -1385,7 +1645,7 @@ namespace adata {
         }
         else if (read)
         {
-          lua_rawgeti(L, 1, mb->filed_idx);
+          lua_rawgeti(L, 1, mb->field_idx);
           if (read_member(L, buf, mb) == 0)
           {
             lua_pop(L, 1);
@@ -1402,7 +1662,7 @@ namespace adata {
           {
           case adata_et_string:
           {
-            lua_rawgeti(L, 1, mb->filed_idx);
+            lua_rawgeti(L, 1, mb->field_idx);
             lua_pushlstring(L, "", 0);
             lua_settable(L, -3);
             break;
@@ -1410,7 +1670,7 @@ namespace adata {
           case adata_et_list:
           case adata_et_map:
           {
-            lua_rawgeti(L, 1, mb->filed_idx);
+            lua_rawgeti(L, 1, mb->field_idx);
             lua_createtable(L, 0, 0);
             lua_settable(L, -3);
             break;
@@ -1683,9 +1943,9 @@ namespace adata {
       return false;
     }
 
-    static int sizeof_type(lua_State *L, /*zero_copy_buffer * buf, */adata_type * type, sizeof_cache_contex * ctx = NULL);
+    static int sizeof_type(lua_State *L, adata_type * type, sizeof_cache_contex * ctx = NULL);
 
-    static ADATA_INLINE int32_t sizeof_value(lua_State *L, /*zero_copy_buffer * buf, */int type, int size, adata_type * type_define, sizeof_cache_contex * ctx)
+    static ADATA_INLINE int32_t sizeof_value(lua_State *L, int type, int size, adata_type * type_define, sizeof_cache_contex * ctx)
     {
       (size);
       switch (type)
@@ -1717,7 +1977,7 @@ namespace adata {
       {
         if (type_define)
         {
-          return sizeof_type(L, /*buf, */type_define, ctx);
+          return sizeof_type(L, type_define, ctx);
         }
         break;
       }
@@ -1725,7 +1985,7 @@ namespace adata {
       return 0;
     }
 
-    static int32_t sizeof_member(lua_State *L, /*zero_copy_buffer * buf, */adata_member * mb, sizeof_cache_contex * ctx)
+    static int32_t sizeof_member(lua_State *L, adata_member * mb, sizeof_cache_contex * ctx)
     {
       int32_t size = 0;
       if (mb->type == adata_et_list)
@@ -1740,7 +2000,7 @@ namespace adata {
         for (int i = 1; i <= len; ++i)
         {
           lua_rawgeti(L, -1, i);
-          size += sizeof_value(L, /*buf, */ptype->type, ptype->size, ptype->type_define, ctx);
+          size += sizeof_value(L, ptype->type, ptype->size, ptype->type_define, ctx);
           lua_pop(L, 1);
         }
       }
@@ -1753,9 +2013,9 @@ namespace adata {
         while (lua_next(L, -2))
         {
           lua_pushvalue(L, -2);
-          size += sizeof_value(L, /*buf, */ptype1->type, ptype1->size, ptype1->type_define, ctx);
+          size += sizeof_value(L, ptype1->type, ptype1->size, ptype1->type_define, ctx);
           lua_pop(L, 1);
-          size += sizeof_value(L, /*buf, */ptype2->type, ptype2->size, ptype2->type_define, ctx);
+          size += sizeof_value(L, ptype2->type, ptype2->size, ptype2->type_define, ctx);
           lua_pop(L, 1);
           ++i;
         }
@@ -1763,12 +2023,12 @@ namespace adata {
       }
       else
       {
-        size += sizeof_value(L, /*buf, */mb->type, mb->size, mb->type_define, ctx);
+        size += sizeof_value(L, mb->type, mb->size, mb->type_define, ctx);
       }
       return size;
     }
 
-    static int sizeof_type(lua_State *L, /*zero_copy_buffer * buf, */adata_type * type, sizeof_cache_contex * ctx)
+    static int sizeof_type(lua_State *L, adata_type * type, sizeof_cache_contex * ctx)
     {
       type_sizeof_info info;
       size_t top = 0;
@@ -1783,12 +2043,12 @@ namespace adata {
         adata_member * mb = &type->members[i];
         if (mb->del == 0)
         {
-          lua_rawgeti(L, 1, mb->filed_idx);
+          lua_rawgeti(L, 1, mb->field_idx);
           lua_gettable(L, -2);
           if (test_adata_empty(L, mb) == false)
           {
             info.tag |= mask;
-            info.size += sizeof_member(L, /*buf, */mb, ctx);
+            info.size += sizeof_member(L, mb, ctx);
           }
           lua_pop(L, 1);
         }
@@ -1805,10 +2065,8 @@ namespace adata {
 
     static int lua_sizeof(lua_State * L)
     {
-      /// Nous Xiong: remove unused zbuf
-      //zero_copy_buffer * zbuf = (zero_copy_buffer*)lua_touserdata(L, 3);
       adata_type * type = (adata_type*)lua_touserdata(L, 3);
-      int size = sizeof_type(L, /*buf, */type, NULL);
+      int size = sizeof_type(L, type, NULL);
       lua_pushinteger(L, size);
       return 1;
     }
@@ -1944,7 +2202,7 @@ namespace adata {
         if (data_tag&mask)
         {
           adata_member * mb = &type->members[i];
-          lua_rawgeti(L, 1, mb->filed_idx);
+          lua_rawgeti(L, 1, mb->field_idx);
           lua_gettable(L, -2);
           if (write_member(L, buf, mb, ctx) == 0)
           {
@@ -1962,34 +2220,17 @@ namespace adata {
       zero_copy_buffer * zbuf = (zero_copy_buffer*)lua_touserdata(L, 3);
       adata_type * type = (adata_type*)lua_touserdata(L, 4);
       sizeof_cache_contex ctx;
-      int top = lua_gettop(L);
-      sizeof_type(L, /*zbuf, */type, &ctx);
-      top = lua_gettop(L);
+      sizeof_type(L, type, &ctx);
       write_type(L, zbuf, type, ctx);
       lua_pushinteger(L, zbuf->error_code());
       return 1;
     }
 
-#if LUA_VERSION_NUM == 501
-    ADATA_INLINE int init_adata_corec(lua_State *L)
+    ADATA_INLINE const luaL_Reg * build_lib()
     {
-      init_lua_int64(L);
-
-      static const luaL_Reg buf_meta_table[] =
-      {
-        { "__gc", del_zbuf },
-        { NULL, NULL }
-      };
-
-      luaL_newmetatable(L, zbuffer_metatable);
-      luaL_setfuncs(L, buf_meta_table, 0);
-      lua_pushvalue(L, -1);
-      lua_setfield(L, -2, "__index");
-
       static const luaL_Reg lib[] =
       {
-        { "regist_layout", regist_layout },
-        { "set_layout_mt", set_layout_mt },
+        { "load", lua_load_pack },
         { "read", lua_read },
         { "skip_read", lua_skip_read },
         { "size_of", lua_sizeof },
@@ -2087,6 +2328,36 @@ namespace adata {
 
         { NULL, NULL }
       };
+
+      return lib;
+    }
+
+#if LUA_VERSION_NUM == 501
+    ADATA_INLINE int init_adata_corec(lua_State *L)
+    {
+      init_lua_int64(L);
+
+      static const luaL_Reg buf_meta_table[] =
+      {
+        { "__gc", del_zbuf },
+        { "resize", resize_zuf },
+        { "clear", clear_zuf },
+        { "set_error", set_error_zuf },
+        { "trace_error", trace_error_zuf },
+        { "trace_info", trace_info_zuf },
+        { "read_len", get_read_length },
+        { "write_len", get_write_length },
+        { "get_write_data", get_write_buf_zuf },
+        { "set_read_data", set_read_buf_zuf },
+        { NULL, NULL }
+      };
+
+      luaL_newmetatable(L, zbuffer_metatable);
+      luaL_setfuncs(L, buf_meta_table, 0);
+      lua_pushvalue(L, -1);
+      lua_setfield(L, -2, "__index");
+
+      const luaL_Reg * lib = build_lib();
 
       luaL_register(L, "adata_core", lib);
       return 1;
@@ -2100,6 +2371,15 @@ namespace adata {
       static const luaL_Reg buf_meta_table[] =
       {
         { "__gc", del_zbuf },
+        { "resize", resize_zuf },
+        { "clear", clear_zuf },
+        { "set_error", set_error_zuf },
+        { "trace_error", trace_error_zuf },
+        { "trace_info", trace_info_zuf },
+        { "read_len", get_read_length },
+        { "write_len", get_write_length },
+        { "get_write_data", get_write_buf_zuf },
+        { "set_read_data", set_read_buf_zuf },
         { NULL, NULL }
       };
 
@@ -2108,107 +2388,7 @@ namespace adata {
       lua_pushvalue(L, -1);
       lua_setfield(L, -2, "__index");
 
-      static const luaL_Reg lib[] =
-      {
-        { "regist_layout", regist_layout },
-        { "set_layout_mt", set_layout_mt },
-        { "read", lua_read },
-        { "skip_read", lua_skip_read },
-        { "write", lua_write },
-        { "size_of", lua_sizeof },
-        { "new_buf", new_zbuf },
-        { "del_buf", del_zbuf },
-        { "resize_buf", resize_zuf },
-        { "clear_buf", clear_zuf },
-        { "set_error", set_error_zuf },
-        { "trace_error", trace_error_zuf },
-        { "trace_info", trace_info_zuf },
-        { "get_rd_len", get_read_length },
-        { "get_wt_len", get_write_length },
-        { "get_write_data", get_write_buf_zuf },
-        { "set_read_data", set_read_buf_zuf },
-        { "rd_tag", read_tag },
-        { "wt_tag", write_tag },
-        { "rd_fixi8", read_fix_int8 },
-        { "rd_fixu8", read_fix_uint8 },
-        { "rd_fixi16", read_fix_int16 },
-        { "rd_fixu16", read_fix_uint16 },
-        { "rd_fixi32", read_fix_int32 },
-        { "rd_fixu32", read_fix_uint32 },
-        { "rd_fixi64", read_fix_int64 },
-        { "rd_fixu64", read_fix_uint64 },
-        { "rd_i8", read_int8 },
-        { "rd_u8", read_uint8 },
-        { "rd_i16", read_int16 },
-        { "rd_u16", read_uint16 },
-        { "rd_i32", read_int32 },
-        { "rd_u32", read_uint32 },
-        { "rd_i64", read_int64 },
-        { "rd_u64", read_uint64 },
-        { "rd_f32", read_float32 },
-        { "rd_f64", read_float64 },
-        { "rd_str", read_str },
-        { "skip_rd_len", skip_read },
-        { "skip_rd_fixi8", skip_read_fix_int8 },
-        { "skip_rd_fixu8", skip_read_fix_uint8 },
-        { "skip_rd_fixi16", skip_read_fix_int16 },
-        { "skip_rd_fixu16", skip_read_fix_uint16 },
-        { "skip_rd_fixi32", skip_read_fix_int32 },
-        { "skip_rd_fixu32", skip_read_fix_uint32 },
-        { "skip_rd_fixi64", skip_read_fix_int64 },
-        { "skip_rd_fixu64", skip_read_fix_uint64 },
-        { "skip_rd_i8", skip_read_int8 },
-        { "skip_rd_u8", skip_read_uint8 },
-        { "skip_rd_i16", skip_read_int16 },
-        { "skip_rd_u16", skip_read_uint16 },
-        { "skip_rd_i32", skip_read_int32 },
-        { "skip_rd_u32", skip_read_uint32 },
-        { "skip_rd_i64", skip_read_int64 },
-        { "skip_rd_u64", skip_read_uint64 },
-        { "skip_rd_f32", skip_read_float32 },
-        { "skip_rd_f64", skip_read_float64 },
-        { "skip_rd_str", skip_read_str },
-        { "wt_fixi8", write_fix_int8 },
-        { "wt_fixu8", write_fix_uint8 },
-        { "wt_fixi16", write_fix_int16 },
-        { "wt_fixu16", write_fix_uint16 },
-        { "wt_fixi32", write_fix_int32 },
-        { "wt_fixu32", write_fix_uint32 },
-        { "wt_fixi64", write_fix_int64 },
-        { "wt_fixu64", write_fix_uint64 },
-        { "wt_i8", write_int8 },
-        { "wt_u8", write_uint8 },
-        { "wt_i16", write_int16 },
-        { "wt_u16", write_uint16 },
-        { "wt_i32", write_int32 },
-        { "wt_u32", write_uint32 },
-        { "wt_i64", write_int64 },
-        { "wt_u64", write_uint64 },
-        { "wt_f32", write_float32 },
-        { "wt_f64", write_float64 },
-        { "wt_str", write_str },
-        { "szof_fixi8", size_of_fix_int8 },
-        { "szof_fixu8", size_of_fix_uint8 },
-        { "szof_fixi16", size_of_fix_int16 },
-        { "szof_fixu16", size_of_fix_uint16 },
-        { "szof_fixi32", size_of_fix_int32 },
-        { "szof_fixu32", size_of_fix_uint32 },
-        { "szof_fixi64", size_of_fix_int64 },
-        { "szof_fixu64", size_of_fix_uint64 },
-        { "szof_i8", size_of_int8 },
-        { "szof_u8", size_of_uint8 },
-        { "szof_i16", size_of_int16 },
-        { "szof_u16", size_of_uint16 },
-        { "szof_i32", size_of_int32 },
-        { "szof_u32", size_of_uint32 },
-        { "szof_i64", size_of_int64 },
-        { "szof_u64", size_of_uint64 },
-        { "szof_f32", size_of_float32 },
-        { "szof_f64", size_of_float64 },
-        { "szof_str", size_of_str },
-
-        { NULL, NULL }
-      };
+      const luaL_Reg * lib = build_lib();
       luaL_newlib(L, lib);
       return 1;
     }

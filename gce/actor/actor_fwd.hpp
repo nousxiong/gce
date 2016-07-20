@@ -63,6 +63,7 @@ static exit_code_t const exit_remote = atom("gce_ex_remote");
 static exit_code_t const exit_already = atom("gce_ex_alread");
 static exit_code_t const exit_neterr = atom("gce_ex_neterr");
 static match_t const msg_remote_ep = atom("gce_remote_ep");
+static match_t const msg_conn_update = atom("gce_conn_upd");
 
 namespace detail
 {

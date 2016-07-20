@@ -1,5 +1,5 @@
-#ifndef match_adl_cpp2lua_h_
-#define match_adl_cpp2lua_h_
+#ifndef gce_adl_match_adl_cpp2lua_h_
+#define gce_adl_match_adl_cpp2lua_h_
 
 #include <gce/adata/cpp/adata_cpp2lua.hpp>
 
@@ -18,7 +18,7 @@ namespace adata
     ADATA_INLINE void push( lua_State * L, ::gce::adl::match const& value, bool use_adata = true)
     {
       lua_createtable(L, 0, 1);
-      if(use_adata && !set_metatable(L, "ad_mt_gce_adl.match")){ luaL_error(L,"unknow type: gce_adl.match"); }
+      if(use_adata && !set_metatable(L, "ad.mt.gce.adl.match")){ luaL_error(L,"unknow type: gce.adl.match"); }
       {push(L, value.val_);}
       lua_setfield(L, -2, "val_");
     }

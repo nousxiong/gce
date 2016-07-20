@@ -354,7 +354,7 @@ namespace adata {
         }
         case et_int64_uint64:
         {
-          lua_pushboolean(L, it1.value.i64 == it2.value.u64);
+          lua_pushboolean(L, (uint64_t)it1.value.i64 == it2.value.u64);
           break;
         }
         default:
@@ -375,7 +375,7 @@ namespace adata {
         }
         case et_int64_int64:
         {
-          lua_pushboolean(L, it1.value.u64 == it2.value.i64);
+          lua_pushboolean(L, (int64_t)it1.value.u64 == it2.value.i64);
           break;
         }
         case et_int64_uint64:

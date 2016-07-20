@@ -1,5 +1,5 @@
-#ifndef conn_option_adl_cpp2lua_h_
-#define conn_option_adl_cpp2lua_h_
+#ifndef gce_mysql_adl_conn_option_adl_cpp2lua_h_
+#define gce_mysql_adl_conn_option_adl_cpp2lua_h_
 
 #include <gce/adata/cpp/adata_cpp2lua.hpp>
 
@@ -46,7 +46,7 @@ namespace adata
     ADATA_INLINE void push( lua_State * L, ::gce::mysql::adl::conn_option const& value, bool use_adata = true)
     {
       lua_createtable(L, 0, 15);
-      if(use_adata && !set_metatable(L, "ad_mt_gce_mysql_adl.conn_option")){ luaL_error(L,"unknow type: gce_mysql_adl.conn_option"); }
+      if(use_adata && !set_metatable(L, "ad.mt.gce.mysql.adl.conn_option")){ luaL_error(L,"unknow type: gce.mysql.adl.conn_option"); }
       {push(L, value.init_command);}
       lua_setfield(L, -2, "init_command");
       {push(L, value.compress);}

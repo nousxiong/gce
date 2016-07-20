@@ -716,6 +716,12 @@ private:
   void send_ret(aid_t const& sire, ctxid_pair_t ctxid_pr, errcode_t& ec)
   {
     gce::detail::send(*this, sire, msg_new_conn, ctxid_pr, ec);
+    send_conn_update(sire, ec);
+  }
+
+  void send_conn_update(aid_t const& sire, errcode_t& ec)
+  {
+    gce::detail::send(*this, sire, msg_conn_update, ec);
   }
 
   void run_conn(aid_t const& sire, ctxid_pair_t target, std::string const& ep, yield_t yld)
@@ -743,7 +749,11 @@ private:
 
         if (!conn_)
         {
-          connect();
+          errcode_t ec = connect();
+          if (conn_)
+          {
+            send_conn_update(sire, ec);
+          }
         }
 
         //GCE_INFO(lg_) << base_t::ctxid_ << " connected to " << target.first << " ok";
@@ -755,6 +765,10 @@ private:
           errcode_t ec = recv(msg);
           if (ec)
           {
+            if (conn_)
+            {
+              send_conn_update(sire, ec);
+            }
             on_neterr(base_t::get_aid(), ec);
             --curr_reconn_;
             if (curr_reconn_ == 0)
@@ -774,6 +788,7 @@ private:
             ec = connect();
             if (!ec)
             {
+              send_conn_update(sire, ec);
               svc_.conn_socket(curr_pr, skt);
               ctx.conn_socket(curr_pr, skt, actor_socket, svc_.get_index());
             }

@@ -1,5 +1,5 @@
-#ifndef echo_adl_h_adata_header_define
-#define echo_adl_h_adata_header_define
+#ifndef gce_adl_echo_adl_h_adata_header_define
+#define gce_adl_echo_adl_h_adata_header_define
 
 #include <gce/adata/cpp/adata.hpp>
 
@@ -17,8 +17,17 @@ namespace gce {namespace adl {
 
 namespace adata
 {
+template<>
+struct is_adata<gce::adl::echo_data>
+{
+  static const bool value = true;
+};
+
+}
+namespace adata
+{
   template<typename stream_ty>
-  ADATA_INLINE void read( stream_ty& stream, ::gce::adl::echo_data& value)
+  inline void read( stream_ty& stream, ::gce::adl::echo_data& value)
   {
     ::std::size_t offset = stream.read_length();
     uint64_t tag = 0;
@@ -46,22 +55,23 @@ namespace adata
   }
 
   template <typename stream_ty>
-  ADATA_INLINE void skip_read(stream_ty& stream, ::gce::adl::echo_data* value)
+  inline void skip_read(stream_ty& stream, ::gce::adl::echo_data*)
   {
-    (value);
     skip_read_compatible(stream);
   }
 
-  ADATA_INLINE int32_t size_of(const ::gce::adl::echo_data& value)
+  inline int32_t size_of(const ::gce::adl::echo_data& value)
   {
     int32_t size = 0;
     uint64_t tag = 2ULL;
     if(!value.hi_.empty()){tag|=1ULL;}
     if(tag&1ULL)
     {
-      int32_t len = (int32_t)(value.hi_).size();
-      size += size_of(len);
-      size += len;
+      {
+        uint32_t len = (uint32_t)(value.hi_).size();
+        size += size_of(len);
+        size += len;
+        }
     }
     {
       size += size_of(value.i_);
@@ -72,7 +82,7 @@ namespace adata
   }
 
   template<typename stream_ty>
-  ADATA_INLINE void write(stream_ty& stream , const ::gce::adl::echo_data&value)
+  inline void write(stream_ty& stream , const ::gce::adl::echo_data&value)
   {
     uint64_t tag = 2ULL;
     if(!value.hi_.empty()){tag|=1ULL;}

@@ -1,5 +1,5 @@
-#ifndef spt_option_adl_h_adata_header_define
-#define spt_option_adl_h_adata_header_define
+#ifndef gce_asio_adl_spt_option_adl_h_adata_header_define
+#define gce_asio_adl_spt_option_adl_h_adata_header_define
 
 #include <gce/adata/cpp/adata.hpp>
 
@@ -24,8 +24,17 @@ namespace gce {namespace asio {namespace adl {
 
 namespace adata
 {
+template<>
+struct is_adata<gce::asio::adl::spt_option>
+{
+  static const bool value = true;
+};
+
+}
+namespace adata
+{
   template<typename stream_ty>
-  ADATA_INLINE void read( stream_ty& stream, ::gce::asio::adl::spt_option& value)
+  inline void read( stream_ty& stream, ::gce::asio::adl::spt_option& value)
   {
     ::std::size_t offset = stream.read_length();
     uint64_t tag = 0;
@@ -49,13 +58,12 @@ namespace adata
   }
 
   template <typename stream_ty>
-  ADATA_INLINE void skip_read(stream_ty& stream, ::gce::asio::adl::spt_option* value)
+  inline void skip_read(stream_ty& stream, ::gce::asio::adl::spt_option*)
   {
-    (value);
     skip_read_compatible(stream);
   }
 
-  ADATA_INLINE int32_t size_of(const ::gce::asio::adl::spt_option& value)
+  inline int32_t size_of(const ::gce::asio::adl::spt_option& value)
   {
     int32_t size = 0;
     uint64_t tag = 31ULL;
@@ -80,7 +88,7 @@ namespace adata
   }
 
   template<typename stream_ty>
-  ADATA_INLINE void write(stream_ty& stream , const ::gce::asio::adl::spt_option&value)
+  inline void write(stream_ty& stream , const ::gce::asio::adl::spt_option&value)
   {
     uint64_t tag = 31ULL;
     write(stream,tag);

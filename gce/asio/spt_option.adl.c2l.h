@@ -1,5 +1,5 @@
-#ifndef spt_option_adl_cpp2lua_h_
-#define spt_option_adl_cpp2lua_h_
+#ifndef gce_asio_adl_spt_option_adl_cpp2lua_h_
+#define gce_asio_adl_spt_option_adl_cpp2lua_h_
 
 #include <gce/adata/cpp/adata_cpp2lua.hpp>
 
@@ -26,7 +26,7 @@ namespace adata
     ADATA_INLINE void push( lua_State * L, ::gce::asio::adl::spt_option const& value, bool use_adata = true)
     {
       lua_createtable(L, 0, 5);
-      if(use_adata && !set_metatable(L, "ad_mt_gce_asio_adl.spt_option")){ luaL_error(L,"unknow type: gce_asio_adl.spt_option"); }
+      if(use_adata && !set_metatable(L, "ad.mt.gce.asio.adl.spt_option")){ luaL_error(L,"unknow type: gce.asio.adl.spt_option"); }
       {push(L, value.baud_rate);}
       lua_setfield(L, -2, "baud_rate");
       {push(L, value.flow_control);}

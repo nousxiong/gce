@@ -1,8 +1,8 @@
-#ifndef net_option_adl_cpp2lua_h_
-#define net_option_adl_cpp2lua_h_
+#ifndef gce_adl_net_option_adl_cpp2lua_h_
+#define gce_adl_net_option_adl_cpp2lua_h_
 
 #include <gce/adata/cpp/adata_cpp2lua.hpp>
-#include <gce/actor/duration.adl.c2l.h>
+#include "gce/actor/duration.adl.c2l.h"
 
 #include "net_option.adl.h"
 
@@ -39,7 +39,7 @@ namespace adata
     ADATA_INLINE void push( lua_State * L, ::gce::adl::net_option const& value, bool use_adata = true)
     {
       lua_createtable(L, 0, 11);
-      if(use_adata && !set_metatable(L, "ad_mt_gce_adl.net_option")){ luaL_error(L,"unknow type: gce_adl.net_option"); }
+      if(use_adata && !set_metatable(L, "ad.mt.gce.adl.net_option")){ luaL_error(L,"unknow type: gce.adl.net_option"); }
       {push(L, value.is_router);}
       lua_setfield(L, -2, "is_router");
       {push(L, value.heartbeat_period, use_adata);}

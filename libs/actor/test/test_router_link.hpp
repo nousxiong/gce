@@ -73,8 +73,8 @@ public:
 
       for (std::size_t i=0; i<quiter_num; ++i)
       {
-        base1->recv();
-        base2->recv();
+        base1->recv(exit);
+        base2->recv(exit);
       }
     }
     catch (std::exception& ex)

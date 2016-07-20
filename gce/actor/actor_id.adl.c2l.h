@@ -1,9 +1,9 @@
-#ifndef actor_id_adl_cpp2lua_h_
-#define actor_id_adl_cpp2lua_h_
+#ifndef gce_adl_actor_id_adl_cpp2lua_h_
+#define gce_adl_actor_id_adl_cpp2lua_h_
 
 #include <gce/adata/cpp/adata_cpp2lua.hpp>
-#include <gce/actor/match.adl.c2l.h>
-#include <gce/actor/service_id.adl.c2l.h>
+#include "gce/actor/match.adl.c2l.h"
+#include "gce/actor/service_id.adl.c2l.h"
 
 #include "actor_id.adl.h"
 
@@ -34,7 +34,7 @@ namespace adata
     ADATA_INLINE void push( lua_State * L, ::gce::adl::actor_id const& value, bool use_adata = true)
     {
       lua_createtable(L, 0, 8);
-      if(use_adata && !set_metatable(L, "ad_mt_gce_adl.actor_id")){ luaL_error(L,"unknow type: gce_adl.actor_id"); }
+      if(use_adata && !set_metatable(L, "ad.mt.gce.adl.actor_id")){ luaL_error(L,"unknow type: gce.adl.actor_id"); }
       {push(L, value.ctxid_, use_adata);}
       lua_setfield(L, -2, "ctxid_");
       {push(L, value.timestamp_);}

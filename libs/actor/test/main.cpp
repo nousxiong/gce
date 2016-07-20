@@ -76,7 +76,7 @@ int main()
   try
   {
     /// basic test
-    gce::linked_ut::run();
+    /*gce::linked_ut::run();
     gce::coro_ut::run();
     gce::send_recv_ut::run();
     gce::actor_ut::run();
@@ -95,11 +95,11 @@ int main()
     gce::common_relay_ut::run();
     gce::message_ut::run();
     gce::pointer_ut::run();
-    gce::addon_ut::run();
+    gce::addon_ut::run();*/
 
     /// remote test
-    gce::socket_ut::run();
-    gce::socket_broken_ut::run();
+    //gce::socket_ut::run();
+    /*gce::socket_broken_ut::run();
     gce::big_msg_ut::run();
     gce::remote_ut::run();
     gce::remote_link_ut::run();
@@ -111,14 +111,14 @@ int main()
     gce::service_ut::run();
     gce::service_link_ut::run();
     gce::service_broken_ut::run();
-    gce::reconn_ut::run();
+    gce::reconn_ut::run();*/
 
     /// script test
 #ifdef GCE_LUA
-    gce::lua_actor_ut::run();
+    /*gce::lua_actor_ut::run();
     gce::lua_socket_ut::run();
     gce::lua_service_ut::run();
-    gce::lua_service_link_ut::run();
+    gce::lua_service_link_ut::run();*/
 #endif
   }
   catch (std::exception& ex)

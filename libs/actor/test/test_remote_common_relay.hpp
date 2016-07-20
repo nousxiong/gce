@@ -73,12 +73,12 @@ private:
       std::vector<aid_t> root_list(root_num);
       for (std::size_t i=0; i<root_num; ++i)
       {
-        root_list[i] = base->recv();
+        root_list[i] = base->recv("done");
       }
 
       BOOST_FOREACH(aid_t aid, root_list)
       {
-        base->send(aid);
+        base->send(aid, "quit");
       }
       thrs.join_all();
     }
@@ -130,12 +130,12 @@ private:
       int i = 0;
       base->send(last_id, "hi", i);
       message msg;
-      aid_t sender = base.recv(msg);
+      aid_t sender = base->match("hello").raw(msg).recv();
       BOOST_ASSERT(sender == first_id);
       BOOST_ASSERT(msg.get_type() == atom("hello"));
 
-      mix->send(base_aid);
-      mix->recv();
+      mix->send(base_aid, "done");
+      mix->recv("quit");
     }
     catch (std::exception& ex)
     {

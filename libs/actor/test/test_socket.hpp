@@ -59,6 +59,10 @@ public:
       ep += boost::lexical_cast<std::string>(port);
       connect(base1, "two", ep, opt);
 
+      errcode_t ec;
+      base1->recv(msg_conn_update, ec);
+      //std::cout << "conn_update: " << ec << std::endl;
+
       for (std::size_t i=0; i<echo_num; ++i)
       {
         base1->send(echo_aid, "echo");
@@ -66,7 +70,7 @@ public:
       }
       base1->send(echo_aid, "end");
 
-      base2->recv();
+      base2->recv(exit);
     }
     catch (std::exception& ex)
     {
@@ -85,10 +89,12 @@ public:
         match_t type = msg.get_type();
         if (type == atom("echo"))
         {
+          //std::cout << "recv echo\n";
           self.send(sender, msg);
         }
         else
         {
+          //std::cout << "recv end\n";
           break;
         }
       }

@@ -474,9 +474,9 @@ namespace adata
 
     ADATA_INLINE std::size_t write(const char * buffer, std::size_t len)  { return m_stream_.write(buffer, len) , len; }
 
-    ADATA_INLINE::std::size_t read_length() const { return m_stream_.tellg(); }
+    ADATA_INLINE std::size_t read_length() const { return (std::size_t)m_stream_.tellg(); }
 
-    ADATA_INLINE::std::size_t write_length() const{ return m_stream_.tellp(); }
+    ADATA_INLINE std::size_t write_length() const{ return (std::size_t)m_stream_.tellp(); }
 
     ADATA_INLINE void skip_read(std::size_t len)  { m_stream_.seekg(len); }
 
@@ -2124,12 +2124,12 @@ namespace adata
       return (const char *)this->m_write_header_ptr;
     }
 
-    ADATA_INLINE::std::size_t read_length() const
+    ADATA_INLINE std::size_t read_length() const
     {
       return this->m_read_ptr - this->m_read_header_ptr;
     }
 
-    ADATA_INLINE::std::size_t write_length() const
+    ADATA_INLINE std::size_t write_length() const
     {
       return this->m_write_ptr - this->m_write_header_ptr;
     }
@@ -3631,6 +3631,11 @@ namespace adata
     }
   }
 
+  template<typename T>
+  struct is_adata
+  {
+    static const bool value = false;
+  };
 }
 
 #undef ADATA_LEPOS2_0

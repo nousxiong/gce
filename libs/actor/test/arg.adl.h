@@ -1,5 +1,5 @@
-#ifndef arg_adl_h_adata_header_define
-#define arg_adl_h_adata_header_define
+#ifndef gce_adl_arg_adl_h_adata_header_define
+#define gce_adl_arg_adl_h_adata_header_define
 
 #include <gce/adata/cpp/adata.hpp>
 
@@ -16,7 +16,7 @@ namespace gce {namespace adl {
   struct arg2_t
   {
     int32_t i_;
-    ::std::vector< int32_t> v_;
+    ::std::vector< int32_t > v_;
     arg2_t()
     :    i_(0)
     {}
@@ -26,8 +26,23 @@ namespace gce {namespace adl {
 
 namespace adata
 {
+template<>
+struct is_adata<gce::adl::arg1_t>
+{
+  static const bool value = true;
+};
+
+template<>
+struct is_adata<gce::adl::arg2_t>
+{
+  static const bool value = true;
+};
+
+}
+namespace adata
+{
   template<typename stream_ty>
-  ADATA_INLINE void read( stream_ty& stream, ::gce::adl::arg1_t& value)
+  inline void read( stream_ty& stream, ::gce::adl::arg1_t& value)
   {
     ::std::size_t offset = stream.read_length();
     uint64_t tag = 0;
@@ -55,22 +70,23 @@ namespace adata
   }
 
   template <typename stream_ty>
-  ADATA_INLINE void skip_read(stream_ty& stream, ::gce::adl::arg1_t* value)
+  inline void skip_read(stream_ty& stream, ::gce::adl::arg1_t*)
   {
-    (value);
     skip_read_compatible(stream);
   }
 
-  ADATA_INLINE int32_t size_of(const ::gce::adl::arg1_t& value)
+  inline int32_t size_of(const ::gce::adl::arg1_t& value)
   {
     int32_t size = 0;
     uint64_t tag = 2ULL;
     if(!value.hi_.empty()){tag|=1ULL;}
     if(tag&1ULL)
     {
-      int32_t len = (int32_t)(value.hi_).size();
-      size += size_of(len);
-      size += len;
+      {
+        uint32_t len = (uint32_t)(value.hi_).size();
+        size += size_of(len);
+        size += len;
+        }
     }
     {
       size += size_of(value.i_);
@@ -81,7 +97,7 @@ namespace adata
   }
 
   template<typename stream_ty>
-  ADATA_INLINE void write(stream_ty& stream , const ::gce::adl::arg1_t&value)
+  inline void write(stream_ty& stream , const ::gce::adl::arg1_t&value)
   {
     uint64_t tag = 2ULL;
     if(!value.hi_.empty()){tag|=1ULL;}
@@ -101,7 +117,7 @@ namespace adata
   }
 
   template<typename stream_ty>
-  ADATA_INLINE void read( stream_ty& stream, ::gce::adl::arg2_t& value)
+  inline void read( stream_ty& stream, ::gce::adl::arg2_t& value)
   {
     ::std::size_t offset = stream.read_length();
     uint64_t tag = 0;
@@ -132,25 +148,26 @@ namespace adata
   }
 
   template <typename stream_ty>
-  ADATA_INLINE void skip_read(stream_ty& stream, ::gce::adl::arg2_t* value)
+  inline void skip_read(stream_ty& stream, ::gce::adl::arg2_t*)
   {
-    (value);
     skip_read_compatible(stream);
   }
 
-  ADATA_INLINE int32_t size_of(const ::gce::adl::arg2_t& value)
+  inline int32_t size_of(const ::gce::adl::arg2_t& value)
   {
     int32_t size = 0;
     uint64_t tag = 2ULL;
     if(!value.v_.empty()){tag|=1ULL;}
     if(tag&1ULL)
     {
-      int32_t len = (int32_t)(value.v_).size();
-      size += size_of(len);
-      for (::std::vector< int32_t>::const_iterator i = value.v_.begin() ; i != value.v_.end() ; ++i)
       {
-        size += size_of(*i);
-      }
+        uint32_t len = (uint32_t)(value.v_).size();
+        size += size_of(len);
+        for (::std::vector< int32_t >::const_iterator i = value.v_.begin() ; i != value.v_.end() ; ++i)
+        {
+          size += size_of(*i);
+        }
+        }
     }
     {
       size += size_of(value.i_);
@@ -161,7 +178,7 @@ namespace adata
   }
 
   template<typename stream_ty>
-  ADATA_INLINE void write(stream_ty& stream , const ::gce::adl::arg2_t&value)
+  inline void write(stream_ty& stream , const ::gce::adl::arg2_t&value)
   {
     uint64_t tag = 2ULL;
     if(!value.v_.empty()){tag|=1ULL;}
@@ -174,7 +191,7 @@ namespace adata
       uint32_t len = (uint32_t)(value.v_).size();
       write(stream,len);
       int32_t count = 0;
-      for (::std::vector< int32_t>::const_iterator i = value.v_.begin() ; i != value.v_.end() ; ++i, ++count)
+      for (::std::vector< int32_t >::const_iterator i = value.v_.begin() ; i != value.v_.end() ; ++i, ++count)
       {
         {write(stream,*i);}
         {if(stream.error()){stream.trace_error("v_",count);return;}}

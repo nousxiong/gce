@@ -68,7 +68,7 @@ public:
       }
       base1->send(echo_aid, "end");
 
-      base2->recv();
+      base2->recv(exit);
     }
     catch (std::exception& ex)
     {

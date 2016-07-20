@@ -80,7 +80,7 @@ public:
         base_svr->send(cln, "init", svr, echo_num);
       }
 
-      base_svr->recv();
+      base_svr->recv(exit);
     }
     catch (std::exception& ex)
     {

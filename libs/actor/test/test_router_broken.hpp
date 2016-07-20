@@ -48,7 +48,7 @@ public:
           base1.get_aid(), boost::ref(a)
           )
         );
-      aid_t mix_id = base1->recv();
+      aid_t mix_id = base1->recv("done");
 
       netopt_t opt = make_netopt();
       opt.is_router = 1;
@@ -70,7 +70,7 @@ public:
             );
         base1.link(quiter_list[i]);
       }
-      base1->send(mix_id);
+      base1->send(mix_id, "quit");
 
       thr.join();
 
@@ -81,8 +81,8 @@ public:
 
       for (std::size_t i=0; i<quiter_num; ++i)
       {
-        base1->recv();
-        base2->recv();
+        base1->recv(exit);
+        base2->recv(exit);
       }
     }
     catch (std::exception& ex)
@@ -103,8 +103,8 @@ public:
       netopt_t opt = make_netopt();
       opt.is_router = 1;
       gce::bind(base, "tcp://127.0.0.1:14923", remote_func_list_t(), opt);
-      mix->send(base_id);
-      mix->recv();
+      mix->send(base_id, "done");
+      mix->recv("quit");
     }
     catch (std::exception& ex)
     {

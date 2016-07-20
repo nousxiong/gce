@@ -1,8 +1,8 @@
-#ifndef service_id_adl_h_adata_header_define
-#define service_id_adl_h_adata_header_define
+#ifndef gce_adl_service_id_adl_h_adata_header_define
+#define gce_adl_service_id_adl_h_adata_header_define
 
 #include <gce/adata/cpp/adata.hpp>
-#include <gce/actor/match.adl.h>
+#include "gce/actor/match.adl.h"
 
 namespace gce {namespace adl {
   struct service_id
@@ -19,8 +19,17 @@ namespace gce {namespace adl {
 
 namespace adata
 {
+template<>
+struct is_adata<gce::adl::service_id>
+{
+  static const bool value = true;
+};
+
+}
+namespace adata
+{
   template<typename stream_ty>
-  ADATA_INLINE void read( stream_ty& stream, ::gce::adl::service_id& value)
+  inline void read( stream_ty& stream, ::gce::adl::service_id& value)
   {
     ::std::size_t offset = stream.read_length();
     uint64_t tag = 0;
@@ -42,13 +51,12 @@ namespace adata
   }
 
   template <typename stream_ty>
-  ADATA_INLINE void skip_read(stream_ty& stream, ::gce::adl::service_id* value)
+  inline void skip_read(stream_ty& stream, ::gce::adl::service_id*)
   {
-    (value);
     skip_read_compatible(stream);
   }
 
-  ADATA_INLINE int32_t size_of(const ::gce::adl::service_id& value)
+  inline int32_t size_of(const ::gce::adl::service_id& value)
   {
     int32_t size = 0;
     uint64_t tag = 7ULL;
@@ -67,7 +75,7 @@ namespace adata
   }
 
   template<typename stream_ty>
-  ADATA_INLINE void write(stream_ty& stream , const ::gce::adl::service_id&value)
+  inline void write(stream_ty& stream , const ::gce::adl::service_id&value)
   {
     uint64_t tag = 7ULL;
     write(stream,tag);

@@ -1,5 +1,5 @@
-#ifndef conn_option_adl_h_adata_header_define
-#define conn_option_adl_h_adata_header_define
+#ifndef gce_mysql_adl_conn_option_adl_h_adata_header_define
+#define gce_mysql_adl_conn_option_adl_h_adata_header_define
 
 #include <gce/adata/cpp/adata.hpp>
 
@@ -40,8 +40,17 @@ namespace gce {namespace mysql {namespace adl {
 
 namespace adata
 {
+template<>
+struct is_adata<gce::mysql::adl::conn_option>
+{
+  static const bool value = true;
+};
+
+}
+namespace adata
+{
   template<typename stream_ty>
-  ADATA_INLINE void read( stream_ty& stream, ::gce::mysql::adl::conn_option& value)
+  inline void read( stream_ty& stream, ::gce::mysql::adl::conn_option& value)
   {
     ::std::size_t offset = stream.read_length();
     uint64_t tag = 0;
@@ -103,13 +112,12 @@ namespace adata
   }
 
   template <typename stream_ty>
-  ADATA_INLINE void skip_read(stream_ty& stream, ::gce::mysql::adl::conn_option* value)
+  inline void skip_read(stream_ty& stream, ::gce::mysql::adl::conn_option*)
   {
-    (value);
     skip_read_compatible(stream);
   }
 
-  ADATA_INLINE int32_t size_of(const ::gce::mysql::adl::conn_option& value)
+  inline int32_t size_of(const ::gce::mysql::adl::conn_option& value)
   {
     int32_t size = 0;
     uint64_t tag = 32318ULL;
@@ -119,9 +127,11 @@ namespace adata
     if(!value.set_charset_name.empty()){tag|=256ULL;}
     if(tag&1ULL)
     {
-      int32_t len = (int32_t)(value.init_command).size();
-      size += size_of(len);
-      size += len;
+      {
+        uint32_t len = (uint32_t)(value.init_command).size();
+        size += size_of(len);
+        size += len;
+        }
     }
     {
       size += size_of(value.compress);
@@ -140,21 +150,27 @@ namespace adata
     }
     if(tag&64ULL)
     {
-      int32_t len = (int32_t)(value.read_default_file).size();
-      size += size_of(len);
-      size += len;
+      {
+        uint32_t len = (uint32_t)(value.read_default_file).size();
+        size += size_of(len);
+        size += len;
+        }
     }
     if(tag&128ULL)
     {
-      int32_t len = (int32_t)(value.read_default_group).size();
-      size += size_of(len);
-      size += len;
+      {
+        uint32_t len = (uint32_t)(value.read_default_group).size();
+        size += size_of(len);
+        size += len;
+        }
     }
     if(tag&256ULL)
     {
-      int32_t len = (int32_t)(value.set_charset_name).size();
-      size += size_of(len);
-      size += len;
+      {
+        uint32_t len = (uint32_t)(value.set_charset_name).size();
+        size += size_of(len);
+        size += len;
+        }
     }
     {
       size += size_of(value.client_compress);
@@ -180,7 +196,7 @@ namespace adata
   }
 
   template<typename stream_ty>
-  ADATA_INLINE void write(stream_ty& stream , const ::gce::mysql::adl::conn_option&value)
+  inline void write(stream_ty& stream , const ::gce::mysql::adl::conn_option&value)
   {
     uint64_t tag = 32318ULL;
     if(!value.init_command.empty()){tag|=1ULL;}
