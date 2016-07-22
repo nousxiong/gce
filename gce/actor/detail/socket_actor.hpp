@@ -1741,7 +1741,7 @@ private:
         {
           retry = 0;
           on_neterr(base_t::get_aid());
-          if (init)
+          //if (init)
           {
             return ec;
           }
