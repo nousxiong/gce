@@ -20,6 +20,7 @@
 #include <gce/mysql/session.hpp>
 #include <gce/mysql/result.hpp>
 #include <gce/mysql/datetime.hpp>
+#include <gce/mysql/newdecimal.hpp>
 #include <gce/mysql/exception.hpp>
 #include <gce/mysql/error.hpp>
 #include <gce/mysql/errno.hpp>

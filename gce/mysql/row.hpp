@@ -12,6 +12,7 @@
 
 #include <gce/mysql/config.hpp>
 #include <gce/mysql/datetime.hpp>
+#include <gce/mysql/newdecimal.hpp>
 #include <gce/mysql/error.hpp>
 #include <boost/chrono/chrono.hpp>
 #include <boost/lexical_cast.hpp>
@@ -329,6 +330,30 @@ struct row
     return (*this)(i, t, ec);
   }
 
+  newdecimal* operator()(int i, newdecimal& t, errcode_t& ec)
+  {
+    double* val = fetch_number(i, t.val_, MYSQL_TYPE_NEWDECIMAL, ec);
+    if (val == 0)
+    {
+      return 0;
+    }
+    else
+    {
+      return &t;
+    }
+  }
+
+  newdecimal* operator()(char const* name, newdecimal& t, errcode_t& ec)
+  {
+    size_t i = find_field_index(name);
+    if (i == size_nil)
+    {
+      ec = make_errcode(field_name_not_found);
+      GCE_VERIFY(!ec).except(ec);
+    }
+    return (*this)(i, t, ec);
+  }
+
   sysclock_t::time_point* operator()(int i, sysclock_t::time_point& t, errcode_t& ec)
   {
     int64_t val;
@@ -581,6 +606,22 @@ struct row
   {
     errcode_t ec;
     datetime* rt = (*this)(name, t, ec);
+    GCE_VERIFY(!ec)(name).except(ec);
+    return rt;
+  }
+
+  newdecimal* operator()(int i, newdecimal& t)
+  {
+    errcode_t ec;
+    newdecimal* rt = (*this)(i, t, ec);
+    GCE_VERIFY(!ec)(i).except(ec);
+    return rt;
+  }
+
+  newdecimal* operator()(char const* name, newdecimal& t)
+  {
+    errcode_t ec;
+    newdecimal* rt = (*this)(name, t, ec);
     GCE_VERIFY(!ec)(name).except(ec);
     return rt;
   }
