@@ -417,7 +417,7 @@ private:
     }
     else
     {
-      gce::detail::send(*this, sire, msg_new_bind);
+      send_ret(sire, -1);
     }
     quit(exc, exit_msg);
   }
