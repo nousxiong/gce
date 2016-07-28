@@ -24,4 +24,5 @@ net_option
   gce.adl.duration rebind_period;
   int32 rebind_try;
   int8 reuse_conn;
+  int32 reconn_max_try;
 }

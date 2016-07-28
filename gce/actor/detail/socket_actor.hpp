@@ -107,7 +107,7 @@ public:
   {
     GCE_ASSERT(stat_ == ready)(stat_).log(lg_, "socket_actor status error");
     opt_ = opt;
-    curr_reconn_ = u32_nil;
+    curr_reconn_ = opt.reconn_max_try;
   }
 
   void connect(

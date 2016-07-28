@@ -13,6 +13,7 @@ namespace gce {namespace adl {
     int32_t init_reconn_try;
     int32_t reconn_try;
     int32_t rebind_try;
+    int32_t reconn_max_try;
     ::gce::adl::duration heartbeat_period;
     ::gce::adl::duration reconn_wait_period;
     ::gce::adl::duration init_reconn_period;
@@ -24,7 +25,8 @@ namespace gce {namespace adl {
     heartbeat_count(0),
     init_reconn_try(0),
     reconn_try(0),
-    rebind_try(0)
+    rebind_try(0),
+    reconn_max_try(0)
     {}
   };
 
@@ -63,6 +65,7 @@ namespace adata
     if(tag&256ULL)    {read(stream,value.rebind_period);{if(stream.error()){stream.trace_error("rebind_period",-1);return;}}}
     if(tag&512ULL)    {read(stream,value.rebind_try);{if(stream.error()){stream.trace_error("rebind_try",-1);return;}}}
     if(tag&1024ULL)    {read(stream,value.reuse_conn);{if(stream.error()){stream.trace_error("reuse_conn",-1);return;}}}
+    if(tag&2048ULL)    {read(stream,value.reconn_max_try);{if(stream.error()){stream.trace_error("reconn_max_try",-1);return;}}}
     if(len_tag >= 0)
     {
       ::std::size_t read_len = stream.read_length() - offset;
@@ -80,7 +83,7 @@ namespace adata
   inline int32_t size_of(const ::gce::adl::net_option& value)
   {
     int32_t size = 0;
-    uint64_t tag = 2047ULL;
+    uint64_t tag = 4095ULL;
     {
       size += size_of(value.is_router);
     }
@@ -114,6 +117,9 @@ namespace adata
     {
       size += size_of(value.reuse_conn);
     }
+    {
+      size += size_of(value.reconn_max_try);
+    }
     size += size_of(tag);
     size += size_of(size + size_of(size));
     return size;
@@ -122,7 +128,7 @@ namespace adata
   template<typename stream_ty>
   inline void write(stream_ty& stream , const ::gce::adl::net_option&value)
   {
-    uint64_t tag = 2047ULL;
+    uint64_t tag = 4095ULL;
     write(stream,tag);
     if(stream.error()){return;}
     write(stream,size_of(value));
@@ -138,6 +144,7 @@ namespace adata
     {write(stream,value.rebind_period);{if(stream.error()){stream.trace_error("rebind_period",-1);return;}}}
     {write(stream,value.rebind_try);{if(stream.error()){stream.trace_error("rebind_try",-1);return;}}}
     {write(stream,value.reuse_conn);{if(stream.error()){stream.trace_error("reuse_conn",-1);return;}}}
+    {write(stream,value.reconn_max_try);{if(stream.error()){stream.trace_error("reconn_max_try",-1);return;}}}
     return;
   }
 
