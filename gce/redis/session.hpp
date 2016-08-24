@@ -384,6 +384,26 @@ private:
     }
   }
 
+  void arg(resp::buffer const& str)
+  {
+    try_channel(str.data());
+
+    size_t len = str.size();
+    if (len <= RESP_LARGE_BUFFER_SIZE)
+    {
+      resp::buffer buffer;
+      buffer.append(str);
+      cmd_.arg(buffer);
+    }
+    else
+    {
+      message& large_arg = curr_req_->reserve_large_arg(len);
+      byte_t const* buf = large_arg.reset_write(0);
+      large_arg << message::chunk((byte_t const*)str.data(), len);
+      cmd_.arg(resp::buffer((char const*)buf, len));
+    }
+  }
+
   template <class T>
   typename boost::enable_if_c<!boost::is_arithmetic<T>::value, void>::type arg(T const& t)
   {
