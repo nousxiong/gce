@@ -176,6 +176,15 @@ public:
     return data_;
   }
 
+  /// Get holding data.
+  /**
+   * @return Holding data pointer.
+   */
+  char* data()
+  {
+    return data_;
+  }
+
   /// Get holding data size.
   /**
    * @return Holding data size.
@@ -282,6 +291,13 @@ public:
         data_ = (char*)std::realloc(data_, capacity_);
       }
     }
+  }
+
+  /// Resize size.
+  void resize(size_t size)
+  {
+    reserve(size);
+    size_ = size;
   }
 
   /// Append other buffer's data, if self is ref, then change to small or large.
