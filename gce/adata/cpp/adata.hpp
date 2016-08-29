@@ -1100,16 +1100,17 @@ namespace adata
     typedef int8_t value_type;
     const int bytes = sizeof(value_type);
     value_type read_value[2] = { 0 };
-    stream.read((char*)&value, 1);
+    uint8_t tag = 0;
+    stream.read((char*)&tag, 1);
     if (stream.bad())
     {
       stream.m_error_code = stream_buffer_overflow;
       return;
     }
-    if (value > const_tag_as_value)
+    if (tag > const_tag_as_value)
     {
       int sign = 1;
-      if ((long)value & const_negative_bit_value)
+      if (tag & const_negative_bit_value)
       {
         sign = -1;
       }
@@ -1133,6 +1134,10 @@ namespace adata
       {
         value = read_value[1];
       }
+    }
+    else
+    {
+      value = tag;
     }
   }
 
