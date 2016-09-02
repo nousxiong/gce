@@ -800,6 +800,7 @@ private:
             ec = connect();
             if (!ec)
             {
+              ++curr_reconn_;
               send_conn_update(sire, ep, ec);
               svc_.conn_socket(curr_pr, skt);
               ctx.conn_socket(curr_pr, skt, actor_socket, svc_.get_index());
