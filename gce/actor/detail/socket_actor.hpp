@@ -92,6 +92,7 @@ public:
     , recving_msg_(false)
     , conn_(false)
     , curr_reconn_(0)
+    , reconn_max_try_(1)
     , is_router_(false)
     , lg_(base_t::ctx_.get_logger())
   {
@@ -108,6 +109,7 @@ public:
     GCE_ASSERT(stat_ == ready)(stat_).log(lg_, "socket_actor status error");
     opt_ = opt;
     curr_reconn_ = opt.reconn_max_try;
+    reconn_max_try_ = opt.reconn_max_try;
   }
 
   void connect(
@@ -800,7 +802,7 @@ private:
             ec = connect();
             if (!ec)
             {
-              ++curr_reconn_;
+              curr_reconn_ = reconn_max_try_;
               send_conn_update(sire, ep, ec);
               svc_.conn_socket(curr_pr, skt);
               ctx.conn_socket(curr_pr, skt, actor_socket, svc_.get_index());
@@ -1953,6 +1955,7 @@ private:
   //std::deque<message> conn_cache_;
   linked_queue<message> conn_cache_;
   size_t curr_reconn_;
+  size_t reconn_max_try_;
 
   /// remote links
   struct straight_set
