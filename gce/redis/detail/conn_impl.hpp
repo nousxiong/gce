@@ -711,9 +711,13 @@ private:
   {
     errc_ = ec;
     resp::result resp_res;
-    tmr_.cancel();
     querying(false);
-    close();
+    if (!conning())
+    {
+      tmr_.cancel();
+      close();
+    }
+
     while (!response_queue_.empty())
     {
       response_t h = response_queue_.front();
