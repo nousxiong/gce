@@ -148,6 +148,10 @@ public:
         /// rhs is large
         if (rhs.capacity_ > capacity_)
         {
+          if (is_ref() || is_small())
+          {
+            data_ = 0;
+          }
           data_ = (char*)std::realloc(data_, rhs.capacity_);
           if (data_ == 0)
           {
@@ -248,6 +252,7 @@ public:
     dealloc();
     capacity_ = 0;
     size_ = 0;
+    data_ = 0;
   }
 
   /// Reserve memory, may change buffer type(ref, small or large).
