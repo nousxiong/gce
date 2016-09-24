@@ -384,7 +384,7 @@ private:
     }
   }
 
-  void arg(resp::buffer const& str)
+  /*void arg(resp::buffer const& str)
   {
     try_channel(str.data());
 
@@ -402,7 +402,7 @@ private:
       large_arg << message::chunk((byte_t const*)str.data(), len);
       cmd_.arg(resp::buffer((char const*)buf, len));
     }
-  }
+  }*/
 
   template <class T>
   typename boost::enable_if_c<!boost::is_arithmetic<T>::value, void>::type arg(T const& t)

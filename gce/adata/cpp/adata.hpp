@@ -1543,7 +1543,7 @@ namespace adata
       else
       {
         bytes[0] = 0x80;
-        bytes[1] = (uint8_t)-value;
+        bytes[1] = (uint8_t)value;
       }
       write_bytes = 2;
     }
@@ -1604,7 +1604,7 @@ namespace adata
     else
     {
       uint8_t negative_bit = 0;
-      value_type temp = value;
+      uint16_t temp = value;
       if (value < 0)
       {
         negative_bit = const_negative_bit_value;
@@ -1696,7 +1696,7 @@ namespace adata
     else
     {
       uint8_t negative_bit = 0;
-      value_type temp = value;
+      uint32_t temp = value;
       if (value < 0)
       {
         negative_bit = const_negative_bit_value;
@@ -1845,7 +1845,7 @@ namespace adata
     else
     {
       uint8_t negative_bit = 0;
-      value_type temp = value;
+      uint64_t temp = value;
       if (value < 0)
       {
         negative_bit = const_negative_bit_value;
@@ -2964,7 +2964,7 @@ namespace adata
     else
     {
       uint8_t negative_bit = 0;
-      value_type temp = value;
+      uint8_t temp = value;
       if (value < 0)
       {
         negative_bit = const_negative_bit_value;
@@ -3039,7 +3039,7 @@ namespace adata
     else
     {
       uint8_t negative_bit = 0;
-      value_type temp = value;
+      uint16_t temp = value;
       if (value < 0)
       {
         negative_bit = const_negative_bit_value;
@@ -3162,7 +3162,7 @@ namespace adata
     else
     {
       uint8_t negative_bit = 0;
-      value_type temp = value;
+      uint32_t temp = value;
       if (value < 0)
       {
         negative_bit = const_negative_bit_value;
@@ -3378,7 +3378,7 @@ namespace adata
     else
     {
       uint8_t negative_bit = 0;
-      value_type temp = value;
+      uint64_t temp = value;
       if (value < 0)
       {
         negative_bit = const_negative_bit_value;
