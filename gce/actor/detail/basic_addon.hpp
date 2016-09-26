@@ -30,7 +30,9 @@ public:
   typedef basic_service<context_t> service_t;
 
 public:
-  template <typename T, typename Attachment = boost::none_t>
+  struct void_t {};
+
+  template <typename T, typename Attachment = void_t>
   class guard
     : public ref_count
   {
@@ -97,7 +99,7 @@ public:
     attachment_t am_;
   };
 
-  template <typename T, typename Attachment = boost::none_t>
+  template <typename T, typename Attachment = void_t>
   class scope
     : private boost::noncopyable
   {
