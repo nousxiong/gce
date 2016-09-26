@@ -115,13 +115,13 @@ public:
 #ifdef GCE_POOL_CHECK
     ++check_;
 #endif
+
+    t->on_free();
     if (size_ >= max_size_)
     {
       delete t;
       return;
     }
-
-    t->on_free();
     add(t);
   }
 
