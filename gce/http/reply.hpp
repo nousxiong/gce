@@ -43,8 +43,19 @@ struct reply
     service_unavailable = 503
   } stat_;
 
+  reply()
+    : stat_(status::ok)
+    , http_major_(1)
+    , http_minor_(0)
+    , upgrade_(false)
+  {
+  }
+
   explicit reply(status stat)
     : stat_(stat)
+    , http_major_(1)
+    , http_minor_(0)
+    , upgrade_(false)
   {
   }
 
@@ -64,23 +75,32 @@ struct reply
   void clear()
   {
     stat_ = status::ok;
+    errmsg_.clear();
+    http_major_ = 1;
+    http_minor_ = 0;
     headers_.clear();
     content_.clear();
+    upgrade_ = false;
+    version_.clear();
   }
+
+  /// If not empty means http parser error.
+  std::string errmsg_;
+
+  /// Http version.
+  int http_major_;
+  int http_minor_;
 
   /// The headers to be included in the reply.
   std::vector<header> headers_;
 
   /// The content to be sent in the reply.
   fmt::MemoryWriter content_;
+  /// If true then all data in content_(e.g. websocket).
+  bool upgrade_;
 
-  /// Convert the reply into a vector of buffers. The buffers do not own the
-  /// underlying memory blocks, therefore the reply object must remain valid and
-  /// not be changed until the write operation has completed.
-  //std::vector<boost::asio::const_buffer> to_buffers();
-
-  /// Get a stock reply.
-  //static reply stock_reply(status stat);
+  /// Internal use.
+  std::string version_;
 };
 
 typedef boost::shared_ptr<reply> reply_ptr;
@@ -92,40 +112,50 @@ static void write(reply_ptr rep, fmt::CStringRef format_str, fmt::ArgList args)
 
 FMT_VARIADIC(void, write, reply_ptr, fmt::CStringRef)
 
+static void write(reply_ptr rep, char const* buf, size_t len)
+{
+  rep->content_ << fmt::StringRef(buf, len);
+}
+
+static void write(reply_ptr rep, fmt::MemoryWriter& content)
+{
+  rep->content_ << fmt::StringRef(content.data(), content.size());
+}
+
 namespace status_strings
 {
 const std::string ok =
-  "HTTP/1.0 200 OK\r\n";
+  "200 OK\r\n";
 const std::string created =
-  "HTTP/1.0 201 Created\r\n";
+  "201 Created\r\n";
 const std::string accepted =
-  "HTTP/1.0 202 Accepted\r\n";
+  "202 Accepted\r\n";
 const std::string no_content =
-  "HTTP/1.0 204 No Content\r\n";
+  "204 No Content\r\n";
 const std::string multiple_choices =
-  "HTTP/1.0 300 Multiple Choices\r\n";
+  "300 Multiple Choices\r\n";
 const std::string moved_permanently =
-  "HTTP/1.0 301 Moved Permanently\r\n";
+  "301 Moved Permanently\r\n";
 const std::string moved_temporarily =
-  "HTTP/1.0 302 Moved Temporarily\r\n";
+  "302 Moved Temporarily\r\n";
 const std::string not_modified =
-  "HTTP/1.0 304 Not Modified\r\n";
+  "304 Not Modified\r\n";
 const std::string bad_request =
-  "HTTP/1.0 400 Bad Request\r\n";
+  "400 Bad Request\r\n";
 const std::string unauthorized =
-  "HTTP/1.0 401 Unauthorized\r\n";
+  "401 Unauthorized\r\n";
 const std::string forbidden =
-  "HTTP/1.0 403 Forbidden\r\n";
+  "403 Forbidden\r\n";
 const std::string not_found =
-  "HTTP/1.0 404 Not Found\r\n";
+  "404 Not Found\r\n";
 const std::string internal_server_error =
-  "HTTP/1.0 500 Internal Server Error\r\n";
+  "500 Internal Server Error\r\n";
 const std::string not_implemented =
-  "HTTP/1.0 501 Not Implemented\r\n";
+  "501 Not Implemented\r\n";
 const std::string bad_gateway =
-  "HTTP/1.0 502 Bad Gateway\r\n";
+  "502 Bad Gateway\r\n";
 const std::string service_unavailable =
-  "HTTP/1.0 503 Service Unavailable\r\n";
+  "503 Service Unavailable\r\n";
 
 static boost::asio::const_buffer to_buffer(reply::status stat)
 {
@@ -169,12 +199,6 @@ static boost::asio::const_buffer to_buffer(reply::status stat)
 }
 
 } /// namespace status_strings
-
-namespace misc_strings
-{
-const char name_value_separator[] = { ':', ' ' };
-const char crlf[] = { '\r', '\n' };
-} /// namespace misc_strings
 } /// namespace http
 } /// namespace gce
 

@@ -18,29 +18,77 @@ namespace gce
 {
 namespace http
 {
-static match_t const as_request = atom("http_request");
-
 /// Http request from client.
 struct request
 {
   request()
-    : http_major_(0)
+    : http_major_(1)
     , http_minor_(0)
     , upgrade_(false)
   {
   }
 
-  std::string errmsg_; /// If not empty means http parser error.
+  boost::string_ref get_content() const
+  {
+    return boost::string_ref(content_.data(), content_.size());
+  }
+
+  void add_header(char const* name, std::string const& value)
+  {
+    headers_.push_back(header());
+    header& h = headers_.back();
+    h.name_ = name;
+    h.value_ = value;
+  }
+
+  void clear()
+  {
+    errmsg_.clear();
+    method_.clear();
+    uri_.clear();
+    http_major_ = 1;
+    http_minor_ = 0;
+    headers_.clear();
+    content_.clear();
+    upgrade_ = false;
+    version_.clear();
+  }
+
+  /// If not empty means http parser error.
+  std::string errmsg_;
+
   std::string method_;
   std::string uri_;
   int http_major_;
   int http_minor_;
   std::vector<header> headers_;
-  std::string body_;
-  bool upgrade_; /// If true then all data in body_(e.g. websocket).
+  fmt::MemoryWriter content_;
+
+  /// If true then all data in body_(e.g. websocket).
+  bool upgrade_;
+
+  /// Internal use.
+  std::string version_;
 };
 
 typedef boost::shared_ptr<request> request_ptr;
+
+static void write(request_ptr req, fmt::CStringRef format_str, fmt::ArgList args)
+{
+  req->content_.write(format_str, args);
+}
+
+FMT_VARIADIC(void, write, request_ptr, fmt::CStringRef)
+
+static void write(request_ptr req, char const* buf, size_t len)
+{
+  req->content_ << fmt::StringRef(buf, len);
+}
+
+static void write(request_ptr req, fmt::MemoryWriter& content)
+{
+  req->content_ << fmt::StringRef(content.data(), content.size());
+}
 } /// namespace http
 } /// namespace gce
 

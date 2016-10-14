@@ -13,6 +13,7 @@
 #include <gce/http/config.hpp>
 #include <gce/http/http.hpp>
 #include <gce/http/server/connection.hpp>
+#include <gce/http/client/connection.hpp>
 #include <gce/http/header.hpp>
 #include <gce/http/request.hpp>
 #include <gce/http/reply.hpp>

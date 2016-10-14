@@ -23,4 +23,27 @@
 # define GCE_HTTP_SERVER_RECV_BUFFER_SIZE 8192
 #endif
 
+#ifndef GCE_HTTP_CLIENT_RECV_BUFFER_SIZE 
+# define GCE_HTTP_CLIENT_RECV_BUFFER_SIZE 8192
+#endif
+
+namespace gce
+{
+namespace http
+{
+static match_t const as_close = atom("http_close");
+static match_t const as_request = atom("http_request");
+static match_t const as_reply = atom("http_reply");
+
+namespace misc_strings
+{
+char const name_value_separator[] = { ':', ' ' };
+char const crlf[] = { '\r', '\n' };
+char const space[] = { ' ' };
+char const point[] = { '.' };
+char const http_str[] = { 'H','T','T','P','/' };
+} /// namespace misc_strings
+}
+}
+
 #endif /// GCE_HTTP_CONFIG_HPP

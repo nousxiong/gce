@@ -85,8 +85,8 @@ private:
     X509* cert = X509_STORE_CTX_get_current_cert(ctx.native_handle());
     X509_NAME_oneline(X509_get_subject_name(cert), subject_name, 256);
     //GCE_INFO(lg) << "Verifying " << subject_name << ", " << preverified;
-    return preverified;
-    //return true;
+    //return preverified;
+    return true;
   }
 
   static void echo_session(stackful_actor self)
@@ -138,7 +138,7 @@ private:
         }*/
 
         reply_ptr rep = conn.make_reply(reply::ok);
-        write(rep, req->body_);
+        write(rep, req->content_);
         boost::string_ref cont = rep->get_content();
         
         rep->add_header("Content-Length", boost::lexical_cast<std::string>(cont.size()));

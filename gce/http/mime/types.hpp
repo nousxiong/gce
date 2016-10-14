@@ -33,6 +33,7 @@ static mapping mappings[] =
   { "html", "text/html" },
   { "jpg", "image/jpeg" },
   { "png", "image/png" },
+  { "json", "text/json" },
   { 0, 0 } // Marks end of list.
 };
 }

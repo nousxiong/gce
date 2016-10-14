@@ -120,11 +120,14 @@ private:
         }*/
 
         reply_ptr rep = conn.make_reply(reply::ok);
-        write(rep, req->body_);
+        rep->http_major_ = 1;
+        rep->http_minor_ = 1;
+        write(rep, req->content_);
         boost::string_ref cont = rep->get_content();
         
         rep->add_header("Content-Length", boost::lexical_cast<std::string>(cont.size()));
         rep->add_header("Content-Type", mime::ext2type("html"));
+        rep->add_header("Connection", "keep-alive");
 
         conn.send(rep);
 
@@ -347,6 +350,88 @@ private:
     }
   }
 
+  static void echo_client(stackful_actor self)
+  {
+    context& ctx = self.get_context();
+    log::logger_t& lg = ctx.get_logger();
+    try
+    {
+      size_t ecount = 3;
+      boost::asio::io_service& ios = ctx.get_io_service();
+      errcode_t ec;
+      boost::shared_ptr<tcp_resolver_t::iterator> eitr;
+      self->match("init").recv(eitr);
+
+      boost::shared_ptr<tcp_socket_t> tcp_skt = boost::make_shared<tcp_socket_t>(boost::ref(ios));
+      asio::tcp::socket skt(self, tcp_skt);
+      skt.async_connect(*eitr);
+      self->match(asio::tcp::as_conn).recv(ec);
+      GCE_VERIFY(!ec).except(ec);
+
+      client::connection conn(self, tcp_skt);
+      reply_ptr rep;
+
+      for (size_t i=0; i<ecount; ++i)
+      {
+        request_ptr req = conn.make_request();
+        req->method_ = "GET";
+        req->http_major_ = 1;
+        req->http_minor_ = 1;
+        req->uri_ = "/favicon.ico";
+        req->add_header("Host", "0.0.0.0=5000");
+        req->add_header("User-Agent", "Mozilla/5.0 (X11; U; Linux i686; en-US; rv:1.9) Gecko/2008061015 Firefox/3.0");
+        req->add_header("Accept", "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8");
+        req->add_header("Connection", "keep-alive");
+        bool is_end = i + 1 == ecount;
+        if (is_end)
+        {
+          write(req, "bye\n");
+          req->add_header("Content-Length", boost::lexical_cast<std::string>(req->content_.size()));
+        }
+        size_t pipeline = 2;
+        for (size_t p=0; p<pipeline; ++p)
+        {
+          conn.send(req);
+          if (is_end)
+          {
+            break;
+          }
+        }
+
+        for (size_t p=0; p<pipeline; ++p)
+        {
+          errcode_t ec;
+          reply_ptr rep;
+          conn.recv();
+          self->match(as_reply).recv(ec, rep);
+          GCE_VERIFY(!ec).except(ec);
+          if (rep->upgrade_)
+          {
+            /// If upgrade e.g. websocket, user must send handshake(websocket) here.
+            GCE_VERIFY(false);
+          }
+
+          if (!rep->errmsg_.empty())
+          {
+            GCE_ERROR(lg) << "Http client " << rep->errmsg_;
+            conn.close();
+            self->recv(as_close);
+            break;
+          }
+
+          if (is_end)
+          {
+            break;
+          }
+        }
+      }
+    }
+    catch (std::exception& ex)
+    {
+      GCE_ERROR(lg) << ex.what();
+    }
+  }
+
   static void test_base()
   {
     log::asio_logger lgr;
@@ -355,16 +440,17 @@ private:
     try
     {
       size_t cln_count = boost::thread::hardware_concurrency();
+      size_t test_cln_count = boost::thread::hardware_concurrency();
       errcode_t ec;
       attributes attrs;
       attrs.lg_ = lg;
       context ctx_svr(attrs);
 
-      threaded_actor base_svr = spawn(ctx_svr);
+      threaded_actor base_act = spawn(ctx_svr);
 
-      aid_t svr = spawn(base_svr, boost::bind(&http_ut::echo_server, _arg1), monitored);
-      base_svr->send(svr, "init");
-      base_svr->recv("ready");
+      aid_t svr = spawn(base_act, boost::bind(&http_ut::echo_server, _arg1), monitored);
+      base_act->send(svr, "init");
+      base_act->recv("ready");
 
       boost::thread_group http_clients;
       for (size_t i=0; i<cln_count; ++i)
@@ -377,10 +463,28 @@ private:
         http_clients.create_thread(boost::bind(&http_ut::http_client, lg, err));
       }
 
-      http_clients.join_all();
+      asio::tcp::resolver rsv(base_act);
+      boost::asio::ip::tcp::resolver::query qry("127.0.0.1", "23333");
+      rsv.async_resolve(qry);
+      boost::shared_ptr<tcp_resolver_t::iterator> eitr;
+      base_act->match(asio::tcp::as_resolve).recv(ec, eitr);
+      GCE_VERIFY(!ec).except(ec);
 
-      base_svr->send(svr, "end");
-      base_svr->recv(exit);
+      for (size_t i=0; i<test_cln_count; ++i)
+      {
+        aid_t cln = spawn(base_act, boost::bind(&http_ut::echo_client, _arg1), monitored);
+        base_act->send(cln, "init", eitr);
+      }
+
+      /// Wait all clients quit.
+      http_clients.join_all();
+      for (size_t i=0; i<test_cln_count; ++i)
+      {
+        base_act->recv(exit);
+      }
+
+      base_act->send(svr, "end");
+      base_act->recv(exit);
     }
     catch (std::exception& ex)
     {

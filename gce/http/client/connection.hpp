@@ -7,13 +7,13 @@
 /// See https://github.com/nousxiong/gce for latest version.
 ///
 
-#ifndef GCE_HTTP_SERVER_CONNECTION_HPP
-#define GCE_HTTP_SERVER_CONNECTION_HPP
+#ifndef GCE_HTTP_CLIENT_CONNECTION_HPP
+#define GCE_HTTP_CLIENT_CONNECTION_HPP
 
 #include <gce/http/config.hpp>
 #include <gce/http/request.hpp>
 #include <gce/http/reply.hpp>
-#include <gce/http/detail/request_parser.hpp>
+#include <gce/http/detail/reply_parser.hpp>
 #include <boost/array.hpp>
 #include <boost/lexical_cast.hpp>
 #ifdef GCE_OPENSSL
@@ -24,7 +24,7 @@ namespace gce
 {
 namespace http
 {
-namespace server
+namespace client
 {
 class connection
   : public addon_t
@@ -52,10 +52,10 @@ class connection
     boost::shared_ptr<ssl_socket_t> ssl_skt_;
 #endif
     /// Recv buffer
-    boost::array<char, GCE_HTTP_SERVER_RECV_BUFFER_SIZE> recv_buffer_;
-    /// The incoming request.
+    boost::array<char, GCE_HTTP_CLIENT_RECV_BUFFER_SIZE> recv_buffer_;
+    /// The request to be sent to the server.
     std::deque<request_ptr> requests_;
-    /// The reply to be sent back to the client.
+    /// The incoming reply.
     std::deque<reply_ptr> replies_;
 
     /// Asio handler_allocator array.
@@ -109,25 +109,25 @@ public:
   }
 
 public:
-  void recv(request_ptr req = request_ptr())
+  void recv(reply_ptr rep = reply_ptr())
   {
     GCE_ASSERT(!closing_);
     if (!parser_.is_upgrade())
     {
-      GCE_ASSERT(!req);
+      GCE_ASSERT(!rep);
     }
     else
     {
       GCE_ASSERT(!recving_);
     }
-    start_recv(req);
+    start_recv(rep);
   }
 
-  void send(reply_ptr rep)
+  void send(request_ptr req)
   {
-    GCE_ASSERT(!!rep);
+    GCE_ASSERT(!!req);
     GCE_ASSERT(!closing_);
-    scp_.get()->get_attachment().replies_.push_back(rep);
+    scp_.get()->get_attachment().requests_.push_back(req);
     if (!sending_)
     {
       start_send();
@@ -152,22 +152,9 @@ public:
     closing_ = true;
   }
 
-  reply_ptr make_reply(reply::status stat)
+  request_ptr make_request()
   {
-    return boost::make_shared<reply>(stat);
-  }
-
-  /// Get an stock reply.
-  reply_ptr stock_reply(reply::status stat)
-  {
-    reply_ptr rep = make_reply(stat);
-    rep->stat_ = stat;
-    rep->headers_.resize(2);
-    rep->headers_[0].name_ = "Content-Length";
-    rep->headers_[0].value_ = boost::lexical_cast<std::string>(rep->content_.size());
-    rep->headers_[1].name_ = "Content-Type";
-    rep->headers_[1].value_ = "text/html";
-    return rep;
+    return boost::make_shared<request>();
   }
 
   /// For lua actor.
@@ -198,47 +185,47 @@ private:
     }
   }
 
-  void start_recv(request_ptr req)
+  void start_recv(reply_ptr rep)
   {
-    std::deque<request_ptr>& requests = scp_.get()->get_attachment().requests_;
-    bool sent_req = false;
-    if (!requests.empty())
+    std::deque<reply_ptr>& replies = scp_.get()->get_attachment().replies_;
+    bool sent_rep = false;
+    if (!replies.empty())
     {
-      if (goon_ && requests.size() > 1)
+      if (goon_ && replies.size() > 1)
       {
-        send_request();
-        sent_req = true;
+        send_reply();
+        sent_rep = true;
       }
       else if (!goon_)
       {
-        send_request();
-        sent_req = true;
+        send_reply();
+        sent_rep = true;
       }
     }
 
-    if (!sent_req && !recving_)
+    if (!sent_rep && !recving_)
     {
-      async_recv(req);
+      async_recv(rep);
     }
   }
 
-  void async_recv(request_ptr req)
+  void async_recv(reply_ptr rep)
   {
     if (tcp_)
     {
-      pri_async_recv(scp_.get()->get_attachment().tcp_skt_, req);
+      pri_async_recv(scp_.get()->get_attachment().tcp_skt_, rep);
     }
     else
     {
 #ifdef GCE_OPENSSL
-      pri_async_recv(scp_.get()->get_attachment().ssl_skt_, req);
+      pri_async_recv(scp_.get()->get_attachment().ssl_skt_, rep);
 #endif
     }
     recving_ = true;
   }
 
   template <typename SocketPtr>
-  void pri_async_recv(SocketPtr skt, request_ptr req)
+  void pri_async_recv(SocketPtr skt, reply_ptr rep)
   {
     skt->async_read_some(
       boost::asio::buffer(scp_.get()->get_attachment().recv_buffer_), 
@@ -246,7 +233,7 @@ private:
         gce::detail::make_asio_alloc_handler(
           scp_.get()->get_attachment().ha_arr_[ha_recv],
           boost::bind(
-            &self_t::handle_recv, scp_.get(), req, 
+            &self_t::handle_recv, scp_.get(), rep, 
             boost::asio::placeholders::error, boost::asio::placeholders::bytes_transferred
             )
           )
@@ -254,7 +241,7 @@ private:
       );
   }
 
-  static void handle_recv(guard_ptr guard, request_ptr req, errcode_t const& ec, size_t bytes_transferred)
+  static void handle_recv(guard_ptr guard, reply_ptr rep, errcode_t const& ec, size_t bytes_transferred)
   {
     self_t* o = guard->get();
     if (!o)
@@ -262,25 +249,25 @@ private:
       return;
     }
 
-    o->pri_handle_recv(req, ec, bytes_transferred);
+    o->pri_handle_recv(rep, ec, bytes_transferred);
   }
 
-  void pri_handle_recv(request_ptr req, errcode_t const& ec, size_t bytes_transferred)
+  void pri_handle_recv(reply_ptr rep, errcode_t const& ec, size_t bytes_transferred)
   {
     recving_ = false;
     if (!ec)
     {
-      std::deque<request_ptr>& requests = scp_.get()->get_attachment().requests_;
-      boost::array<char, GCE_HTTP_SERVER_RECV_BUFFER_SIZE> const& recv_buffer = scp_.get()->get_attachment().recv_buffer_;
+      std::deque<reply_ptr>& replies = scp_.get()->get_attachment().replies_;
+      boost::array<char, GCE_HTTP_CLIENT_RECV_BUFFER_SIZE> const& recv_buffer = scp_.get()->get_attachment().recv_buffer_;
       if (parser_.is_upgrade())
       {
-        GCE_ASSERT(requests.empty());
-        if (!!req)
+        GCE_ASSERT(replies.empty());
+        if (!!rep)
         {
-          requests.push_back(req);
+          replies.push_back(rep);
         }
       }
-      boost::tribool result = parser_.parse(requests, recv_buffer.data(), bytes_transferred);
+      boost::tribool result = parser_.parse(replies, recv_buffer.data(), bytes_transferred);
       if (result || !result)
       {
         goon_ = false;
@@ -290,20 +277,20 @@ private:
         goon_ = true;
       }
 
-      if (!goon_ || requests.size() > 1)
+      if (!goon_ || replies.size() > 1)
       {
-        send_request();
+        send_reply();
       }
-      else if (!closing_ && goon_ && requests.size() == 1)
+      else if (!closing_ && goon_ && replies.size() == 1)
       {
         /// Continue recv.
-        async_recv(req);
+        async_recv(rep);
       }
     }
     else
     {
       goon_ = false;
-      send_request(ec);
+      send_reply(ec);
       if (closed_)
       {
         send_close();
@@ -311,20 +298,20 @@ private:
     }
   }
 
-  void send_request(errcode_t const& ec = errcode_t())
+  void send_reply(errcode_t const& ec = errcode_t())
   {
-    std::deque<request_ptr>& requests = scp_.get()->get_attachment().requests_;
-    recv_msg_.set_type(as_request);
+    std::deque<reply_ptr>& replies = scp_.get()->get_attachment().replies_;
+    recv_msg_.set_type(as_reply);
     recv_msg_ << ec;
-    if (!ec && !requests.empty())
+    if (!ec && !replies.empty())
     {
-      request_ptr req = requests.front();
-      requests.pop_front();
-      recv_msg_ << req;
+      reply_ptr rep = replies.front();
+      replies.pop_front();
+      recv_msg_ << rep;
     }
     else
     {
-      recv_msg_ << request_ptr();
+      recv_msg_ << reply_ptr();
     }
     pri_send2actor(recv_msg_);
   }
@@ -378,19 +365,19 @@ private:
 
   void pri_handle_send(size_t size, errcode_t const& ec, size_t bytes_transferred)
   {
-    std::deque<reply_ptr>& replies = scp_.get()->get_attachment().replies_;
+    std::deque<request_ptr>& requests = scp_.get()->get_attachment().requests_;
     sending_ = false;
     if (!ec)
     {
-      if (size == replies.size())
+      if (size == requests.size())
       {
-        replies.clear();
+        requests.clear();
       }
       else
       {
         for (size_t i=0; i<size; ++i)
         {
-          replies.pop_front();
+          requests.pop_front();
         }
         start_send();
       }
@@ -402,35 +389,38 @@ private:
     }
   }
 
-  /// Convert the reply into a vector of buffers. The buffers do not own the
-  /// underlying memory blocks, therefore the reply object must remain valid and
+  /// Convert the request into a vector of buffers. The buffers do not own the
+  /// underlying memory blocks, therefore the request object must remain valid and
   /// not be changed until the write operation has completed.
   size_t to_send_buffers()
   {
     send_buffers_.clear();
-    std::deque<reply_ptr>& replies = scp_.get()->get_attachment().replies_;
-    size_t size = replies.size();
+    std::deque<request_ptr>& requests = scp_.get()->get_attachment().requests_;
+    size_t size = requests.size();
     for (size_t i=0; i<size; ++i)
     {
-      reply_ptr rep = replies[i];
+      request_ptr req = requests[i];
+      send_buffers_.push_back(boost::asio::buffer(req->method_));
+      send_buffers_.push_back(boost::asio::buffer(misc_strings::space));
+      send_buffers_.push_back(boost::asio::buffer(req->uri_));
+      send_buffers_.push_back(boost::asio::buffer(misc_strings::space));
       send_buffers_.push_back(boost::asio::buffer(misc_strings::http_str));
       /// http version
-      rep->version_.assign(boost::lexical_cast<intbuf_t>(rep->http_major_).cbegin());
-      rep->version_.push_back(*misc_strings::point);
-      rep->version_.append(boost::lexical_cast<intbuf_t>(rep->http_minor_).cbegin());
-      rep->version_.push_back(*misc_strings::space);
-      send_buffers_.push_back(boost::asio::buffer(rep->version_));
-      send_buffers_.push_back(status_strings::to_buffer(rep->stat_));
-      for (size_t j = 0; j < rep->headers_.size(); ++j)
+      req->version_.assign(boost::lexical_cast<intbuf_t>(req->http_major_).cbegin());
+      req->version_.push_back(*misc_strings::point);
+      req->version_.append(boost::lexical_cast<intbuf_t>(req->http_minor_).cbegin());
+      send_buffers_.push_back(boost::asio::buffer(req->version_));
+      send_buffers_.push_back(boost::asio::buffer(misc_strings::crlf));
+      for (size_t j = 0; j < req->headers_.size(); ++j)
       {
-        header& h = rep->headers_[j];
+        header& h = req->headers_[j];
         send_buffers_.push_back(boost::asio::buffer(h.name_));
         send_buffers_.push_back(boost::asio::buffer(misc_strings::name_value_separator));
         send_buffers_.push_back(boost::asio::buffer(h.value_));
         send_buffers_.push_back(boost::asio::buffer(misc_strings::crlf));
       }
       send_buffers_.push_back(boost::asio::buffer(misc_strings::crlf));
-      send_buffers_.push_back(boost::asio::buffer(rep->content_.data(), rep->content_.size()));
+      send_buffers_.push_back(boost::asio::buffer(req->content_.data(), req->content_.size()));
     }
     return size;
   }
@@ -481,7 +471,7 @@ private:
   std::vector<boost::asio::const_buffer> send_buffers_;
 
   /// Parser.
-  detail::request_parser parser_;
+  detail::reply_parser parser_;
 
   /// Status.
   bool recving_;
@@ -501,4 +491,4 @@ private:
 } /// namespace http
 } /// namespace gce
 
-#endif /// GCE_HTTP_SERVER_CONNECTION_HPP
+#endif /// GCE_HTTP_CLIENT_CONNECTION_HPP
