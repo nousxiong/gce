@@ -7,6 +7,7 @@
 
 #include "config.hpp"
 #include <cstdlib>
+#include <cstring>
 
 namespace resp
 {
