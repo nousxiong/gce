@@ -6,6 +6,7 @@
 #define RESP_BUFFER_HPP
 
 #include "config.hpp"
+#include "realloc.hpp"
 #include <string>
 #include <cstring>
 #include <cstdlib>
@@ -152,9 +153,14 @@ public:
           {
             data_ = 0;
           }
-          data_ = (char*)std::realloc(data_, rhs.capacity_);
+          char* old_data = data_;
+          data_ = (char*)realloc(data_, capacity_, rhs.capacity_);
           if (data_ == 0)
           {
+            if (old_data)
+            {
+              std::free(old_data);
+            }
             throw std::bad_alloc();
           }
           capacity_ = rhs.capacity_;
@@ -292,8 +298,18 @@ public:
       else
       {
         /// large
+        size_t old_cap = capacity_;
         capacity_ = capacity;
-        data_ = (char*)std::realloc(data_, capacity_);
+        char* old_data = data_;
+        data_ = (char*)realloc(data_, old_cap, capacity_);
+        if (data_ == 0)
+        {
+          if (old_data)
+          {
+            std::free(old_data);
+          }
+          throw std::bad_alloc();
+        }
       }
     }
   }
