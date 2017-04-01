@@ -349,19 +349,19 @@ private:
     try_channel(str);
 
     size_t len = std::strlen(str);
-    if (len <= RESP_LARGE_BUFFER_SIZE)
+    //if (len <= RESP_LARGE_BUFFER_SIZE)
     {
       resp::buffer buffer;
       buffer.append(str);
       cmd_.arg(buffer);
     }
-    else
-    {
-      message& large_arg = curr_req_->reserve_large_arg(len);
-      byte_t const* buf = large_arg.reset_write(0);
-      large_arg << message::chunk((byte_t const*)str, len);
-      cmd_.arg(resp::buffer((char const*)buf, len));
-    }
+    // else
+    // {
+    //   message& large_arg = curr_req_->reserve_large_arg(len);
+    //   byte_t const* buf = large_arg.reset_write(0);
+    //   large_arg << message::chunk((byte_t const*)str, len);
+    //   cmd_.arg(resp::buffer((char const*)buf, len));
+    // }
   }
 
   void arg(std::string const& str)
@@ -369,19 +369,19 @@ private:
     try_channel(str.c_str());
 
     size_t len = str.size();
-    if (len <= RESP_LARGE_BUFFER_SIZE)
+    //if (len <= RESP_LARGE_BUFFER_SIZE)
     {
       resp::buffer buffer;
       buffer.append(str);
       cmd_.arg(buffer);
     }
-    else
-    {
-      message& large_arg = curr_req_->reserve_large_arg(len);
-      byte_t const* buf = large_arg.reset_write(0);
-      large_arg << message::chunk((byte_t const*)str.data(), len);
-      cmd_.arg(resp::buffer((char const*)buf, len));
-    }
+    // else
+    // {
+    //   message& large_arg = curr_req_->reserve_large_arg(len);
+    //   byte_t const* buf = large_arg.reset_write(0);
+    //   large_arg << message::chunk((byte_t const*)str.data(), len);
+    //   cmd_.arg(resp::buffer((char const*)buf, len));
+    // }
   }
 
   /*void arg(resp::buffer const& str)

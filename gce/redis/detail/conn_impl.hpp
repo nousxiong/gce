@@ -257,6 +257,7 @@ struct conn_impl
     , sending_(false)
     , querying_(false)
     , timing_(false)
+    , opened_(false)
     , recv_buffer_(GCE_REDIS_RECV_BUFFER_SIZE)
     , ref_(0)
   {
