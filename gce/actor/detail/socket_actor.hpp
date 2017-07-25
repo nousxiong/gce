@@ -1728,6 +1728,10 @@ private:
         ylder.yield();
         if (stat_ != on)
         {
+          if (!ec)
+          {
+            ec = boost::system::errc::make_error_code(boost::system::errc::state_not_recoverable);
+          }
           return ec;
         }
       }
@@ -1744,6 +1748,10 @@ private:
           on_neterr(base_t::get_aid());
           //if (init)
           {
+            if (!ec)
+            {
+              ec = boost::system::errc::make_error_code(boost::system::errc::state_not_recoverable);
+            }
             return ec;
           }
         }
@@ -1775,6 +1783,10 @@ private:
 
       if (stat_ != on)
       {
+        if (!ec)
+        {
+          ec = boost::system::errc::make_error_code(boost::system::errc::state_not_recoverable);
+        }
         return ec;
       }
 
